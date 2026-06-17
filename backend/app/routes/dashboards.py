@@ -1,0 +1,259 @@
+import logging
+from typing import List, Optional
+
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
+
+from app.core.deps import CurrentUserDep
+from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, CellUpdatePayload, ReevaluateCellPayload
+from app.services import campaign_service
+from app.services.coding_service import generate_schema_and_description, enqueue_sequential_coding
+from app.core.client import get_user_client
+from app.core.constants import MAX_FILE_SIZE_BYTES, DEFAULT_WORKSPACE_ID
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/dashboards", tags=["dashboards"])
+
+
+@router.post("", response_model=DashboardRow, status_code=status.HTTP_201_CREATED)
+async def create_campaign(
+    payload: DashboardCreate,
+    current_user: CurrentUserDep,
+    workspace_id: str = DEFAULT_WORKSPACE_ID
+):
+    """Create a new research campaign dashboard.
+    
+    Calls generate_schema_and_description directly to allow route-level test patch mocking.
+    """
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to create campaigns."
+        )
+
+    # Calling the imported functional delegate allows pytest patches to intercept it
+    generated = await generate_schema_and_description(payload.prompt, payload.user_columns)
+    return campaign_service.create_campaign_with_schema(payload, generated, workspace_id)
+
+
+@router.get("", response_model=List[DashboardRow])
+async def list_campaigns(
+    current_user: CurrentUserDep,
+    workspace_id: str = DEFAULT_WORKSPACE_ID
+):
+    """List all research campaign dashboards in the workspace."""
+    return campaign_service.list_campaigns(workspace_id)
+
+
+@router.get("/{id}", response_model=DashboardRow)
+async def get_campaign(
+    id: str,
+    current_user: CurrentUserDep
+):
+    """Retrieve details for a specific campaign dashboard."""
+    return campaign_service.get_campaign(id)
+
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_campaign(
+    id: str,
+    current_user: CurrentUserDep
+):
+    """Delete a research campaign dashboard."""
+    if not current_user.is_admin and not current_user.can_delete:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete campaigns."
+        )
+    
+    deleted = campaign_service.delete_campaign(id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign dashboard not found."
+        )
+
+
+@router.put("/{id}", response_model=DashboardRow)
+async def update_campaign(
+    id: str,
+    payload: DashboardUpdate,
+    current_user: CurrentUserDep
+):
+    """Update campaign name, description, prompt, or column schema."""
+    if not current_user.is_admin and not current_user.can_add:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaigns."
+        )
+    return campaign_service.update_campaign(id, payload)
+
+
+
+@router.get("/{id}/documents", response_model=List[DashboardDocumentRow])
+async def list_campaign_documents(
+    id: str,
+    current_user: CurrentUserDep
+):
+    """List all documents linked to this campaign, along with their coded values and processing statuses."""
+    return campaign_service.list_campaign_documents(id)
+
+
+@router.post("/{id}/documents/link", status_code=status.HTTP_200_OK)
+async def link_campaign_documents(
+    id: str,
+    document_ids: List[str],
+    current_user: CurrentUserDep
+):
+    """Link existing global documents to this campaign and enqueue them for sequential LLM coding.
+    
+    Calls enqueue_sequential_coding directly to allow route-level test patch mocking.
+    """
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaign documents."
+        )
+
+    campaign_service.link_campaign_documents_in_db(id, document_ids)
+    
+    # Calling the imported functional delegate allows pytest patches to intercept it
+    enqueue_sequential_coding(id, document_ids, current_user.id)
+    return {"message": f"Successfully linked {len(document_ids)} documents and enqueued them for coding."}
+
+
+@router.post("/{id}/documents/check-duplicates", status_code=status.HTTP_200_OK)
+async def check_duplicate_filenames(
+    id: str,
+    filenames: List[str],
+    current_user: CurrentUserDep,
+):
+    """Given a list of filenames, return which ones are already linked to this dashboard."""
+    existing = campaign_service.get_filenames_in_dashboard(id)
+    duplicates = [f for f in filenames if f in existing]
+    return {"duplicates": duplicates}
+
+
+@router.post("/{id}/documents/upload", response_model=DashboardDocumentRow, status_code=status.HTTP_201_CREATED)
+async def upload_campaign_document(
+    id: str,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentUserDep,
+    file: UploadFile = File(...),
+    relative_path: str = Form(None),
+    workspace_id: str = Form(DEFAULT_WORKSPACE_ID),
+    tags: str = Form(None),
+):
+    """Upload a file directly to a campaign: saves file globally first and links/codes in campaign."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to add documents."
+        )
+
+    user_client = get_user_client(current_user.jwt, workspace_id)
+    filename = relative_path or file.filename
+    if not filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename is required")
+        
+    content_type = file.content_type or "text/plain"
+    content = await file.read()
+    file_size = len(content)
+    
+    if file_size > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds maximum size limit."
+        )
+
+    try:
+        return campaign_service.upload_campaign_document(
+            id=id,
+            user_client=user_client,
+            current_user=current_user,
+            file_content=content,
+            filename=filename,
+            content_type=content_type,
+            file_size=file_size,
+            workspace_id=workspace_id,
+            tags=tags,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process upload: {e}"
+        )
+
+
+@router.post("/{id}/documents/retry", status_code=status.HTTP_200_OK)
+async def retry_failed_documents(
+    id: str,
+    current_user: CurrentUserDep,
+    payload: Optional[List[str]] = None
+):
+    """Retry coding execution for failed documents in a campaign dashboard."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaign documents."
+        )
+
+    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload)
+    if not doc_ids:
+        return {"message": "No failed documents to retry."}
+    return {"message": f"Successfully queued {len(doc_ids)} documents for retry."}
+
+
+@router.put("/{id}/documents/{doc_id}", status_code=status.HTTP_200_OK)
+async def update_coded_cell(
+    id: str,
+    doc_id: str,
+    payload: CellUpdatePayload,
+    current_user: CurrentUserDep
+):
+    """Override an AI-generated value in a specific spreadsheet grid cell."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to edit values."
+        )
+
+    coded_values = campaign_service.update_coded_cell(
+        id, doc_id, payload.column_name, payload.value, payload.reasoning
+    )
+    return {"message": "Cell updated successfully.", "coded_values": coded_values}
+
+
+@router.post("/{id}/documents/{doc_id}/re-evaluate", status_code=status.HTTP_200_OK)
+async def reevaluate_coded_cell(
+    id: str,
+    doc_id: str,
+    payload: ReevaluateCellPayload,
+    current_user: CurrentUserDep
+):
+    """Trigger LLM re-evaluation of a specific cell using researcher corrective feedback."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to re-evaluate values."
+        )
+
+    coded_values = await campaign_service.reevaluate_coded_cell(
+        id, doc_id, payload.column_name, payload.user_prompt
+    )
+    return {"message": "Cell re-evaluated successfully.", "coded_values": coded_values}
+
+
+@router.post("/{id}/regenerate-schema", response_model=DashboardRow)
+async def regenerate_campaign_schema(
+    id: str,
+    current_user: CurrentUserDep
+):
+    """Regenerate campaign schema by running the LLM prompt extraction again."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaigns."
+        )
+    return await campaign_service.regenerate_campaign_schema(id)
+
+

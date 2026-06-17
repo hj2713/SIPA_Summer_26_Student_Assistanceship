@@ -1,0 +1,135 @@
+# Prompt Version 4
+
+Run each prompt version separately. Do not combine V1, V2, V3, and V4 in the same model run.
+
+---
+
+V1: Delegation only, label only
+
+---
+
+We are coding summaries of financial regulation laws.
+
+Question: Does the summary say that Congress delegated authority to an executive agency?
+
+Delegation means Congress gives an executive agency, department, bureau, commission, regulator, or other administrative actor authority to implement, administer, enforce, supervise, regulate, interpret, approve, waive, investigate, or issue rules under the law.
+
+Do not count a mere mention of an agency unless the summary says the agency has authority.
+
+Output exactly one label:
+
+DelegateLaw = Y
+
+or
+
+DelegateLaw = N
+
+Do not provide a rationale. Do not provide any additional text.
+
+---
+
+V2: Delegation plus rationale
+
+---
+
+We are coding summaries of financial regulation laws.
+
+Question: Does the summary say that Congress delegated authority to an executive agency?
+
+Delegation means Congress gives an executive agency, department, bureau, commission, regulator, or other administrative actor authority to implement, administer, enforce, supervise, regulate, interpret, approve, waive, investigate, or issue rules under the law.
+
+Do not count a mere mention of an agency unless the summary says the agency has authority.
+
+Output only the following fields:
+
+DelegateLaw:
+Agency:
+Delegated authority:
+Rationale:
+
+If there is no delegation, write:
+
+Agency: None
+Delegated authority: None
+
+Keep the rationale to 1 or 2 sentences.
+
+---
+
+V3: Discretion rank only
+
+---
+
+We are coding summaries of financial regulation laws.
+
+Question: From 0 to 4, how much discretionary authority does Congress grant to executive agencies?
+
+Delegation means Congress gives an executive agency, department, bureau, commission, regulator, or other administrative actor authority to implement, administer, enforce, supervise, regulate, interpret, approve, waive, investigate, or issue rules under the law.
+
+Assess discretion as the authority delegated to agencies, reduced by any limits on how agencies may use that authority.
+
+Use this scale:
+
+0 = No delegation. No agency receives implementation, enforcement, rulemaking, supervisory, administrative, or decision-making authority.
+
+1 = Minimal discretion. An agency has a narrow, mechanical, procedural, or ministerial role.
+
+2 = Limited discretion. An agency has real but bounded implementation authority.
+
+3 = Substantial discretion. An agency has meaningful authority to interpret, implement, enforce, supervise, or regulate.
+
+4 = High discretion. An agency receives broad policymaking, rulemaking, standard-setting, waiver, exemption, enforcement, supervisory, or interpretive authority.
+
+If there is no delegation, assign 0.
+
+If the summary indicates delegation to multiple agencies, base the score on the highest level of discretion granted in the summary.
+
+Output exactly one number:
+
+0, 1, 2, 3, or 4
+
+Do not provide a rationale. Do not provide any additional text.
+
+---
+
+V4: Discretion rank plus rationale
+
+---
+
+We are coding summaries of financial regulation laws.
+
+Question: From 0 to 4, how much discretionary authority does Congress grant to executive agencies?
+
+Delegation means Congress gives an executive agency, department, bureau, commission, regulator, or other administrative actor authority to implement, administer, enforce, supervise, regulate, interpret, approve, waive, investigate, or issue rules under the law.
+
+Assess discretion as the authority delegated to agencies, reduced by any limits on how agencies may use that authority.
+
+Use this scale:
+
+0 = No delegation. No agency receives implementation, enforcement, rulemaking, supervisory, administrative, or decision-making authority.
+
+1 = Minimal discretion. An agency has a narrow, mechanical, procedural, or ministerial role.
+
+2 = Limited discretion. An agency has real but bounded implementation authority.
+
+3 = Substantial discretion. An agency has meaningful authority to interpret, implement, enforce, supervise, or regulate.
+
+4 = High discretion. An agency receives broad policymaking, rulemaking, standard-setting, waiver, exemption, enforcement, supervisory, or interpretive authority.
+
+If there is no delegation, assign 0.
+
+If the summary indicates delegation to multiple agencies, base the score on the highest level of discretion granted in the summary.
+
+Output only the following fields:
+
+Discretion_Rank:
+Agency:
+Delegated authority:
+Rationale:
+
+If there is no delegation, write:
+
+Agency: None
+Delegated authority: None
+
+Keep the rationale to 1 or 2 sentences.

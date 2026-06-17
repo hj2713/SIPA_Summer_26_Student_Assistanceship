@@ -1,0 +1,187 @@
+# Prompt Version 6: Staged Coding of Delegation and Rough Guide Discretion
+
+You are coding a financial regulation law for the level of discretionary authority delegated to administrative actors.
+
+Complete each stage in order. Provide the required output for each stage before moving to the next stage. Use the outputs from earlier stages to inform later stages.
+
+Do not skip stages. Do not assign the final Rough Guide discretion rank until Stages 1-4 are complete.
+
+---
+
+## General Coding Instructions
+
+Code only the text supplied. Do not infer authority from background law unless the supplied text expressly incorporates it.
+
+The coding unit is the law-level text provided, unless the user specifies a narrower unit such as a title, subtitle, section, provision, or summary.
+
+This task classifies the law as a whole into a Rough Guide discretion category. It is not asking for a precise provision-level discretion measure unless the full statutory text is supplied and provision counts can be identified from the text.
+
+For purposes of this coding:
+
+* **Delegation** means the law gives an agency or administrative actor authority or responsibility to act.
+* **Discretion** means the agency has room to choose policy, standards, enforcement priorities, exemptions, interpretations, approvals, waivers, supervision methods, or implementation details.
+* **Constraint** means the law limits, channels, reviews, conditions, or structures the agency’s use of delegated authority.
+
+An agency or administrative actor includes any executive department, bureau, commission, board, office, regulator, supervisory authority, independent regulatory agency, or similar administrative body.
+
+A mere mention of an agency is not delegation unless the law gives that agency authority or responsibility.
+
+A mandatory ministerial duty may count as delegation but usually implies low discretion.
+
+A rulemaking command counts as delegation. It counts as a constraint only if the text also provides substantive standards, required procedures, deadlines, findings, consultation duties, approval requirements, review mechanisms, or limits on the rulemaking authority.
+
+If the supplied text is incomplete, summarized, or excerpted, state that limitation in the rationale. Do not infer exact provision counts, agency powers, constraint categories, or discretion levels beyond what the supplied text supports.
+
+When evidence is ambiguous, choose the lower discretion category unless the text clearly supports broader agency judgment.
+
+Use short quotations only in evidence fields.
+
+---
+
+## Constraint Categories
+
+Use these categories when identifying constraints:
+
+1. reporting requirements;
+2. consultation requirements;
+3. substantive standards governing agency action;
+4. required rulemaking procedures, findings, or deadlines;
+5. spending limits;
+6. time limits or sunset provisions;
+7. exemptions limiting the scope of authority;
+8. appeals procedures;
+9. direct oversight;
+10. public hearing requirements;
+11. approval requirements by Congress, the President, another agency, or another executive actor;
+12. limits on waiver, exemption, enforcement, supervisory, or interpretive authority.
+
+Do not count a grant of authority itself as a constraint unless the text also limits, channels, or conditions the use of that authority.
+
+---
+
+## Stage 1: Delegation Screen
+
+Question: Does the law delegate authority to an agency or administrative actor?
+
+### Stage 1 Output
+
+DelegateLaw: Y/N
+
+Delegation_Evidence: [short quote or Not stated]
+
+Delegation_Rationale: [1-2 sentences]
+
+---
+
+## Stage 2: Amount and Centrality of Delegation
+
+Question: Does the law contain no delegation, a small amount of delegation, a moderate amount of delegation, or extensive delegation?
+
+If the full statutory text is supplied, estimate the number of provisions that delegate authority. If only a summary or excerpt is supplied, estimate the level of delegation based on the supplied text and do not pretend to make an exact provision count.
+
+Use this guide:
+
+* **None** = no provisions or text passages delegate authority.
+* **Low** = only a small number of provisions or text passages delegate authority.
+* **Moderate** = several provisions or text passages delegate authority, but delegation is not the dominant feature of the law.
+* **High** = many provisions or text passages delegate authority, or delegation is central to the law.
+
+### Stage 2 Output
+
+Estimated_Number_of_Delegation_Provisions_or_Passages: [number, range, or Not stated]
+
+Delegation_Level: None / Low / Moderate / High
+
+Delegation_Centrality: None / Incidental / Important / Central
+
+Delegated_Agency_or_Actor: [agency name(s) or None]
+
+Delegated_Authority: [brief description or None]
+
+Delegation_Evidence: [short quote or Not stated]
+
+Delegation_Rationale: [1-2 sentences]
+
+---
+
+## Stage 3: Constraints on Delegated Authority
+
+Question: Does the law constrain delegated authority?
+
+A constraint is a statutory limit on how an agency may use delegated authority. Constraints reduce agency discretion by requiring procedures, approvals, reports, consultations, standards, review, or limits on scope, time, budget, waiver authority, enforcement authority, supervisory authority, or interpretive authority.
+
+If the full statutory text is supplied, estimate the number of provisions that constrain delegated authority. If only a summary or excerpt is supplied, estimate the level of constraint based on the supplied text.
+
+### Stage 3 Output
+
+ConstraintLaw: Y/N
+
+Estimated_Number_of_Constraint_Provisions_or_Passages: [number, range, or Not stated]
+
+Constraint_Level: None / Low / Moderate / High
+
+Constraint_Evidence: [short quote or Not stated]
+
+Constraint_Rationale: [1-2 sentences]
+
+---
+
+## Stage 4: Categories of Constraints
+
+Question: How many different categories of administrative constraints are identified in the law?
+
+Count distinct constraint categories, not just the number of constraint provisions. Use only categories supported by the supplied text.
+
+### Stage 4 Output
+
+Constraint_Categories_Identified: [list categories or None]
+
+Number_of_Constraint_Categories: [number]
+
+Constraint_Category_Evidence: [short quote or Not stated]
+
+Constraint_Category_Rationale: [1-2 sentences]
+
+---
+
+## Stage 5: Rough Guide Discretion Classification
+
+Question: Based on the delegated authority and constraints identified in Stages 1-4, classify the law as a whole by the level of discretionary authority it grants to administrative actors.
+
+This is a law-level Rough Guide classification, not a precise provision-level discretion measure.
+
+Assign a Rough Guide discretion rank from 0 to 4.
+
+0 = No discretion. The law does not delegate authority to an agency or administrative actor.
+
+1 = Minimal discretion. The law delegates only a small amount of authority, or the agency's role is narrow, mechanical, procedural, or ministerial. Delegated authority is tightly constrained.
+
+2 = Limited discretion. The law delegates some real implementation, supervisory, regulatory, or enforcement authority, but the authority is bounded by significant rules, standards, reporting, consultation, appeals, exemptions, oversight, deadlines, or other constraints.
+
+3 = Substantial discretion. The law delegates meaningful authority to interpret, implement, enforce, supervise, regulate, approve, waive, exempt, or set standards. Constraints exist, but agencies retain significant room to exercise judgment.
+
+4 = High discretion. The law delegates broad policymaking, rulemaking, standard-setting, waiver, exemption, enforcement, supervisory, or interpretive authority across many provisions or central parts of the law, with few meaningful constraints on how that authority is used.
+
+In assigning the final rank, consider:
+
+1. breadth of affected actors, markets, institutions, transactions, or activities;
+2. degree of agency policy choice;
+3. strength of statutory constraints;
+4. centrality of agency implementation to the law.
+
+### Final Consistency Rule
+
+The final rank must follow from the earlier outputs.
+
+* If `DelegateLaw` is `N`, `Discretion_Rank` must be `0`.
+* If `Delegation_Level` is `Low` and the delegated role is mostly ministerial, procedural, or narrow, the rank should normally be `1` unless the text clearly shows meaningful policy choice.
+* If `Delegation_Level` is `Moderate` or `High` but `Constraint_Level` is also `Moderate` or `High`, consider rank `2` or `3` depending on how much agency judgment remains.
+* Assign rank `4` only when delegation is broad or central, agencies retain major policy judgment, and constraints are limited or weak.
+* Do not assign `4` simply because the law delegates authority.
+* Do not introduce new delegation evidence, constraint evidence, agency authority, or constraint categories for the first time in Stage 5.
+
+### Stage 5 Output
+
+Discretion_Rank: 0/1/2/3/4
+
+Final_Rationale: [1-2 sentences explaining how the Stage 1-4 outputs support the rank]

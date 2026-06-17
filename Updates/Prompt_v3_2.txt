@@ -1,0 +1,85 @@
+# Prompt Version 7: Staged Coding of Delegation, Constraints, and Discretion (Professor Coding Sheet Alignment)
+
+You are coding a law for the level of discretionary authority delegated to administrative actors, following the precise variables defined in the research coding sheet.
+
+Complete each stage in order. Provide the required output for each stage before moving to the next stage. Use the outputs from earlier stages to inform later stages.
+
+---
+
+## General Coding Instructions
+
+Code only the text supplied. Do not infer authority or constraints from background law unless the supplied text expressly incorporates it.
+
+### Definitions for purposes of this coding:
+* **Delegation** means the law gives an agency or administrative actor authority or responsibility to act.
+* **Delegees**: The specific agency, commission, board, department, or administrative actor receiving authority.
+* **Discretion** means the agency has room to choose policy, standards, enforcement priorities, exemptions, interpretations, approvals, waivers, supervision methods, or implementation details.
+* **Constraint** means the law limits, channels, reviews, conditions, or structures the agency’s use of delegated authority.
+
+For boolean indicators below, assign **Y** (Yes) if the feature is present in the text, or **N** (No) if it is absent or not mentioned. 
+
+---
+
+## Stage 1: Delegation & Agency Structure Screen
+Identify whether the law delegates authority and whether new administrative structures or appointment powers are established.
+
+### Stage 1 Outputs
+* **DelegateLaw**: [Y / N] (Does the law delegate authority or responsibility to any agency or administrative actor?)
+* **Delegees**: [Comma-separated list of agencies/actors, or None] (Identify the specific actors receiving authority, e.g., "Securities and Exchange Commission", "Secretary of the Interior".)
+* **NewAgencyCreated**: [Y / N] (Does the law establish a new administrative agency, board, commission, or office?)
+* **ApptPower**: [Y / N] (Does the law specify appointment powers or procedures for agency heads, members, or officers?)
+* **ApptComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+
+---
+
+## Stage 2: Specific Procedural and Statutory Constraints
+Identify which specific administrative tool constraints, procedural hurdles, or scope limits are imposed on the delegees. For each, assign **Y** or **N** and provide a brief comment containing the citation/reasoning.
+
+### Stage 2 Outputs
+* **TimeLimits**: [Y / N] (Does the law specify deadlines, time limits for agency action, or sunset provisions?)
+* **TimeComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **SpendLimits**: [Y / N] (Does the law limit or specify the budget, funds, or spending limits of the agency?)
+* **SpendingComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **LegAxnReq**: [Y / N] (Is subsequent legislative action or approval required for the agency action to take effect?)
+* **LegAxnComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **ExecAxnReq**: [Y / N] (Is executive approval by the President or another department head required for the agency action?)
+* **ExecAxnComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **LegVeto**: [Y / N] (Does the law contain a legislative veto provision over agency regulations?)
+* **VetoComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **ReportReq**: [Y / N] (Is the agency required to submit reports to Congress, the President, or other bodies?)
+* **ReportComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **Consultation**: [Y / N] (Is the agency required to consult with other agencies, advisory committees, or state actors?)
+* **ConsultComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **PubHearings**: [Y / N] (Is the agency required to hold public hearings or provide opportunities for hearings?)
+* **HearingComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **AppealsProc**: [Y / N] (Does the law specify appeals, administrative reviews, or judicial review procedures for affected parties?)
+* **AppealsComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **RuleReqs**: [Y / N] (Does the law require or specify rulemaking procedures, notice-and-comment requirements, or regulatory standards?)
+* **RuleComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **Exemptions**: [Y / N] (Does the law define scope exclusions, exemptions, or carve-outs limiting what the agency can regulate?)
+* **ExempComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **Compensations**: [Y / N] (Does the law mention compensations, damages, or financial payouts managed or evaluated by the agency?)
+* **DirectOversight**: [Y / N] (Does the law mandate direct oversight, audits, or investigations of the agency's performance?)
+* **OversightComment**: [Text citation/reasoning if Y, or "Not mentioned"]
+* **Studies**: [Y / N] (Does the law commission specific studies, research projects, or evaluations by the agency?)
+
+---
+
+## Stage 3: Summary and Overall Discretion Classification
+Synthesize the delegation level and the density of constraints identified in the prior stages to assign the overall discretion rank.
+
+### Discretion Rank Scale (0–4)
+* **0 = No discretion**: The law does not delegate any authority.
+* **1 = Minimal discretion**: Low delegation, or the delegated task is narrow, mechanical, procedural, or ministerial. Highly constrained.
+* **2 = Limited discretion**: Bounded authority. The agency has regulatory/enforcement powers, but they are checked by significant procedural or political constraints (e.g. reports, hearings, time limits, appeals, consultation).
+* **3 = Substantial discretion**: Meaningful authority to make rules, supervise, regulate, or set standards. Constraints exist but leave large room for agency judgment.
+* **4 = High discretion**: Broad standard-setting, rulemaking, or policymaking authority with few or no meaningful constraints.
+
+### Logical Consistency Rules
+* If `DelegateLaw` is **N**, `Discretion_Rank` must be **0**.
+* If `Discretion_Rank` is **4**, constraints must be very low or absent. If multiple constraints (like time limits, legislative approval, and consultation) are present, the score must be lower (typically 2 or 3).
+
+### Stage 3 Outputs
+* **Discretion_Rank**: [0 / 1 / 2 / 3 / 4]
+* **Final_Rationale**: [1-2 sentences explaining how the presence/absence of specific constraints leads to the final score]
+* **Notes**: [Optional general research notes]

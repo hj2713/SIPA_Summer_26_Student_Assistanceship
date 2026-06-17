@@ -23,6 +23,9 @@ frontend/dist/
 frontend/.next/
 *.tsbuildinfo
 
+# Backend / Data
+backend/data/
+
 # OS
 .DS_Store
 Thumbs.db

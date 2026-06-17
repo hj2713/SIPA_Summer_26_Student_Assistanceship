@@ -18,6 +18,7 @@ A hands-on course where you collaborate with Claude Code to build a full-feature
 - **Document ingestion** with drag-and-drop upload and processing status
 - **Full RAG pipeline**: chunking, embedding, hybrid search, reranking
 - **Agentic patterns**: text-to-SQL, web search, subagents with isolated context
+- **Usage Tracking & Model Selection**: Token-level logging, cost mapping (pricing matrix), and visual billing stats next to per-thread and per-campaign model configuration selectors
 
 ## Tech Stack
 

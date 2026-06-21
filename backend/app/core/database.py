@@ -49,6 +49,10 @@ def init_db():
                 is_admin INTEGER NOT NULL DEFAULT 0,
                 can_add INTEGER NOT NULL DEFAULT 0,
                 can_delete INTEGER NOT NULL DEFAULT 0,
+                llm_provider TEXT,
+                llm_api_key_encrypted TEXT,
+                llm_model TEXT,
+                llm_base_url TEXT,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
             );
         """)
@@ -201,6 +205,12 @@ def init_db():
         for col, default_val in [("is_admin", 0), ("can_add", 0), ("can_delete", 0)]:
             try:
                 conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER NOT NULL DEFAULT {default_val};")
+            except sqlite3.OperationalError:
+                pass
+
+        for col in ["llm_provider", "llm_api_key_encrypted", "llm_model", "llm_base_url"]:
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT;")
             except sqlite3.OperationalError:
                 pass
 

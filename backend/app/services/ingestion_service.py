@@ -17,6 +17,7 @@ from app.services.embedding import get_embedding_service, EmbeddingService
 from app.core.database import get_db_conn
 from app.core.constants import MIME_TO_EXT
 from app.core.prompts import METADATA_EXTRACTION_SYSTEM_PROMPT
+from app.core.vectors import serialize_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +329,7 @@ class IngestionService:
                     str(user_id),
                     str(workspace_id),
                     chunk_content,
-                    json.dumps(chunk_emb),
+                    serialize_embedding(chunk_emb),
                     json.dumps({
                         "chunk_index": index,
                         "category": metadata.get("category", "general"),

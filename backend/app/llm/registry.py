@@ -13,6 +13,8 @@ from collections.abc import AsyncIterator, Sequence
 from pydantic import BaseModel
 
 from app.core.config import settings
+from app.core.llm_credentials import UserLLMCredentials, get_user_llm_credentials
+from app.core.request_context import get_current_user_id
 from app.llm.base import LLMProvider
 from app.llm.tracing import get_tracer
 from app.llm.types import LLMChunk, LLMMessage, LLMTool
@@ -150,6 +152,11 @@ _llm_singleton: LLMService | None = None
 
 def get_llm() -> LLMService:
     """Return the process-wide `LLMService` singleton, building it on first call."""
+    credentials = _get_request_llm_credentials()
+    if credentials:
+        return _build_user_llm(credentials)
+    _raise_if_server_fallback_disabled()
+
     global _llm_singleton
     if _llm_singleton is None:
         _llm_singleton = _build_llm()
@@ -160,6 +167,11 @@ def get_llm_for_model(model_name: str | None = None) -> LLMService:
     """Get or build an LLMService for a specific model name.
     If model_name is None, returns the default process-wide get_llm() instance.
     """
+    credentials = _get_request_llm_credentials()
+    if credentials:
+        return _build_user_llm(credentials, model_name=model_name)
+    _raise_if_server_fallback_disabled()
+
     if not model_name:
         return get_llm()
 
@@ -202,6 +214,73 @@ def reset_llm() -> None:
     """Clear the singleton. Intended for tests that swap providers."""
     global _llm_singleton
     _llm_singleton = None
+
+
+def _get_request_llm_credentials() -> UserLLMCredentials | None:
+    user_id = get_current_user_id()
+    if not user_id:
+        return None
+    try:
+        return get_user_llm_credentials(user_id)
+    except Exception as exc:
+        logger.exception("Failed to load user LLM credentials for user %s", user_id)
+        raise ValueError("Could not load your saved LLM credentials. Check Settings or contact an administrator.") from exc
+
+
+def _raise_if_server_fallback_disabled() -> None:
+    user_id = get_current_user_id()
+    if user_id and not settings.ALLOW_SERVER_LLM_FALLBACK:
+        raise ValueError("No LLM API key is configured for this user. Add one in Settings.")
+
+
+def _build_user_llm(
+    credentials: UserLLMCredentials,
+    *,
+    model_name: str | None = None,
+) -> LLMService:
+    """Build an LLM service using the current user's saved provider credentials."""
+    tracer = get_tracer()
+    provider_name = credentials.provider.lower()
+    model = model_name or credentials.model
+
+    if provider_name == "gemini":
+        from app.llm.providers.gemini_provider import GeminiProvider
+        provider: LLMProvider = GeminiProvider(
+            api_key=credentials.api_key,
+            model=model,
+        )
+        return LLMService(provider)
+
+    if provider_name == "openrouter":
+        from app.llm.providers.openai_provider import OpenAIProvider
+        provider = OpenAIProvider(
+            api_key=credentials.api_key,
+            model=model,
+            base_url=credentials.base_url or "https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "http://localhost:8000",
+                "X-Title": "Agentic RAG",
+            },
+            tracer=tracer,
+            name="openrouter",
+        )
+        return LLMService(provider)
+
+    if provider_name == "openai":
+        from app.llm.providers.openai_provider import OpenAIProvider
+        provider = OpenAIProvider(
+            api_key=credentials.api_key,
+            model=model,
+            base_url=credentials.base_url or None,
+            tracer=tracer,
+            name="openai",
+        )
+        return LLMService(provider)
+
+    raise ValueError(
+        f"Unknown user LLM provider={provider_name!r}. "
+        "Supported: 'openai', 'openrouter', 'gemini'."
+    )
 
 
 def _build_llm() -> LLMService:

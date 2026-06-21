@@ -7,6 +7,12 @@ from pydantic import BaseModel
 from app.core.config import settings
 from app.core.database import get_db_conn, hash_password, verify_password
 from app.core.deps import CurrentUserDep
+from app.core.llm_credentials import (
+    LLMCredentialsResponse,
+    LLMCredentialsUpdate,
+    get_user_llm_credentials_summary,
+    update_user_llm_credentials,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -156,6 +162,22 @@ def list_users(current_user: CurrentUserDep):
             )
             for row in rows
         ]
+
+@router.get("/llm-credentials", response_model=LLMCredentialsResponse)
+def read_llm_credentials(current_user: CurrentUserDep):
+    """Return the current user's LLM settings without exposing the API key."""
+    return get_user_llm_credentials_summary(current_user.id)
+
+@router.put("/llm-credentials", response_model=LLMCredentialsResponse)
+def save_llm_credentials(payload: LLMCredentialsUpdate, current_user: CurrentUserDep):
+    """Save encrypted LLM settings for the current user."""
+    try:
+        return update_user_llm_credentials(current_user.id, payload)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
 @router.put("/users/{user_id}/permissions", response_model=UserResponse)
 def update_permissions(user_id: str, payload: PermissionsUpdate, current_user: CurrentUserDep):

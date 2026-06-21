@@ -33,10 +33,19 @@ class Settings(BaseSettings):
     # Auth/JWT settings
     JWT_SECRET: str = _AUTO_JWT_SECRET  # Falls back to stable auto-generated secret
 
+    # Supabase settings (optional, for future cloud authentication / storage migrations)
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+
+
     # LLM provider selection
     # 'auto' picks OpenRouter if OPEN_ROUTER_API_KEY is set, else OpenAI.
     # Explicit values: 'openai', 'openrouter' (and future: 'anthropic', 'gemini').
     LLM_PROVIDER: str = "gemini"
+    # When false, authenticated users must save their own API key in Settings.
+    # This prevents accidental use of the deployment owner's API key in production.
+    ALLOW_SERVER_LLM_FALLBACK: bool = True
 
     # OpenAI / OpenRouter credentials and model names
     OPENAI_API_KEY: str = ""

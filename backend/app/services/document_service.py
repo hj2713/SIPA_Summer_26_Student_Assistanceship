@@ -123,7 +123,17 @@ class DocumentService:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM documents WHERE id = ?;", (str(doc_id),))
             conn.commit()
-            return cursor.rowcount > 0
+            deleted = cursor.rowcount > 0
+            
+        if deleted:
+            try:
+                with self.db_conn_factory() as conn:
+                    conn.execute("VACUUM;")
+                    logger.info("Database vacuumed successfully after deleting document %s to reclaim disk space.", doc_id)
+            except Exception as e:
+                logger.error("Failed to vacuum database after deleting document %s: %s", doc_id, e)
+        return deleted
+
 
     def delete_document_chunks(self, client: Any, doc_id: str) -> None:
         """Delete all chunks belonging to a document."""

@@ -10,6 +10,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import settings
+from app.core.request_context import set_current_user_id
 from app.schemas.thread import CurrentUser
 
 logger = logging.getLogger(__name__)
@@ -60,12 +61,23 @@ def get_current_user(
                     can_add = True
                     can_delete = True
                 else:
-                    raise ValueError(f"User {user_id} not found in database")
+                    # Automatically register verified external user in local cache
+                    email = payload.get("email") or f"{user_id}@auth.external"
+                    is_admin = False
+                    can_add = True
+                    can_delete = False
+                    conn.execute(
+                        "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, ?, ?, ?);",
+                        (user_id, email, "EXTERNAL_AUTH_NO_PASSWORD", int(is_admin), int(can_add), int(can_delete))
+                    )
+                    conn.commit()
+                    logger.info("Automatically registered external user %s (%s) in local SQLite cache.", user_id, email)
             else:
                 is_admin = bool(row["is_admin"])
                 can_add = bool(row["can_add"])
                 can_delete = bool(row["can_delete"])
                     
+        set_current_user_id(user_id)
         return CurrentUser(
             id=user_id,
             jwt=token,

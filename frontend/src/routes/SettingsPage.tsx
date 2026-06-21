@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, Cpu, Coins } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, TrendingUp, Cpu, Coins, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { API_BASE_URL } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 
@@ -35,6 +36,19 @@ interface UsageStatsResponse {
   timeline: UsageTimeline[];
 }
 
+interface LLMCredentialsSettings {
+  provider: "openai" | "openrouter" | "gemini";
+  model: string;
+  base_url: string;
+  has_api_key: boolean;
+}
+
+const DEFAULT_MODEL_BY_PROVIDER: Record<LLMCredentialsSettings["provider"], string> = {
+  openai: "gpt-4.1-mini",
+  openrouter: "openai/gpt-4o-mini",
+  gemini: "gemini-3.1-flash-lite-preview",
+};
+
 export function SettingsPage() {
   const { session } = useAuthContext();
   const jwt = session?.access_token ?? "";
@@ -42,6 +56,15 @@ export function SettingsPage() {
   const [timeframe, setTimeframe] = useState<"last_hour" | "last_day" | "last_7_days" | "all">("last_day");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UsageStatsResponse | null>(null);
+  const [credentialsLoading, setCredentialsLoading] = useState(true);
+  const [credentialsSaving, setCredentialsSaving] = useState(false);
+  const [credentials, setCredentials] = useState<LLMCredentialsSettings>({
+    provider: "gemini",
+    model: DEFAULT_MODEL_BY_PROVIDER.gemini,
+    base_url: "",
+    has_api_key: false,
+  });
+  const [apiKeyInput, setApiKeyInput] = useState("");
 
   const fetchStats = async () => {
     if (!jwt) return;
@@ -61,9 +84,65 @@ export function SettingsPage() {
     }
   };
 
+  const fetchCredentials = async () => {
+    if (!jwt) return;
+    setCredentialsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error("Failed to load LLM credentials");
+      const data = await res.json();
+      setCredentials(data);
+      setApiKeyInput("");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to load LLM credentials");
+    } finally {
+      setCredentialsLoading(false);
+    }
+  };
+
+  const saveCredentials = async () => {
+    if (!jwt) return;
+    setCredentialsSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          provider: credentials.provider,
+          model: credentials.model,
+          base_url: credentials.base_url,
+          api_key: apiKeyInput.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || "Failed to save LLM credentials");
+      }
+      const data = await res.json();
+      setCredentials(data);
+      setApiKeyInput("");
+      toast.success("LLM settings saved");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to save LLM credentials");
+    } finally {
+      setCredentialsSaving(false);
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, [jwt, timeframe]);
+
+  useEffect(() => {
+    fetchCredentials();
+  }, [jwt]);
 
   // Max value calculation for custom SVG/CSS charting
   const maxTimelineCost = stats?.timeline && stats.timeline.length > 0
@@ -107,6 +186,98 @@ export function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-300">
+            <Card className="p-6">
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4 text-emerald-600" />
+                    <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                      LLM Credentials
+                    </h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Saved per user and encrypted on the backend.
+                  </p>
+                </div>
+                {credentials.has_api_key && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    <ShieldCheck className="h-4 w-4" />
+                    Key saved
+                  </div>
+                )}
+              </div>
+
+              {credentialsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="animate-spin text-primary h-5 w-5" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Provider
+                    <select
+                      value={credentials.provider}
+                      onChange={(event) => {
+                        const provider = event.target.value as LLMCredentialsSettings["provider"];
+                        setCredentials((prev) => ({
+                          ...prev,
+                          provider,
+                          model: DEFAULT_MODEL_BY_PROVIDER[provider],
+                          base_url: "",
+                        }));
+                      }}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 py-1 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      <option value="gemini">Google Gemini</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="openrouter">OpenRouter</option>
+                    </select>
+                  </label>
+
+                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Default Model
+                    <Input
+                      value={credentials.model}
+                      onChange={(event) => setCredentials((prev) => ({ ...prev, model: event.target.value }))}
+                      placeholder={DEFAULT_MODEL_BY_PROVIDER[credentials.provider]}
+                    />
+                  </label>
+
+                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
+                    API Key
+                    <Input
+                      type="password"
+                      value={apiKeyInput}
+                      onChange={(event) => setApiKeyInput(event.target.value)}
+                      placeholder={credentials.has_api_key ? "Leave blank to keep existing key" : "Paste your provider API key"}
+                      autoComplete="off"
+                    />
+                  </label>
+
+                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
+                    Base URL
+                    <Input
+                      value={credentials.base_url}
+                      onChange={(event) => setCredentials((prev) => ({ ...prev, base_url: event.target.value }))}
+                      placeholder={credentials.provider === "openrouter" ? "https://openrouter.ai/api/v1" : "Optional OpenAI-compatible endpoint"}
+                    />
+                  </label>
+
+                  <div className="md:col-span-2 flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={saveCredentials}
+                      disabled={credentialsSaving}
+                      className="gap-2"
+                    >
+                      {credentialsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+
             {/* Stat Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="p-5 flex flex-col justify-between border-violet-500/20 bg-violet-500/5 hover:border-violet-500/30 transition-all">

@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import get_db_conn
 from app.services.embedding import get_embedding_service, EmbeddingService
 from app.services.reranking import get_reranking_service, RerankingService
+from app.core.vectors import deserialize_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ class RetrievalService:
 
             # Deserialize fields
             for chunk in all_chunks:
-                chunk["embedding"] = json.loads(chunk["embedding"]) if chunk["embedding"] else []
+                chunk["embedding"] = deserialize_embedding(chunk["embedding"])
                 chunk["chunk_metadata"] = json.loads(chunk["chunk_metadata"]) if chunk["chunk_metadata"] else {}
                 chunk["doc_metadata"] = json.loads(chunk["doc_metadata"]) if chunk["doc_metadata"] else {}
 

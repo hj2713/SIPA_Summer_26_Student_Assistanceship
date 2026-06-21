@@ -11,9 +11,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routes import auth, chat, health, threads, documents, dashboards, usage
 
+import sys
+import os
+
+# Configure logging dynamically based on environment settings
+log_handlers = [logging.StreamHandler(sys.stdout)]
+
+if settings.ENV == "development":
+    # In development, also log to a local file for easy offline inspection
+    os.makedirs("data", exist_ok=True)
+    file_handler = logging.FileHandler("data/app.log", encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    log_handlers.append(file_handler)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    handlers=log_handlers,
+    force=True
 )
 logger = logging.getLogger(__name__)
 

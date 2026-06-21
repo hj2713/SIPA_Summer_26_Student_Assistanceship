@@ -9,7 +9,8 @@ from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel
 
-from app.llm.types import LLMChunk, LLMMessage, LLMTool
+from app.llm.types import LLMChunk, LLMMessage, LLMTool, LLMUsage
+
 
 
 @runtime_checkable

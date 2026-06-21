@@ -49,7 +49,7 @@ async def chat_stream(request: ChatRequest, current_user: CurrentUserDep):
             title_text = title_text.split("---ATTACHMENT_BOUNDARY---\n\n", 1)[-1]
 
         thread = thread_service.create_thread(
-            client, current_user.id, ThreadCreate(title=title_text[:60])
+            client, current_user.id, ThreadCreate(title=title_text[:60], dashboard_id=request.dashboard_id)
         )
         is_new_thread = True
 

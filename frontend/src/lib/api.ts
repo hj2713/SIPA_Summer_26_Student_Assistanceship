@@ -1,5 +1,5 @@
 /**
- * Fetch wrapper that attaches the Supabase JWT as an Authorization header.
+ * Fetch wrapper that attaches the local auth JWT as an Authorization header.
  *
  * Usage:
  *   const threads = await apiFetch<Thread[]>("/api/threads", session.access_token);

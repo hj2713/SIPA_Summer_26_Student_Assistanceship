@@ -3,12 +3,15 @@ set -e
 
 # Base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKEND_DIR="$BASE_DIR/backend"
+FRONTEND_DIR="$BASE_DIR/frontend"
+BACKEND_PYTHON="$BACKEND_DIR/venv/bin/python"
 
-echo "=== Setting up Agentic RAG Masterclass ==="
+echo "=== Setting up Law Delegation ==="
 
 # 1. Setup Backend env
 echo "👉 Setting up backend environment..."
-cd "$BASE_DIR/backend"
+cd "$BACKEND_DIR"
 if [ ! -f .env ]; then
   cp .env.example .env
   echo "✅ Created backend/.env from .env.example (please fill in your keys!)"
@@ -17,20 +20,20 @@ else
 fi
 
 # Create python virtual environment
-if [ ! -d venv ]; then
+if [ ! -x "$BACKEND_PYTHON" ]; then
   echo "👉 Creating Python virtual environment..."
   python3 -m venv venv
   echo "✅ Created virtual environment."
 fi
 
 echo "👉 Installing backend dependencies..."
-./venv/bin/pip install --upgrade pip
-./venv/bin/pip install -r requirements.txt
+"$BACKEND_PYTHON" -m pip install --upgrade pip
+"$BACKEND_PYTHON" -m pip install -r requirements.txt
 echo "✅ Backend dependencies installed."
 
 # 2. Setup Frontend env
 echo "👉 Setting up frontend environment..."
-cd "$BASE_DIR/frontend"
+cd "$FRONTEND_DIR"
 if [ ! -f .env.local ]; then
   cp .env.example .env.local
   echo "✅ Created frontend/.env.local from .env.example (please fill in your keys!)"

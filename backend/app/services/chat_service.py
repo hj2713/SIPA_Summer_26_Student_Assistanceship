@@ -81,12 +81,12 @@ class ChatService:
         thread_id: str,
         messages: list[dict[str, Any]],
         user_client: Any = None,
-        supabase_client: Any = None,  # kept for backward compatibility
+        legacy_client: Any = None,
         pinned_document_ids: list[str] | None = None,
         dashboard_id: str | None = None,
     ) -> AsyncGenerator[SseEvent, None]:
         """Stream a chat response as SSE events."""
-        client = user_client or supabase_client
+        client = user_client or legacy_client
 
         # Resolve the thread-configured model
         model_name = None
@@ -140,25 +140,54 @@ class ChatService:
                     if doc:
                         docs.append(doc)
 
-                if docs and all(doc.file_size < 100000 for doc in docs):
+                if docs:
                     try:
                         extra_system_messages: list[LLMMessage] = []
                         for doc in docs:
-                            content_bytes = self._doc_service.storage_service.download_file(doc.file_path)
-                            full_file_text = content_bytes.decode("utf-8", errors="replace")
+                            # Retrieve content from chunks or storage
+                            from app.core.database import get_db_conn
+                            import json
+                            with db_conn_factory() as conn:
+                                cursor = conn.cursor()
+                                cursor.execute("SELECT content, metadata FROM document_chunks WHERE document_id = ?;", (str(doc.id),))
+                                rows = cursor.fetchall()
+
+                            if rows:
+                                chunks_with_index = []
+                                for r in rows:
+                                    content = r[0]
+                                    meta_str = r[1]
+                                    idx = 0
+                                    try:
+                                        meta = json.loads(meta_str)
+                                        idx = meta.get("chunk_index", 0)
+                                    except Exception:
+                                        pass
+                                    chunks_with_index.append((idx, content))
+                                chunks_with_index.sort(key=lambda x: x[0])
+                                full_file_text = "\n\n".join(c[1] for c in chunks_with_index)
+                            else:
+                                content_bytes = self._doc_service.storage_service.download_file(doc.file_path)
+                                full_file_text = content_bytes.decode("utf-8", errors="replace")
+
+                            # Limit size to 10,000 characters to protect LLM context length
+                            MAX_PINNED_CONTEXT_CHARS = 10000
+                            if len(full_file_text) > MAX_PINNED_CONTEXT_CHARS:
+                                full_file_text = full_file_text[:MAX_PINNED_CONTEXT_CHARS] + "\n\n... [TRUNCATED DUE TO FILE SIZE LIMITS] ..."
+
                             extra_system_messages.append(
                                 LLMMessage(
                                     role="system",
                                     content=(
-                                        f"The user has pinned the complete document '{doc.filename}'. "
-                                        "Below is the full content of this file. Use it to answer the user's query.\n\n"
+                                        f"The user has tagged/pinned the document '{doc.filename}'. "
+                                        "Below is the content of this file. Use it to answer the user's query.\n\n"
                                         f"--- FILE CONTENT START ({doc.filename}) ---\n"
                                         f"{full_file_text}\n"
                                         "--- FILE CONTENT END ---"
                                     ),
                                 )
                             )
-                            logger.info("Successfully loaded full text of small file: %s", doc.filename)
+                            logger.info("Successfully loaded context of tagged file: %s (truncated if needed)", doc.filename)
 
                         # Insert pinned-file system messages just before the final user turn
                         if llm_messages:
@@ -350,8 +379,8 @@ async def stream_chat(
     user_id: str,
     thread_id: str,
     messages: list[dict[str, Any]],
-    supabase_client: Any = None,
     user_client: Any = None,
+    legacy_client: Any = None,
     pinned_document_ids: list[str] | None = None,
     dashboard_id: str | None = None,
 ) -> AsyncGenerator[SseEvent, None]:
@@ -359,7 +388,7 @@ async def stream_chat(
         user_id=user_id,
         thread_id=thread_id,
         messages=messages,
-        user_client=user_client or supabase_client,
+        user_client=user_client or legacy_client,
         pinned_document_ids=pinned_document_ids,
         dashboard_id=dashboard_id,
     ):

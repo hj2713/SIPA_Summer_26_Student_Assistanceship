@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
 
 from app.core.deps import CurrentUserDep
-from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, CellUpdatePayload, ReevaluateCellPayload
+from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload
 from app.services import campaign_service
 from app.services.coding_service import generate_schema_and_description, enqueue_sequential_coding
 from app.core.client import get_user_client
@@ -241,6 +241,39 @@ async def reevaluate_coded_cell(
         id, doc_id, payload.column_name, payload.user_prompt
     )
     return {"message": "Cell re-evaluated successfully.", "coded_values": coded_values}
+
+
+@router.post("/{id}/columns/{column_name}/reevaluate", response_model=DashboardRow)
+async def reevaluate_campaign_column(
+    id: str,
+    column_name: str,
+    payload: ReevaluateColumnPayload,
+    current_user: CurrentUserDep
+):
+    """Trigger LLM re-evaluation of a specific column across all documents."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to re-evaluate columns."
+        )
+    return await campaign_service.reevaluate_column(id, column_name, payload.feedback_prompt)
+
+
+@router.post("/{id}/documents/{doc_id}/reevaluate-row", status_code=status.HTTP_200_OK)
+async def reevaluate_campaign_row(
+    id: str,
+    doc_id: str,
+    payload: ReevaluateRowPayload,
+    current_user: CurrentUserDep
+):
+    """Trigger LLM re-evaluation of all columns in a row (document) using feedback."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to re-evaluate rows."
+        )
+    coded_values = await campaign_service.reevaluate_row(id, doc_id, payload.feedback_prompt)
+    return {"message": "Row re-evaluated successfully.", "coded_values": coded_values}
 
 
 @router.post("/{id}/regenerate-schema", response_model=DashboardRow)

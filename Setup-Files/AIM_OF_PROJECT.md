@@ -1,135 +1,98 @@
-# 🎯 Project Goal: Legislative Coding Platform (Agentic RAG Masterclass)
+# Aim of Project: Law Delegation
 
-This document is the single source of truth for the **Agentic RAG Masterclass** repository. It outlines the project's core objectives, the academic and research context, system architecture, and constraints.
+This document defines the long-term purpose of the project. It should stay stable and strategic. Do not use this file as a daily issue log, prompt notebook, or temporary debugging record.
 
----
-
-## 🏫 Academic & Research Context (SIPA Quantitative Analysis II)
-
-This platform is being built to support academic research in policy analysis and program evaluation under the **School of International and Public Affairs (SIPA)** for the course **Quantitative Analysis II**. 
-
-### The Research Question
-In political science and public policy, researchers study **congressional delegation** and **agency discretion**:
-*   How often does Congress delegate authority to executive agencies (like the SEC, EPA, or Treasury)?
-*   How much discretionary power does Congress grant them?
-*   What constraints (e.g., spending limits, reporting requirements, sunsets) are placed on those agencies?
-
-Traditionally, to answer these questions, researchers hire Research Assistants (RAs) to read thousands of pages of financial regulation laws (e.g., from the *CQ Almanac* summaries or full statutory text) and manually record variables in spreadsheets. This project automates that process using LLMs, creating a **Systematic Legal Document Coding Platform**.
-
-The resulting dataset (e.g. discretion scores, constraint types, agency names) is exported as a CSV, allowing students and professors to run **multiple regression analysis** to evaluate the causes and effects of policy design.
+For active work, decisions, and resolved issues, use the files in `Project-Tracking/`.
 
 ---
 
-## 🚀 The Core Application Goals
+## Vision
 
-Our application provides two distinct operational paradigms:
+Law Delegation is a local-first research platform for turning legislative and policy documents into structured social-science datasets.
 
-1.  **📊 The Campaign Coding Runner (Primary Goal)**:
-    *   **Single-Document Structured Extraction**: The system iterates through a collection of uploaded laws (like the `.txt` files in `finance_final_txts`).
-    *   **Staged Prompt Implementation**: For each file, the system feeds the *entire document content* (not semantic chunks) into the LLM alongside a structured codebook prompt (like `Prompt_v3.txt`).
-    *   **Reasoning-Based Variables**: The LLM executes a multi-stage analysis (detecting delegation, listing delegees, mapping constraints to 12 distinct categories, and applying consistency checks) before outputting a final **Discretion Score (0-4)**.
-    *   **Coded Grid Interface**: Results populate a spreadsheet dashboard where researchers can inspect the LLM’s extracted values, review quotes/rationales, override values manually, and export the dataset as a CSV.
+The product should help a policy researcher move from unstructured legal text to reviewable, exportable coding decisions. The system is not meant to be a generic chatbot over laws. Its core value is structured coding: fields, labels, rationales, review history, corrections, and exports that can support academic analysis.
 
-2.  **💬 The Exploratory Chatbot (RAG + SQL Assistant)**:
-    *   An interactive chat interface that operates *after* the documents have been uploaded or coded.
-    *   **RAG Retrieval**: If a user asks a question about the document text (e.g., *"What did the Real Estate Settlement Act of 1975 say about escrow accounts?"*), the system uses vector + keyword hybrid search to retrieve matching text chunks.
-    *   **Text-to-SQL Routing**: If a user asks a quantitative question about the spreadsheet data (e.g., *"How many laws in our campaign have a discretion rank of 4?"*), the agent uses a SQL tool to query the underlying database tables and returns structured statistics.
+## Research Problem
 
----
+The project supports research on congressional delegation and agency discretion.
 
-## 🛠️ System Architecture
+Researchers want to understand when Congress delegates authority to administrative actors, how much discretion those actors receive, and what statutory or procedural constraints shape that discretion.
 
-```mermaid
-graph TD
-    subgraph Frontend [React + TS + Vite + Tailwind]
-        UI[Chat / Campaign Spreadsheet UI]
-        RTS[Supabase Realtime Status]
-    end
+Historically, these values were coded manually by researchers. The project aims to make that workflow faster, more inspectable, and easier to reproduce without hiding uncertainty or researcher judgment.
 
-    subgraph Backend [Python + FastAPI]
-        API[FastAPI Endpoints]
-        Docling[Docling Parser]
-        Chunker[Recursive Character Splitter]
-        Rerank[HuggingFace Reranker MS-MARCO]
-        SQLTool[Text-to-SQL Exec Engine]
-        SearchTool[DuckDuckGo Web Fallback]
-    end
+## Product Goal
 
-    subgraph Supabase [Cloud Database & Storage]
-        Auth[Supabase Auth]
-        Store[Private Storage Bucket]
-        DB[Postgres + pgvector]
-    end
+The main product is a campaign-based coding dashboard.
 
-    subgraph AI & Observability [LLM & Tracing]
-        LLM[OpenRouter / OpenAI API]
-        LangSmith[LangSmith Observability]
-    end
+A researcher should be able to:
 
-    UI --> Auth
-    UI --> API
-    API --> Store
-    API --> DB
-    API --> LLM
-    LLM --> LangSmith
-    RTS <-- Realtime Channel --> DB
-```
+1. Define a research codebook.
+2. Upload or link relevant documents.
+3. Run structured LLM coding against those documents.
+4. Inspect each value and rationale.
+5. Override or re-evaluate questionable outputs.
+6. Track prompt versions and coding history.
+7. Export a clean dataset for downstream analysis.
 
----
+The chat/RAG experience is useful, but it is secondary. The durable product value is the coding workflow and the dataset it produces.
 
-## 📈 Comparing the Codebook Prompt Versions
+## Current Strategic Focus
 
-To achieve research-grade accuracy, the prompt evolved to overcome standard LLM biases:
+The project should progress in stages.
 
-*   **Prompt v1 (One-Shot Direct)**: Asked the LLM to output `DelegateLaw` and `RG_Discretion_Rank (0-4)` in a single step.
-    *   *Flaw*: The LLM over-indexes on any mention of an executive agency or standard rulemaking authority. Because it has no step-by-step thinking about constraints, it codes almost every law as a `4` (high discretion). This creates an "all-4s" dataset with zero variance, making it useless for statistical regression analysis.
-*   **Prompt v2 (Modular Direct)**: Split the delegation and discretion tasks into separate model runs (V1: delegation label, V2: delegation with rationale, V3: discretion rank, V4: discretion rank with rationale), but still relied on single-pass judgments without forcing the LLM to evaluate constraints systematically.
-*   **Prompt v3 (Staged Coding - Version 6)**: Forces a **5-stage sequential reasoning pipeline**:
-    1.  **Stage 1**: Screen for delegation presence (`DelegateLaw: Y/N` with textual evidence and rationale).
-    2.  **Stage 2**: Measure delegation level (None/Low/Moderate/High) and centrality, and list the delegee agencies and authority.
-    3.  **Stage 3**: Check for constraints (statutory limits on authority) and rate constraint levels.
-    4.  **Stage 4**: Map constraints to **12 predefined categories** (e.g. reporting, consultation, spending limits, sunsets, exemptions, appeals, direct oversight).
-    5.  **Stage 5**: Assign the final **Discretion Rank (0-4)** using strict consistency rules (e.g., if delegation is Low and constraints are High, the rank must be a `1` or `2`, never a `4`). This forces the LLM to lower the score when constraints are present, solving the "all-4s" bias.
+The current stage is benchmark alignment for a single binary delegation field. The purpose of this stage is to recover and operationalize the professor's manual coding logic before expanding into more complex discretion and constraint variables.
 
----
+This is a research-calibration problem as much as an engineering problem. A plausible LLM rationale is not automatically correct, and a legacy manual label is not automatically self-explanatory. The system must make disagreements visible so researchers can decide whether the prompt, source text, benchmark, or codebook needs revision.
 
-## 🔍 Understanding Social Science "Coding" vs "Programming"
+## Operating Principles
 
-In this project, **"Coding"** refers to the social science method of **content analysis** or **document coding**. It does **not** mean writing computer software.
-*   **Social Science Coding**: A researcher reads a text (e.g., a law summary) and categorizes it using variables (e.g., assigning `DelegateLaw = Y` and `RG_Discretion_Rank = 2`).
-*   **The Problem**: Doing this manually with research assistants (RAs) is slow, expensive, and subject to human fatigue.
-*   **The Solution**: Automating this process using structured LLM outputs to read the texts and fill the database, allowing researchers to download a CSV and run regression models.
+1. Keep benchmark experiments and exploratory experiments clearly separated.
+2. Do not mix document sources when comparing against a benchmark.
+3. Preserve traceability for every coded value: source text, prompt version, model, value, rationale, and review history.
+4. Prefer small, testable calibration steps over broad multi-variable prompting.
+5. Keep production coding logic separate from one-off prompt experiments.
+6. Treat professor feedback as research input that should be captured, tested, and converted into codebook rules.
+7. Keep the product understandable for non-technical policy researchers.
 
----
+## Intended Workflow
 
-## 📊 The Sample Excel Data & "Missing Language"
+The mature workflow should support:
 
-The professor provided a sample Excel spreadsheet mapping specific Public Laws to their manual coding results (assigned by human researchers).
-*   **Top Table (Description Language Provided = Y)**: Includes 15 laws (like PL 99-571, PL 97-444, PL 94-29). The actual text ("language") of these law summaries is provided in Tab 2 of the Excel sheet. Because these are short summaries, they can fit inside Excel cells and represent a perfect test suite for the LLM.
-*   **Bottom Table (Language Provided = N / "Nine Laws missing language")**: Contains 9 laws (like PL 101-508, PL 111-203, PL 94-200) where the text is **not** provided in Tab 2.
-    *   *Why are they missing in Excel?* Many of these laws are massive (e.g., Dodd-Frank PL 111-203 is 3.1MB, and PL 101-508 is 1.8MB). Since Excel has a hard limit of 32,767 characters per cell, their full statutory text could not be pasted into the spreadsheet.
-    *   *Source File Inconsistency*: In our `finance_final_txts` folder, the source files for some of these laws are fragmented or corrupted. For example:
-        *   `1964_88-353_HR8459.txt` actually contains Title XI of the Civil Rights Act of 1964 (PL 88-352) instead of the Federal Credit Union Act Amendments.
-        *   `1975_94-200_S1281.txt` is missing the first two titles and starts at Section 305.
-        *   `1971_92-9_HR5432.txt` starts mid-sentence and then appends Public Law 92-10.
-        *   `1966_89-356_S1698.txt` starts mid-sentence and appends Public Law 89-357.
+1. Campaign creation from a research prompt or codebook.
+2. Document ingestion and campaign linking.
+3. Structured coding for delegation and later discretion variables.
+4. Human review, override, and re-evaluation.
+5. Benchmark comparison when ground-truth labels exist.
+6. Export to CSV or spreadsheet formats.
+7. Auditability across prompt versions and model runs.
 
----
+## Architecture Direction
 
-## 🛠️ Tech Stack Alignment: LLM vs SQL vs RAG
+The project is local-first.
 
-To build what the professor wants, three distinct technical components are utilized:
-1.  **Structured LLM Calls (The Coding Runner)**: Used to read the *entire* document text and return a structured JSON output (Pydantic model) containing the coded variables and evidence. **RAG (vector retrieval) is NOT used here** because checking for global properties like "discretion score" or "all constraints" requires reading the full context of the document, not matching snippets.
-2.  **SQL Database (The Structured Store & Analytics)**: Stores the final coded dashboard results (`coded_values` JSON). If a researcher asks a quantitative question (e.g., *"What is the average discretion score of all coded laws?"*), the system routes the question to a **Text-to-SQL tool** that queries the database directly.
-3.  **RAG (vector search) (The Chat Assistant)**: Used only in the exploratory chat interface. If a user asks a qualitative question about specific contents of a law (e.g., *"What did the Real Estate Settlement Act of 1975 say about escrow accounts?"*), RAG retrieves the relevant vector-matched text chunks to answer.
+The current architecture should remain centered on:
 
----
+1. React, TypeScript, Vite, and Tailwind on the frontend.
+2. FastAPI on the backend.
+3. SQLite for local persistence.
+4. Local filesystem storage for uploaded documents.
+5. Local authentication and workspace scoping.
+6. LLM providers such as Gemini, OpenAI, or OpenRouter for structured generation.
+7. Optional tracing and evaluation tooling where it helps debugging.
 
-## ⚠️ Key Operational Constraints
+Cloud services should not be introduced casually. If a future cloud dependency is added, it should solve a real product requirement and be documented as an architectural decision.
 
-1.  **No LLM Frameworks**: Use raw OpenAI SDK calls for completions and tool loops.
-2.  **Strict Row-Level Security (RLS)**: Users must only access their own threads, campaigns, and files.
-3.  **SSE Streaming**: Chat responses and tool logs must stream token-by-token.
-4.  **Supabase Realtime**: Use database triggers and channels to report background ingestion status in the UI.
-5.  **LangSmith Observability**: Trace all LLM calls with campaign, user, and document metadata tags.
+## Project Management Rule
+
+Stable project docs should answer:
+
+1. What are we building?
+2. Why are we building it?
+3. What stage are we in?
+4. What are the product principles?
+5. What should future agents preserve?
+
+They should not store short-lived facts like a specific failed run, one mismatched file, or one temporary prompt issue.
+
+Use `Project-Tracking/` for that work instead.
 

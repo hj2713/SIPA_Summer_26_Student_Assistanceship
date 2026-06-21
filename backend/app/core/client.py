@@ -1,7 +1,4 @@
-"""Per-request local client wrapper representing the authenticated user context.
-
-Replaces the old supabase_client.py.
-"""
+"""Per-request local client wrapper representing the authenticated user context."""
 import jwt
 
 from app.core.config import settings

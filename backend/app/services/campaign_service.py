@@ -651,6 +651,345 @@ class CampaignService:
 
         return coded_values
 
+    async def reevaluate_column(
+        self,
+        id: str,
+        column_name: str,
+        feedback_prompt: str,
+    ) -> DashboardRow:
+        """Trigger LLM re-evaluation of a specific column across all documents in a campaign dashboard."""
+        import datetime
+        from fastapi import HTTPException
+        from pydantic import create_model, Field
+        from typing import Optional
+        from app.llm.registry import get_llm
+        from app.llm.types import LLMMessage
+
+        with self.db_conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT prompt, schema FROM dashboards WHERE id = ?;", (id,))
+            campaign_row = cursor.fetchone()
+            if not campaign_row:
+                raise HTTPException(status_code=404, detail="Campaign not found.")
+            campaign_prompt = campaign_row["prompt"]
+            try:
+                schema = json.loads(campaign_row["schema"])
+            except Exception:
+                schema = []
+
+            # 1. Update the column's prompt history and version in the schema
+            col_def = None
+            for col in schema:
+                if col["name"] == column_name:
+                    col_def = col
+                    break
+            if not col_def:
+                raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found in campaign schema.")
+
+            current_version = col_def.get("prompt_version", 1)
+            prompt_history = col_def.get("prompt_history", [])
+            
+            # If prompt history is empty, record version 1
+            if not prompt_history:
+                prompt_history.append({
+                    "version": 1,
+                    "prompt": col_def.get("description", "Original column description"),
+                    "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+                })
+            
+            new_version = current_version + 1
+            prompt_history.append({
+                "version": new_version,
+                "prompt": feedback_prompt,
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+            })
+            
+            col_def["prompt_version"] = new_version
+            col_def["prompt_history"] = prompt_history
+
+            # Save the updated schema
+            conn.execute(
+                "UPDATE dashboards SET schema = ? WHERE id = ?;",
+                (json.dumps(schema), id)
+            )
+            conn.commit()
+
+            # 2. Get all documents linked to the campaign
+            cursor.execute(
+                "SELECT document_id, coded_values FROM dashboard_documents WHERE dashboard_id = ?;",
+                (id,)
+            )
+            doc_rows = cursor.fetchall()
+
+        # 3. Process each document sequentially
+        col_type = col_def["type"]
+        col_desc = col_def.get("description", "")
+        opts = col_def.get("options")
+        
+        py_type = str
+        if col_type == "number":
+            py_type = float
+        elif col_type == "boolean":
+            py_type = bool
+            
+        allowed_options_text = f"Allowed Categories: {', '.join(opts)}" if opts else ""
+        
+        ReevaluationResult = create_model(
+            "ReevaluationResult",
+            value=(Optional[py_type], Field(description="The new or confirmed value for the variable, conforming to the expected type.")),
+            reasoning=(str, Field(description="The detailed rationale or quote supporting this value, specifically addressing the user's critique."))
+        )
+
+        for doc_r in doc_rows:
+            doc_id = doc_r["document_id"]
+            try:
+                coded_values = json.loads(doc_r["coded_values"]) if doc_r["coded_values"] else {}
+            except Exception:
+                coded_values = {}
+
+            doc_text = self._coding_service.get_document_text(doc_id)
+            if not doc_text or not doc_text.strip():
+                continue
+
+            MAX_CODING_INPUT_CHARS = 80000
+            if len(doc_text) > MAX_CODING_INPUT_CHARS:
+                doc_text = doc_text[:MAX_CODING_INPUT_CHARS] + "\n\n... [TRUNCATED] ..."
+
+            previous_val = coded_values.get(column_name)
+            previous_reasoning = coded_values.get(f"{column_name}_reasoning", "")
+
+            system_instruction = (
+                "You are an AI coding assistant helping a quantitative research researcher.\n"
+                "Your task is to re-evaluate the value and reasoning for a specific variable extracted from a document, based on the researcher's corrective feedback.\n\n"
+                f"=== CAMPAIGN SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
+                "=== COLUMN CRITERIA ===\n"
+                f"Variable Name: {column_name}\n"
+                f"Type: {col_type}\n"
+                f"Description: {col_desc}\n"
+                f"{allowed_options_text}\n"
+            )
+            
+            user_msg = (
+                f"We previously analyzed this document and extracted the following results for the variable '{column_name}':\n"
+                f"- Previous Assigned Value: {previous_val}\n"
+                f"- Previous Rationale/Evidence: {previous_reasoning}\n\n"
+                f"The researcher provided the following corrective feedback or instructions:\n"
+                f"\"{feedback_prompt}\"\n\n"
+                "Please re-analyze the document and the feedback. Correct the value and update the reasoning accordingly, or if the previous value was correct, explain why in your reasoning while addressing the feedback.\n\n"
+                f"=== DOCUMENT CONTENT ===\n{doc_text}"
+            )
+
+            llm = get_llm()
+            try:
+                parsed = await llm.parse_structured(
+                    [
+                        LLMMessage(role="system", content=system_instruction),
+                        LLMMessage(role="user", content=user_msg),
+                    ],
+                    schema=ReevaluationResult,
+                )
+                if parsed is not None:
+                    new_val = parsed.value
+                    new_reasoning = parsed.reasoning
+                    
+                    history_key = f"{column_name}_history"
+                    history = coded_values.get(history_key, [])
+                    if not history:
+                        if previous_val is not None:
+                            history.append({
+                                "version": 1,
+                                "value": previous_val,
+                                "reasoning": previous_reasoning,
+                                "feedback_prompt": None,
+                                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                                "source": "ai"
+                            })
+
+                    history.append({
+                        "version": len(history) + 1,
+                        "value": new_val,
+                        "reasoning": new_reasoning,
+                        "feedback_prompt": feedback_prompt,
+                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                        "source": "ai_reevaluation"
+                    })
+
+                    coded_values[column_name] = new_val
+                    coded_values[f"{column_name}_reasoning"] = new_reasoning
+                    coded_values[history_key] = history
+
+                    with self.db_conn_factory() as conn:
+                        conn.execute(
+                            "UPDATE dashboard_documents SET coded_values = ? WHERE dashboard_id = ? AND document_id = ?;",
+                            (json.dumps(coded_values), id, doc_id)
+                        )
+                        conn.commit()
+            except Exception as e:
+                logger.error("Sequential column re-evaluation failed for doc %s, column %s: %s", doc_id, column_name, e)
+
+        return self.get_campaign(id)
+
+    async def reevaluate_row(
+        self,
+        id: str,
+        doc_id: str,
+        feedback_prompt: str,
+    ) -> Dict[str, Any]:
+        """Trigger LLM re-evaluation of all schema variables in a row (document) based on corrective feedback."""
+        import datetime
+        from fastapi import HTTPException
+        from pydantic import create_model, Field
+        from typing import Optional
+        from app.llm.registry import get_llm
+        from app.llm.types import LLMMessage
+
+        with self.db_conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT prompt, schema FROM dashboards WHERE id = ?;", (id,))
+            campaign_row = cursor.fetchone()
+            if not campaign_row:
+                raise HTTPException(status_code=404, detail="Campaign not found.")
+            campaign_prompt = campaign_row["prompt"]
+            try:
+                schema = json.loads(campaign_row["schema"])
+            except Exception:
+                schema = []
+
+            cursor.execute(
+                "SELECT coded_values FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
+                (id, doc_id)
+            )
+            doc_row = cursor.fetchone()
+            if not doc_row:
+                raise HTTPException(status_code=404, detail="Document not linked to this campaign.")
+            try:
+                coded_values = json.loads(doc_row["coded_values"]) if doc_row["coded_values"] else {}
+            except Exception:
+                coded_values = {}
+
+        doc_text = self._coding_service.get_document_text(doc_id)
+        if not doc_text or not doc_text.strip():
+            raise HTTPException(status_code=400, detail="Document text content could not be retrieved.")
+
+        MAX_CODING_INPUT_CHARS = 80000
+        if len(doc_text) > MAX_CODING_INPUT_CHARS:
+            doc_text = doc_text[:MAX_CODING_INPUT_CHARS] + "\n\n... [TRUNCATED] ..."
+
+        # Build dynamic fields dictionary for structured parsing of the whole row schema
+        fields = {}
+        for col in schema:
+            col_name = col["name"]
+            col_type = col["type"]
+            col_desc = col.get("description", "")
+            opts = col.get("options")
+            
+            py_type = str
+            if col_type == "number":
+                py_type = float
+            elif col_type == "boolean":
+                py_type = bool
+                
+            allowed = f" Allowed categories: {', '.join(opts)}." if opts else ""
+            
+            # Sub-model for each column's value and reasoning
+            ColResult = create_model(
+                f"Result_{col_name}",
+                value=(Optional[py_type], Field(description=f"Value for {col_name}. {col_desc}{allowed}")),
+                reasoning=(str, Field(description=f"Detailed rationale/evidence for {col_name} value."))
+            )
+            fields[col_name] = (ColResult, Field(description=f"Re-evaluated value and reasoning for {col_name}"))
+
+        RowReevaluationResult = create_model("RowReevaluationResult", **fields)
+
+        # Assemble summary of previous values and reasonings for context
+        prev_summary = []
+        for col in schema:
+            cname = col["name"]
+            pval = coded_values.get(cname)
+            preas = coded_values.get(f"{cname}_reasoning", "")
+            prev_summary.append(f"Column: {cname}\n- Previous Value: {pval}\n- Previous Reasoning: {preas}")
+        prev_summary_text = "\n\n".join(prev_summary)
+
+        system_instruction = (
+            "You are an AI coding assistant helping a quantitative research researcher.\n"
+            "Your task is to re-evaluate the coded values for all variables of a single document, based on the researcher's corrective feedback.\n\n"
+            f"=== CAMPAIGN SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n"
+        )
+        
+        user_msg = (
+            "We previously analyzed this document and extracted the following results:\n\n"
+            f"{prev_summary_text}\n\n"
+            "The researcher is unsatisfied with the coding of this document and provided the following feedback/instructions:\n"
+            f"\"{feedback_prompt}\"\n\n"
+            "Please re-analyze the document and feedback. Correct any incorrect values and reasonings, keeping them consistent with the feedback and campaign rules.\n\n"
+            f"=== DOCUMENT CONTENT ===\n{doc_text}"
+        )
+
+        llm = get_llm()
+        try:
+            parsed = await llm.parse_structured(
+                [
+                    LLMMessage(role="system", content=system_instruction),
+                    LLMMessage(role="user", content=user_msg),
+                ],
+                schema=RowReevaluationResult,
+            )
+            if parsed is None:
+                raise ValueError("LLM returned empty parsed result")
+        except Exception as err:
+            logger.error("LLM row re-evaluation failed for doc %s: %s", doc_id, err)
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI Row Re-evaluation failed: {str(err)}"
+            )
+
+        # Apply updates to coded_values dictionary and append history
+        for col in schema:
+            cname = col["name"]
+            col_res = getattr(parsed, cname, None)
+            if col_res is not None:
+                new_val = col_res.value
+                new_reasoning = col_res.reasoning
+                
+                previous_val = coded_values.get(cname)
+                previous_reasoning = coded_values.get(f"{cname}_reasoning", "")
+                
+                # Check if value or reasoning changed, or record anyway
+                history_key = f"{cname}_history"
+                history = coded_values.get(history_key, [])
+                if not history:
+                    if previous_val is not None:
+                        history.append({
+                            "version": 1,
+                            "value": previous_val,
+                            "reasoning": previous_reasoning,
+                            "feedback_prompt": None,
+                            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                            "source": "ai"
+                        })
+                
+                history.append({
+                    "version": len(history) + 1,
+                    "value": new_val,
+                    "reasoning": new_reasoning,
+                    "feedback_prompt": feedback_prompt,
+                    "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                    "source": "ai_row_reevaluation"
+                })
+                
+                coded_values[cname] = new_val
+                coded_values[f"{cname}_reasoning"] = new_reasoning
+                coded_values[history_key] = history
+
+        with self.db_conn_factory() as conn:
+            conn.execute(
+                "UPDATE dashboard_documents SET coded_values = ? WHERE dashboard_id = ? AND document_id = ?;",
+                (json.dumps(coded_values), id, doc_id)
+            )
+            conn.commit()
+
+        return coded_values
+
     async def regenerate_campaign_schema(self, id: str) -> DashboardRow:
         """Regenerate campaign schema by running the LLM prompt extraction again."""
         campaign = self.get_campaign(id)

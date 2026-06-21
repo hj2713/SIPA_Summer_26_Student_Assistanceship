@@ -1,7 +1,7 @@
 """Thread management routes.
 
 All routes require a valid JWT (CurrentUserDep).
-RLS is enforced at the DB layer via user-scoped Supabase clients.
+Access is enforced by local JWT auth and user-scoped SQLite queries.
 """
 import logging
 
@@ -67,3 +67,13 @@ async def update_thread_model(thread_id: str, payload: ThreadModelUpdate, curren
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
     return updated
+
+
+@router.get("/campaign/{dashboard_id}", response_model=ThreadWithMessages | None)
+async def get_campaign_thread(dashboard_id: str, current_user: CurrentUserDep):
+    """Get the latest chat thread associated with a campaign dashboard."""
+    client = get_user_client(current_user.jwt)
+    thread = thread_service.get_latest_thread_for_campaign(client, current_user.id, dashboard_id)
+    if thread is None:
+        return None
+    return thread_service.get_thread_with_messages(client, str(thread.id), current_user.id)

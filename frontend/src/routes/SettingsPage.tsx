@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, Cpu, Coins, Key } from "lucide-react";
+import { Loader2, TrendingUp, Cpu, Coins } from "lucide-react";
 import { API_BASE_URL } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 

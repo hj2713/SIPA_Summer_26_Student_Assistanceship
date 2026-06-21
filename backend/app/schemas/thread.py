@@ -18,6 +18,7 @@ class ThreadBase(BaseModel):
     title: str = "New conversation"
     provider: str = "openai"
     model: str | None = None
+    dashboard_id: str | None = None
 
 
 class ThreadCreate(ThreadBase):

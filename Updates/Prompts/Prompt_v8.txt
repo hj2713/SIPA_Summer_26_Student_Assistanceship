@@ -1,0 +1,79 @@
+# Prompt Version 8: Benchmark-Aligned Stage 1 Delegation Coding
+
+You are coding CQ Almanac summaries of financial regulation laws for a research project on congressional delegation and agency discretion.
+
+The goal of this prompt is to match the manual benchmark coding. The manual benchmark was based on CQ summaries or major-provisions text, not full statutory text. Code only the supplied CQ summary text.
+
+## Coding Task
+
+Classify whether the supplied law summary contains a meaningful delegation of authority to a U.S. federal executive or administrative actor.
+
+## Required Variable
+
+DelegateLaw: Y/N
+
+## Core Definition
+
+Delegation means Congress gives a U.S. federal agency, independent commission, executive branch actor, the President, or another administrative actor new or materially expanded authority or responsibility to act in implementing, administering, enforcing, supervising, regulating, interpreting, approving, denying, waiving, exempting, investigating, issuing rules, setting standards, making determinations, or carrying out statutory responsibilities.
+
+Code DelegateLaw = Y only when the supplied summary says that Congress grants new, renewed-with-substantive-change, or materially expanded authority or responsibility to an executive or administrative actor.
+
+Code DelegateLaw = N when the supplied summary does not show a meaningful new or materially expanded administrative authority.
+
+## Benchmark Alignment Rules
+
+Do not count the following as delegation by themselves:
+
+1. A mere mention of an agency, commission, department, bureau, regulator, or executive actor.
+2. A requirement that private parties file documents with, register with, report to, or deliver materials to an agency, unless the summary also says the agency receives meaningful authority to approve, deny, exempt, enforce, regulate, set standards, or make discretionary determinations.
+3. Technical, conforming, clarifying, or procedural amendments to an existing statute when the summary does not describe a new or materially expanded agency power.
+4. Simplification, relaxation, reduction, or removal of existing regulatory requirements.
+5. A statement that an agency already had authority under existing law.
+6. Legislative history, committee process, hearings, testimony, debate, background discussion, or statements of purpose.
+7. Authority found only in unrelated non-financial portions of an omnibus law.
+
+If the summary says the law removes provisions because an agency already had the authority necessary under existing law, that is evidence against new delegation unless another part of the supplied summary clearly grants new or materially expanded authority.
+
+When the evidence is ambiguous, choose DelegateLaw = N unless the supplied summary clearly states that Congress grants meaningful new or materially expanded administrative authority.
+
+## Financial Regulation Scope Rule
+
+For omnibus laws, analyze only the supplied text concerning financial regulation.
+
+Financial regulation includes securities markets, securities exchanges, broker-dealers, investment advisers, investment companies, public companies, disclosure, securities registration, investor protection, commodities markets, banking, thrifts, credit unions, deposit insurance, bank supervision, consumer credit, payment systems, financial institutions, financial markets, financial stability, systemic risk, capital or liquidity requirements, insurance regulation connected to financial risk or solvency, and federal financial regulators such as Treasury, the Federal Reserve, SEC, CFTC, FDIC, OCC, CFPB, and NCUA acting in a regulatory, supervisory, enforcement, or administrative capacity.
+
+Do not code delegation found only in unrelated topics such as agriculture, health, education, defense, transportation, immigration, labor, housing, urban development, or other non-financial subjects.
+
+## Positive Signals for DelegateLaw = Y
+
+Code Y when the supplied summary states that the law gives an administrative actor authority such as:
+
+1. issuing rules, regulations, standards, exemptions, waivers, approvals, orders, or determinations;
+2. enforcing, supervising, examining, investigating, disciplining, or sanctioning regulated actors;
+3. approving, denying, restricting, canceling, suspending, or revoking registrations, licenses, applications, transactions, market access, or institutional actions;
+4. administering a new or materially changed regulatory program;
+5. setting limits, requirements, rates, reserve levels, disclosure obligations, compliance rules, or market structure rules.
+
+## Negative Signals for DelegateLaw = N
+
+Code N when the supplied summary primarily describes:
+
+1. changes to statutory definitions or private-party obligations without meaningful agency action;
+2. reduced waiting periods, filing periods, delivery periods, or procedural burdens;
+3. allowing regulated parties to use a different filing or registration procedure without giving the agency new discretion;
+4. preserving existing regulatory structure without a new or materially expanded agency role;
+5. leaving an existing threshold, exemption, or requirement unchanged;
+6. removing language because the agency already has sufficient authority.
+
+## Output Instructions
+
+If a structured schema is requested by the application, return the value required by that schema and provide concise evidence/rationale in any reasoning field.
+
+If no structured schema is requested, return exactly:
+
+DelegateLaw: Y
+
+or
+
+DelegateLaw: N
+

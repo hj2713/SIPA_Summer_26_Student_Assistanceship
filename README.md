@@ -1,130 +1,176 @@
-# Cloud Code Agentic RAG Masterclass
+# Law Delegation
 
-Build an agentic RAG application from scratch by collaborating with Claude Code. Follow along with our video series using the docs in this repo.
+Law Delegation is a local-first research platform for structured legislative coding.
 
-[![Claude Code RAG Masterclass](./video-thumbnail.png)](https://www.youtube.com/watch?v=xgPWCuqLoek)
+The project helps policy researchers upload legislative documents, define coding campaigns, run LLM-assisted classification, inspect reasoning, revise outputs, and export structured datasets for academic analysis.
 
-[Watch the full video on YouTube](https://www.youtube.com/watch?v=xgPWCuqLoek)
+## What We Are Building
 
-## What This Is
+The main product is a campaign coding dashboard, not a general legal chatbot.
 
-A hands-on course where you collaborate with Claude Code to build a full-featured RAG system. You're not the one writing code—Claude is. Your job is to guide it, understand what you're building, and course-correct when needed.
+Researchers should be able to:
 
-**You don't need to know how to code.** You do need to be technically minded and willing to learn about APIs, databases, and system architecture.
+1. Create a research campaign from a codebook or prompt.
+2. Upload or link law summaries and legal documents.
+3. Generate or manually define coding columns.
+4. Run structured LLM coding.
+5. Inspect values, rationales, and coding history.
+6. Override or re-evaluate questionable outputs.
+7. Export the final dataset for downstream analysis.
 
-## What You'll Build
+Chat and retrieval features exist to support exploration, but the campaign coding workflow is the core product.
 
-- **Chat interface** with threaded conversations, streaming, tool calls, and subagent reasoning
-- **Document ingestion** with drag-and-drop upload and processing status
-- **Full RAG pipeline**: chunking, embedding, hybrid search, reranking
-- **Agentic patterns**: text-to-SQL, web search, subagents with isolated context
-- **Usage Tracking & Model Selection**: Token-level logging, cost mapping (pricing matrix), and visual billing stats next to per-thread and per-campaign model configuration selectors
+## Project Stage
 
-## Tech Stack
+The project is currently in a calibration stage.
 
-| Layer | Tech |
-|-------|------|
-| Frontend | React, TypeScript, Tailwind, shadcn/ui, Vite |
-| Backend | Python, FastAPI |
-| Database | Supabase (Postgres + pgvector + Auth + Storage) |
-| Doc Processing | Docling |
-| AI Models | Local (LM Studio) or Cloud (OpenAI, OpenRouter) |
-| Observability | LangSmith |
+The near-term goal is to make one important delegation field reliable before expanding into the full research codebook. This means the team is focusing on benchmark alignment, prompt clarity, source-document discipline, and review workflows.
 
-## The 8 Modules
+Future work should expand from the binary delegation stage into richer discretion and constraint coding once the first-stage benchmark is trustworthy.
 
-1. **App Shell** — Auth, chat UI, managed RAG with OpenAI Responses API
-2. **BYO Retrieval + Memory** — Ingestion, pgvector, switch to generic completions API
-3. **Record Manager** — Content hashing, deduplication
-4. **Metadata Extraction** — LLM-extracted metadata, filtered retrieval
-5. **Multi-Format Support** — PDF, DOCX, HTML, Markdown via Docling
-6. **Hybrid Search & Reranking** — Keyword + vector search, RRF, reranking
-7. **Additional Tools** — Text-to-SQL, web search fallback
-8. **Subagents** — Isolated context, document analysis delegation
+## How To Think About This Repo
 
-## Getting Started
+Future agents should treat this repository like a product under active research calibration.
 
-1. Clone this repo
-2. Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-3. Open in your IDE (Cursor, VS Code, etc.)
-4. Run `claude` in the terminal
-5. Use the `/onboard` command to get started
+Stable project intent belongs in:
 
----
+1. `Setup-Files/AIM_OF_PROJECT.md`
+2. `Setup-Files/FEATURES.md`
+3. `README.md`
 
-## Local Development (Module 1)
+Active work, unresolved issues, benchmark incidents, and completed fixes belong in:
+
+1. `Project-Tracking/ACTIVE_WORK.md`
+2. `Project-Tracking/DECISIONS.md`
+3. `Project-Tracking/COMPLETED_WORK.md`
+
+Do not turn stable docs into a running diary. If a detail may become stale after a prompt change, data fix, or code fix, track it in `Project-Tracking/`.
+
+## Product Surface
+
+### Research Campaigns
+
+Campaigns store the research prompt, schema, selected model, linked documents, and coding results.
+
+### Coding Dashboard
+
+The dashboard presents documents as rows and research variables as columns. It supports inspection, reasoning review, manual overrides, re-evaluation, and export.
+
+### Document Ingestion
+
+The ingestion pipeline parses uploaded files, stores originals locally, chunks text for retrieval, and makes documents available to campaigns.
+
+### Chat and Retrieval
+
+The chat system supports exploratory questions over local documents and campaign context. It is useful, but secondary to the coding workflow.
+
+## Architecture
+
+The app is local-first.
+
+### Frontend
+
+1. React
+2. TypeScript
+3. Vite
+4. Tailwind
+
+### Backend
+
+1. FastAPI
+2. SQLite
+3. Local filesystem storage
+4. Local authentication
+
+### AI and Retrieval
+
+1. Gemini, OpenAI, or OpenRouter for LLM calls
+2. Docling for document parsing
+3. Local chunk-based retrieval
+4. Optional tracing for debugging
+
+## Setup
 
 ### Prerequisites
-- Python 3.11+, Node.js 20+
-- A [Supabase](https://supabase.com) project, [OpenAI](https://platform.openai.com) key, [LangSmith](https://smith.langchain.com) account
 
-### 1. Supabase Setup
-1. Create a new Supabase project.
-2. In the SQL Editor, run **in order**:
-   - `supabase/migrations/0001_init_threads.sql`
-   - `supabase/migrations/0002_init_messages.sql`
-   - `supabase/migrations/0003_rls_policies.sql`
-3. Verify: `select * from pg_policies where schemaname='public'` → 8 rows.
-4. Under **Authentication → Providers → Email**, disable email confirmations for dev.
+1. Python 3.11+
+2. Node.js 20+
+3. At least one configured LLM provider key
 
-### 2. Backend
+### Install
+
 ```bash
-cd backend
-cp .env.example .env        # fill in all values
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-- API: `http://localhost:8000`
-- Docs: `http://localhost:8000/docs`
-- Tests: `pytest app/tests/ -v`
-
-### 3. Frontend
-```bash
-cd frontend
-cp .env.example .env.local  # fill in Supabase URL + anon key
-npm install
-npm run dev                  # http://localhost:5173
-npm run build                # production build check
+./scripts/setup.sh
 ```
 
-### Key Environment Variables
+### Start
 
-**Backend (`backend/.env`):**
+```bash
+./scripts/start.sh
+```
+
+The app runs at:
+
+1. Frontend: `http://localhost:5173`
+2. Backend: `http://127.0.0.1:8000`
+
+### Stop
+
+```bash
+./scripts/stop.sh
+```
+
+## Environment
+
+Backend environment lives in `backend/.env`.
+
 ```env
-SUPABASE_URL=          # Project URL
-SUPABASE_ANON_KEY=     # Anon/public key
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_JWT_SECRET=   # API settings → JWT Secret
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=
+GEMINI_MODEL=
 OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4.1-mini
-LANGSMITH_TRACING=true
+OPENAI_MODEL=
+OPEN_ROUTER_API_KEY=
+OPEN_ROUTER_MODEL_NAME=
+LANGSMITH_TRACING=false
 LANGSMITH_API_KEY=
 ```
 
-**Frontend (`frontend/.env.local`):**
+Frontend environment lives in `frontend/.env.local`.
+
 ```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Architecture
+## Development Commands
 
+Backend:
+
+```bash
+cd backend
+venv/bin/python -m pytest app/tests/ -v
+venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
-Browser (React + Vite) → FastAPI (Python) → OpenAI Responses API
-       ↓                        ↓                    ↓
-  Supabase Auth          Supabase Postgres        LangSmith
-                         (threads + messages)      (tracing)
+
+Frontend:
+
+```bash
+cd frontend
+npm run dev
+npm run build
 ```
 
-## Docs
+## Engineering Priorities
 
-- [PRD.md](./PRD.md) — What to build (the 8 modules in detail)
-- [CLAUDE.md](./CLAUDE.md) — Context for Claude Code
-- [PROGRESS.md](./PROGRESS.md) — Track your build progress
+1. Keep campaign coding logic clean and testable.
+2. Keep experimental prompt research separate from production services.
+3. Improve benchmark and run tracking.
+4. Preserve local-first behavior unless a cloud dependency is deliberately justified.
+5. Maintain traceability for coding values, rationales, prompt versions, models, and overrides.
 
-## Join the Community
+## Short Handoff
 
-If you want to connect with hundreds of builders creating production-grade AI and RAG systems, join us in [The AI Automators community](https://www.theaiautomators.com/). Share your progress, get help when you're stuck, and see what others are building.
+This repo is building a serious research coding platform for legislative delegation analysis.
+
+The immediate mission is to make the first-stage delegation coding workflow reliable, inspectable, and repeatable. Once that is stable, the project should expand toward richer discretion and constraint coding.
+

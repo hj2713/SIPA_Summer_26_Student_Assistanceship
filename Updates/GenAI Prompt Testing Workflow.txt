@@ -1,0 +1,102 @@
+GenAI Prompt Testing Workflow and Documentation
+Sharyn O’Halloran
+June 19, 2026
+Purpose
+We are testing whether GenAI models can classify financial regulation laws using the same logic
+as the manual benchmark.
+This note provides a guide to exploratory model development through prompt augmentation. We
+are not using a settled training pipeline. We are conducting law-by-law reviews to identify model
+errors, refine prompts, and test whether staged prompting improves classification.
+Benchmark Alignment
+The manual benchmark coding was based on CQ summaries of major provisions.
+For benchmark comparison, use the same information set: either CQ summaries or the
+corresponding major-provisions text.
+Do not compare full-text model runs directly to the CQ-based benchmark. Full statutory text may
+include minor or technical delegations that were not visible in the CQ summaries.
+Full-text runs can be useful, but they should be labeled as a separate experiment.
+Documentation Required for Each Run
+For each run, record:
+1. data universe and input files;
+2. prompt version;
+3. model name and version;
+4. output format;
+5. evaluation metric;
+6. comparison to the manual benchmark coding;
+7. recurring model errors;
+8. prompt refinements;
+9. scripts used;
+10. output file location; and
+11. unresolved issues.
+Step-by-Step Workflow
+Step 1: Fix the Test Set
+Start with the 15 laws that have summary text.
+Hold the test set fixed while testing prompt revisions. This lets us compare prompt versions.
+1
+Step 2: Confirm Input Alignment
+For each law, confirm that the model input is the CQ summary or corresponding major-
+provisions text.
+Do not use full statutory text for the benchmark comparison unless the run is labeled as a full-
+text experiment.
+Step 3: Run the Prompt
+Run the selected prompt version on each law.
+For Prompt v.7, the model should complete each stage in order:
+1. delegation screen;
+2. amount and centrality of delegation;
+3. constraints on delegated authority;
+4. categories of constraints; and
+5. final Rough Guide discretion rank.
+The model should provide the required output for each stage before proceeding to the next.
+Step 4: Preserve Law Identifiers
+Each output must preserve the law identifier.
+This is required for comparison to the manual benchmark.
+Step 5: Compare to Manual Coding
+For delegation prompts, compare the model’s DelegateLaw = Y/N output with the manual
+DelegateLaw coding.
+For discretion prompts, compare the model’s Discretion_Rank = 0/1/2/3/4 output with the
+manually coded discretion/Rough Guide rank.
+Step 6: Review Law by Law
+Use the app to review each model output.
+For each law, check whether the model correctly identified:
+1. delegation;
+2. agency or actor receiving authority;
+3. delegated authority;
+4. constraints;
+5. constraint categories; and
+6. final Rough Guide discretion rank.
+Step 7: Document Failure Modes
+Record recurring errors, including cases where the model:
+2
+1. 2. 4. 5. 6. 7. 8. treats any delegation as high discretion;
+counts minor technical delegation as central;
+3. misses constraints;
+treats rulemaking authority as unconstrained when standards or procedures exist;
+introduces authority not present in the supplied text;
+relies on full-text details not visible in the CQ summary;
+gives a final rank that does not follow from earlier stages; or
+fails to distinguish delegation from discretion.
+Step 8: Refine the Prompt
+Revise the prompt only to address recurring errors.
+Save each revision as a new prompt version.
+Step 9: Rerun the Same Test Set
+Rerun the same 15-law test set after each prompt revision.
+Compare prompt versions using the same laws, same input text, and same benchmark coding.
+Step 10: Decide Whether to Expand
+Expand to the larger sample only after the prompt yields interpretable, benchmark-aligned
+outputs on the fixed test set.
+Output File
+Each run should produce an output file with:
+1. law identifier;
+2. input text source;
+3. prompt version;
+4. model name and version;
+5. stage-by-stage output;
+6. final predicted label or rank;
+7. manual benchmark label or rank;
+8. match/mismatch indicator;
+9. discrepancy notes; and
+10. unresolved issues.
+Research Framing
+The law-by-law review is part of the research process.
+We are testing whether staged prompting can help GenAI models recover nuanced legal-
+institutional concepts. The workflow documents model performance, classification logic, failure
+modes, and prompt refinements.

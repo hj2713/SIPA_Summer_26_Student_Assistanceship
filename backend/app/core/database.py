@@ -61,9 +61,12 @@ def init_db():
                 title TEXT NOT NULL DEFAULT 'New conversation',
                 provider TEXT NOT NULL DEFAULT 'openai',
                 provider_thread_id TEXT,
+                model TEXT,
+                dashboard_id TEXT,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (dashboard_id) REFERENCES dashboards (id) ON DELETE CASCADE
             );
         """)
 
@@ -156,6 +159,11 @@ def init_db():
         # Add model column to threads and dashboards tables defensively
         try:
             conn.execute("ALTER TABLE threads ADD COLUMN model TEXT;")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            conn.execute("ALTER TABLE threads ADD COLUMN dashboard_id TEXT REFERENCES dashboards(id) ON DELETE CASCADE;")
         except sqlite3.OperationalError:
             pass
 

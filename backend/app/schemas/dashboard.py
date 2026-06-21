@@ -1,11 +1,25 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, Union
 
+class ColumnPromptHistoryItem(BaseModel):
+    version: int
+    prompt: str
+    timestamp: str
+
 class UserColumnInput(BaseModel):
     name: str = Field(..., description="The name of the column")
     type: Optional[str] = Field(default="string", description="The data type of the column")
     description: Optional[str] = Field(default=None, description="The description of the column for LLM context")
     options: Optional[List[str]] = Field(default=None, description="Allowed categorical values")
+    prompt_version: Optional[int] = Field(default=1, description="The version of prompt instructions for this column")
+    prompt_history: Optional[List[ColumnPromptHistoryItem]] = Field(default=None, description="The history of prompt instructions for this column")
+
+class ReevaluateColumnPayload(BaseModel):
+    feedback_prompt: str
+
+class ReevaluateRowPayload(BaseModel):
+    feedback_prompt: str
+
 
 class DashboardCreate(BaseModel):
     name: str = Field(..., description="The name of the campaign dashboard")

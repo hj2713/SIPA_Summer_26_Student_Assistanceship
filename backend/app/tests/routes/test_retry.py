@@ -24,10 +24,10 @@ def test_retry_single_document(client, auth_headers):
     existing = DocumentRow(**_MOCK_DOC)
     updated_doc = DocumentRow(**{**_MOCK_DOC, "status": "pending"})
     
-    mock_supabase = MagicMock()
+    mock_user_client = MagicMock()
     
     with (
-        patch("app.routes.documents.get_user_client", return_value=mock_supabase),
+        patch("app.routes.documents.get_user_client", return_value=mock_user_client),
         patch("app.routes.documents.document_service.get_document", return_value=existing),
         patch("app.routes.documents.document_service.download_file_from_storage", return_value=b"retried file content") as mock_download,
         patch("app.routes.documents.document_service.delete_document_chunks") as mock_delete,
@@ -44,8 +44,8 @@ def test_retry_single_document(client, auth_headers):
     assert body["status"] == "pending"
     assert body["id"] == str(existing.id)
     
-    mock_download.assert_called_once_with(mock_supabase, existing.file_path)
-    mock_delete.assert_called_once_with(mock_supabase, str(existing.id))
+    mock_download.assert_called_once_with(mock_user_client, existing.file_path)
+    mock_delete.assert_called_once_with(mock_user_client, str(existing.id))
     mock_update.assert_called_once()
     mock_enqueue.assert_called_once_with(
         doc_id=str(existing.id),
@@ -61,10 +61,10 @@ def test_retry_batch_documents(client, auth_headers):
     existing = DocumentRow(**_MOCK_DOC)
     updated_doc = DocumentRow(**{**_MOCK_DOC, "status": "pending"})
     
-    mock_supabase = MagicMock()
+    mock_user_client = MagicMock()
     
     with (
-        patch("app.routes.documents.get_user_client", return_value=mock_supabase),
+        patch("app.routes.documents.get_user_client", return_value=mock_user_client),
         patch("app.routes.documents.document_service.get_document", return_value=existing),
         patch("app.routes.documents.document_service.download_file_from_storage", return_value=b"batch retried file content") as mock_download,
         patch("app.routes.documents.document_service.delete_document_chunks") as mock_delete,
@@ -83,8 +83,8 @@ def test_retry_batch_documents(client, auth_headers):
     assert body[0]["status"] == "pending"
     assert body[0]["id"] == str(existing.id)
     
-    mock_download.assert_called_once_with(mock_supabase, existing.file_path)
-    mock_delete.assert_called_once_with(mock_supabase, str(existing.id))
+    mock_download.assert_called_once_with(mock_user_client, existing.file_path)
+    mock_delete.assert_called_once_with(mock_user_client, str(existing.id))
     mock_update.assert_called_once()
     mock_enqueue.assert_called_once_with(
         doc_id=str(existing.id),

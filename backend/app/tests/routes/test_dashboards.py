@@ -428,3 +428,122 @@ def test_create_campaign_with_structured_columns(client, auth_headers, clean_db)
 
 
 
+def test_column_reevaluation_endpoint(client, auth_headers, clean_db):
+    db_id = "test-db-col-reeval"
+    doc_id = "test-doc-col-reeval"
+    schema = [{"name": "delegatelaw", "type": "string", "description": "Is it delegated?"}]
+    
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Col Reeval', 'Desc', 'Prompt', ?);",
+            (db_id, json.dumps(schema))
+        )
+        conn.execute(
+            """
+            INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            """,
+            (doc_id,)
+        )
+        conn.execute(
+            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, '00000000-0000-0000-0000-000000000001', 'Document content.', '[]', '{}');",
+            ("chunk-col-reeval-1", doc_id)
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values) VALUES (?, ?, 'completed', ?);",
+            (db_id, doc_id, json.dumps({"delegatelaw": "OldVal", "delegatelaw_reasoning": "OldReason"}))
+        )
+        conn.commit()
+
+    mock_parsed = MagicMock()
+    mock_parsed.value = "NewValColumn"
+    mock_parsed.reasoning = "New reasoning for column."
+    
+    mock_llm = MagicMock()
+    mock_llm.parse_structured = AsyncMock(return_value=mock_parsed)
+    
+    with patch("app.llm.registry.get_llm", return_value=mock_llm):
+        response = client.post(
+            f"/api/dashboards/{db_id}/columns/delegatelaw/reevaluate",
+            json={"feedback_prompt": "Force NewValColumn everywhere"},
+            headers=auth_headers
+        )
+        
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["schema"]) == 1
+    assert data["schema"][0]["prompt_version"] == 2
+    assert len(data["schema"][0]["prompt_history"]) == 2
+
+    # Verify document values updated
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT coded_values FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;", (db_id, doc_id))
+        row = cursor.fetchone()
+        coded = json.loads(row[0])
+        assert coded["delegatelaw"] == "NewValColumn"
+        assert coded["delegatelaw_reasoning"] == "New reasoning for column."
+        assert len(coded["delegatelaw_history"]) == 2
+        assert coded["delegatelaw_history"][1]["feedback_prompt"] == "Force NewValColumn everywhere"
+
+
+def test_row_reevaluation_endpoint(client, auth_headers, clean_db):
+    db_id = "test-db-row-reeval"
+    doc_id = "test-doc-row-reeval"
+    schema = [
+        {"name": "delegatelaw", "type": "string", "description": "Is it delegated?"},
+        {"name": "spendlimits", "type": "boolean", "description": "Spend limit presence?"}
+    ]
+    
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Row Reeval', 'Desc', 'Prompt', ?);",
+            (db_id, json.dumps(schema))
+        )
+        conn.execute(
+            """
+            INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            """,
+            (doc_id,)
+        )
+        conn.execute(
+            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, '00000000-0000-0000-0000-000000000001', 'Document content.', '[]', '{}');",
+            ("chunk-row-reeval-1", doc_id)
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values) VALUES (?, ?, 'completed', ?);",
+            (db_id, doc_id, json.dumps({
+                "delegatelaw": "OldVal", "delegatelaw_reasoning": "OldReason",
+                "spendlimits": False, "spendlimits_reasoning": "No mention"
+            }))
+        )
+        conn.commit()
+
+    mock_row_res = MagicMock()
+    mock_delegatelaw = MagicMock()
+    mock_delegatelaw.value = "NewValRow"
+    mock_delegatelaw.reasoning = "New reasoning for row delegatelaw."
+    mock_spendlimits = MagicMock()
+    mock_spendlimits.value = True
+    mock_spendlimits.reasoning = "New reasoning for row spendlimits."
+    
+    setattr(mock_row_res, "delegatelaw", mock_delegatelaw)
+    setattr(mock_row_res, "spendlimits", mock_spendlimits)
+    
+    mock_llm = MagicMock()
+    mock_llm.parse_structured = AsyncMock(return_value=mock_row_res)
+    
+    with patch("app.llm.registry.get_llm", return_value=mock_llm):
+        response = client.post(
+            f"/api/dashboards/{db_id}/documents/{doc_id}/reevaluate-row",
+            json={"feedback_prompt": "Correct everything please"},
+            headers=auth_headers
+        )
+        
+    assert response.status_code == 200
+    body = response.json()
+    assert body["coded_values"]["delegatelaw"] == "NewValRow"
+    assert body["coded_values"]["spendlimits"] is True
+    assert len(body["coded_values"]["delegatelaw_history"]) == 2
+    assert body["coded_values"]["delegatelaw_history"][1]["feedback_prompt"] == "Correct everything please"

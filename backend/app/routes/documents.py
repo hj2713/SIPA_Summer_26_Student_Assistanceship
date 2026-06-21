@@ -246,18 +246,47 @@ from fastapi.responses import FileResponse
 
 @router.get("/{document_id}/content")
 async def get_document_content(document_id: str, current_user: CurrentUserDep):
-    """Serve the actual document file for previewing."""
+    """Serve the actual document file for previewing, falling back to database chunks if missing from disk."""
     client = get_user_client(current_user.jwt)
     doc = document_service.get_document(client, document_id)
     
-    if not doc or not doc.file_path:
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
-    full_path = os.path.join("data/storage", doc.file_path)
-    if not os.path.exists(full_path):
-        raise HTTPException(status_code=404, detail="File not found on disk")
+    if doc.file_path:
+        full_path = os.path.join("data/storage", doc.file_path)
+        if os.path.exists(full_path):
+            return FileResponse(full_path, media_type=doc.content_type, filename=doc.filename)
+            
+    # Fallback: retrieve from document_chunks table in SQLite database
+    from app.core.database import get_db_conn
+    import json
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT content, metadata FROM document_chunks WHERE document_id = ?;", (str(document_id),))
+        rows = cursor.fetchall()
         
-    return FileResponse(full_path, media_type=doc.content_type, filename=doc.filename)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Document content not found on disk or database")
+        
+    chunks_with_index = []
+    for row in rows:
+        content = row[0]
+        meta_str = row[1]
+        idx = 0
+        try:
+            meta = json.loads(meta_str)
+            idx = meta.get("chunk_index", 0)
+        except Exception:
+            pass
+        chunks_with_index.append((idx, content))
+        
+    chunks_with_index.sort(key=lambda x: x[0])
+    full_text = "\n\n".join(c[1] for c in chunks_with_index)
+    
+    from fastapi.responses import Response
+    return Response(content=full_text, media_type="text/plain", headers={"Content-Disposition": f"attachment; filename={os.path.basename(doc.filename)}"})
+
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

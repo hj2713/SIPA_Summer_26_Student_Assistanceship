@@ -22,7 +22,8 @@ interface Campaign {
   name: string;
   description: string;
   prompt: string;
-  schema: { name: string; type: string; description?: string; options?: string[] }[];
+  schema: { name: string; type: string; description?: string; options?: string[]; prompt_version?: number; prompt_history?: any[] }[];
+  model?: string;
 }
 
 interface CampaignDocument {
@@ -104,12 +105,20 @@ export function DashboardDetailPage() {
   // Chat State
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
+  const [pinnedDocIds, setPinnedDocIds] = useState<string[]>([]);
   const { messages, streaming, draftContent, sendMessage, stopGeneration } = useChat(chatThreadId);
 
   // Drag and Drop Upload State
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [regeneratingSchema, setRegeneratingSchema] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Benchmark Comparison States
+  const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: any[] } | null>(null);
+  const [showBenchmarkComparison, setShowBenchmarkComparison] = useState(false);
+  const [benchmarkAccuracy, setBenchmarkAccuracy] = useState<{ total: number; matches: number; percent: number } | null>(null);
+  const benchmarkInputRef = useRef<HTMLInputElement>(null);
+
 
   // Duplicate file detection modal
   const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([]);
@@ -133,6 +142,25 @@ export function DashboardDetailPage() {
       console.error(err);
       toast.error("Failed to load campaign metadata");
       navigate("/dashboard");
+    }
+  };
+
+  // Fetch campaign's chat thread
+  const fetchCampaignThread = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/threads/campaign/${id}`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch campaign thread");
+      const data = await res.json();
+      if (data && data.id) {
+        setChatThreadId(data.id);
+      } else {
+        setChatThreadId(null);
+      }
+    } catch (err) {
+      console.error("Failed to load campaign chat thread:", err);
+      setChatThreadId(null);
     }
   };
 
@@ -193,6 +221,7 @@ export function DashboardDetailPage() {
       void fetchCampaign();
       void fetchDocuments();
       void fetchGlobalDocuments();
+      void fetchCampaignThread();
     }
   }, [id, jwt]);
 
@@ -459,6 +488,89 @@ export function DashboardDetailPage() {
     }
   };
 
+  // Column-level re-evaluation states
+  const [showColFeedbackModal, setShowColFeedbackModal] = useState(false);
+  const [selectedColFeedback, setSelectedColFeedback] = useState<{ name: string; type: string; prompt_version?: number; prompt_history?: any[] } | null>(null);
+  const [colFeedbackPrompt, setColFeedbackPrompt] = useState("");
+  const [colFeedbackLoading, setColFeedbackLoading] = useState(false);
+
+  // Row-level re-evaluation states
+  const [showRowFeedbackModal, setShowRowFeedbackModal] = useState(false);
+  const [selectedRowFeedback, setSelectedRowFeedback] = useState<CampaignDocument | null>(null);
+  const [rowFeedbackPrompt, setRowFeedbackPrompt] = useState("");
+  const [rowFeedbackLoading, setRowFeedbackLoading] = useState(false);
+
+  // Handle column-level re-evaluation submit
+  const handleColumnReevaluate = async () => {
+    if (!selectedColFeedback || !colFeedbackPrompt.trim()) return;
+    setColFeedbackLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/columns/${selectedColFeedback.name}/reevaluate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ feedback_prompt: colFeedbackPrompt.trim() }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Column re-evaluation failed");
+      }
+
+      const updatedCampaign = await res.json();
+      setCampaign(updatedCampaign);
+      setShowColFeedbackModal(false);
+      setColFeedbackPrompt("");
+      toast.success(`Started AI re-evaluation for column "${selectedColFeedback.name}" across all documents!`);
+      void fetchDocuments();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to re-evaluate column");
+    } finally {
+      setColFeedbackLoading(false);
+    }
+  };
+
+  // Handle row-level re-evaluation submit
+  const handleRowReevaluate = async () => {
+    if (!selectedRowFeedback || !rowFeedbackPrompt.trim()) return;
+    setRowFeedbackLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/${selectedRowFeedback.document_id}/reevaluate-row`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ feedback_prompt: rowFeedbackPrompt.trim() }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Row re-evaluation failed");
+      }
+
+      const data = await res.json();
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.document_id === selectedRowFeedback.document_id
+            ? { ...d, coded_values: data.coded_values }
+            : d
+        )
+      );
+      setShowRowFeedbackModal(false);
+      setRowFeedbackPrompt("");
+      toast.success("AI row re-evaluation completed successfully!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to re-evaluate row");
+    } finally {
+      setRowFeedbackLoading(false);
+    }
+  };
+
   // Link existing global files to campaign
   const handleLinkDocuments = async () => {
     if (selectedGlobalDocIds.length === 0) return;
@@ -672,9 +784,168 @@ export function DashboardDetailPage() {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
+  // Helper to extract PL Number from filename
+  const getPLNumFromFilename = (filename: string): string | null => {
+    const match = /\d+-\d+/.exec(filename);
+    return match ? match[0] : null;
+  };
+
+
+  // Auto-detect CSV/TSV parser
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/);
+    if (lines.length === 0) return { headers: [], rows: [] };
+    
+    const firstLine = lines[0];
+    const delimiter = firstLine.includes('\t') ? '\t' : ',';
+    
+    const splitLine = (line: string) => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current.trim().replace(/^["']|["']$/g, ''));
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      return result;
+    };
+
+    const headers = splitLine(firstLine);
+    const rows: any[] = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const cols = splitLine(line);
+      const row: Record<string, string> = {};
+      headers.forEach((header, idx) => {
+        row[header] = cols[idx] || "";
+      });
+      rows.push(row);
+    }
+    return { headers, rows };
+  };
+
+  // Normalize column names for comparison
+  const normalizeKey = (key: string): string => {
+    return key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  };
+
+  // Get benchmark value mapped by PLNum and normalized column header
+  const getMappedBenchmarkValue = (doc: CampaignDocument, colName: string) => {
+    if (!parsedBenchmark) return undefined;
+    const plNum = getPLNumFromFilename(doc.filename);
+    if (!plNum) return undefined;
+    
+    const row = parsedBenchmark.rows.find((r: any) => {
+      const csvPlNum = r["PLNum"] || r["pl_num"] || r["PL Num"] || r["Public Law"] || "";
+      return csvPlNum.trim() === plNum;
+    });
+    
+    if (!row) return undefined;
+    
+    const normalizedCampaignCol = normalizeKey(colName);
+    const csvKey = parsedBenchmark.headers.find(h => normalizeKey(h) === normalizedCampaignCol);
+    
+    if (!csvKey) return undefined;
+    return row[csvKey];
+  };
+
+  // Normalize values (booleans/strings/numbers) for robust equivalence checks
+  const normalizeValueForComparison = (val: any): string => {
+    if (val === undefined || val === null) return "";
+    const s = String(val).trim().toUpperCase();
+    if (s === "Y" || s === "YES" || s === "TRUE" || s === "1" || s === "-1") return "TRUE";
+    if (s === "N" || s === "NO" || s === "FALSE" || s === "0") return "FALSE";
+    return s;
+  };
+
+  // Handle benchmark upload
+  const handleBenchmarkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      try {
+        const parsed = parseCSV(text);
+        if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+          toast.error("Invalid CSV/TSV file. Content is empty.");
+          return;
+        }
+        
+        const hasPLNum = parsed.headers.some(h => ["PLNum", "pl_num", "PL Num", "Public Law"].map(x => x.toLowerCase()).includes(h.toLowerCase()));
+        if (!hasPLNum) {
+          toast.error("Could not find a 'PLNum' column in the uploaded file to match rows.");
+          return;
+        }
+
+        setParsedBenchmark(parsed);
+        setShowBenchmarkComparison(true);
+        toast.success(`Successfully loaded ${parsed.rows.length} benchmark rows. Benchmark Mode Active!`);
+      } catch (err) {
+        console.error("CSV parse error:", err);
+        toast.error("Failed to parse CSV file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  // Dynamic accuracy computation hook
+  useEffect(() => {
+    if (!showBenchmarkComparison || !parsedBenchmark || docs.length === 0) {
+      setBenchmarkAccuracy(null);
+      return;
+    }
+
+    let totalComparisons = 0;
+    let matchCount = 0;
+
+    docs.forEach(doc => {
+      if (doc.status !== "completed") return;
+      
+      orderedColumns.forEach(col => {
+        const docVal = doc.coded_values[col.name];
+        const benchVal = getMappedBenchmarkValue(doc, col.name);
+        
+        if (benchVal !== undefined && benchVal !== "") {
+          totalComparisons++;
+          const normDoc = normalizeValueForComparison(docVal);
+          const normBench = normalizeValueForComparison(benchVal);
+          if (normDoc === normBench) {
+            matchCount++;
+          }
+        }
+      });
+    });
+
+    if (totalComparisons > 0) {
+      setBenchmarkAccuracy({
+        total: totalComparisons,
+        matches: matchCount,
+        percent: Math.round((matchCount / totalComparisons) * 100)
+      });
+    } else {
+      setBenchmarkAccuracy(null);
+    }
+  }, [showBenchmarkComparison, parsedBenchmark, docs, orderedColumns]);
+
   // Export spreadsheet to CSV
   const handleExportCSV = () => {
     if (!campaign || docs.length === 0) return;
+
 
     // Headers
     const headers = ["Filename", "Status", ...campaign.schema.map((s) => s.name)];
@@ -713,10 +984,12 @@ export function DashboardDetailPage() {
     if (!chatInput.trim()) return;
 
     const messageToSend = chatInput;
+    const currentPinned = [...pinnedDocIds];
     setChatInput("");
+    setPinnedDocIds([]);
 
     try {
-      const newThreadId = await sendMessage(messageToSend, chatThreadId || undefined, undefined, id);
+      const newThreadId = await sendMessage(messageToSend, chatThreadId || undefined, currentPinned, id);
       if (newThreadId && !chatThreadId) {
         setChatThreadId(newThreadId);
       }
@@ -777,7 +1050,31 @@ export function DashboardDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Export & Chat triggers */}
+            {/* Export, Benchmark & Chat triggers */}
+            <Button
+              variant={showBenchmarkComparison ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                if (showBenchmarkComparison) {
+                  setShowBenchmarkComparison(false);
+                  setParsedBenchmark(null);
+                  setBenchmarkAccuracy(null);
+                } else {
+                  benchmarkInputRef.current?.click();
+                }
+              }}
+              className="gap-1.5 text-xs border-dashed"
+            >
+              <Sparkles size={14} className={showBenchmarkComparison ? "text-amber-500 fill-amber-500 animate-pulse" : ""} />
+              {showBenchmarkComparison ? "Disable Benchmark Mode" : "Compare with Benchmark"}
+            </Button>
+            <input
+              type="file"
+              ref={benchmarkInputRef}
+              onChange={handleBenchmarkUpload}
+              accept=".csv,.tsv,.txt"
+              className="hidden"
+            />
             <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={total === 0} className="gap-1.5 text-xs">
               <Download size={14} /> Export CSV
             </Button>
@@ -791,6 +1088,7 @@ export function DashboardDetailPage() {
             </Button>
           </div>
         </div>
+
 
         {/* Dashboard Progress Banner */}
         {total > 0 && (
@@ -819,6 +1117,27 @@ export function DashboardDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Benchmark Accuracy Banner */}
+        {showBenchmarkComparison && benchmarkAccuracy && (
+          <div className="px-6 py-2.5 bg-rose-500/10 dark:bg-rose-950/20 border-b flex justify-between items-center text-xs text-rose-700 dark:text-rose-400 font-medium">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-amber-500 fill-amber-500" />
+              <span>Benchmark Mode Active: <strong>{benchmarkAccuracy.matches} / {benchmarkAccuracy.total}</strong> cells match (<strong>{benchmarkAccuracy.percent}% accuracy</strong>).</span>
+            </div>
+            <button
+              onClick={() => {
+                setShowBenchmarkComparison(false);
+                setParsedBenchmark(null);
+                setBenchmarkAccuracy(null);
+              }}
+              className="text-xs underline hover:text-rose-800 dark:hover:text-rose-300 cursor-pointer"
+            >
+              Close Benchmark Mode
+            </button>
+          </div>
+        )}
+
 
         {/* Middle Work Area */}
         <div className="flex-1 flex overflow-hidden">
@@ -1049,6 +1368,18 @@ export function DashboardDetailPage() {
                                   ) : (
                                     <AlertTriangle className="text-amber-500 shrink-0 animate-pulse" size={13} />
                                   )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedColFeedback(col);
+                                      setColFeedbackPrompt("");
+                                      setShowColFeedbackModal(true);
+                                    }}
+                                    className="p-0.5 rounded hover:bg-muted-foreground/20 text-muted-foreground/70 hover:text-primary transition-colors cursor-pointer"
+                                    title="Submit prompt/instructions to re-evaluate this column"
+                                  >
+                                    <Sparkles size={12} className="shrink-0" />
+                                  </button>
                                 </div>
                                 <span className="text-[10px] text-muted-foreground/30 opacity-0 group-hover/header:opacity-100 transition-opacity shrink-0">
                                   ☰
@@ -1094,21 +1425,45 @@ export function DashboardDetailPage() {
                         {docs.map((doc) => (
                           <tr key={doc.document_id} className="hover:bg-muted/30 transition-colors">
                             {/* File info cell */}
-                            <td className="p-3 border-r font-medium truncate flex items-center justify-between gap-2">
+                             <td className="p-3 border-r font-medium truncate flex items-center justify-between gap-2">
                               <span 
                                 className="cursor-pointer text-primary font-semibold hover:underline truncate" 
                                 onClick={() => loadDocPreview(doc.document_id)}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData("application/json", JSON.stringify({
+                                    id: doc.document_id,
+                                    filename: doc.filename.split("/").pop() || ""
+                                  }));
+                                }}
                               >
                                 {doc.filename.split("/").pop()}
                               </span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-5 w-5 rounded hover:bg-muted" 
-                                onClick={() => loadDocPreview(doc.document_id)}
-                              >
-                                <Eye size={12} />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-5 w-5 rounded hover:bg-muted" 
+                                  onClick={() => loadDocPreview(doc.document_id)}
+                                >
+                                  <Eye size={12} />
+                                </Button>
+                                {(doc.status === "completed" || doc.status === "failed") && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 rounded hover:bg-muted text-primary" 
+                                    onClick={() => {
+                                      setSelectedRowFeedback(doc);
+                                      setRowFeedbackPrompt("");
+                                      setShowRowFeedbackModal(true);
+                                    }}
+                                    title="Re-evaluate all variables in this row with corrective feedback"
+                                  >
+                                    <Sparkles size={11} />
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                             
                             {/* Status cell */}
@@ -1182,10 +1537,17 @@ export function DashboardDetailPage() {
                               const reasoning = doc.coded_values[`${col.name}_reasoning`] ? String(doc.coded_values[`${col.name}_reasoning`]) : "";
                               const hasReasoning = !!reasoning;
                               
+                              const benchVal = showBenchmarkComparison ? getMappedBenchmarkValue(doc, col.name) : undefined;
+                              const hasBenchmark = benchVal !== undefined && benchVal !== "";
+                              const isMismatch = hasBenchmark && normalizeValueForComparison(val) !== normalizeValueForComparison(benchVal);
+                              
                               return (
                                 <td 
                                   key={col.name} 
-                                  className="p-2 border-r relative group/cell cursor-pointer h-10 select-none"
+                                  className={cn(
+                                    "p-2 border-r relative group/cell cursor-pointer h-10 select-none",
+                                    isMismatch && "bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900"
+                                  )}
                                   onDoubleClick={() => {
                                     if (doc.status !== "completed" && doc.status !== "failed") return;
                                     const history = doc.coded_values[`${col.name}_history`] || [];
@@ -1205,7 +1567,18 @@ export function DashboardDetailPage() {
                                   }}
                                 >
                                   <div className="flex items-center justify-between w-full h-full">
-                                    <span className={`truncate block flex-1 leading-normal font-mono ${hasReasoning ? "underline decoration-dotted decoration-muted-foreground/50 underline-offset-4" : ""}`}>
+                                    {isMismatch && (
+                                      <span 
+                                        className="mr-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-black h-4.5 w-4.5 flex items-center justify-center cursor-help shrink-0 shadow-sm"
+                                        title={`Benchmark value: ${benchVal}\nLLM value: ${val}`}
+                                      >
+                                        !
+                                      </span>
+                                    )}
+                                    <span className={cn(
+                                      "truncate block flex-1 leading-normal font-mono",
+                                      hasReasoning && "underline decoration-dotted decoration-muted-foreground/50 underline-offset-4"
+                                    )}>
                                       {val === undefined || val === null ? (
                                         <span className="text-muted-foreground/30 italic font-sans">double-click</span>
                                       ) : typeof val === "boolean" ? (
@@ -1334,13 +1707,31 @@ export function DashboardDetailPage() {
                     </div>
 
                     {/* Chat Messages Log */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div 
+                      className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        try {
+                          const dataStr = e.dataTransfer.getData("application/json");
+                          if (dataStr) {
+                            const { id: docId, filename } = JSON.parse(dataStr);
+                            if (docId && !pinnedDocIds.includes(docId)) {
+                              setPinnedDocIds([...pinnedDocIds, docId]);
+                              toast.info(`Tagged file "${filename}" in chat context.`);
+                            }
+                          }
+                        } catch (err) {
+                          console.error("Drop failed:", err);
+                        }
+                      }}
+                    >
                       {messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground max-w-[280px] mx-auto">
                           <MessageSquare size={32} className="text-muted-foreground/30 mb-2" />
                           <p className="font-semibold">Ask questions about this campaign's docs</p>
                           <p className="mt-1 leading-normal">
-                            All queries are automatically constrained to only look inside the documents linked to this spreadsheet.
+                            All queries are automatically constrained to only look inside the documents linked to this spreadsheet. Drag and drop file names here or type `@` to pin files.
                           </p>
                         </div>
                       ) : (
@@ -1387,10 +1778,101 @@ export function DashboardDetailPage() {
                       <div ref={chatEndRef} />
                     </div>
 
+                    {/* Tag autocomplete dropdown */}
+                    {(() => {
+                      const atIdx = chatInput.lastIndexOf("@");
+                      if (atIdx !== -1) {
+                        const query = chatInput.slice(atIdx + 1).toLowerCase();
+                        // Filter campaign documents
+                        const matching = docs.filter(
+                          (d) => 
+                            (d.status === "completed" || d.status === "failed") &&
+                            d.filename.split("/").pop()?.toLowerCase().includes(query)
+                        );
+                        if (matching.length > 0) {
+                          return (
+                            <div className="mx-3 my-1 border border-border bg-card rounded-lg shadow-xl max-h-40 overflow-y-auto text-xs z-50">
+                              <div className="p-2 border-b font-bold text-[10px] text-muted-foreground uppercase tracking-wider bg-muted/20">
+                                Tag Campaign Document
+                              </div>
+                              {matching.map((d) => {
+                                const fname = d.filename.split("/").pop() || "";
+                                return (
+                                  <button
+                                    key={d.document_id}
+                                    type="button"
+                                    onClick={() => {
+                                      const beforeAt = chatInput.slice(0, atIdx);
+                                      setChatInput(beforeAt + `@${fname} `);
+                                      if (!pinnedDocIds.includes(d.document_id)) {
+                                        setPinnedDocIds([...pinnedDocIds, d.document_id]);
+                                      }
+                                    }}
+                                    className="w-full text-left px-3 py-2 hover:bg-muted font-mono flex items-center justify-between border-b last:border-b-0 border-border/40"
+                                  >
+                                    <span>{fname}</span>
+                                    <span className="text-[9px] font-sans font-bold bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded">
+                                      Tag File
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
+
+                    {/* Tagged files list/badges */}
+                    {pinnedDocIds.length > 0 && (
+                      <div className="px-3 py-1.5 border-t bg-muted/10 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mr-1">Tagged:</span>
+                        {pinnedDocIds.map((docId) => {
+                          const docObj = docs.find(d => d.document_id === docId);
+                          const label = docObj ? docObj.filename.split("/").pop() : docId;
+                          return (
+                            <span 
+                              key={docId}
+                              className="inline-flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full text-[10px] font-medium font-mono"
+                            >
+                              <span>{label}</span>
+                              <button 
+                                type="button" 
+                                className="hover:text-destructive transition-colors shrink-0"
+                                onClick={() => setPinnedDocIds(pinnedDocIds.filter(id => id !== docId))}
+                              >
+                                <X size={10} />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {/* Chat Input form */}
-                    <form onSubmit={handleSendChatMessage} className="p-3 border-t bg-muted/20 flex gap-2">
+                    <form 
+                      onSubmit={handleSendChatMessage} 
+                      className="p-3 border-t bg-muted/20 flex gap-2"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        try {
+                          const dataStr = e.dataTransfer.getData("application/json");
+                          if (dataStr) {
+                            const { id: docId, filename } = JSON.parse(dataStr);
+                            if (docId && !pinnedDocIds.includes(docId)) {
+                              setPinnedDocIds([...pinnedDocIds, docId]);
+                              toast.info(`Tagged file "${filename}" in chat context.`);
+                            }
+                          }
+                        } catch (err) {
+                          console.error("Drop failed:", err);
+                        }
+                      }}
+                    >
                       <Input
-                        placeholder="Query campaign docs..."
+                        placeholder="Query campaign docs... (Type @ to tag files)"
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         disabled={streaming}
@@ -2209,6 +2691,22 @@ export function DashboardDetailPage() {
                       Manual Value Override
                     </h4>
                     <div className="space-y-4 text-xs">
+                      {showBenchmarkComparison && parsedBenchmark && (() => {
+                        const doc = docs.find(d => d.document_id === editCellData?.docId);
+                        if (!doc || !editCellData) return null;
+                        const benchVal = getMappedBenchmarkValue(doc, editCellData.colName);
+                        if (benchVal === undefined || benchVal === "") return null;
+                        return (
+                          <div className="bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 p-3 rounded-lg border border-rose-200 dark:border-rose-900 text-xs">
+                            <span className="font-bold block uppercase text-[10px] tracking-wider mb-1 flex items-center gap-1.5">
+                              <Sparkles size={11} className="text-amber-500 fill-amber-500 animate-pulse" />
+                              Professor Benchmark Value
+                            </span>
+                            <span className="font-mono text-xs font-bold">{String(benchVal)}</span>
+                          </div>
+                        );
+                      })()}
+
                       <div>
                         <span className="font-bold text-muted-foreground block uppercase text-[10px] tracking-wider mb-1.5">
                           Override Value
@@ -2381,6 +2879,113 @@ export function DashboardDetailPage() {
             <div className="flex justify-end gap-3 pt-3 border-t mt-4 flex-shrink-0">
               <Button variant="outline" size="sm" onClick={() => setShowEditCellModal(false)}>
                 Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal: Column feedback re-evaluation */}
+        <Dialog open={showColFeedbackModal} onOpenChange={setShowColFeedbackModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2 border-b pb-2">
+                <Sparkles size={18} className="text-primary animate-pulse" />
+                <span>Re-evaluate Column: <span className="font-mono text-primary lowercase">{selectedColFeedback?.name}</span></span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-2 space-y-4 text-xs leading-normal">
+              <p className="text-muted-foreground">
+                Submit corrective feedback or prompt instructions for this column. The AI will re-evaluate <strong>all documents</strong> in this campaign using your updated guidelines.
+              </p>
+
+              <div>
+                <span className="font-bold text-muted-foreground block uppercase text-[10px] tracking-wider mb-1">
+                  Column Instruction / Corrective Feedback
+                </span>
+                <textarea
+                  className="w-full bg-background border border-input rounded px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary min-h-[120px] font-sans leading-relaxed mt-1"
+                  value={colFeedbackPrompt}
+                  onChange={(e) => setColFeedbackPrompt(e.target.value)}
+                  placeholder="e.g. 'Ensure that TimeLimits is only set to True if there is a sunset date or statutory authority expiration. Do not mark True for reporting deadlines.'"
+                  disabled={colFeedbackLoading}
+                />
+              </div>
+
+              {selectedColFeedback?.prompt_history && selectedColFeedback.prompt_history.length > 0 && (
+                <div className="mt-3">
+                  <span className="font-bold text-muted-foreground block uppercase text-[10px] tracking-wider mb-2">
+                    Prompt Version History
+                  </span>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {[...selectedColFeedback.prompt_history].reverse().map((hist: any) => (
+                      <div key={hist.version} className="p-2 border border-border bg-muted/40 rounded text-[11px]">
+                        <div className="flex justify-between font-bold text-foreground mb-1">
+                          <span>Version {hist.version}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{new Date(hist.timestamp).toLocaleString()}</span>
+                        </div>
+                        <p className="text-muted-foreground italic">"{hist.prompt}"</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 pt-3 border-t mt-4">
+              <Button variant="outline" size="sm" onClick={() => setShowColFeedbackModal(false)} disabled={colFeedbackLoading}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleColumnReevaluate} disabled={colFeedbackLoading || !colFeedbackPrompt.trim()}>
+                {colFeedbackLoading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin mr-1.5" /> Reevaluating Dataset...
+                  </>
+                ) : (
+                  "Reevaluate Column"
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal: Row feedback re-evaluation */}
+        <Dialog open={showRowFeedbackModal} onOpenChange={setShowRowFeedbackModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2 border-b pb-2">
+                <Sparkles size={18} className="text-primary animate-pulse" />
+                <span>Re-evaluate Document: <span className="font-mono text-primary truncate max-w-[250px]">{selectedRowFeedback?.filename.split("/").pop()}</span></span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-2 space-y-4 text-xs leading-normal">
+              <p className="text-muted-foreground">
+                Explain what the AI got wrong or what specific criteria it should use when coding all variables for this law/document.
+              </p>
+
+              <div>
+                <span className="font-bold text-muted-foreground block uppercase text-[10px] tracking-wider mb-1">
+                  Document Corrective Feedback / Critique
+                </span>
+                <textarea
+                  className="w-full bg-background border border-input rounded px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary min-h-[140px] font-sans leading-relaxed mt-1"
+                  value={rowFeedbackPrompt}
+                  onChange={(e) => setRowFeedbackPrompt(e.target.value)}
+                  placeholder="e.g. 'DirectOversight was marked True because of an SRO audit, but that is self-regulation. We only want True when Congress or GAO performs the audit. Re-evaluate variables accordingly.'"
+                  disabled={rowFeedbackLoading}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-3 border-t mt-4">
+              <Button variant="outline" size="sm" onClick={() => setShowRowFeedbackModal(false)} disabled={rowFeedbackLoading}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleRowReevaluate} disabled={rowFeedbackLoading || !rowFeedbackPrompt.trim()}>
+                {rowFeedbackLoading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin mr-1.5" /> Reevaluating Row...
+                  </>
+                ) : (
+                  "Reevaluate Row"
+                )}
               </Button>
             </div>
           </DialogContent>

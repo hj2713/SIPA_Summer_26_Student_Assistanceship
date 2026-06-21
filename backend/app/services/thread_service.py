@@ -41,12 +41,13 @@ class ThreadService:
             "title": payload.title,
             "provider": payload.provider,
             "model": payload.model,
+            "dashboard_id": payload.dashboard_id,
         }
         with self.db_conn_factory() as conn:
             conn.execute(
                 """
-                INSERT INTO threads (id, user_id, title, provider, model)
-                VALUES (:id, :user_id, :title, :provider, :model);
+                INSERT INTO threads (id, user_id, title, provider, model, dashboard_id)
+                VALUES (:id, :user_id, :title, :provider, :model, :dashboard_id);
                 """,
                 row
             )
@@ -145,6 +146,24 @@ class ThreadService:
             row = cursor.fetchone()
             return self._row_to_thread(row) if row else None
 
+    def get_latest_thread_for_campaign(
+        self, client: Any, user_id: str, dashboard_id: str
+    ) -> ThreadRow | None:
+        """Fetch the newest thread associated with a dashboard_id and user_id."""
+        with self.db_conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM threads
+                WHERE user_id = ? AND dashboard_id = ?
+                ORDER BY created_at DESC LIMIT 1;
+                """,
+                (str(user_id), str(dashboard_id))
+            )
+            row = cursor.fetchone()
+            return self._row_to_thread(row) if row else None
+
+
 
 # Process-wide singleton instance for dependency injection & route integration
 thread_service = ThreadService()
@@ -183,3 +202,9 @@ def update_thread_model(
     client: Any, thread_id: str, user_id: str, model: str
 ) -> ThreadRow | None:
     return thread_service.update_thread_model(client, thread_id, user_id, model)
+
+
+def get_latest_thread_for_campaign(
+    client: Any, user_id: str, dashboard_id: str
+) -> ThreadRow | None:
+    return thread_service.get_latest_thread_for_campaign(client, user_id, dashboard_id)

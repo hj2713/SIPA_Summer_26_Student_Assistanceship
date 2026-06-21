@@ -14,6 +14,9 @@ from app.services.document_service import document_service as default_document_s
 
 logger = logging.getLogger(__name__)
 
+MAX_CODING_INPUT_CHARS = 80000
+TRUNCATION_NOTICE = "\n\n... [TRUNCATED FOR CONTEXT LIMITS] ..."
+
 
 class SchemaField(BaseModel):
     name: str = Field(..., description="Clean snake_case name of the variable. E.g. 'discretion_score', 'has_penalty'")
@@ -77,6 +80,12 @@ class CodingService:
             
             chunks_with_index.sort(key=lambda x: x[0])
             return "\n\n".join(c[1] for c in chunks_with_index)
+
+    def prepare_document_text_for_coding(self, doc_text: str) -> str:
+        """Apply production-safe context handling before an LLM coding call."""
+        if len(doc_text) <= MAX_CODING_INPUT_CHARS:
+            return doc_text
+        return doc_text[:MAX_CODING_INPUT_CHARS] + TRUNCATION_NOTICE
 
     async def generate_schema_and_description(self, prompt_text: str, user_columns: Optional[List[str]] = None) -> Dict[str, Any]:
         """Analyze the campaign prompt using the LLM to generate description and schema."""
@@ -277,17 +286,13 @@ class CodingService:
                     if not doc_text or not doc_text.strip():
                         raise ValueError("Document has no text content extracted yet. Ensure it completed global ingestion.")
 
-                # Context length safety truncation
                 with self.db_conn_factory() as conn:
                     conn.execute(
                         "UPDATE dashboard_documents SET current_step = 3 WHERE dashboard_id = ? AND document_id = ?;",
                         (str(dashboard_id), str(doc_id))
                     )
                     conn.commit()
-                MAX_CODING_INPUT_CHARS = 80000
-                if len(doc_text) > MAX_CODING_INPUT_CHARS:
-                    logger.warning("Document %s exceeds coding limit (%d chars). Truncating text for LLM context.", doc_id, len(doc_text))
-                    doc_text = doc_text[:MAX_CODING_INPUT_CHARS] + "\n\n... [TRUNCATED FOR CONTEXT LIMITS] ..."
+                doc_text = self.prepare_document_text_for_coding(doc_text)
 
                 # Prepare dynamic Pydantic schema model
                 with self.db_conn_factory() as conn:
@@ -312,13 +317,16 @@ class CodingService:
                     if opts:
                         desc += f" Must be one of: {', '.join(opts)}"
                     
-                    fields[name] = (Optional[py_type], Field(default=None, description=desc))
+                    # Avoid Optional/nullable fields as they generate 'anyOf' schemas which are rejected by Gemini's structured output mode.
+                    fields[name] = (py_type, Field(..., description=desc))
                     
-                    # AI Reasoning/Evidence companion field for this variable
-                    reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable."
-                    fields[f"{name}_reasoning"] = (Optional[str], Field(default=None, description=reasoning_desc))
+                    # Only generate reasoning companion field for structured variables (boolean, number, or categorical string fields) to keep schema size within LLM limits.
+                    if col_type in ["boolean", "number"] or opts:
+                        reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
+                        fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
                     
                 CodedOutputModel = create_model("CodedOutputModel", **fields)
+
 
                 # Structured LLM call
                 with self.db_conn_factory() as conn:
@@ -349,6 +357,7 @@ class CodingService:
                     f"=== SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
                     "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
                 )
+
 
                 try:
                     parsed = await llm.parse_structured(

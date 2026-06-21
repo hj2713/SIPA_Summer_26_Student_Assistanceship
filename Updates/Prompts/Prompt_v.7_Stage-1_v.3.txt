@@ -1,0 +1,63 @@
+# Prompt Version 7: Stage 1 Delegation Coding
+
+You are coding a financial regulation law for whether it delegates authority to an administrative or executive actor.
+
+
+## General Coding Instructions
+
+Code only the text supplied. Do not infer authority from background law unless the supplied text expressly incorporates it.
+
+The coding unit is the law-level text provided, unless the user specifies a narrower unit such as a title, subtitle, section, provision, or summary.
+
+
+This task classifies the law as a whole into a binary delegation category. It is not asking for a precise provision-level delegation measure unless the full statutory text is supplied and provision counts can be identified from the text.
+
+## Scope Rule for Financial Regulation and Omnibus Laws
+
+Some laws are omnibus laws and contain titles, subtitles, sections, or provisions that address subjects outside financial regulation.
+
+For this coding task, analyze only the parts of the supplied text that concern financial regulation.
+
+Financial regulation includes laws or provisions concerning:
+
+1. securities markets, securities exchanges, broker-dealers, investment advisers, investment companies, public companies, disclosure, registration, or investor protection;
+2. commodities markets, commodity exchanges, futures, swaps, derivatives, or the CFTC;
+3. banking, bank holding companies, national banks, state banks, thrifts, credit unions, deposit insurance, bank supervision, or bank regulators;
+5. consumer credit, consumer financial protection, lending, credit reporting, debt collection, or payment systems;
+6. financial institutions, financial markets, financial stability, systemic risk, capital requirements, liquidity requirements, prudential supervision, or resolution authority;
+7. insurance, when the provision regulates insurance markets, insurance companies, financial risk, solvency, or related financial activity;
+7. Treasury, Federal Reserve, SEC, CFTC, FDIC, OCC, CFPB, NCUA, FHFA, or other financial regulators acting in a regulatory, supervisory, enforcement, or administrative capacity.
+
+Do not code delegation found only in unrelated parts of the law, such as agriculture, health, education, defense, transportation, immigration, labor, or other non-financial topics.
+
+If the law contains both financial and non-financial titles, base `DelegateLaw` only on the financial-regulation portions of the text.
+
+If the supplied text does not make clear which provisions are financial-regulation provisions, apply the rule using only the information available in the supplied text.
+
+
+For purposes of this coding:
+
+* **Delegation** means the law gives a U.S. federal agency, independent commission, executive branch actor, the President, or another administrative actor authority or responsibility to act.
+* **Delegation is coded 1 / Y** if at least one provision of the law delegates authority to an executive or administrative actor.
+* **Delegation is coded 0 / N** if no provision of the law delegates authority to an executive or administrative actor.
+
+A mere mention of an agency or executive actor is not delegation unless the law gives that actor authority or responsibility to act.
+
+Delegated authority may include authority to implement, administer, enforce, supervise, regulate, interpret, approve, waive, exempt, investigate, issue rules, set standards, make determinations, or carry out statutory responsibilities.
+
+## Stage 1: Delegation Screen
+
+Question: Does the law delegate authority to an agency, executive actor, or administrative actor?
+
+## Required Output
+
+Return exactly one line:
+
+DelegateLaw: Y
+
+or
+
+DelegateLaw: N
+
+Do not provide a rationale. Do not provide any additional text.
+

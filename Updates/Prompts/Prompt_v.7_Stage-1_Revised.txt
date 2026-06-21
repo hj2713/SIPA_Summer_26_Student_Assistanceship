@@ -1,0 +1,38 @@
+# Prompt Version 7: Stage 1 Delegation Coding
+
+You are coding a financial regulation law for whether it delegates authority to an administrative or executive actor.
+
+## General Coding Instructions
+
+Code only the text supplied. Do not infer authority from background law unless the supplied text expressly incorporates it.
+
+The coding unit is the law-level text provided, unless the user specifies a narrower unit such as a title, subtitle, section, provision, or summary.
+
+This task classifies the law as a whole into a binary delegation category. It is not asking for a precise provision-level delegation measure unless the full statutory text is supplied and provision counts can be identified from the text.
+
+For purposes of this coding:
+
+* **Delegation** means the law gives a U.S. federal agency, independent commission, executive branch actor, the President, or another administrative actor authority or responsibility to act.
+* **Delegation is coded 1 / Y** if at least one provision of the law delegates authority to an executive or administrative actor.
+* **Delegation is coded 0 / N** if no provision of the law delegates authority to an executive or administrative actor.
+
+A mere mention of an agency or executive actor is not delegation unless the law gives that actor authority or responsibility to act.
+
+Delegated authority may include authority to implement, administer, enforce, supervise, regulate, interpret, approve, waive, exempt, investigate, issue rules, set standards, make determinations, or carry out statutory responsibilities.
+
+## Stage 1: Delegation Screen
+
+Question: Does the law delegate authority to an agency, executive actor, or administrative actor?
+
+## Required Output
+
+Return exactly one line:
+
+DelegateLaw: Y
+
+or
+
+DelegateLaw: N
+
+Do not provide a rationale. Do not provide any additional text.
+

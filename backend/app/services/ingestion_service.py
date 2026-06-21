@@ -17,6 +17,7 @@ from app.services.embedding import get_embedding_service, EmbeddingService
 from app.core.database import get_db_conn
 from app.core.constants import MIME_TO_EXT
 from app.core.prompts import METADATA_EXTRACTION_SYSTEM_PROMPT
+from app.core.request_context import set_current_user_id
 from app.core.vectors import serialize_embedding
 
 logger = logging.getLogger(__name__)
@@ -293,6 +294,7 @@ class IngestionService:
         workspace_id: str = "TEST",
     ) -> None:
         """Asynchronously process a document: extract text, extract metadata, chunk it, embed, and store in DB."""
+        set_current_user_id(user_id)
         logger.info("Starting background processing for document %s (user %s, workspace %s)", doc_id, user_id, workspace_id)
 
         try:

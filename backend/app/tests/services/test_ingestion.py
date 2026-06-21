@@ -1,6 +1,21 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.services.ingestion_service import extract_text, chunk_text
+from app.core.request_context import get_current_user_id
+from app.services.ingestion_service import IngestionService, extract_text, chunk_text
+
+
+class _FakeConn:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def executemany(self, query, rows):
+        self.rows = rows
+
+    def commit(self):
+        pass
 
 @patch("docling.document_converter.DocumentConverter")
 def test_extract_text_plain_text(mock_converter_cls):
@@ -93,3 +108,27 @@ def test_chunk_text_long_sentence_fallback():
     assert "sentence one" in full_reconstructed
     assert "sentence two" in full_reconstructed
     assert "sentence three" in full_reconstructed
+
+
+def test_background_ingestion_sets_user_context_for_llm_calls():
+    service = IngestionService(db_conn_factory=lambda: _FakeConn())
+
+    def fake_extract_metadata(text):
+        assert get_current_user_id() == "user-123"
+        return {"category": "general", "tags": []}
+
+    with (
+        patch("app.services.ingestion_service.update_document_status"),
+        patch("app.services.ingestion_service.extract_text", return_value="Some document text."),
+        patch("app.services.ingestion_service.extract_metadata_from_text", side_effect=fake_extract_metadata),
+        patch("app.services.ingestion_service.chunk_text", return_value=["Some document text."]),
+        patch.object(service, "generate_embeddings_parallel", return_value=[[0.1, -0.2, 0.3]]),
+    ):
+        service.process_document_background(
+            doc_id="doc-123",
+            user_id="user-123",
+            filename="test.txt",
+            content=b"Some document text.",
+            content_type="text/plain",
+            workspace_id="TEST",
+        )

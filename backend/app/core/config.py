@@ -92,6 +92,18 @@ class Settings(BaseSettings):
                 "LANGSMITH_TRACING=true but LANGSMITH_API_KEY is not set — "
                 "traces will be silently dropped."
             )
+        if self.ENV != "development" and self.JWT_SECRET == _AUTO_JWT_SECRET:
+            logger.warning(
+                "ENV=%s is using the auto-generated local JWT_SECRET. "
+                "Set a stable, high-entropy JWT_SECRET before production deployment.",
+                self.ENV,
+            )
+        if self.ENV != "development" and self.ALLOW_SERVER_LLM_FALLBACK:
+            logger.warning(
+                "ALLOW_SERVER_LLM_FALLBACK=true in ENV=%s. "
+                "Users without saved LLM keys may use server-owned API keys.",
+                self.ENV,
+            )
         if not self.OPENAI_API_KEY and not self.OPEN_ROUTER_API_KEY and not self.GEMINI_API_KEY:
             logger.warning("No API keys set (OPENAI_API_KEY, OPEN_ROUTER_API_KEY, or GEMINI_API_KEY) — LLM calls will fail.")
         if self.ENABLE_RERANKING:

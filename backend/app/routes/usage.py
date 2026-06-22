@@ -6,7 +6,7 @@ from app.repositories import get_db_session
 router = APIRouter(prefix="/api/usage", tags=["usage"])
 
 @router.get("/stats")
-async def get_usage_stats(
+def get_usage_stats(
     current_user: CurrentUserDep,
     timeframe: str = Query("last_day", enum=["last_hour", "last_day", "last_7_days", "all"]),
     campaign_id: Optional[str] = Query(None),

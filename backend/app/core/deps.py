@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 _bearer = HTTPBearer(auto_error=True)
 
 
-async def get_current_user(
+def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
 ) -> CurrentUser:
     """Verify the local JWT and return the authenticated user.
@@ -89,6 +89,13 @@ async def get_current_user(
         )
     except Exception as e:
         import traceback
+        error_module = type(e).__module__
+        if error_module.startswith(("psycopg", "psycopg_pool")):
+            logger.error("Database unavailable during authentication: %s\n%s", e, traceback.format_exc())
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database temporarily unavailable",
+            )
         logger.warning("Local JWT verification failed: %s\n%s", e, traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -122,4 +129,3 @@ def get_workspace_id(workspace_id: str = None) -> str:
         pass
         
     return resolved
-

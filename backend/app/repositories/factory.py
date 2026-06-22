@@ -51,7 +51,14 @@ def get_db_session() -> BaseUnitOfWork:
     """Returns the active Unit of Work according to DB_PROVIDER."""
     if settings.DB_PROVIDER == "postgres":
         pool = get_postgres_pool()
-        conn = pool.getconn(timeout=10.0)
+        try:
+            # Keep checkout waits short. Callers run in FastAPI's worker pool, but a
+            # saturated DB pool should still fail promptly instead of building an
+            # unbounded request backlog.
+            conn = pool.getconn(timeout=2.0)
+        except Exception:
+            logger.exception("PostgreSQL pool checkout failed; stats=%s", pool.get_stats())
+            raise
         try:
             conn.autocommit = False
             if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):

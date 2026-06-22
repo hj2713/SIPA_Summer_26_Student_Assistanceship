@@ -17,21 +17,21 @@ router = APIRouter(prefix="/api/threads", tags=["threads"])
 
 
 @router.get("", response_model=list[ThreadRow])
-async def list_threads(current_user: CurrentUserDep):
+def list_threads(current_user: CurrentUserDep):
     """List all threads for the authenticated user."""
     client = get_user_client(current_user.jwt)
     return thread_service.list_threads(client, current_user.id)
 
 
 @router.post("", response_model=ThreadRow, status_code=status.HTTP_201_CREATED)
-async def create_thread(payload: ThreadCreate, current_user: CurrentUserDep):
+def create_thread(payload: ThreadCreate, current_user: CurrentUserDep):
     """Create a new thread."""
     client = get_user_client(current_user.jwt)
     return thread_service.create_thread(client, current_user.id, payload)
 
 
 @router.get("/{thread_id}", response_model=ThreadWithMessages)
-async def get_thread(thread_id: str, current_user: CurrentUserDep):
+def get_thread(thread_id: str, current_user: CurrentUserDep):
     """Get a thread with its messages."""
     client = get_user_client(current_user.jwt)
     thread = thread_service.get_thread_with_messages(client, thread_id, current_user.id)
@@ -41,7 +41,7 @@ async def get_thread(thread_id: str, current_user: CurrentUserDep):
 
 
 @router.delete("/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_thread(thread_id: str, current_user: CurrentUserDep):
+def delete_thread(thread_id: str, current_user: CurrentUserDep):
     """Delete a thread and cascade its messages."""
     client = get_user_client(current_user.jwt)
     deleted = thread_service.delete_thread(client, thread_id, current_user.id)
@@ -50,7 +50,7 @@ async def delete_thread(thread_id: str, current_user: CurrentUserDep):
 
 
 @router.patch("/{thread_id}", response_model=ThreadRow)
-async def rename_thread(thread_id: str, payload: ThreadRename, current_user: CurrentUserDep):
+def rename_thread(thread_id: str, payload: ThreadRename, current_user: CurrentUserDep):
     """Rename a thread's title."""
     client = get_user_client(current_user.jwt)
     updated = thread_service.rename_thread(client, thread_id, current_user.id, payload)
@@ -60,7 +60,7 @@ async def rename_thread(thread_id: str, payload: ThreadRename, current_user: Cur
 
 
 @router.patch("/{thread_id}/model", response_model=ThreadRow)
-async def update_thread_model(thread_id: str, payload: ThreadModelUpdate, current_user: CurrentUserDep):
+def update_thread_model(thread_id: str, payload: ThreadModelUpdate, current_user: CurrentUserDep):
     """Update a thread's LLM model."""
     client = get_user_client(current_user.jwt)
     updated = thread_service.update_thread_model(client, thread_id, current_user.id, payload.model)
@@ -70,7 +70,7 @@ async def update_thread_model(thread_id: str, payload: ThreadModelUpdate, curren
 
 
 @router.get("/campaign/{dashboard_id}", response_model=ThreadWithMessages | None)
-async def get_campaign_thread(dashboard_id: str, current_user: CurrentUserDep):
+def get_campaign_thread(dashboard_id: str, current_user: CurrentUserDep):
     """Get the latest chat thread associated with a campaign dashboard."""
     client = get_user_client(current_user.jwt)
     thread = thread_service.get_latest_thread_for_campaign(client, current_user.id, dashboard_id)

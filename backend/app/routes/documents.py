@@ -185,7 +185,7 @@ async def upload_document(
 
 
 @router.get("", response_model=list[DocumentRow])
-async def list_documents(
+def list_documents(
     current_user: CurrentUserDep,
     workspace_id: str = Depends(get_workspace_id),
 ):
@@ -199,7 +199,7 @@ class DocumentTagsUpdate(BaseModel):
     tags: list[str]
 
 @router.patch("/{document_id}/tags", response_model=DocumentRow)
-async def update_document_tags(document_id: str, tags_update: DocumentTagsUpdate, current_user: CurrentUserDep):
+def update_document_tags(document_id: str, tags_update: DocumentTagsUpdate, current_user: CurrentUserDep):
     if not current_user.can_add and not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Permission denied")
     
@@ -227,7 +227,7 @@ class DocumentMoveRequest(BaseModel):
     new_filename: str
 
 @router.patch("/{document_id}/move", response_model=DocumentRow)
-async def move_document(document_id: str, move_req: DocumentMoveRequest, current_user: CurrentUserDep):
+def move_document(document_id: str, move_req: DocumentMoveRequest, current_user: CurrentUserDep):
     if not current_user.can_add and not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Permission denied")
     
@@ -247,7 +247,7 @@ import os
 from fastapi.responses import FileResponse
 
 @router.get("/{document_id}/content")
-async def get_document_content(document_id: str, current_user: CurrentUserDep):
+def get_document_content(document_id: str, current_user: CurrentUserDep):
     """Serve the actual document file for previewing, falling back to database chunks if missing from disk."""
     client = get_user_client(current_user.jwt)
     doc = document_service.get_document(client, document_id)
@@ -290,7 +290,7 @@ async def get_document_content(document_id: str, current_user: CurrentUserDep):
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_document(document_id: str, current_user: CurrentUserDep):
+def delete_document(document_id: str, current_user: CurrentUserDep):
     """Delete a document, cascade delete its vector chunks, and remove it from storage."""
     if not current_user.can_delete and not current_user.is_admin:
         raise HTTPException(
@@ -321,7 +321,7 @@ async def delete_document(document_id: str, current_user: CurrentUserDep):
 
 
 @router.post("/{document_id}/retry", response_model=DocumentRow)
-async def retry_document_ingestion(
+def retry_document_ingestion(
     document_id: str,
     background_tasks: BackgroundTasks,
     current_user: CurrentUserDep,
@@ -377,7 +377,7 @@ async def retry_document_ingestion(
 
 
 @router.post("/retry-batch", response_model=list[DocumentUploadResponse])
-async def retry_documents_batch(
+def retry_documents_batch(
     request: RetryBatchRequest,
     background_tasks: BackgroundTasks,
     current_user: CurrentUserDep,

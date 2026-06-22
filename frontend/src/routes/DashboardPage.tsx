@@ -191,7 +191,7 @@ export function DashboardPage() {
     if (session?.access_token) {
       void fetchCampaigns();
     }
-  }, [session, documents]);
+  }, [session?.access_token]);
 
   const isIngestableFile = (name: string): boolean => {
     const ext = name.split(".").pop()?.toLowerCase();

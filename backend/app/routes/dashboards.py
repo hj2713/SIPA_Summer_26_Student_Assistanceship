@@ -36,7 +36,7 @@ async def create_campaign(
 
 
 @router.get("", response_model=List[DashboardRow])
-async def list_campaigns(
+def list_campaigns(
     current_user: CurrentUserDep,
     workspace_id: str = Depends(get_workspace_id)
 ):
@@ -45,7 +45,7 @@ async def list_campaigns(
 
 
 @router.get("/{id}", response_model=DashboardRow)
-async def get_campaign(
+def get_campaign(
     id: str,
     current_user: CurrentUserDep
 ):
@@ -54,7 +54,7 @@ async def get_campaign(
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_campaign(
+def delete_campaign(
     id: str,
     current_user: CurrentUserDep
 ):
@@ -74,7 +74,7 @@ async def delete_campaign(
 
 
 @router.put("/{id}", response_model=DashboardRow)
-async def update_campaign(
+def update_campaign(
     id: str,
     payload: DashboardUpdate,
     current_user: CurrentUserDep
@@ -90,7 +90,7 @@ async def update_campaign(
 
 
 @router.get("/{id}/documents", response_model=List[DashboardDocumentRow])
-async def list_campaign_documents(
+def list_campaign_documents(
     id: str,
     current_user: CurrentUserDep
 ):
@@ -99,7 +99,7 @@ async def list_campaign_documents(
 
 
 @router.post("/{id}/documents/link", status_code=status.HTTP_200_OK)
-async def link_campaign_documents(
+def link_campaign_documents(
     id: str,
     document_ids: List[str],
     current_user: CurrentUserDep
@@ -122,7 +122,7 @@ async def link_campaign_documents(
 
 
 @router.post("/{id}/documents/check-duplicates", status_code=status.HTTP_200_OK)
-async def check_duplicate_filenames(
+def check_duplicate_filenames(
     id: str,
     filenames: List[str],
     current_user: CurrentUserDep,
@@ -186,7 +186,7 @@ async def upload_campaign_document(
 
 
 @router.post("/{id}/documents/retry", status_code=status.HTTP_200_OK)
-async def retry_failed_documents(
+def retry_failed_documents(
     id: str,
     current_user: CurrentUserDep,
     payload: Optional[List[str]] = None
@@ -205,7 +205,7 @@ async def retry_failed_documents(
 
 
 @router.put("/{id}/documents/{doc_id}", status_code=status.HTTP_200_OK)
-async def update_coded_cell(
+def update_coded_cell(
     id: str,
     doc_id: str,
     payload: CellUpdatePayload,
@@ -290,5 +290,4 @@ async def regenerate_campaign_schema(
             detail="You do not have permission to modify campaigns."
         )
     return await campaign_service.regenerate_campaign_schema(id)
-
 

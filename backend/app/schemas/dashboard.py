@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, Union
+from datetime import datetime
 
 class ColumnPromptHistoryItem(BaseModel):
     version: int
@@ -38,7 +39,7 @@ class DashboardRow(BaseModel):
     prompt: str
     schema_fields: List[Dict[str, Any]] = Field(..., alias="schema")
     model: Optional[str] = None
-    created_at: str
+    created_at: datetime
 
     model_config = ConfigDict(populate_by_name=True)
 

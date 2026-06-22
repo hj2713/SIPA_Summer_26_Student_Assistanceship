@@ -233,8 +233,13 @@ class PostgresDocumentChunkRepository(BaseDocumentChunkRepository):
         embedding_str = serialize_embedding_postgres(query_embedding)
         
         # Dense leg (Vector search via pgvector <=> operator)
+        # NOTE: param order must match %s positions in the query:
+        # 1st %s → embedding in SELECT clause (similarity calc)
+        # 2nd %s → workspace_id in WHERE clause
+        # 3rd %s → embedding in ORDER BY clause
+        # 4th %s → limit
         dense_conditions = ["dc.workspace_id = %s"]
-        dense_params = [str(workspace_id), embedding_str, embedding_str]
+        dense_params: list = [embedding_str, str(workspace_id), embedding_str]
         
         if document_ids:
             placeholders = ",".join("%s" for _ in document_ids)

@@ -29,7 +29,13 @@ def get_postgres_pool():
             min_size=1,
             max_size=20,
             open=True,
-            kwargs={"row_factory": dict_row}
+            kwargs={
+                "row_factory": dict_row,
+                # Disable prepared statements — required for Supabase pgBouncer
+                # Transaction pooler (port 6543). Without this, psycopg will try
+                # to use server-side prepared statements which pgBouncer doesn't support.
+                "prepare_threshold": 0,
+            }
         )
     return _pg_pool
 

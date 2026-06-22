@@ -45,8 +45,9 @@ def init_postgres_db():
         raise ValueError("DATABASE_URL is not set but DB_PROVIDER is postgres")
     
     logger.info("Initializing PostgreSQL database...")
-    # Establish direct connection for initialization using standard client
-    conn = psycopg.connect(settings.DATABASE_URL)
+    # prepare_threshold=0 disables server-side prepared statements so this works
+    # with Supabase's pgBouncer connection pooler (Transaction mode, port 6543).
+    conn = psycopg.connect(settings.DATABASE_URL, prepare_threshold=0)
     conn.autocommit = True
     
     try:

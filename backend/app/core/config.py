@@ -83,7 +83,17 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        return [o.strip() for o in self.CORS_ORIGINS.split(",")]
+        origins = []
+        for o in self.CORS_ORIGINS.split(","):
+            clean = o.strip()
+            if clean:
+                origins.append(clean)
+                if clean.endswith("/"):
+                    origins.append(clean.rstrip("/"))
+                else:
+                    origins.append(clean + "/")
+        return origins
+
 
     def warn_missing(self) -> None:
         """Log warnings for missing critical configuration."""

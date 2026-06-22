@@ -1375,7 +1375,23 @@ export function DashboardDetailPage() {
                             >
                               <div className="flex items-center gap-1.5 justify-between">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="truncate font-semibold">{col.name}</span>
+                                  <span className="truncate font-semibold flex items-center gap-1">
+                                    {col.name}
+                                    {(() => {
+                                      const totalCount = docs.length;
+                                      const filledCount = docs.filter(
+                                        (d) =>
+                                          d.coded_values[col.name] !== undefined &&
+                                          d.coded_values[col.name] !== null &&
+                                          d.coded_values[col.name] !== ""
+                                      ).length;
+                                      return (
+                                        <span className="text-[10px] text-muted-foreground/60 font-mono font-medium shrink-0 ml-0.5">
+                                          ({filledCount}/{totalCount})
+                                        </span>
+                                      );
+                                    })()}
+                                  </span>
                                   {col.description && col.description.trim() ? (
                                     <button
                                       onClick={(e) => {

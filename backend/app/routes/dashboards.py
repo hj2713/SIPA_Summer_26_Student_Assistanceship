@@ -248,6 +248,7 @@ async def reevaluate_campaign_column(
     id: str,
     column_name: str,
     payload: ReevaluateColumnPayload,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUserDep
 ):
     """Trigger LLM re-evaluation of a specific column across all documents."""
@@ -256,7 +257,7 @@ async def reevaluate_campaign_column(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to re-evaluate columns."
         )
-    return await campaign_service.reevaluate_column(id, column_name, payload.feedback_prompt)
+    return await campaign_service.reevaluate_column(id, column_name, payload.feedback_prompt, background_tasks)
 
 
 @router.post("/{id}/documents/{doc_id}/reevaluate-row", status_code=status.HTTP_200_OK)

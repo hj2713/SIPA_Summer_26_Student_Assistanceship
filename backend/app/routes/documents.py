@@ -8,7 +8,7 @@ from app.schemas.document import DocumentRow, DocumentStatus, DocumentUploadResp
 from app.services import document_service, ingestion_service
 from app.core.client import get_user_client
 
-from app.core.constants import MAX_FILE_SIZE_BYTES
+from app.core.constants import MAX_FILE_SIZE_BYTES, DEFAULT_WORKSPACE_ID
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -325,6 +325,7 @@ async def retry_document_ingestion(
     document_id: str,
     background_tasks: BackgroundTasks,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
 ):
     """Retry processing a failed document by downloading its file from storage and triggering background ingestion again."""
     if not current_user.can_add and not current_user.is_admin:
@@ -333,7 +334,7 @@ async def retry_document_ingestion(
             detail="You do not have permission to add/retry documents."
         )
 
-    client = get_user_client(current_user.jwt)
+    client = get_user_client(current_user.jwt, workspace_id)
     
     doc = document_service.get_document(client, document_id)
     if not doc:
@@ -380,6 +381,7 @@ async def retry_documents_batch(
     request: RetryBatchRequest,
     background_tasks: BackgroundTasks,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
 ):
     """Retry processing a batch of documents by downloading files and triggering background ingestion."""
     if not current_user.can_add and not current_user.is_admin:
@@ -388,7 +390,7 @@ async def retry_documents_batch(
             detail="You do not have permission to add/retry documents."
         )
 
-    client = get_user_client(current_user.jwt)
+    client = get_user_client(current_user.jwt, workspace_id)
     response_docs = []
     
     for doc_id in request.document_ids:
@@ -413,13 +415,13 @@ async def retry_documents_batch(
             )
             
             ingestion_service.enqueue_document_ingestion(
-            doc_id=str(doc_row.id),
-            user_id=current_user.id,
-            filename=doc_row.filename,
-            content=content,
-            content_type=doc_row.content_type,
-            workspace_id=doc.workspace_id or DEFAULT_WORKSPACE_ID,
-        )
+                doc_id=str(doc_row.id),
+                user_id=current_user.id,
+                filename=doc_row.filename,
+                content=content,
+                content_type=doc_row.content_type,
+                workspace_id=doc.workspace_id or DEFAULT_WORKSPACE_ID,
+            )
             
             response_docs.append(
                 DocumentUploadResponse(

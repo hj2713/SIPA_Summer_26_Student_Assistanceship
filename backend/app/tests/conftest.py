@@ -54,6 +54,9 @@ def cleanup_test_db():
     """Set up test session environment and clean the test SQLite DB if using SQLite."""
     # Signal get_db_path() to use the isolated test database file (SQLite only).
     os.environ["TEST_MODE"] = "1"
+    
+    from app.core.workspace import set_active_workspace
+    set_active_workspace("QA")
 
     if settings.DB_PROVIDER != "postgres":
         from app.core.database import get_db_path
@@ -136,6 +139,9 @@ def run_init_db():
                     cur.execute("DELETE FROM messages WHERE user_id = %s;", (TEST_USER_ID,))
                     cur.execute("DELETE FROM threads WHERE user_id = %s;", (TEST_USER_ID,))
                     cur.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
+                    cur.execute("DELETE FROM workspaces WHERE id IN ('QA', 'PRODUCTION');")
+                    cur.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
+                    cur.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
                     cur.execute("DELETE FROM users WHERE id = %s OR email = %s;", (TEST_USER_ID, "test@test.com"))
                     cur.execute(
                         "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
@@ -151,6 +157,8 @@ def run_init_db():
                 conn.execute("DELETE FROM messages WHERE user_id = ?;", (TEST_USER_ID,))
                 conn.execute("DELETE FROM threads WHERE user_id = ?;", (TEST_USER_ID,))
                 conn.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
+                conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+                conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
                 conn.execute("DELETE FROM users WHERE id = ? OR email = ?;", (TEST_USER_ID, "test@test.com"))
                 conn.execute(
                     "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",

@@ -469,6 +469,15 @@ class CodingService:
         )
         logger.info("Enqueued coding job for dashboard %s, document_ids: %s", dashboard_id, document_ids)
 
+    def schedule_coroutine(self, coro) -> None:
+        """Schedule an arbitrary async coroutine on the coding background event loop."""
+        self._ensure_loop_running()
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        future.add_done_callback(
+            lambda f: logger.error("Scheduled coroutine raised: %s", f.exception(), exc_info=f.exception())
+            if f.exception() else None
+        )
+
     def _ensure_loop_running(self) -> None:
         """Start the persistent background event loop thread once, lazily."""
         if getattr(self, "_loop", None) is not None and self._loop.is_running():

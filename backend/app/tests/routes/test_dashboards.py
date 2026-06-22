@@ -548,3 +548,104 @@ def test_row_reevaluation_endpoint(client, auth_headers, clean_db):
     assert body["coded_values"]["spendlimits"] is True
     assert len(body["coded_values"]["delegatelaw_history"]) == 2
     assert body["coded_values"]["delegatelaw_history"][1]["feedback_prompt"] == "Correct everything please"
+
+
+def test_campaign_add_column_triggers_background_evaluation(client, auth_headers, clean_db):
+    db_id = "test-dashboard-add-col"
+    doc_id = "test-doc-add-col"
+    
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model) VALUES (?, 'QA', 'Campaign', 'Desc', 'Prompt', '[]', 'gemini-3.1-flash');",
+            (db_id,)
+        )
+        conn.execute(
+            """
+            INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            """,
+            (doc_id,)
+        )
+        conn.execute(
+            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, '00000000-0000-0000-0000-000000000001', 'Document content.', '[]', '{}');",
+            ("chunk-add-col-1", doc_id)
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values) VALUES (?, ?, 'completed', '{}');",
+            (db_id, doc_id)
+        )
+        conn.commit()
+
+    # Mock the LLM call to evaluate the new column
+    mock_res = MagicMock()
+    mock_res.new_column = "ExtractedVal"
+    mock_res.new_column_reasoning = "Because text says so."
+    mock_res.model_dump = MagicMock(return_value={
+        "new_column": "ExtractedVal",
+        "new_column_reasoning": "Because text says so."
+    })
+    
+    mock_llm = MagicMock()
+    mock_llm.parse_structured = AsyncMock(return_value=mock_res)
+    
+    # We call the PUT update endpoint to add the new column
+    updated_schema = [
+        {"name": "new_column", "type": "string", "description": "A newly added column", "options": ["ExtractedVal"]}
+    ]
+    
+    import asyncio
+    import threading
+
+    def run_coro_sync(coro):
+        """Run a coroutine in a new thread (avoids 'cannot be called from running event loop' error)."""
+        exc_holder = []
+
+        def _run():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(coro)
+            except Exception as e:
+                exc_holder.append(e)
+            finally:
+                loop.close()
+
+        t = threading.Thread(target=_run)
+        t.start()
+        t.join()
+        if exc_holder:
+            raise exc_holder[0]
+
+    with (
+        patch("app.llm.registry.get_llm_for_model", return_value=mock_llm),
+        patch.object(coding_service, "schedule_coroutine", side_effect=run_coro_sync),
+    ):
+        response = client.put(
+            f"/api/dashboards/{db_id}",
+            json={
+                "name": "Campaign",
+                "description": "Desc",
+                "prompt": "Prompt",
+                "schema": updated_schema
+            },
+            headers=auth_headers
+        )
+        
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["schema"]) == 1
+    assert data["schema"][0]["name"] == "new_column"
+    assert data["schema"][0]["prompt_version"] == 1
+    assert len(data["schema"][0]["prompt_history"]) == 1
+    
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT coded_values, status FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;", (db_id, doc_id))
+        row = cursor.fetchone()
+        assert row["status"] == "completed"
+        coded = json.loads(row["coded_values"])
+        assert coded["new_column"] == "ExtractedVal"
+        assert coded["new_column_reasoning"] == "Because text says so."
+        assert len(coded["new_column_history"]) == 1
+        assert coded["new_column_history"][0]["version"] == 1
+

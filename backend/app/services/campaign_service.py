@@ -1,6 +1,7 @@
 import logging
 import uuid
 import json
+import asyncio
 from typing import List, Optional, Any, Dict
 
 from app.core.database import get_db_conn
@@ -196,6 +197,10 @@ class CampaignService:
 
     def update_campaign(self, id: str, payload: DashboardUpdate) -> DashboardRow:
         """Update campaign name, description, prompt, or variable schema."""
+        import datetime
+        new_cols = []
+        doc_rows_for_eval = []
+
         with self.db_session_factory() as session:
             row = session.dashboards.get_by_id(id)
             if not row:
@@ -211,7 +216,31 @@ class CampaignService:
             model = payload.model if payload.model is not None else row.get("model")
 
             if payload.schema_fields is not None:
-                schema_json = json.dumps(payload.schema_fields)
+                try:
+                    old_schema = json.loads(row["schema"]) if isinstance(row["schema"], str) else (row["schema"] or [])
+                except Exception:
+                    old_schema = []
+
+                # Convert payload schema fields to dictionaries
+                new_schema = []
+                for col in payload.schema_fields:
+                    col_dict = col.model_dump() if hasattr(col, "model_dump") else (col.dict() if hasattr(col, "dict") else dict(col))
+                    new_schema.append(col_dict)
+
+                old_names = {c.get("name") for c in old_schema if isinstance(c, dict) and c.get("name")}
+                for col in new_schema:
+                    col_name = col.get("name")
+                    if col_name and col_name not in old_names:
+                        col["prompt_version"] = 1
+                        col["prompt_history"] = [
+                            {
+                                "version": 1,
+                                "prompt": col.get("description", "Original column description"),
+                                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+                            }
+                        ]
+                        new_cols.append(col)
+                schema_json = json.dumps(new_schema)
             else:
                 schema_json = json.dumps(row["schema"]) if not isinstance(row["schema"], str) else row["schema"]
 
@@ -223,12 +252,30 @@ class CampaignService:
                 "model": model
             })
 
+            # If there are newly added columns, mark documents as processing now (inside the transaction)
+            if new_cols:
+                doc_rows = session.dashboard_documents.list_by_dashboard(id)
+                for doc_r in doc_rows:
+                    session.dashboard_documents.update_status(
+                        dashboard_id=id,
+                        document_id=doc_r["document_id"],
+                        status="processing"
+                    )
+                    session.dashboard_documents.update_progress(
+                        dashboard_id=id,
+                        document_id=doc_r["document_id"],
+                        current_step=1,
+                        total_steps=7
+                    )
+                # Snapshot the doc_rows so the background task can use them after the session closes
+                doc_rows_for_eval = [dict(r) for r in doc_rows]
+
             try:
                 schema_list = json.loads(schema_json)
             except Exception:
                 schema_list = []
 
-            return DashboardRow(
+            result = DashboardRow(
                 id=id,
                 workspace_id=row["workspace_id"],
                 name=name,
@@ -238,6 +285,20 @@ class CampaignService:
                 model=model,
                 created_at=row["created_at"]
             )
+
+        # Schedule background evaluation AFTER the session is committed and closed
+        if new_cols and doc_rows_for_eval:
+            self._coding_service.schedule_coroutine(
+                self._evaluate_new_columns_background(
+                    id=id,
+                    new_cols=new_cols,
+                    campaign_prompt=prompt,
+                    model_name=model,
+                    doc_rows=doc_rows_for_eval
+                )
+            )
+
+        return result
 
 
     def list_campaign_documents(self, id: str) -> List[DashboardDocumentRow]:
@@ -882,6 +943,193 @@ class CampaignService:
                         current_step=0,
                         total_steps=7
                     )
+
+    async def _evaluate_new_columns_background(
+        self,
+        id: str,
+        new_cols: list,
+        campaign_prompt: str,
+        model_name: str,
+        doc_rows: list
+    ) -> None:
+        import datetime
+        from pydantic import create_model, Field
+        from typing import Optional
+        from app.llm.registry import get_llm_for_model
+        from app.llm.types import LLMMessage
+
+        llm = get_llm_for_model(model_name)
+
+        # Build fields for the Pydantic schema model
+        fields = {}
+        for col in new_cols:
+            name = col["name"]
+            col_type = col["type"]
+            fields[name] = (
+                self._coding_service._field_type_for_column(col),
+                Field(..., description=self._coding_service._column_description(col))
+            )
+            if col_type in ["boolean", "number"] or col.get("options"):
+                reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
+                fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
+
+        CodedOutputModel = create_model("CodedOutputModel", **fields)
+
+        # Generate a textual representation of the new columns and their rules for the prompt
+        column_instructions = []
+        for col in new_cols:
+            name = col["name"]
+            col_type = col["type"]
+            opts = col.get("options")
+            opts_text = f" (Allowed categories: {', '.join(opts)})" if opts else ""
+            column_instructions.append(f"- **{name}** ({col_type}): {col.get('description', '')}{opts_text}")
+
+        column_instructions_text = "\n".join(column_instructions)
+
+        for doc_r in doc_rows:
+            doc_id = doc_r["document_id"]
+
+            with self.db_session_factory() as session:
+                session.dashboard_documents.update_progress(
+                    dashboard_id=id,
+                    document_id=doc_id,
+                    current_step=2,
+                    total_steps=7
+                )
+
+            try:
+                # 1. Fetch document text
+                doc_text = self._coding_service.get_document_text(doc_id)
+                if not doc_text or not doc_text.strip():
+                    raise ValueError("Document has no text content extracted yet.")
+
+                doc_text = self._coding_service.prepare_document_text_for_coding(doc_text)
+
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_progress(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        current_step=3,
+                        total_steps=7
+                    )
+
+                # 2. Fetch existing coded values to check/pass context
+                with self.db_session_factory() as session:
+                    fresh_doc_r = session.dashboard_documents.get(id, doc_id)
+                    if not fresh_doc_r:
+                        continue
+                    try:
+                        coded_values = json.loads(fresh_doc_r["coded_values"]) if isinstance(fresh_doc_r["coded_values"], str) else (fresh_doc_r["coded_values"] or {})
+                    except Exception:
+                        coded_values = {}
+
+                # Assemble summary of previous values and reasonings of existing columns for context
+                prev_summary = []
+                for k, v in coded_values.items():
+                    if not k.endswith("_reasoning") and not k.endswith("_history"):
+                        reasoning = coded_values.get(f"{k}_reasoning", "Not provided")
+                        prev_summary.append(f"- {k}: {v!r}\n  reasoning: {reasoning}")
+                prev_summary_text = "\n".join(prev_summary) if prev_summary else "No prior column values are available."
+
+                # 3. Build system instruction and message
+                coding_system_prompt = (
+                    "You are an AI coding assistant helping a quantitative research researcher.\n"
+                    "Analyze the provided document text and extract values for the specified output schema columns.\n\n"
+                    "=== COLUMN DEFINITIONS AND RULES ===\n"
+                    f"{column_instructions_text}\n\n"
+                    f"=== CAMPAIGN SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
+                    f"=== PRIOR COLUMN VALUES AND REASONING ===\n{prev_summary_text}\n\n"
+                    "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
+                )
+
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_progress(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        current_step=5,
+                        total_steps=7
+                    )
+
+                # 4. LLM Call
+                parsed = await llm.parse_structured(
+                    [
+                        LLMMessage(role="system", content=coding_system_prompt),
+                        LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
+                    ],
+                    schema=CodedOutputModel,
+                    log_context={"service": "campaign_coding", "campaign_id": str(id)},
+                )
+                if parsed is None:
+                    raise ValueError("LLM returned empty parsed result")
+                parsed_values = parsed.model_dump()
+
+                # 5. Merge new values and initialize history
+                for col in new_cols:
+                    col_name = col["name"]
+                    val = parsed_values.get(col_name)
+                    reasoning = parsed_values.get(f"{col_name}_reasoning")
+
+                    coded_values[col_name] = val
+                    if reasoning is not None:
+                        coded_values[f"{col_name}_reasoning"] = reasoning
+
+                    coded_values[f"{col_name}_history"] = [
+                        {
+                            "version": 1,
+                            "value": val,
+                            "reasoning": reasoning,
+                            "feedback_prompt": None,
+                            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                            "source": "ai"
+                        }
+                    ]
+
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_progress(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        current_step=6,
+                        total_steps=7
+                    )
+
+                # 6. Save back to database and mark completed
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_coded_values(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        coded_values=json.dumps(coded_values),
+                        status="completed"
+                    )
+                    session.dashboard_documents.update_progress(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        current_step=0,
+                        total_steps=7
+                    )
+
+            except Exception as e:
+                err_str = str(e)
+                logger.error("Sequential new column evaluation failed for doc %s in campaign %s: %s", doc_id, id, err_str)
+                error_type = "EXTRACTION_FAILURE"
+                if "API_FAILURE" in err_str:
+                    error_type = "API_FAILURE"
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_status(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        status="failed",
+                        error_message=err_str,
+                        error_type=error_type
+                    )
+                    session.dashboard_documents.update_progress(
+                        dashboard_id=id,
+                        document_id=doc_id,
+                        current_step=0,
+                        total_steps=7
+                    )
+
+            # Sleep 3 seconds rate limit safety between documents
+            await asyncio.sleep(3.0)
 
     async def reevaluate_row(
         self,

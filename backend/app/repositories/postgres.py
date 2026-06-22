@@ -551,7 +551,7 @@ class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
                 """,
                 [str(dashboard_id)] + [str(d_id) for d_id in document_ids]
             )
-            return [r[0] for r in cursor.fetchall()]
+            return [r["document_id"] for r in cursor.fetchall()]
 
     def get_failed_document_ids(self, dashboard_id: str) -> List[str]:
         with self.conn.cursor() as cursor:
@@ -562,7 +562,7 @@ class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
                 """,
                 (str(dashboard_id),)
             )
-            return [r[0] for r in cursor.fetchall()]
+            return [r["document_id"] for r in cursor.fetchall()]
 
     def reset_documents_to_pending(self, dashboard_id: str, document_ids: List[str]) -> None:
         if not document_ids:

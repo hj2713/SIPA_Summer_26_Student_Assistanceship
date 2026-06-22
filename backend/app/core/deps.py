@@ -88,7 +88,8 @@ async def get_current_user(
             can_delete=can_delete
         )
     except Exception as e:
-        logger.warning("Local JWT verification failed: %s", e)
+        import traceback
+        logger.warning("Local JWT verification failed: %s\n%s", e, traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

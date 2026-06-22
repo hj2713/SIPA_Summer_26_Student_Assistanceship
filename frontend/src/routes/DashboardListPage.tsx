@@ -32,7 +32,7 @@ export function DashboardListPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [columnsList, setColumnsList] = useState<{ name: string; type: string; description: string; options_raw?: string }[]>([]);
+  const [columnsList, setColumnsList] = useState<{ name: string; type: string; description: string; options_raw?: string; prompt?: string; depends_on_raw?: string }[]>([]);
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
 
@@ -125,7 +125,9 @@ export function DashboardListPage() {
             name: c.name.trim(),
             type: c.type,
             description: c.description.trim() || undefined,
-            options: c.options_raw ? c.options_raw.split(",").map(o => o.trim()).filter(Boolean) : null
+            options: c.options_raw ? c.options_raw.split(",").map(o => o.trim()).filter(Boolean) : null,
+            prompt: c.prompt?.trim() || undefined,
+            depends_on: c.depends_on_raw ? c.depends_on_raw.split(",").map(o => o.trim()).filter(Boolean) : []
           })) : null,
         }),
       });
@@ -355,7 +357,7 @@ export function DashboardListPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setColumnsList(prev => [...prev, { name: "", type: "string", description: "" }])}
+                      onClick={() => setColumnsList(prev => [...prev, { name: "", type: "string", description: "", prompt: "", depends_on_raw: "" }])}
                       className="h-7 text-xs gap-1"
                       disabled={creating}
                     >
@@ -421,6 +423,30 @@ export function DashboardListPage() {
                             placeholder="Explain exactly how the LLM should evaluate and score this variable..."
                             className="w-full bg-background border border-input rounded mt-0.5 p-1.5 text-xs min-h-[40px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
                           />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[9px] font-bold text-muted-foreground uppercase">
+                              Column Prompt / Rubric
+                            </label>
+                            <textarea
+                              value={col.prompt || ""}
+                              onChange={(e) => setColumnsList(prev => prev.map((c, i) => i === idx ? { ...c, prompt: e.target.value } : c))}
+                              placeholder="Optional prompt used specifically for this column..."
+                              className="w-full bg-background border border-input rounded mt-0.5 p-1.5 text-xs min-h-[48px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-bold text-muted-foreground uppercase">
+                              Depends On
+                            </label>
+                            <Input
+                              value={col.depends_on_raw || ""}
+                              onChange={(e) => setColumnsList(prev => prev.map((c, i) => i === idx ? { ...c, depends_on_raw: e.target.value } : c))}
+                              placeholder="Comma separated, e.g. law_delegation"
+                              className="mt-0.5 text-xs h-7"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}

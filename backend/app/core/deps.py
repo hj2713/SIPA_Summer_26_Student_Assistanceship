@@ -4,6 +4,7 @@ Extracts and decodes local JWTs and verifies user existence in SQLite.
 Raises 401 on any failure.
 """
 import logging
+import os
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -30,8 +31,8 @@ async def get_current_user(
     """
     token = credentials.credentials
     
-    # Check if we are running unit tests
-    is_test_env = settings.JWT_SECRET == "test-secret-32-bytes-long-enough!!"
+    # Check if we are running unit tests (set by conftest.py's cleanup_test_db fixture)
+    is_test_env = os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes")
     
     import jwt
     try:

@@ -1,0 +1,88 @@
+Question
+
+Based on the delegated authority and constraints identified in earlier analysis, classify the law as a whole by the level of discretionary authority it grants to administrative actors.
+
+This is a law-level Rough Guide classification, not a precise provision-level discretion measure.
+
+Discretion Rank Scale
+0 = No Discretion
+
+The law does not delegate authority to an agency or administrative actor.
+
+1 = Minimal Discretion
+
+The law delegates only a small amount of authority, or the agency's role is narrow, mechanical, procedural, or ministerial. Delegated authority is tightly constrained.
+
+2 = Limited Discretion
+
+The law delegates some real implementation, supervisory, regulatory, or enforcement authority, but the authority is bounded by significant rules, standards, reporting, consultation, appeals, exemptions, oversight, deadlines, or other constraints.
+
+3 = Substantial Discretion
+
+The law delegates meaningful authority to interpret, implement, enforce, supervise, regulate, approve, waive, exempt, or set standards. Constraints exist, but agencies retain significant room to exercise judgment.
+
+4 = High Discretion
+
+The law delegates broad policymaking, rulemaking, standard-setting, waiver, exemption, enforcement, supervisory, or interpretive authority across many provisions or central parts of the law, with few meaningful constraints on how that authority is used.
+
+Factors to Consider When Assigning the Rank
+
+Evaluate:
+
+Breadth of affected actors, markets, institutions, transactions, or activities.
+Degree of agency policy choice.
+Strength of statutory constraints.
+Centrality of agency implementation to the law.
+Consistency Rules
+Rank 0
+
+Assign if:
+
+No delegation exists.
+DelegateLaw = N.
+Rank 1
+
+Assign if:
+
+Delegation is low.
+Agency role is mostly ministerial, procedural, mechanical, or narrow.
+Delegated authority is heavily constrained.
+Rank 2
+
+Assign if:
+
+Agency receives meaningful implementation, supervisory, regulatory, or enforcement authority.
+Significant constraints limit how authority can be exercised.
+Rank 3
+
+Assign if:
+
+Agency receives substantial authority to interpret, implement, enforce, supervise, regulate, approve, waive, exempt, or set standards.
+Constraints exist but still leave significant room for agency judgment.
+Rank 4
+
+Assign only if:
+
+Delegation is broad, extensive, or central to the law.
+Agency retains major policy-making or standard-setting discretion.
+Constraints are limited, weak, or minimal.
+Broad authority extends across many provisions or central parts of the law.
+
+Do not assign Rank 4 merely because authority is delegated.
+
+Required Output Format
+Discretion_Rank: 0/1/2/3/4
+
+Final_Rationale: [1-2 sentences explaining how the identified delegation and constraints support the assigned rank]
+Mapping from Earlier Findings
+Delegation	Constraints	Typical Rank
+None	N/A	0
+Low + Ministerial	Any	1
+Moderate/High	Moderate/High	2 or 3
+Broad/Central	Weak/Few	4
+Decision Logic
+No delegation → Rank 0
+Narrow, procedural authority → Rank 1
+Real authority but strongly constrained → Rank 2
+Meaningful authority with significant judgment remaining → Rank 3
+Broad policy-making authority with limited constraints → Rank 4

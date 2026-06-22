@@ -16,13 +16,13 @@ except ImportError:
 import os
 import time
 
-# Force test secret and SQLite provider globally before other modules import settings
-TEST_SECRET = "test-secret-32-bytes-long-enough!!"
-os.environ["JWT_SECRET"] = TEST_SECRET
-os.environ["DB_PROVIDER"] = "sqlite"
+# Load settings from env/.env — no hardcoded values here ever.
+# JWT_SECRET and DB_PROVIDER are fully controlled by the environment.
 from app.core.config import settings
-settings.JWT_SECRET = TEST_SECRET
-settings.DB_PROVIDER = "sqlite"
+
+# Use the JWT_SECRET already resolved by settings (from .env or env var).
+# This is the same secret the running app uses, so tokens stay valid.
+TEST_SECRET = settings.JWT_SECRET
 
 import jwt
 import pytest
@@ -47,47 +47,72 @@ def make_jwt(user_id: str = TEST_USER_ID, expired: bool = False) -> str:
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_test_db():
-    """Delete test database file once at the very start of the test session."""
-    from app.core.database import get_db_path
-    db_path = get_db_path()
-    if os.path.exists(db_path):
-        try:
-            os.remove(db_path)
-        except OSError:
-            pass
+    """Set up test session environment and clean the test SQLite DB if using SQLite."""
+    # Signal get_db_path() to use the isolated test database file (SQLite only).
+    os.environ["TEST_MODE"] = "1"
+
+    if settings.DB_PROVIDER != "postgres":
+        from app.core.database import get_db_path
+        db_path = get_db_path()
+        if os.path.exists(db_path):
+            try:
+                os.remove(db_path)
+            except OSError:
+                pass
     yield
+
+    # Clean up TEST_MODE after the session
+    os.environ.pop("TEST_MODE", None)
 
 
 @pytest.fixture()
-def client(monkeypatch):
-    """Test client with JWT secret and DB provider patched."""
-    monkeypatch.setenv("JWT_SECRET", TEST_SECRET)
-    monkeypatch.setenv("DB_PROVIDER", "sqlite")
-    # Re-import settings so monkeypatch takes effect
-    from app.core import config
-    config.settings.JWT_SECRET = TEST_SECRET
-    config.settings.DB_PROVIDER = "sqlite"
+def client():
+    """Test client — uses whatever DB_PROVIDER and JWT_SECRET are set in the environment."""
     with TestClient(app) as c:
         yield c
 
 
 @pytest.fixture(autouse=True)
 def run_init_db():
-    """Ensure a clean, initialized database exists for each test run."""
-    from app.core.database import init_db, get_db_conn
+    """Ensure a clean, initialized database exists for each test run.
+
+    Works transparently with both SQLite (local) and Postgres/Supabase.
+    The active backend is determined entirely by DB_PROVIDER in the environment.
+    """
+    from app.core.database import init_db
     init_db()
-    # Seed default test user to satisfy local deps JWT validation
-    with get_db_conn() as conn:
-        conn.execute("DELETE FROM document_chunks;")
-        conn.execute("DELETE FROM documents;")
-        conn.execute("DELETE FROM messages;")
-        conn.execute("DELETE FROM threads;")
-        conn.execute("DELETE FROM users;")
-        conn.execute(
-            "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
-            (TEST_USER_ID, "test@test.com", "mock_hash")
-        )
-        conn.commit()
+
+    if settings.DB_PROVIDER == "postgres":
+        # Postgres/Supabase path — use psycopg directly
+        import psycopg
+        with psycopg.connect(settings.DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM document_chunks;")
+                cur.execute("DELETE FROM documents;")
+                cur.execute("DELETE FROM messages;")
+                cur.execute("DELETE FROM threads;")
+                cur.execute("DELETE FROM users WHERE email = %s;", ("test@test.com",))
+                cur.execute(
+                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) "
+                    "VALUES (%s, %s, %s, 1, 1, 1) ON CONFLICT (id) DO UPDATE "
+                    "SET password_hash = EXCLUDED.password_hash;",
+                    (TEST_USER_ID, "test@test.com", "mock_hash")
+                )
+            conn.commit()
+    else:
+        # SQLite path
+        from app.core.database import get_db_conn
+        with get_db_conn() as conn:
+            conn.execute("DELETE FROM document_chunks;")
+            conn.execute("DELETE FROM documents;")
+            conn.execute("DELETE FROM messages;")
+            conn.execute("DELETE FROM threads;")
+            conn.execute("DELETE FROM users;")
+            conn.execute(
+                "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
+                (TEST_USER_ID, "test@test.com", "mock_hash")
+            )
+            conn.commit()
 
 
 @pytest.fixture()

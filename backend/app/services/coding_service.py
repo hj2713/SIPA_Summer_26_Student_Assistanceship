@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, create_model
 from concurrent.futures import ThreadPoolExecutor
 
 from app.core.database import get_db_conn
+from app.core.request_context import set_current_user_id
 from app.llm import LLMMessage, get_llm, get_llm_for_model
 from app.services.document_service import document_service as default_document_service, DocumentService
 
@@ -23,6 +24,8 @@ class SchemaField(BaseModel):
     type: str = Field(..., description="The data type. One of 'string', 'number', 'boolean'")
     description: str = Field(..., description="Explanation of what this variable represents according to the prompt rules")
     options: Optional[List[str]] = Field(default=None, description="Optional list of allowed values/categories for this field")
+    prompt: Optional[str] = Field(default=None, description="Optional column-specific coding prompt or rubric")
+    depends_on: Optional[List[str]] = Field(default=None, description="Optional prior columns this variable depends on")
 
 
 class GeneratedCampaignMeta(BaseModel):
@@ -37,6 +40,8 @@ For each variable, determine:
 2. The data type ('string', 'number', or 'boolean').
 3. A description of what this variable measures.
 4. Any allowed categorical values/categories if specified by the prompt.
+5. If the variable should be coded using a specific section of the prompt, include that section as the variable's prompt.
+6. If the variable logically depends on earlier variables, list those prior variable names in depends_on.
 
 Also, write a concise 1-2 sentence description summarizing the overall goal of this research campaign.
 """
@@ -152,6 +157,181 @@ class CodingService:
             return doc_text
         return doc_text[:MAX_CODING_INPUT_CHARS] + TRUNCATION_NOTICE
 
+    def _normalize_depends_on(self, value: Any) -> list[str]:
+        """Normalize dependency metadata to a clean list of column names."""
+        if value is None:
+            return []
+        if isinstance(value, str):
+            raw_items = value.split(",")
+        elif isinstance(value, list):
+            raw_items = value
+        else:
+            return []
+
+        deps: list[str] = []
+        for item in raw_items:
+            dep = self.sanitize_column_name(str(item).strip())
+            if dep and dep not in deps:
+                deps.append(dep)
+        return deps
+
+    def _normalize_schema_field(self, col: dict[str, Any]) -> dict[str, Any]:
+        """Preserve supported schema metadata while normalizing names/types/dependencies."""
+        clean_name = self.sanitize_column_name(str(col.get("name", "")))
+        col_type = col.get("type") or "string"
+        if col_type not in ["string", "number", "boolean"]:
+            col_type = "string"
+
+        normalized = dict(col)
+        normalized["name"] = clean_name
+        normalized["type"] = col_type
+        normalized["description"] = col.get("description") or f"Column: {clean_name}"
+        normalized["options"] = col.get("options") or None
+        normalized["prompt"] = (col.get("prompt") or "").strip()
+        normalized["depends_on"] = self._normalize_depends_on(col.get("depends_on") or col.get("dependencies"))
+        return normalized
+
+    def _schema_uses_staged_coding(self, schema_fields: list[dict[str, Any]]) -> bool:
+        """Staged coding is needed when any column has a specific prompt or dependency."""
+        for col in schema_fields:
+            if (col.get("prompt") or "").strip() or self._normalize_depends_on(col.get("depends_on")):
+                return True
+        return False
+
+    def _ordered_schema_fields_for_staged_coding(self, schema_fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Order columns so dependency columns are coded before columns that rely on them."""
+        by_name = {col.get("name"): col for col in schema_fields if col.get("name")}
+        ordered: list[dict[str, Any]] = []
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(col: dict[str, Any]) -> None:
+            name = col.get("name")
+            if not name or name in visited:
+                return
+            if name in visiting:
+                logger.warning("Cycle detected in schema column dependencies at %s; preserving remaining order.", name)
+                return
+            visiting.add(name)
+            for dep in self._normalize_depends_on(col.get("depends_on")):
+                dep_col = by_name.get(dep)
+                if dep_col is not None:
+                    visit(dep_col)
+            visiting.remove(name)
+            visited.add(name)
+            ordered.append(col)
+
+        for col in schema_fields:
+            visit(col)
+
+        return ordered
+
+    def _field_type_for_column(self, col: dict[str, Any]) -> Any:
+        col_type = col.get("type", "string")
+        if col_type == "number":
+            return float
+        if col_type == "boolean":
+            return bool
+        return str
+
+    def _column_description(self, col: dict[str, Any]) -> str:
+        desc = col.get("description", "")
+        opts = col.get("options")
+        if opts:
+            desc += f" Must be one of: {', '.join(opts)}"
+        return desc
+
+    def _dependency_context_text(
+        self,
+        col: dict[str, Any],
+        coded_values: dict[str, Any],
+        schema_fields: list[dict[str, Any]],
+    ) -> str:
+        deps = self._normalize_depends_on(col.get("depends_on"))
+        if not deps:
+            current_name = col.get("name")
+            deps = [
+                c.get("name")
+                for c in schema_fields
+                if c.get("name") != current_name and c.get("name") in coded_values
+            ]
+
+        lines = []
+        for dep in deps:
+            if dep not in coded_values and f"{dep}_reasoning" not in coded_values:
+                lines.append(f"- {dep}: not coded yet")
+                continue
+            lines.append(
+                f"- {dep}: {coded_values.get(dep)!r}\n"
+                f"  reasoning: {coded_values.get(f'{dep}_reasoning', 'Not provided')}"
+            )
+        return "\n".join(lines) if lines else "No prior column values are available."
+
+    def _build_staged_column_prompt(
+        self,
+        campaign_prompt: str,
+        col: dict[str, Any],
+        coded_values: dict[str, Any],
+        schema_fields: list[dict[str, Any]],
+    ) -> str:
+        column_prompt = (col.get("prompt") or "").strip()
+        dependency_context = self._dependency_context_text(col, coded_values, schema_fields)
+        return (
+            "You are an AI coding assistant helping a legal-institutional research project.\n"
+            "Code exactly one output column for the provided law text.\n\n"
+            f"=== CAMPAIGN CODEBOOK ===\n{campaign_prompt}\n\n"
+            "=== CURRENT COLUMN ===\n"
+            f"Name: {col['name']}\n"
+            f"Type: {col['type']}\n"
+            f"Description: {self._column_description(col)}\n\n"
+            f"=== COLUMN-SPECIFIC PROMPT / RUBRIC ===\n{column_prompt or col.get('description', '')}\n\n"
+            f"=== PRIOR COLUMN VALUES AND REASONING ===\n{dependency_context}\n\n"
+            "If this column depends on prior values, apply those prior values as binding context unless the document text clearly shows the earlier value is impossible. "
+            "Return only the requested structured JSON fields."
+        )
+
+    def _build_single_column_model(self, col: dict[str, Any]) -> type[BaseModel]:
+        name = col["name"]
+        fields: dict[str, Any] = {
+            name: (self._field_type_for_column(col), Field(..., description=self._column_description(col)))
+        }
+        if col["type"] in ["boolean", "number"] or col.get("options"):
+            fields[f"{name}_reasoning"] = (
+                str,
+                Field(..., description=f"Reasoning and textual evidence supporting the value assigned to '{name}'.")
+            )
+        return create_model(f"{name.title().replace('_', '')}CodingModel", **fields)
+
+    async def _code_document_staged(
+        self,
+        *,
+        llm: Any,
+        campaign_prompt: str,
+        schema_fields: list[dict[str, Any]],
+        doc_text: str,
+        dashboard_id: str,
+    ) -> dict[str, Any]:
+        """Code schema columns in order, feeding prior values into dependent columns."""
+        coded_values: dict[str, Any] = {}
+        ordered_schema_fields = self._ordered_schema_fields_for_staged_coding(schema_fields)
+        for col in ordered_schema_fields:
+            model = self._build_single_column_model(col)
+            parsed = await llm.parse_structured(
+                [
+                    LLMMessage(
+                        role="system",
+                        content=self._build_staged_column_prompt(campaign_prompt, col, coded_values, schema_fields),
+                    ),
+                    LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
+                ],
+                schema=model,
+                log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+            )
+            if parsed is None:
+                raise ValueError(f"LLM returned empty parsed result for column {col['name']}")
+            coded_values.update(parsed.model_dump())
+        return coded_values
+
     async def generate_schema_and_description(self, prompt_text: str, user_columns: Optional[List[str]] = None) -> Dict[str, Any]:
         """Analyze the campaign prompt using the LLM to generate description and schema."""
         llm = get_llm()
@@ -191,18 +371,24 @@ class CodingService:
                         col_type = col_data.get("type") or "string"
                         col_desc = col_data.get("description") or f"User-defined column: {raw_name}"
                         col_opts = col_data.get("options")
+                        col_prompt = col_data.get("prompt")
+                        col_depends_on = self._normalize_depends_on(col_data.get("depends_on") or col_data.get("dependencies"))
                     else:
                         clean_name = self.sanitize_column_name(str(col))
                         col_type = "string"
                         col_desc = f"User-defined column: {col}"
                         col_opts = None
+                        col_prompt = None
+                        col_depends_on = []
 
                     if clean_name and clean_name not in seen_names:
                         schema_fields.append({
                             "name": clean_name,
                             "type": col_type if col_type in ["string", "number", "boolean"] else "string",
                             "description": col_desc,
-                            "options": col_opts
+                            "options": col_opts,
+                            "prompt": col_prompt,
+                            "depends_on": col_depends_on
                         })
                         seen_names.add(clean_name)
                         
@@ -214,7 +400,9 @@ class CodingService:
                         "name": clean_name,
                         "type": field.type if field.type in ["string", "number", "boolean"] else "string",
                         "description": field.description,
-                        "options": field.options
+                        "options": field.options,
+                        "prompt": field.prompt,
+                        "depends_on": self._normalize_depends_on(field.depends_on)
                     })
                     seen_names.add(clean_name)
                     
@@ -242,18 +430,24 @@ class CodingService:
                         col_type = col_data.get("type") or "string"
                         col_desc = col_data.get("description") or f"User-defined column: {raw_name}"
                         col_opts = col_data.get("options")
+                        col_prompt = col_data.get("prompt")
+                        col_depends_on = self._normalize_depends_on(col_data.get("depends_on") or col_data.get("dependencies"))
                     else:
                         clean_name = self.sanitize_column_name(str(col))
                         col_type = "string"
                         col_desc = f"User-defined column: {col}"
                         col_opts = None
+                        col_prompt = None
+                        col_depends_on = []
 
                     if clean_name:
                         fallback_schema.append({
                             "name": clean_name,
                             "type": col_type if col_type in ["string", "number", "boolean"] else "string",
                             "description": col_desc,
-                            "options": col_opts
+                            "options": col_opts,
+                            "prompt": col_prompt,
+                            "depends_on": col_depends_on
                         })
             return {
                 "description": "Campaign created from system prompt.",
@@ -300,6 +494,7 @@ class CodingService:
 
     async def process_sequential_coding_queue(self, dashboard_id: str, document_ids: List[str], user_id: str) -> None:
         """Process a batch of documents sequentially, parsing and coding each one."""
+        set_current_user_id(user_id)
         logger.info("Starting sequential coding for dashboard %s", dashboard_id)
         
         with self.db_session_factory() as session:
@@ -312,6 +507,7 @@ class CodingService:
             model_name = campaign_row.get("model")
             try:
                 schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
+                schema_fields = [self._normalize_schema_field(col) for col in schema_fields]
             except Exception:
                 logger.error("Failed to parse schema for dashboard %s", dashboard_id)
                 return
@@ -369,33 +565,6 @@ class CodingService:
                         current_step=4,
                         total_steps=7
                     )
-                fields = {}
-                for col in schema_fields:
-                    name = col["name"]
-                    col_type = col["type"]
-                    desc = col.get("description", "")
-                    opts = col.get("options")
-                    
-                    py_type = str
-                    if col_type == "number":
-                        py_type = float
-                    elif col_type == "boolean":
-                        py_type = bool
-                        
-                    if opts:
-                        desc += f" Must be one of: {', '.join(opts)}"
-                    
-                    # Avoid Optional/nullable fields as they generate 'anyOf' schemas which are rejected by Gemini's structured output mode.
-                    fields[name] = (py_type, Field(..., description=desc))
-                    
-                    # Only generate reasoning companion field for structured variables (boolean, number, or categorical string fields) to keep schema size within LLM limits.
-                    if col_type in ["boolean", "number"] or opts:
-                        reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
-                        fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
-                    
-                CodedOutputModel = create_model("CodedOutputModel", **fields)
-
-
                 # Structured LLM call
                 with self.db_session_factory() as session:
                     session.dashboard_documents.update_progress(
@@ -403,43 +572,67 @@ class CodingService:
                         document_id=doc_id,
                         current_step=5,
                         total_steps=7
-                    )
+                )
                 llm = get_llm_for_model(model_name)
 
-                # Generate a textual representation of the columns and their rules for the prompt
-                column_instructions = []
-                for col in schema_fields:
-                    name = col["name"]
-                    col_type = col["type"]
-                    desc = col.get("description", "")
-                    opts = col.get("options")
-                    opts_text = f" (Allowed categories: {', '.join(opts)})" if opts else ""
-                    column_instructions.append(f"- **{name}** ({col_type}): {desc}{opts_text}")
-
-                column_instructions_text = "\n".join(column_instructions)
-
-                coding_system_prompt = (
-                    "You are an AI coding assistant helping a quantitative research researcher.\n"
-                    "Analyze the provided document text and extract values for the specified output schema columns.\n\n"
-                    "=== COLUMN DEFINITIONS AND RULES ===\n"
-                    f"{column_instructions_text}\n\n"
-                    f"=== SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
-                    "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
-                )
-
-
                 try:
-                    parsed = await llm.parse_structured(
-                        [
-                            LLMMessage(role="system", content=coding_system_prompt),
-                            LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
-                        ],
-                        schema=CodedOutputModel,
-                        log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
-                    )
-                    if parsed is None:
-                        raise ValueError("LLM returned empty parsed result")
-                    coded_values = parsed.model_dump()
+                    if self._schema_uses_staged_coding(schema_fields):
+                        coded_values = await self._code_document_staged(
+                            llm=llm,
+                            campaign_prompt=campaign_prompt,
+                            schema_fields=schema_fields,
+                            doc_text=doc_text,
+                            dashboard_id=dashboard_id,
+                        )
+                    else:
+                        fields = {}
+                        for col in schema_fields:
+                            name = col["name"]
+                            
+                            # Avoid Optional/nullable fields as they generate 'anyOf' schemas which are rejected by Gemini's structured output mode.
+                            fields[name] = (
+                                self._field_type_for_column(col),
+                                Field(..., description=self._column_description(col))
+                            )
+                            
+                            # Only generate reasoning companion field for structured variables (boolean, number, or categorical string fields) to keep schema size within LLM limits.
+                            if col["type"] in ["boolean", "number"] or col.get("options"):
+                                reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
+                                fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
+                            
+                        CodedOutputModel = create_model("CodedOutputModel", **fields)
+
+                        # Generate a textual representation of the columns and their rules for the prompt
+                        column_instructions = []
+                        for col in schema_fields:
+                            name = col["name"]
+                            col_type = col["type"]
+                            opts = col.get("options")
+                            opts_text = f" (Allowed categories: {', '.join(opts)})" if opts else ""
+                            column_instructions.append(f"- **{name}** ({col_type}): {col.get('description', '')}{opts_text}")
+
+                        column_instructions_text = "\n".join(column_instructions)
+
+                        coding_system_prompt = (
+                            "You are an AI coding assistant helping a quantitative research researcher.\n"
+                            "Analyze the provided document text and extract values for the specified output schema columns.\n\n"
+                            "=== COLUMN DEFINITIONS AND RULES ===\n"
+                            f"{column_instructions_text}\n\n"
+                            f"=== SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
+                            "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
+                        )
+
+                        parsed = await llm.parse_structured(
+                            [
+                                LLMMessage(role="system", content=coding_system_prompt),
+                                LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
+                            ],
+                            schema=CodedOutputModel,
+                            log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+                        )
+                        if parsed is None:
+                            raise ValueError("LLM returned empty parsed result")
+                        coded_values = parsed.model_dump()
 
                 except Exception as api_err:
                     logger.error("LLM call failed for doc %s: %s", doc_id, api_err)

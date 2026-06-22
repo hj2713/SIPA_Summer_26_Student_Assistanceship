@@ -11,6 +11,8 @@ class UserColumnInput(BaseModel):
     type: Optional[str] = Field(default="string", description="The data type of the column")
     description: Optional[str] = Field(default=None, description="The description of the column for LLM context")
     options: Optional[List[str]] = Field(default=None, description="Allowed categorical values")
+    prompt: Optional[str] = Field(default=None, description="Column-specific coding prompt or rubric")
+    depends_on: Optional[List[str]] = Field(default=None, description="Prior column names this column depends on")
     prompt_version: Optional[int] = Field(default=1, description="The version of prompt instructions for this column")
     prompt_history: Optional[List[ColumnPromptHistoryItem]] = Field(default=None, description="The history of prompt instructions for this column")
 
@@ -68,5 +70,4 @@ class CellUpdatePayload(BaseModel):
 class ReevaluateCellPayload(BaseModel):
     column_name: str
     user_prompt: str
-
 

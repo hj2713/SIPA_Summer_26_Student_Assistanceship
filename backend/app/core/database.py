@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_db_path() -> str:
-    is_test = settings.JWT_SECRET == "test-secret-32-bytes-long-enough!!"
-    if is_test:
+    # Use TEST_MODE env var to select the test database path.
+    # Never rely on a hardcoded secret string for environment detection.
+    if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
         return "data/test_local_rag.db"
     return "data/local_rag.db"
 

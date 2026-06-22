@@ -22,7 +22,7 @@ interface Campaign {
   name: string;
   description: string;
   prompt: string;
-  schema: { name: string; type: string; description?: string; options?: string[]; prompt_version?: number; prompt_history?: any[] }[];
+  schema: { name: string; type: string; description?: string; options?: string[]; prompt?: string; depends_on?: string[]; prompt_version?: number; prompt_history?: any[] }[];
   model?: string;
 }
 
@@ -67,7 +67,7 @@ export function DashboardDetailPage() {
   const [errorDoc, setErrorDoc] = useState<CampaignDocument | null>(null);
 
   // Column Reordering state
-  const [orderedColumns, setOrderedColumns] = useState<{ name: string; type: string; description?: string; options?: string[] }[]>([]);
+  const [orderedColumns, setOrderedColumns] = useState<{ name: string; type: string; description?: string; options?: string[]; prompt?: string; depends_on?: string[] }[]>([]);
 
   // Column Widths for resizing
   const [colWidths, setColWidths] = useState<Record<string, number>>({
@@ -80,8 +80,8 @@ export function DashboardDetailPage() {
   const [campaignDesc, setCampaignDesc] = useState("");
   const [campaignPromptText, setCampaignPromptText] = useState("");
   const [showSchemaModal, setShowSchemaModal] = useState(false);
-  const [selectedColumnInfo, setSelectedColumnInfo] = useState<{ name: string; type: string; description?: string; options?: string[] } | null>(null);
-  const [schemaFields, setSchemaFields] = useState<{ name: string; type: string; description?: string; options?: string[]; options_raw?: string }[]>([]);
+  const [selectedColumnInfo, setSelectedColumnInfo] = useState<{ name: string; type: string; description?: string; options?: string[]; prompt?: string; depends_on?: string[] } | null>(null);
+  const [schemaFields, setSchemaFields] = useState<{ name: string; type: string; description?: string; options?: string[]; options_raw?: string; prompt?: string; depends_on?: string[]; depends_on_raw?: string }[]>([]);
 
   // Cell override / editing state dialog modal
   const [showEditCellModal, setShowEditCellModal] = useState(false);
@@ -309,7 +309,8 @@ export function DashboardDetailPage() {
       setCampaignPromptText(campaign.prompt || "");
       const mapped = (campaign.schema || []).map(col => ({
         ...col,
-        options_raw: col.options ? col.options.join(", ") : ""
+        options_raw: col.options ? col.options.join(", ") : "",
+        depends_on_raw: col.depends_on ? col.depends_on.join(", ") : ""
       }));
       setSchemaFields(mapped as any);
       setShowSchemaModal(true);
@@ -343,13 +344,18 @@ export function DashboardDetailPage() {
       }
 
       const formattedSchema = schemaFields.map(col => {
-        const { options_raw, ...rest } = col as any;
+        const { options_raw, depends_on_raw, ...rest } = col as any;
         const optionsList = options_raw
           ? options_raw.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0)
           : col.options;
+        const dependsOnList = depends_on_raw
+          ? depends_on_raw.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+          : col.depends_on;
         return {
           ...rest,
-          options: optionsList && optionsList.length > 0 ? optionsList : null
+          prompt: col.prompt?.trim() || undefined,
+          options: optionsList && optionsList.length > 0 ? optionsList : null,
+          depends_on: dependsOnList && dependsOnList.length > 0 ? dependsOnList : []
         };
       });
 
@@ -2525,7 +2531,7 @@ export function DashboardDetailPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setSchemaFields([...schemaFields, { name: "new_column_" + (schemaFields.length + 1), type: "string", description: "", options_raw: "" }])}
+                      onClick={() => setSchemaFields([...schemaFields, { name: "new_column_" + (schemaFields.length + 1), type: "string", description: "", options_raw: "", prompt: "", depends_on_raw: "" }])}
                       className="h-7 text-xs gap-1"
                     >
                       <Plus size={11} /> Add Column
@@ -2598,6 +2604,29 @@ export function DashboardDetailPage() {
                               placeholder="Explain exactly how the LLM should evaluate and score this variable..."
                               className="w-full bg-background border border-input rounded mt-0.5 p-2 text-xs min-h-[50px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
                             />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[9px] font-bold text-muted-foreground uppercase">Column Prompt / Rubric</label>
+                              <textarea
+                                value={col.prompt || ""}
+                                onChange={(e) => updateSchemaField(idx, "prompt", e.target.value)}
+                                placeholder="Optional detailed prompt used specifically for this column..."
+                                className="w-full bg-background border border-input rounded mt-0.5 p-2 text-xs min-h-[70px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-muted-foreground uppercase">Depends On</label>
+                              <Input
+                                value={col.depends_on_raw || ""}
+                                onChange={(e) => updateSchemaField(idx, "depends_on_raw", e.target.value)}
+                                placeholder="Comma separated, e.g. law_delegation"
+                                className="mt-0.5 text-xs h-8"
+                              />
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                Dependent columns are coded after earlier columns and receive their values and reasoning.
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}

@@ -45,6 +45,8 @@ async def lifespan(app: FastAPI):
     # Clean up stale document statuses from database on startup
     try:
         with get_db_conn() as conn:
+            if settings.DB_PROVIDER == "postgres":
+                conn.execute("SET lock_timeout = '5s';")
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM documents WHERE status IN ('pending', 'processing');")
             stale_docs = cursor.fetchall()

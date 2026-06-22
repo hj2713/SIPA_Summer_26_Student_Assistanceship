@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/constants";
 import { Trash2, Plus, Play, Sparkles, BookOpen, Layers, AlertTriangle, X, Upload } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+
 
 interface Campaign {
   id: string;
@@ -32,6 +34,8 @@ export function DashboardListPage() {
   const [prompt, setPrompt] = useState("");
   const [columnsList, setColumnsList] = useState<{ name: string; type: string; description: string; options_raw?: string }[]>([]);
   const [creating, setCreating] = useState(false);
+  const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
+
 
   const fetchCampaigns = async () => {
     if (!session?.access_token) return;
@@ -147,24 +151,28 @@ export function DashboardListPage() {
     }
   };
 
-  const handleDeleteCampaign = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteCampaignClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this research campaign? All associated classifications and grid data will be lost.")) {
-      return;
-    }
+    setDeleteCampaignId(id);
+  };
 
+  const executeDeleteCampaign = async () => {
+    if (!deleteCampaignId) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${deleteCampaignId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (!res.ok) throw new Error("Failed to delete campaign");
       toast.success("Campaign deleted");
-      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+      setCampaigns((prev) => prev.filter((c) => c.id !== deleteCampaignId));
     } catch (err: any) {
       toast.error(err.message || "Failed to delete campaign");
+    } finally {
+      setDeleteCampaignId(null);
     }
   };
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -237,7 +245,7 @@ export function DashboardListPage() {
                         variant="ghost" 
                         size="icon" 
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 rounded-md"
-                        onClick={(e) => handleDeleteCampaign(c.id, e)}
+                        onClick={(e) => handleDeleteCampaignClick(c.id, e)}
                       >
                         <Trash2 size={15} />
                       </Button>
@@ -443,6 +451,16 @@ export function DashboardListPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <ConfirmationDialog
+          open={deleteCampaignId !== null}
+          onOpenChange={(open) => !open && setDeleteCampaignId(null)}
+          title="Delete Research Campaign"
+          description="Are you sure you want to delete this research campaign? All associated classifications and grid data will be lost."
+          onConfirm={executeDeleteCampaign}
+          confirmText="Delete"
+          variant="destructive"
+        />
       </main>
     </div>
   );

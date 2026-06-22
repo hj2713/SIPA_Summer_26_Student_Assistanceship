@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 _bearer = HTTPBearer(auto_error=True)
 
 
-def get_current_user(
+async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
 ) -> CurrentUser:
     """Verify the local JWT and return the authenticated user.

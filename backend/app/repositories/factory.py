@@ -29,8 +29,18 @@ def get_postgres_pool():
             min_size=1,
             max_size=20,
             open=True,
+            # Recycle connections regularly and validate them before checkout so
+            # Render never keeps a half-dead Supavisor connection indefinitely.
+            max_lifetime=300.0,
+            max_idle=60.0,
+            check=ConnectionPool.check_connection,
             kwargs={
                 "row_factory": dict_row,
+                # Repository writes are individual SQL statements. Autocommit
+                # prevents read requests from pinning a Supabase transaction-pool
+                # connection if request cleanup is delayed or interrupted.
+                "autocommit": True,
+                "application_name": "law-delegation-api",
                 # prepare_threshold=None disables auto-prepared statements entirely.
                 # psycopg3: 0 = prepare immediately (WRONG), None = never prepare (CORRECT)
                 # Required for Supabase pgBouncer Transaction pooler (port 6543).
@@ -60,7 +70,6 @@ def get_db_session() -> BaseUnitOfWork:
             logger.exception("PostgreSQL pool checkout failed; stats=%s", pool.get_stats())
             raise
         try:
-            conn.autocommit = False
             if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
                 from app.tests.base import SafeTestConnection
                 conn = SafeTestConnection(conn)

@@ -1,10 +1,10 @@
 """API routes for uploading and managing documents."""
 import logging
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends, Query
 
 from app.core.deps import CurrentUserDep, get_workspace_id
 from app.core.workspace import get_active_workspace
-from app.schemas.document import DocumentRow, DocumentStatus, DocumentUploadResponse, RetryBatchRequest
+from app.schemas.document import DocumentPage, DocumentRow, DocumentStatus, DocumentUploadResponse, RetryBatchRequest
 from app.services import document_service, ingestion_service
 from app.core.client import get_user_client
 
@@ -192,6 +192,19 @@ def list_documents(
     """Retrieve all documents belonging to the workspace."""
     client = get_user_client(current_user.jwt, workspace_id)
     return document_service.list_documents(client, workspace_id)
+
+
+@router.get("/page", response_model=DocumentPage)
+def list_documents_page(
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+):
+    client = get_user_client(current_user.jwt, workspace_id)
+    items, total = document_service.list_documents_page(client, workspace_id, page, page_size)
+    pages = max(1, (total + page_size - 1) // page_size)
+    return DocumentPage(items=items, total=total, page=page, page_size=page_size, pages=pages)
 
 
 from pydantic import BaseModel

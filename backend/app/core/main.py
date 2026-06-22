@@ -6,6 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
@@ -97,6 +98,19 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Pool exhaustion is a temporary infrastructure failure, not an opaque 500.
+    # The short checkout timeout keeps worker threads available for later requests.
+    from psycopg_pool import PoolTimeout
+
+    @app.exception_handler(PoolTimeout)
+    async def postgres_pool_timeout_handler(request, exc):
+        logger.error("PostgreSQL pool exhausted: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Database connection pool temporarily exhausted"},
+            headers={"Retry-After": "2"},
+        )
 
     app.include_router(health.router)
     app.include_router(auth.router)

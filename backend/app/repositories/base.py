@@ -64,6 +64,14 @@ class BaseDocumentRepository(ABC):
     def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
         pass
 
+    @abstractmethod
+    def count_by_workspace(self, workspace_id: str) -> int:
+        pass
+
+    @abstractmethod
+    def list_page_by_workspace(self, workspace_id: str, limit: int, offset: int) -> List[Dict[str, Any]]:
+        pass
+
 class BaseDocumentChunkRepository(ABC):
     @abstractmethod
     def create_chunks(self, chunks: List[Dict[str, Any]]) -> None:
@@ -133,6 +141,18 @@ class BaseDashboardDocumentRepository(ABC):
 
     @abstractmethod
     def list_by_dashboard_with_documents(self, dashboard_id: str) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def count_by_dashboard(self, dashboard_id: str) -> int:
+        pass
+
+    @abstractmethod
+    def list_page_by_dashboard_with_documents(self, dashboard_id: str, limit: int, offset: int) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def list_mapping_by_document_ids(self, workspace_id: str, document_ids: List[str]) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod

@@ -75,6 +75,53 @@ def test_list_and_get_campaigns(client, auth_headers, clean_db):
     assert response.status_code == 200
     assert response.json()["name"] == "Test C"
 
+
+def test_paginated_documents_and_joined_campaign_mapping(client, auth_headers, clean_db):
+    dashboard_id = "pagination-dashboard"
+    document_ids = [
+        "10000000-0000-0000-0000-000000000001",
+        "10000000-0000-0000-0000-000000000002",
+        "10000000-0000-0000-0000-000000000003",
+    ]
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Paged', '', '', '[]');",
+            (dashboard_id,),
+        )
+        for index, document_id in enumerate(document_ids):
+            conn.execute(
+                """
+                INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
+                VALUES (?, ?, 'QA', ?, ?, 10, 'text/plain', 'completed', '{}');
+                """,
+                (document_id, TEST_USER_ID, f"doc-{index}.txt", f"/tmp/doc-{index}.txt"),
+            )
+            conn.execute(
+                "INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values) VALUES (?, ?, 'completed', '{}');",
+                (dashboard_id, document_id),
+            )
+        conn.commit()
+
+    response = client.get("/api/documents/page?workspace_id=QA&page=1&page_size=2", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["total"] == 3
+    assert response.json()["pages"] == 2
+    assert len(response.json()["items"]) == 2
+
+    response = client.get(f"/api/dashboards/{dashboard_id}/documents/page?page=2&page_size=2", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["total"] == 3
+    assert len(response.json()["items"]) == 1
+
+    response = client.post(
+        "/api/dashboards/document-mapping?workspace_id=QA",
+        json={"document_ids": document_ids[:2]},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert {row["document_id"] for row in response.json()} == set(document_ids[:2])
+    assert all(row["campaign_id"] == dashboard_id for row in response.json())
+
 def test_link_campaign_documents_and_override_cell(client, auth_headers, clean_db):
     # 1. Create campaign and document records
     db_id = "test-db-override"
@@ -648,4 +695,3 @@ def test_campaign_add_column_triggers_background_evaluation(client, auth_headers
         assert coded["new_column_reasoning"] == "Because text says so."
         assert len(coded["new_column_history"]) == 1
         assert coded["new_column_history"][0]["version"] == 1
-

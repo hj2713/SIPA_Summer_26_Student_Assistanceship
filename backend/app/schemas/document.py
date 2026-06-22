@@ -57,5 +57,13 @@ class DocumentUploadResponse(BaseModel):
     upserted: bool = False
 
 
+class DocumentPage(BaseModel):
+    items: list[DocumentRow]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
 class RetryBatchRequest(BaseModel):
     document_ids: list[UUID]

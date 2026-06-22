@@ -334,6 +334,37 @@ class CampaignService:
                 ))
             return results
 
+    def list_campaign_documents_page(self, id: str, page: int, page_size: int) -> tuple[List[DashboardDocumentRow], int]:
+        """Return one bounded campaign-document page plus its total row count."""
+        offset = (page - 1) * page_size
+        with self.db_session_factory() as session:
+            total = session.dashboard_documents.count_by_dashboard(id)
+            rows = session.dashboard_documents.list_page_by_dashboard_with_documents(id, page_size, offset)
+
+            results = []
+            for r in rows:
+                try:
+                    coded = json.loads(r["coded_values"]) if isinstance(r["coded_values"], str) else (r["coded_values"] or {})
+                except Exception:
+                    coded = {}
+                try:
+                    doc_meta = json.loads(r["doc_metadata"]) if isinstance(r["doc_metadata"], str) else (r["doc_metadata"] or {})
+                    tags = doc_meta.get("tags", [])
+                except Exception:
+                    tags = []
+                results.append(DashboardDocumentRow(
+                    document_id=r["document_id"], filename=r["filename"], file_size=r["file_size"],
+                    status=r["status"], coded_values=coded, error_message=r["error_message"],
+                    error_type=r["error_type"], tags=tags, current_step=r["current_step"] or 0,
+                    total_steps=r["total_steps"] or 7,
+                ))
+            return results, total
+
+    def get_document_campaign_mapping(self, workspace_id: str, document_ids: List[str]) -> List[Dict[str, Any]]:
+        """Return campaign memberships for a bounded set of visible documents in one query."""
+        with self.db_session_factory() as session:
+            return [dict(row) for row in session.dashboard_documents.list_mapping_by_document_ids(workspace_id, document_ids)]
+
     def link_campaign_documents_in_db(self, id: str, document_ids: List[str]) -> None:
         """Link existing documents in the database junction table (DB only, no sequential coding trigger)."""
         with self.db_session_factory() as session:

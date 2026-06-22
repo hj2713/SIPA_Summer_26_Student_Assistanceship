@@ -17,6 +17,7 @@ from app.schemas.thread import CurrentUser
 logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=True)
+_verified_workspace_ids: set[str] = set()
 
 
 def get_current_user(
@@ -119,13 +120,16 @@ def get_workspace_id(workspace_id: str = None) -> str:
     else:
         resolved = get_active_workspace()
 
-    # Dynamically ensure the workspace exists in the database on access
+    # Ensure each workspace exists once per process. Rechecking the same row on
+    # every request adds an avoidable database round trip to all paginated calls.
     from app.repositories import get_db_session
-    try:
-        with get_db_session() as session:
-            if not session.workspaces.get_by_id(resolved):
-                session.workspaces.create(workspace_id=resolved, name=resolved)
-    except Exception:
-        pass
+    if resolved not in _verified_workspace_ids:
+        try:
+            with get_db_session() as session:
+                if not session.workspaces.get_by_id(resolved):
+                    session.workspaces.create(workspace_id=resolved, name=resolved)
+            _verified_workspace_ids.add(resolved)
+        except Exception:
+            logger.exception("Could not verify workspace %s", resolved)
         
     return resolved

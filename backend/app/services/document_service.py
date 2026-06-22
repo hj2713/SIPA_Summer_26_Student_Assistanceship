@@ -105,6 +105,14 @@ class DocumentService:
             rows = session.documents.list_by_workspace(workspace_id)
             return [self._row_to_doc(row) for row in rows]
 
+    def list_documents_page(self, client: Any, workspace_id: str, page: int, page_size: int) -> tuple[list[DocumentRow], int]:
+        """Return one bounded document page plus the workspace total."""
+        offset = (page - 1) * page_size
+        with self.db_session_factory() as session:
+            total = session.documents.count_by_workspace(workspace_id)
+            rows = session.documents.list_page_by_workspace(workspace_id, page_size, offset)
+            return [self._row_to_doc(row) for row in rows], total
+
     def create_document(
         self,
         client: Any,

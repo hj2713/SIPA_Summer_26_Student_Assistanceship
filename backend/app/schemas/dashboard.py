@@ -55,6 +55,27 @@ class DashboardDocumentRow(BaseModel):
     current_step: Optional[int] = 0
     total_steps: Optional[int] = 7
 
+
+class DashboardDocumentPage(BaseModel):
+    items: List[DashboardDocumentRow]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class DocumentCampaignMappingRequest(BaseModel):
+    document_ids: List[str] = Field(default_factory=list, max_length=100)
+
+
+class DocumentCampaignMappingRow(BaseModel):
+    document_id: str
+    campaign_id: str
+    campaign_name: str
+    status: str
+    error_message: Optional[str] = None
+    error_type: Optional[str] = None
+
 class DashboardUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -71,4 +92,3 @@ class CellUpdatePayload(BaseModel):
 class ReevaluateCellPayload(BaseModel):
     column_name: str
     user_prompt: str
-

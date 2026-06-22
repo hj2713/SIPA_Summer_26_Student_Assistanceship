@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { useDocuments } from "@/hooks/useDocuments";
@@ -39,7 +39,12 @@ export function DashboardPage() {
     updateDocumentTags,
     moveDocument,
     refetch,
-  } = useDocuments();
+    page,
+    setPage,
+    pageCount,
+    totalDocuments,
+  } = useDocuments({ pageSize: 50 });
+  const visibleDocumentIdsKey = useMemo(() => documents.map((doc) => doc.id).join(","), [documents]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
@@ -147,38 +152,39 @@ export function DashboardPage() {
   const fetchCampaigns = async () => {
     if (!session?.access_token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const workspaceId = activeWorkspace?.id ?? "TEST";
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+      const campaignResponse = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${workspaceId}`, { headers });
+      if (campaignResponse.ok) setCampaigns(await campaignResponse.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchCampaignMapping = async () => {
+    if (!session?.access_token) return;
+    if (documents.length === 0) {
+      setCampaignDocumentMapping({});
+      return;
+    }
+    try {
+      const workspaceId = activeWorkspace?.id ?? "TEST";
+      const mappingResponse = await fetch(`${API_BASE_URL}/api/dashboards/document-mapping?workspace_id=${workspaceId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ document_ids: documents.map((doc) => doc.id) }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setCampaigns(data);
-        
-        // Build mapping
+      if (mappingResponse.ok) {
+        const rows = await mappingResponse.json();
         const mapping: Record<string, any[]> = {};
-        for (const c of data) {
-          try {
-            const dRes = await fetch(`${API_BASE_URL}/api/dashboards/${c.id}/documents`, {
-              headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-            if (dRes.ok) {
-              const cDocs = await dRes.json();
-              for (const cd of cDocs) {
-                if (!mapping[cd.document_id]) {
-                  mapping[cd.document_id] = [];
-                }
-                mapping[cd.document_id].push({
-                  campaignId: c.id,
-                  campaignName: c.name,
-                  status: cd.status,
-                  error_message: cd.error_message,
-                  error_type: cd.error_type
-                });
-              }
-            }
-          } catch (e) {
-            console.error("Failed to fetch campaign docs for", c.name, e);
-          }
+        for (const row of rows) {
+          (mapping[row.document_id] ??= []).push({
+            campaignId: row.campaign_id,
+            campaignName: row.campaign_name,
+            status: row.status,
+            error_message: row.error_message,
+            error_type: row.error_type,
+          });
         }
         setCampaignDocumentMapping(mapping);
       }
@@ -191,7 +197,11 @@ export function DashboardPage() {
     if (session?.access_token) {
       void fetchCampaigns();
     }
-  }, [session?.access_token]);
+  }, [session?.access_token, activeWorkspace?.id]);
+
+  useEffect(() => {
+    void fetchCampaignMapping();
+  }, [session?.access_token, activeWorkspace?.id, visibleDocumentIdsKey]);
 
   const isIngestableFile = (name: string): boolean => {
     const ext = name.split(".").pop()?.toLowerCase();
@@ -1229,6 +1239,13 @@ export function DashboardPage() {
                     {(filteredDocs.length > 0 || virtualFolders.length > 0) && renderTree(treeRoot)}
                   </tbody>
                 </table>
+              </div>
+              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+                <span>{totalDocuments} documents · page {page} of {pageCount}</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage(page - 1)}>Previous</Button>
+                  <Button variant="outline" size="sm" disabled={page >= pageCount || loading} onClick={() => setPage(page + 1)}>Next</Button>
+                </div>
               </div>
             </div>
           </div>

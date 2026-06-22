@@ -49,6 +49,9 @@ export function DashboardDetailPage() {
   // Data States
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [docs, setDocs] = useState<CampaignDocument[]>([]);
+  const [documentPage, setDocumentPage] = useState(1);
+  const [documentPageCount, setDocumentPageCount] = useState(1);
+  const [campaignDocumentTotal, setCampaignDocumentTotal] = useState(0);
   const [globalDocs, setGlobalDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
@@ -182,15 +185,18 @@ export function DashboardDetailPage() {
   const fetchDocuments = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents`, {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/page?page=${documentPage}&page_size=50`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) throw new Error("Failed to fetch documents");
       const data = await res.json();
-      setDocs(data);
+      setDocs(data.items);
+      setCampaignDocumentTotal(data.total);
+      setDocumentPageCount(data.pages);
+      if (documentPage > data.pages) setDocumentPage(data.pages);
       
       // Auto-start polling if there are any processing or pending documents
-      const hasActiveJobs = data.some(
+      const hasActiveJobs = data.items.some(
         (d: CampaignDocument) => d.status === "pending" || d.status === "processing"
       );
       setPolling(hasActiveJobs);
@@ -224,7 +230,7 @@ export function DashboardDetailPage() {
       void fetchGlobalDocuments();
       void fetchCampaignThread();
     }
-  }, [id, jwt]);
+  }, [id, jwt, documentPage]);
 
   // Reset link search query on close
   useEffect(() => {
@@ -965,8 +971,17 @@ export function DashboardDetailPage() {
   }, [showBenchmarkComparison, parsedBenchmark, docs, orderedColumns]);
 
   // Export spreadsheet to CSV
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (!campaign || docs.length === 0) return;
+
+    const exportResponse = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    if (!exportResponse.ok) {
+      toast.error("Could not load all campaign rows for export");
+      return;
+    }
+    const exportDocs: CampaignDocument[] = await exportResponse.json();
 
 
     // Headers
@@ -975,7 +990,7 @@ export function DashboardDetailPage() {
     // Rows
     const csvRows = [
       headers.join(","),
-      ...docs.map((d) => {
+      ...exportDocs.map((d) => {
         const rowData = [
           `"${d.filename.replace(/"/g, '""')}"`,
           d.status,
@@ -1312,7 +1327,8 @@ export function DashboardDetailPage() {
                     </div>
                   </>
                 ) : (
-                  /* Full table with rows — single overflow-x-auto keeps header+body in sync */
+                  <>
+                  {/* Full table with rows — single overflow-x-auto keeps header+body in sync */}
                   <div className="overflow-auto flex-1">
                     <table className="w-full text-left border-collapse table-fixed">
                       <colgroup>
@@ -1671,6 +1687,14 @@ export function DashboardDetailPage() {
                       </tbody>
                     </table>
                   </div>
+                  <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+                    <span>{campaignDocumentTotal} documents · page {documentPage} of {documentPageCount}</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled={documentPage <= 1 || loading} onClick={() => setDocumentPage(documentPage - 1)}>Previous</Button>
+                      <Button variant="outline" size="sm" disabled={documentPage >= documentPageCount || loading} onClick={() => setDocumentPage(documentPage + 1)}>Next</Button>
+                    </div>
+                  </div>
+                  </>
                 )}
               </div>
             )}

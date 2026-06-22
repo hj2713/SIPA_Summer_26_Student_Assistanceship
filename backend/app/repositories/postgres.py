@@ -170,6 +170,19 @@ class PostgresDocumentRepository(BaseDocumentRepository):
             cursor.execute("SELECT * FROM documents WHERE workspace_id = %s ORDER BY created_at DESC;", (str(workspace_id),))
             return cursor.fetchall()
 
+    def count_by_workspace(self, workspace_id: str) -> int:
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT count(*) AS total FROM documents WHERE workspace_id = %s;", (str(workspace_id),))
+            return int(cursor.fetchone()["total"])
+
+    def list_page_by_workspace(self, workspace_id: str, limit: int, offset: int) -> List[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM documents WHERE workspace_id = %s ORDER BY created_at DESC LIMIT %s OFFSET %s;",
+                (str(workspace_id), int(limit), int(offset)),
+            )
+            return cursor.fetchall()
+
 class PostgresDocumentChunkRepository(BaseDocumentChunkRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
@@ -525,6 +538,48 @@ class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
                 ORDER BY dd.created_at DESC;
                 """,
                 (str(dashboard_id),)
+            )
+            return cursor.fetchall()
+
+    def count_by_dashboard(self, dashboard_id: str) -> int:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT count(*) AS total FROM dashboard_documents WHERE dashboard_id = %s;",
+                (str(dashboard_id),),
+            )
+            return int(cursor.fetchone()["total"])
+
+    def list_page_by_dashboard_with_documents(self, dashboard_id: str, limit: int, offset: int) -> List[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT d.id as document_id, d.filename, d.file_size, d.metadata as doc_metadata,
+                       dd.status, dd.coded_values, dd.error_message, dd.error_type,
+                       dd.current_step, dd.total_steps
+                FROM dashboard_documents dd
+                JOIN documents d ON dd.document_id = d.id
+                WHERE dd.dashboard_id = %s
+                ORDER BY dd.created_at DESC
+                LIMIT %s OFFSET %s;
+                """,
+                (str(dashboard_id), int(limit), int(offset)),
+            )
+            return cursor.fetchall()
+
+    def list_mapping_by_document_ids(self, workspace_id: str, document_ids: List[str]) -> List[Dict[str, Any]]:
+        if not document_ids:
+            return []
+        placeholders = ",".join("%s" for _ in document_ids)
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT dd.document_id, d.id AS campaign_id, d.name AS campaign_name,
+                       dd.status, dd.error_message, dd.error_type
+                FROM dashboard_documents dd
+                JOIN dashboards d ON d.id = dd.dashboard_id
+                WHERE d.workspace_id = %s AND dd.document_id IN ({placeholders});
+                """,
+                [str(workspace_id)] + [str(doc_id) for doc_id in document_ids],
             )
             return cursor.fetchall()
 

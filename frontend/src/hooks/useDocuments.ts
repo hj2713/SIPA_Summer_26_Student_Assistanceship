@@ -6,22 +6,47 @@ import { API_BASE_URL, DEFAULT_WORKSPACE_ID } from "@/constants";
 
 const BASE_URL = API_BASE_URL;
 
-export function useDocuments() {
+interface DocumentPage {
+  items: Document[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export function useDocuments(options: { pageSize?: number } = {}) {
   const { session, user, activeWorkspace } = useAuthContext();
+  const pageSize = options.pageSize;
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalDocuments, setTotalDocuments] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
 
   const fetchDocuments = async () => {
     if (!session?.access_token) return;
     setLoading(true);
     try {
       const workspaceId = activeWorkspace?.id ?? DEFAULT_WORKSPACE_ID;
-      const data = await apiFetch<Document[]>(
-        `/api/documents?workspace_id=${workspaceId}`,
-        session.access_token
-      );
-      setDocuments(data);
+      if (pageSize) {
+        const data = await apiFetch<DocumentPage>(
+          `/api/documents/page?workspace_id=${workspaceId}&page=${page}&page_size=${pageSize}`,
+          session.access_token
+        );
+        setDocuments(data.items);
+        setTotalDocuments(data.total);
+        setPageCount(data.pages);
+        if (page > data.pages) setPage(data.pages);
+      } else {
+        const data = await apiFetch<Document[]>(
+          `/api/documents?workspace_id=${workspaceId}`,
+          session.access_token
+        );
+        setDocuments(data);
+        setTotalDocuments(data.length);
+        setPageCount(1);
+      }
     } catch (err) {
       console.error("Failed to fetch documents", err);
     } finally {
@@ -255,13 +280,17 @@ export function useDocuments() {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [activeWorkspace?.id]);
+
+  useEffect(() => {
     if (session?.access_token) {
       void fetchDocuments();
     } else {
       setDocuments([]);
       setLoading(false);
     }
-  }, [session, activeWorkspace]);
+  }, [session, activeWorkspace, page, pageSize]);
 
   useEffect(() => {
     if (!session || !user) return;
@@ -293,5 +322,9 @@ export function useDocuments() {
     retryDocument,
     retryDocumentsBatch,
     refetch: fetchDocuments,
+    page,
+    setPage,
+    pageCount,
+    totalDocuments,
   };
 }

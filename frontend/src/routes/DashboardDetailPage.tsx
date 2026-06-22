@@ -16,6 +16,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { ColumnDependencySelector } from "@/components/dashboard/ColumnDependencySelector";
 
 interface Campaign {
   id: string;
@@ -81,7 +82,7 @@ export function DashboardDetailPage() {
   const [campaignPromptText, setCampaignPromptText] = useState("");
   const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [selectedColumnInfo, setSelectedColumnInfo] = useState<{ name: string; type: string; description?: string; options?: string[]; prompt?: string; depends_on?: string[] } | null>(null);
-  const [schemaFields, setSchemaFields] = useState<{ name: string; type: string; description?: string; options?: string[]; options_raw?: string; prompt?: string; depends_on?: string[]; depends_on_raw?: string }[]>([]);
+  const [schemaFields, setSchemaFields] = useState<{ name: string; type: string; description?: string; options?: string[]; options_raw?: string; prompt?: string; depends_on?: string[] }[]>([]);
 
   // Cell override / editing state dialog modal
   const [showEditCellModal, setShowEditCellModal] = useState(false);
@@ -310,7 +311,7 @@ export function DashboardDetailPage() {
       const mapped = (campaign.schema || []).map(col => ({
         ...col,
         options_raw: col.options ? col.options.join(", ") : "",
-        depends_on_raw: col.depends_on ? col.depends_on.join(", ") : ""
+        depends_on: col.depends_on || []
       }));
       setSchemaFields(mapped as any);
       setShowSchemaModal(true);
@@ -319,12 +320,19 @@ export function DashboardDetailPage() {
 
   // Helper to update a schema field in the local state array
   const updateSchemaField = (index: number, key: string, value: any) => {
-    setSchemaFields(prev =>
-      prev.map((col, idx) => {
+    setSchemaFields(prev => {
+      const previousName = prev[index]?.name;
+      return prev.map((col, idx) => {
         if (idx !== index) return col;
         return { ...col, [key]: value };
-      })
-    );
+      }).map((col, idx) => {
+        if (key !== "name" || idx <= index || !previousName) return col;
+        return {
+          ...col,
+          depends_on: (col.depends_on || []).map((dependency) => dependency === previousName ? value : dependency),
+        };
+      });
+    });
   };
 
   // Handle campaign schema and settings update
@@ -332,7 +340,12 @@ export function DashboardDetailPage() {
     e.preventDefault();
     try {
       // Validate column names
-      for (const col of schemaFields) {
+      const columnNames = schemaFields.map((col) => col.name.trim());
+      if (new Set(columnNames).size !== columnNames.length) {
+        toast.error("Every column must have a unique name.");
+        return;
+      }
+      for (const [index, col] of schemaFields.entries()) {
         if (!col.name.trim()) {
           toast.error("Column names cannot be blank.");
           return;
@@ -341,21 +354,24 @@ export function DashboardDetailPage() {
           toast.error(`Column name "${col.name}" is invalid. Use letters, numbers, and underscores only.`);
           return;
         }
+        const priorNames = new Set(columnNames.slice(0, index));
+        const invalidDependency = (col.depends_on || []).find((dependency) => !priorNames.has(dependency));
+        if (invalidDependency) {
+          toast.error(`"${col.name}" can only use outputs from an earlier step. Remove "${invalidDependency}" or move that rule earlier.`);
+          return;
+        }
       }
 
       const formattedSchema = schemaFields.map(col => {
-        const { options_raw, depends_on_raw, ...rest } = col as any;
+        const { options_raw, ...rest } = col as any;
         const optionsList = options_raw
           ? options_raw.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0)
           : col.options;
-        const dependsOnList = depends_on_raw
-          ? depends_on_raw.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0)
-          : col.depends_on;
         return {
           ...rest,
           prompt: col.prompt?.trim() || undefined,
           options: optionsList && optionsList.length > 0 ? optionsList : null,
-          depends_on: dependsOnList && dependsOnList.length > 0 ? dependsOnList : []
+          depends_on: col.depends_on || []
         };
       });
 
@@ -2480,7 +2496,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: Manage Columns & Campaign Settings */}
         <Dialog open={showSchemaModal} onOpenChange={setShowSchemaModal}>
-          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogContent className="w-[96vw] sm:max-w-5xl lg:max-w-6xl h-[92vh] max-h-[92vh] flex flex-col overflow-hidden p-5">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2 border-b pb-2">
                 <Edit size={18} className="text-primary" />
@@ -2488,7 +2504,7 @@ export function DashboardDetailPage() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSchemaSave} className="flex-1 flex flex-col min-h-0">
-              <div className="mt-2 space-y-4 flex-1 overflow-y-auto pr-1">
+              <div className="mt-2 space-y-5 flex-1 overflow-y-auto pr-2">
                 {/* Basic info section */}
                 <div className="space-y-3 p-4 bg-muted/30 border rounded-lg">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">General Info</h4>
@@ -2531,7 +2547,7 @@ export function DashboardDetailPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setSchemaFields([...schemaFields, { name: "new_column_" + (schemaFields.length + 1), type: "string", description: "", options_raw: "", prompt: "", depends_on_raw: "" }])}
+                      onClick={() => setSchemaFields([...schemaFields, { name: "new_column_" + (schemaFields.length + 1), type: "string", description: "", options_raw: "", prompt: "", depends_on: [] }])}
                       className="h-7 text-xs gap-1"
                     >
                       <Plus size={11} /> Add Column
@@ -2543,10 +2559,11 @@ export function DashboardDetailPage() {
                   ) : (
                     <div className="space-y-3">
                       {schemaFields.map((col, idx) => (
-                        <div key={idx} className="p-3 border rounded-lg bg-card shadow-sm space-y-2.5 relative">
+                        <div key={idx} className="p-4 border rounded-xl bg-card shadow-sm space-y-3 relative">
                           <div className="flex justify-between items-center border-b pb-1.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Variable #{idx + 1}</span>
+                              <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Step {idx + 1}</span>
+                              <span className="text-[11px] font-semibold text-muted-foreground">Define and evaluate this column</span>
                               {!col.description?.trim() && (
                                 <span className="flex items-center gap-1 text-[9px] text-amber-500 font-semibold bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse">
                                   <AlertTriangle size={10} /> Missing Description
@@ -2563,7 +2580,7 @@ export function DashboardDetailPage() {
                               <X size={12} />
                             </Button>
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                             <div className="col-span-1">
                               <label className="text-[9px] font-bold text-muted-foreground uppercase">Variable Name (snake_case)</label>
                               <Input 
@@ -2605,8 +2622,8 @@ export function DashboardDetailPage() {
                               className="w-full bg-background border border-input rounded mt-0.5 p-2 text-xs min-h-[50px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
                             />
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
+                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <div className="space-y-1">
                               <label className="text-[9px] font-bold text-muted-foreground uppercase">Column Prompt / Rubric</label>
                               <textarea
                                 value={col.prompt || ""}
@@ -2615,17 +2632,13 @@ export function DashboardDetailPage() {
                                 className="w-full bg-background border border-input rounded mt-0.5 p-2 text-xs min-h-[70px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
                               />
                             </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-muted-foreground uppercase">Depends On</label>
-                              <Input
-                                value={col.depends_on_raw || ""}
-                                onChange={(e) => updateSchemaField(idx, "depends_on_raw", e.target.value)}
-                                placeholder="Comma separated, e.g. law_delegation"
-                                className="mt-0.5 text-xs h-8"
+                            <div className="rounded-lg border bg-muted/20 p-3">
+                              <ColumnDependencySelector
+                                columns={schemaFields}
+                                columnIndex={idx}
+                                value={col.depends_on || []}
+                                onChange={(dependencies) => updateSchemaField(idx, "depends_on", dependencies)}
                               />
-                              <p className="text-[10px] text-muted-foreground mt-1">
-                                Dependent columns are coded after earlier columns and receive their values and reasoning.
-                              </p>
                             </div>
                           </div>
                         </div>

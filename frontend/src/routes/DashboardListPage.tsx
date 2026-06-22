@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { API_BASE_URL } from "@/constants";
 import { Trash2, Plus, Play, Sparkles, BookOpen, Layers, AlertTriangle, X, Upload } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ColumnDependencySelector } from "@/components/dashboard/ColumnDependencySelector";
 
 
 interface Campaign {
@@ -32,7 +33,7 @@ export function DashboardListPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [columnsList, setColumnsList] = useState<{ name: string; type: string; description: string; options_raw?: string; prompt?: string; depends_on_raw?: string }[]>([]);
+  const [columnsList, setColumnsList] = useState<{ name: string; type: string; description: string; options_raw?: string; prompt?: string; depends_on?: string[] }[]>([]);
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
 
@@ -76,7 +77,8 @@ export function DashboardListPage() {
         const newCols = headers.map(h => ({
           name: h,
           type: "string",
-          description: ""
+          description: "",
+          depends_on: [],
         }));
         
         setColumnsList(prev => [...prev, ...newCols]);
@@ -97,13 +99,24 @@ export function DashboardListPage() {
     }
 
     // Validate column names
-    for (const col of columnsList) {
+    const columnNames = columnsList.map((col) => col.name.trim());
+    if (new Set(columnNames).size !== columnNames.length) {
+      toast.error("Every column must have a unique name.");
+      return;
+    }
+    for (const [index, col] of columnsList.entries()) {
       if (!col.name.trim()) {
         toast.error("Column names cannot be blank.");
         return;
       }
       if (!/^[a-zA-Z0-9_]+$/.test(col.name.trim())) {
         toast.error(`Column name "${col.name}" is invalid. Use alphanumeric characters and underscores only.`);
+        return;
+      }
+      const priorNames = new Set(columnNames.slice(0, index));
+      const invalidDependency = (col.depends_on || []).find((dependency) => !priorNames.has(dependency));
+      if (invalidDependency) {
+        toast.error(`"${col.name}" can only use outputs from an earlier step. Remove "${invalidDependency}" or move that rule earlier.`);
         return;
       }
     }
@@ -127,7 +140,7 @@ export function DashboardListPage() {
             description: c.description.trim() || undefined,
             options: c.options_raw ? c.options_raw.split(",").map(o => o.trim()).filter(Boolean) : null,
             prompt: c.prompt?.trim() || undefined,
-            depends_on: c.depends_on_raw ? c.depends_on_raw.split(",").map(o => o.trim()).filter(Boolean) : []
+            depends_on: c.depends_on || []
           })) : null,
         }),
       });
@@ -283,7 +296,7 @@ export function DashboardListPage() {
 
         {/* Create Campaign Modal */}
         <Dialog open={showCreateModal} onOpenChange={(open) => !creating && setShowCreateModal(open)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[96vw] sm:max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-y-auto p-5">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                 <Sparkles className="text-primary animate-pulse" size={20} />
@@ -357,7 +370,7 @@ export function DashboardListPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setColumnsList(prev => [...prev, { name: "", type: "string", description: "", prompt: "", depends_on_raw: "" }])}
+                      onClick={() => setColumnsList(prev => [...prev, { name: "", type: "string", description: "", prompt: "", depends_on: [] }])}
                       className="h-7 text-xs gap-1"
                       disabled={creating}
                     >
@@ -367,11 +380,11 @@ export function DashboardListPage() {
                 </div>
 
                 {columnsList.length > 0 && (
-                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
                     {columnsList.map((col, idx) => (
-                      <div key={idx} className="p-3 border rounded-lg bg-card/50 space-y-2 relative">
+                      <div key={idx} className="p-4 border rounded-xl bg-card/50 space-y-3 relative">
                         <div className="flex justify-between items-center border-b pb-1.5 border-border/40">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Column #{idx + 1}</span>
+                          <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Step {idx + 1}</span>
                           <div className="flex items-center gap-2">
                             {!col.description.trim() && (
                               <span className="flex items-center gap-1 text-[9px] text-amber-500 font-semibold bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse">
@@ -394,7 +407,16 @@ export function DashboardListPage() {
                             <label className="text-[9px] font-bold text-muted-foreground uppercase">Column Name</label>
                             <Input
                               value={col.name}
-                              onChange={(e) => setColumnsList(prev => prev.map((c, i) => i === idx ? { ...c, name: e.target.value } : c))}
+                              onChange={(e) => setColumnsList(prev => {
+                                const previousName = prev[idx]?.name;
+                                return prev.map((c, i) => {
+                                  if (i === idx) return { ...c, name: e.target.value };
+                                  if (i > idx && previousName) {
+                                    return { ...c, depends_on: (c.depends_on || []).map((dependency) => dependency === previousName ? e.target.value : dependency) };
+                                  }
+                                  return c;
+                                });
+                              })}
                               placeholder="e.g. discretion_score"
                               className="mt-0.5 text-xs h-7"
                               required
@@ -436,15 +458,12 @@ export function DashboardListPage() {
                               className="w-full bg-background border border-input rounded mt-0.5 p-1.5 text-xs min-h-[48px] focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-normal"
                             />
                           </div>
-                          <div>
-                            <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                              Depends On
-                            </label>
-                            <Input
-                              value={col.depends_on_raw || ""}
-                              onChange={(e) => setColumnsList(prev => prev.map((c, i) => i === idx ? { ...c, depends_on_raw: e.target.value } : c))}
-                              placeholder="Comma separated, e.g. law_delegation"
-                              className="mt-0.5 text-xs h-7"
+                          <div className="rounded-lg border bg-muted/20 p-3">
+                            <ColumnDependencySelector
+                              columns={columnsList}
+                              columnIndex={idx}
+                              value={col.depends_on || []}
+                              onChange={(dependencies) => setColumnsList(prev => prev.map((c, i) => i === idx ? { ...c, depends_on: dependencies } : c))}
                             />
                           </div>
                         </div>

@@ -365,6 +365,10 @@ class CampaignService:
         with self.db_session_factory() as session:
             return [dict(row) for row in session.dashboard_documents.list_mapping_by_document_ids(workspace_id, document_ids)]
 
+    def get_campaign_status_summary(self, id: str) -> Dict[str, int]:
+        with self.db_session_factory() as session:
+            return session.dashboard_documents.get_status_counts(id)
+
     def link_campaign_documents_in_db(self, id: str, document_ids: List[str]) -> None:
         """Link existing documents in the database junction table (DB only, no sequential coding trigger)."""
         with self.db_session_factory() as session:

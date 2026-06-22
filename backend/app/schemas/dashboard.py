@@ -76,6 +76,14 @@ class DocumentCampaignMappingRow(BaseModel):
     error_message: Optional[str] = None
     error_type: Optional[str] = None
 
+
+class CampaignStatusSummary(BaseModel):
+    total: int = 0
+    pending: int = 0
+    processing: int = 0
+    completed: int = 0
+    failed: int = 0
+
 class DashboardUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None

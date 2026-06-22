@@ -40,6 +40,16 @@ interface CampaignDocument {
   total_steps?: number;
 }
 
+interface CampaignStatusSummary {
+  total: number;
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+}
+
+type BenchmarkRow = Record<string, string>;
+
 export function DashboardDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -55,6 +65,8 @@ export function DashboardDetailPage() {
   const [globalDocs, setGlobalDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
+  const [statusSummary, setStatusSummary] = useState<CampaignStatusSummary>({ total: 0, pending: 0, processing: 0, completed: 0, failed: 0 });
+  const lastPageRefreshRef = useRef(0);
 
   // UI Panels
   const [rightPanel, setRightPanel] = useState<"none" | "preview" | "chat">("none");
@@ -118,7 +130,9 @@ export function DashboardDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Benchmark Comparison States
-  const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: any[] } | null>(null);
+  const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: BenchmarkRow[] } | null>(null);
+  const [benchmarkDocuments, setBenchmarkDocuments] = useState<CampaignDocument[]>([]);
+  const [benchmarkCoverage, setBenchmarkCoverage] = useState<{ matched: number; missing: number } | null>(null);
   const [showBenchmarkComparison, setShowBenchmarkComparison] = useState(false);
   const [benchmarkAccuracy, setBenchmarkAccuracy] = useState<{ total: number; matches: number; percent: number } | null>(null);
   const benchmarkInputRef = useRef<HTMLInputElement>(null);
@@ -194,17 +208,29 @@ export function DashboardDetailPage() {
       setCampaignDocumentTotal(data.total);
       setDocumentPageCount(data.pages);
       if (documentPage > data.pages) setDocumentPage(data.pages);
-      
-      // Auto-start polling if there are any processing or pending documents
-      const hasActiveJobs = data.items.some(
-        (d: CampaignDocument) => d.status === "pending" || d.status === "processing"
-      );
-      setPolling(hasActiveJobs);
+      lastPageRefreshRef.current = Date.now();
     } catch (err) {
       console.error(err);
       toast.error("Failed to load campaign documents");
     } finally {
       if (!silent) setLoading(false);
+    }
+  };
+
+  const fetchStatusSummary = async (): Promise<CampaignStatusSummary | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/status-summary`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch campaign status");
+      const summary: CampaignStatusSummary = await res.json();
+      setStatusSummary(summary);
+      setCampaignDocumentTotal(summary.total);
+      setPolling(summary.pending > 0 || summary.processing > 0);
+      return summary;
+    } catch (err) {
+      console.error("Failed to fetch campaign status summary", err);
+      return null;
     }
   };
 
@@ -227,6 +253,7 @@ export function DashboardDetailPage() {
     if (id && jwt) {
       void fetchCampaign();
       void fetchDocuments();
+      void fetchStatusSummary();
       void fetchGlobalDocuments();
       void fetchCampaignThread();
     }
@@ -239,16 +266,26 @@ export function DashboardDetailPage() {
     }
   }, [showLinkModal]);
 
-  // Polling loop for active runs
+  // Poll a tiny aggregate endpoint while coding is active. Refresh the visible
+  // rows at most once per minute, plus once immediately when the job finishes.
   useEffect(() => {
-    let intervalId: any;
-    if (polling && id && jwt) {
-      intervalId = setInterval(() => {
-        void fetchDocuments(true);
-      }, 3000);
-    }
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (!polling || !id || !jwt) return;
+
+    const poll = async () => {
+      const summary = await fetchStatusSummary();
+      if (cancelled || !summary) return;
+      const active = summary.pending > 0 || summary.processing > 0;
+      const pageIsStale = Date.now() - lastPageRefreshRef.current >= 60_000;
+      if (!active || pageIsStale) await fetchDocuments(true);
+      if (active && !cancelled) timeoutId = setTimeout(poll, 10_000);
+    };
+
+    timeoutId = setTimeout(poll, 10_000);
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [polling, id, jwt]);
 
@@ -726,6 +763,7 @@ export function DashboardDetailPage() {
       if (!res.ok) throw new Error("Retry failed");
       toast.success("Queued all failed files for sequential retry.");
       void fetchDocuments();
+      void fetchStatusSummary();
     } catch (err) {
       console.error(err);
       toast.error("Failed to enqueue retry");
@@ -746,6 +784,7 @@ export function DashboardDetailPage() {
       if (!res.ok) throw new Error("Retry failed");
       toast.success("Queued document for coding retry.");
       void fetchDocuments();
+      void fetchStatusSummary();
     } catch (err) {
       console.error(err);
       toast.error("Failed to retry document");
@@ -848,7 +887,7 @@ export function DashboardDetailPage() {
     };
 
     const headers = splitLine(firstLine);
-    const rows: any[] = [];
+    const rows: BenchmarkRow[] = [];
     
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -869,32 +908,54 @@ export function DashboardDetailPage() {
     return key.toLowerCase().replace(/[^a-z0-9]/g, "");
   };
 
-  // Get benchmark value mapped by PLNum and normalized column header
+  const getBenchmarkIdentifierHeader = (headers: string[]) => headers.find((header) =>
+    ["filename", "document", "documentname", "plnum", "publiclaw"].includes(normalizeKey(header))
+  );
+
+  const getBenchmarkColumnHeader = (colName: string) => {
+    if (!parsedBenchmark) return undefined;
+    const normalized = normalizeKey(colName);
+    const aliases: Record<string, string[]> = {
+      delegatelaw: ["delegationlawyn", "delegationlaw", "delegatelawyn", "delegatelaw"],
+      discreterank: ["rgdiscretionrank", "discretionrank", "discreterank"],
+    };
+    const accepted = new Set([normalized, ...(aliases[normalized] || [])]);
+    return parsedBenchmark.headers.find((header) => accepted.has(normalizeKey(header)));
+  };
+
+  // Match by exact basename when a Filename column exists, falling back to PL number.
   const getMappedBenchmarkValue = (doc: CampaignDocument, colName: string) => {
     if (!parsedBenchmark) return undefined;
+    const identifierHeader = getBenchmarkIdentifierHeader(parsedBenchmark.headers);
+    if (!identifierHeader) return undefined;
+    const documentBasename = doc.filename.split("/").pop()?.trim().toLowerCase() || "";
     const plNum = getPLNumFromFilename(doc.filename);
-    if (!plNum) return undefined;
-    
-    const row = parsedBenchmark.rows.find((r: any) => {
-      const csvPlNum = r["PLNum"] || r["pl_num"] || r["PL Num"] || r["Public Law"] || "";
-      return csvPlNum.trim() === plNum;
+    const row = parsedBenchmark.rows.find((benchmarkRow) => {
+      const identifier = (benchmarkRow[identifierHeader] || "").trim();
+      if (normalizeKey(identifierHeader).includes("filename") || normalizeKey(identifierHeader).startsWith("document")) {
+        return identifier.split("/").pop()?.trim().toLowerCase() === documentBasename;
+      }
+      return Boolean(plNum) && identifier === plNum;
     });
-    
     if (!row) return undefined;
-    
-    const normalizedCampaignCol = normalizeKey(colName);
-    const csvKey = parsedBenchmark.headers.find(h => normalizeKey(h) === normalizedCampaignCol);
-    
+    const csvKey = getBenchmarkColumnHeader(colName);
     if (!csvKey) return undefined;
     return row[csvKey];
   };
 
-  // Normalize values (booleans/strings/numbers) for robust equivalence checks
-  const normalizeValueForComparison = (val: any): string => {
+  // Normalize according to the campaign column type so numeric ranks 0/1 are
+  // never accidentally converted into boolean FALSE/TRUE.
+  const normalizeValueForComparison = (val: any, columnType?: string): string => {
     if (val === undefined || val === null) return "";
     const s = String(val).trim().toUpperCase();
-    if (s === "Y" || s === "YES" || s === "TRUE" || s === "1" || s === "-1") return "TRUE";
-    if (s === "N" || s === "NO" || s === "FALSE" || s === "0") return "FALSE";
+    if (columnType === "boolean") {
+      if (s === "Y" || s === "YES" || s === "TRUE" || s === "1" || s === "-1") return "TRUE";
+      if (s === "N" || s === "NO" || s === "FALSE" || s === "0") return "FALSE";
+    }
+    if (columnType === "number") {
+      const number = Number(s);
+      return Number.isFinite(number) ? String(number) : s;
+    }
     return s;
   };
 
@@ -904,7 +965,7 @@ export function DashboardDetailPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
       try {
         const parsed = parseCSV(text);
@@ -913,13 +974,18 @@ export function DashboardDetailPage() {
           return;
         }
         
-        const hasPLNum = parsed.headers.some(h => ["PLNum", "pl_num", "PL Num", "Public Law"].map(x => x.toLowerCase()).includes(h.toLowerCase()));
-        if (!hasPLNum) {
-          toast.error("Could not find a 'PLNum' column in the uploaded file to match rows.");
+        if (!getBenchmarkIdentifierHeader(parsed.headers)) {
+          toast.error("Could not find a Filename, Document, PLNum, or Public Law column to match rows.");
           return;
         }
 
+        const allDocumentsResponse = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!allDocumentsResponse.ok) throw new Error("Could not load campaign rows for benchmark comparison");
+        const allDocuments: CampaignDocument[] = await allDocumentsResponse.json();
         setParsedBenchmark(parsed);
+        setBenchmarkDocuments(allDocuments);
         setShowBenchmarkComparison(true);
         toast.success(`Successfully loaded ${parsed.rows.length} benchmark rows. Benchmark Mode Active!`);
       } catch (err) {
@@ -933,31 +999,37 @@ export function DashboardDetailPage() {
 
   // Dynamic accuracy computation hook
   useEffect(() => {
-    if (!showBenchmarkComparison || !parsedBenchmark || docs.length === 0) {
+    const comparisonDocuments = benchmarkDocuments.length > 0 ? benchmarkDocuments : docs;
+    if (!showBenchmarkComparison || !parsedBenchmark || comparisonDocuments.length === 0) {
       setBenchmarkAccuracy(null);
+      setBenchmarkCoverage(null);
       return;
     }
 
     let totalComparisons = 0;
     let matchCount = 0;
 
-    docs.forEach(doc => {
+    let matchedDocuments = 0;
+    comparisonDocuments.forEach(doc => {
       if (doc.status !== "completed") return;
-      
+      let documentMatched = false;
       orderedColumns.forEach(col => {
         const docVal = doc.coded_values[col.name];
         const benchVal = getMappedBenchmarkValue(doc, col.name);
         
         if (benchVal !== undefined && benchVal !== "") {
+          documentMatched = true;
           totalComparisons++;
-          const normDoc = normalizeValueForComparison(docVal);
-          const normBench = normalizeValueForComparison(benchVal);
+          const normDoc = normalizeValueForComparison(docVal, col.type);
+          const normBench = normalizeValueForComparison(benchVal, col.type);
           if (normDoc === normBench) {
             matchCount++;
           }
         }
       });
+      if (documentMatched) matchedDocuments++;
     });
+    setBenchmarkCoverage({ matched: matchedDocuments, missing: Math.max(0, parsedBenchmark.rows.length - matchedDocuments) });
 
     if (totalComparisons > 0) {
       setBenchmarkAccuracy({
@@ -968,7 +1040,7 @@ export function DashboardDetailPage() {
     } else {
       setBenchmarkAccuracy(null);
     }
-  }, [showBenchmarkComparison, parsedBenchmark, docs, orderedColumns]);
+  }, [showBenchmarkComparison, parsedBenchmark, benchmarkDocuments, docs, orderedColumns]);
 
   // Export spreadsheet to CSV
   const handleExportCSV = async () => {
@@ -1036,11 +1108,11 @@ export function DashboardDetailPage() {
   };
 
   // Progress Stats calculations
-  const total = docs.length;
-  const completed = docs.filter((d) => d.status === "completed").length;
-  const failed = docs.filter((d) => d.status === "failed").length;
-  const processing = docs.filter((d) => d.status === "processing").length;
-  const pending = docs.filter((d) => d.status === "pending").length;
+  const total = statusSummary.total;
+  const completed = statusSummary.completed;
+  const failed = statusSummary.failed;
+  const processing = statusSummary.processing;
+  const pending = statusSummary.pending;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -1095,6 +1167,8 @@ export function DashboardDetailPage() {
                 if (showBenchmarkComparison) {
                   setShowBenchmarkComparison(false);
                   setParsedBenchmark(null);
+                  setBenchmarkDocuments([]);
+                  setBenchmarkCoverage(null);
                   setBenchmarkAccuracy(null);
                 } else {
                   benchmarkInputRef.current?.click();
@@ -1158,14 +1232,17 @@ export function DashboardDetailPage() {
         {/* Benchmark Accuracy Banner */}
         {showBenchmarkComparison && benchmarkAccuracy && (
           <div className="px-6 py-2.5 bg-rose-500/10 dark:bg-rose-950/20 border-b flex justify-between items-center text-xs text-rose-700 dark:text-rose-400 font-medium">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Sparkles size={14} className="text-amber-500 fill-amber-500" />
               <span>Benchmark Mode Active: <strong>{benchmarkAccuracy.matches} / {benchmarkAccuracy.total}</strong> cells match (<strong>{benchmarkAccuracy.percent}% accuracy</strong>).</span>
+              {benchmarkCoverage && <span className="opacity-80">Matched {benchmarkCoverage.matched} campaign files; {benchmarkCoverage.missing} benchmark rows are not in this campaign.</span>}
             </div>
             <button
               onClick={() => {
                 setShowBenchmarkComparison(false);
                 setParsedBenchmark(null);
+                setBenchmarkDocuments([]);
+                setBenchmarkCoverage(null);
                 setBenchmarkAccuracy(null);
               }}
               className="text-xs underline hover:text-rose-800 dark:hover:text-rose-300 cursor-pointer"
@@ -1593,7 +1670,7 @@ export function DashboardDetailPage() {
                               
                               const benchVal = showBenchmarkComparison ? getMappedBenchmarkValue(doc, col.name) : undefined;
                               const hasBenchmark = benchVal !== undefined && benchVal !== "";
-                              const isMismatch = hasBenchmark && normalizeValueForComparison(val) !== normalizeValueForComparison(benchVal);
+                              const isMismatch = hasBenchmark && normalizeValueForComparison(val, col.type) !== normalizeValueForComparison(benchVal, col.type);
                               
                               return (
                                 <td 

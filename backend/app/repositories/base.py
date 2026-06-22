@@ -156,6 +156,10 @@ class BaseDashboardDocumentRepository(ABC):
         pass
 
     @abstractmethod
+    def get_status_counts(self, dashboard_id: str) -> Dict[str, int]:
+        pass
+
+    @abstractmethod
     def link_document_if_not_exists(self, dashboard_id: str, document_id: str) -> None:
         pass
 

@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends, Query
 
 from app.core.deps import CurrentUserDep, get_workspace_id
-from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, DashboardDocumentPage, DocumentCampaignMappingRequest, DocumentCampaignMappingRow, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload
+from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, DashboardDocumentPage, DocumentCampaignMappingRequest, DocumentCampaignMappingRow, CampaignStatusSummary, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload
 from app.services import campaign_service
 from app.services.coding_service import generate_schema_and_description, enqueue_sequential_coding
 from app.core.client import get_user_client
@@ -118,6 +118,12 @@ def list_campaign_documents_page(
     items, total = campaign_service.list_campaign_documents_page(id, page, page_size)
     pages = max(1, (total + page_size - 1) // page_size)
     return DashboardDocumentPage(items=items, total=total, page=page, page_size=page_size, pages=pages)
+
+
+@router.get("/{id}/documents/status-summary", response_model=CampaignStatusSummary)
+def get_campaign_status_summary(id: str, current_user: CurrentUserDep):
+    """Return lightweight aggregate job counts for polling without loading document rows."""
+    return campaign_service.get_campaign_status_summary(id)
 
 
 @router.post("/{id}/documents/link", status_code=status.HTTP_200_OK)

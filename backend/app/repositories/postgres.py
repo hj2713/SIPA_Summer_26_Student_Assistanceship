@@ -583,6 +583,22 @@ class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
             )
             return cursor.fetchall()
 
+    def get_status_counts(self, dashboard_id: str) -> Dict[str, int]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT count(*) AS total,
+                       count(*) FILTER (WHERE status = 'pending') AS pending,
+                       count(*) FILTER (WHERE status = 'processing') AS processing,
+                       count(*) FILTER (WHERE status = 'completed') AS completed,
+                       count(*) FILTER (WHERE status = 'failed') AS failed
+                FROM dashboard_documents
+                WHERE dashboard_id = %s;
+                """,
+                (str(dashboard_id),),
+            )
+            return {key: int(value or 0) for key, value in cursor.fetchone().items()}
+
     def link_document_if_not_exists(self, dashboard_id: str, document_id: str) -> None:
         with self.conn.cursor() as cursor:
             cursor.execute(

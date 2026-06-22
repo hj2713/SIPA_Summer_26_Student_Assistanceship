@@ -475,6 +475,23 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
         )
         return [dict(r) for r in cursor.fetchall()]
 
+    def get_status_counts(self, dashboard_id: str) -> Dict[str, int]:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT count(*) AS total,
+                   sum(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+                   sum(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) AS processing,
+                   sum(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+                   sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+            FROM dashboard_documents
+            WHERE dashboard_id = ?;
+            """,
+            (str(dashboard_id),),
+        )
+        row = dict(cursor.fetchone())
+        return {key: int(value or 0) for key, value in row.items()}
+
     def link_document_if_not_exists(self, dashboard_id: str, document_id: str) -> None:
         self.conn.execute(
             """

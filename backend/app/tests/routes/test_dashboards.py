@@ -113,6 +113,10 @@ def test_paginated_documents_and_joined_campaign_mapping(client, auth_headers, c
     assert response.json()["total"] == 3
     assert len(response.json()["items"]) == 1
 
+    response = client.get(f"/api/dashboards/{dashboard_id}/documents/status-summary", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json() == {"total": 3, "pending": 0, "processing": 0, "completed": 3, "failed": 0}
+
     response = client.post(
         "/api/dashboards/document-mapping?workspace_id=QA",
         json={"document_ids": document_ids[:2]},

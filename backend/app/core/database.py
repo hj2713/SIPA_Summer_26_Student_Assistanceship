@@ -3,8 +3,12 @@ import sqlite3
 import hashlib
 import json
 import uuid
+import logging
 from contextlib import contextmanager
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
 
 def get_db_path() -> str:
     is_test = settings.JWT_SECRET == "test-secret-32-bytes-long-enough!!"
@@ -27,6 +31,205 @@ def get_db_conn():
         conn.close()
 
 def init_db():
+    """Initialize the database based on the selected DB_PROVIDER."""
+    if settings.DB_PROVIDER == "postgres":
+        init_postgres_db()
+    else:
+        init_sqlite_db()
+
+def init_postgres_db():
+    """Create PostgreSQL tables, enable pgvector, and seed defaults."""
+    import psycopg
+    if not settings.DATABASE_URL:
+        raise ValueError("DATABASE_URL is not set but DB_PROVIDER is postgres")
+    
+    logger.info("Initializing PostgreSQL database...")
+    # Establish direct connection for initialization using standard client
+    conn = psycopg.connect(settings.DATABASE_URL)
+    conn.autocommit = True
+    
+    try:
+        with conn.cursor() as cursor:
+            # 1. Enable pgvector extension
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            
+            # 2. Create tables
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS workspaces (
+                    id VARCHAR(255) PRIMARY KEY,
+                    name VARCHAR(255) UNIQUE NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id VARCHAR(255) PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    is_admin INTEGER NOT NULL DEFAULT 0,
+                    can_add INTEGER NOT NULL DEFAULT 0,
+                    can_delete INTEGER NOT NULL DEFAULT 0,
+                    llm_provider VARCHAR(50),
+                    llm_api_key_encrypted TEXT,
+                    llm_model VARCHAR(100),
+                    llm_base_url TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS dashboards (
+                    id VARCHAR(255) PRIMARY KEY,
+                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    prompt TEXT NOT NULL,
+                    schema TEXT NOT NULL DEFAULT '[]',
+                    model VARCHAR(255),
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS threads (
+                    id VARCHAR(255) PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title VARCHAR(255) NOT NULL DEFAULT 'New conversation',
+                    provider VARCHAR(50) NOT NULL DEFAULT 'openai',
+                    provider_thread_id VARCHAR(255),
+                    model VARCHAR(255),
+                    dashboard_id VARCHAR(255) REFERENCES dashboards(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id VARCHAR(255) PRIMARY KEY,
+                    thread_id VARCHAR(255) NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+                    content TEXT NOT NULL,
+                    provider_response_id VARCHAR(255),
+                    tokens_input INTEGER,
+                    tokens_output INTEGER,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS documents (
+                    id VARCHAR(255) PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    workspace_id VARCHAR(255) DEFAULT 'TEST' REFERENCES workspaces(id) ON DELETE CASCADE,
+                    filename VARCHAR(255) NOT NULL,
+                    file_path TEXT NOT NULL,
+                    file_size INTEGER NOT NULL,
+                    content_type VARCHAR(255) NOT NULL,
+                    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+                    error_message TEXT,
+                    content_hash VARCHAR(255),
+                    metadata TEXT NOT NULL DEFAULT '{}',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (workspace_id, filename)
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS document_chunks (
+                    id VARCHAR(255) PRIMARY KEY,
+                    document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    workspace_id VARCHAR(255) DEFAULT 'TEST' REFERENCES workspaces(id) ON DELETE CASCADE,
+                    content TEXT NOT NULL,
+                    embedding vector,
+                    metadata TEXT NOT NULL DEFAULT '{}',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS dashboard_documents (
+                    dashboard_id VARCHAR(255) NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+                    document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    coded_values TEXT NOT NULL DEFAULT '{}',
+                    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+                    error_message TEXT,
+                    error_type VARCHAR(50) CHECK(error_type IN ('API_FAILURE', 'COMPREHENSION_FAILURE', 'EXTRACTION_FAILURE')),
+                    current_step INTEGER DEFAULT 0,
+                    total_steps INTEGER DEFAULT 7,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (dashboard_id, document_id)
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS llm_usage_logs (
+                    id VARCHAR(255) PRIMARY KEY,
+                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    provider VARCHAR(255) NOT NULL,
+                    model VARCHAR(255) NOT NULL,
+                    service VARCHAR(255) NOT NULL,
+                    campaign_id VARCHAR(255) REFERENCES dashboards(id) ON DELETE SET NULL,
+                    thread_id VARCHAR(255) REFERENCES threads(id) ON DELETE SET NULL,
+                    input_tokens INTEGER NOT NULL DEFAULT 0,
+                    output_tokens INTEGER NOT NULL DEFAULT 0,
+                    calculated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0
+                );
+            """)
+
+            # Create indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_threads_user_updated ON threads (user_id, updated_at DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, created_at ASC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks (document_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents (user_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents (workspace_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_workspace ON document_chunks (workspace_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
+
+            # Seed defaults
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
+            
+            # Seed test@gmail.com
+            cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@gmail.com",))
+            admin_row = cursor.fetchone()
+            admin_pwd_hash = hash_password("test@gmail.com")
+            if not admin_row:
+                import uuid
+                cursor.execute(
+                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
+                    (str(uuid.uuid4()), "test@gmail.com", admin_pwd_hash)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE users SET password_hash = %s, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;",
+                    (admin_pwd_hash, "test@gmail.com")
+                )
+
+            # Seed test@test.com
+            cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@test.com",))
+            test_row = cursor.fetchone()
+            test_pwd_hash = hash_password("test@test.com")
+            if not test_row:
+                import uuid
+                cursor.execute(
+                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
+                    (str(uuid.uuid4()), "test@test.com", test_pwd_hash)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE users SET password_hash = %s, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;",
+                    (test_pwd_hash, "test@test.com")
+                )
+    finally:
+        conn.close()
+
+def init_sqlite_db():
     """Create all SQLite tables if they do not exist, run migrations, and seed defaults."""
     db_path = get_db_path()
     

@@ -50,11 +50,9 @@ async def get_current_user(
         can_add = False
         can_delete = False
         
-        from app.core.database import get_db_conn
-        with get_db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, is_admin, can_add, can_delete FROM users WHERE id = ?;", (user_id,))
-            row = cursor.fetchone()
+        from app.repositories import get_db_session
+        with get_db_session() as session:
+            row = session.users.get_by_id(user_id)
             if not row:
                 if is_test_env:
                     is_admin = True
@@ -66,12 +64,15 @@ async def get_current_user(
                     is_admin = False
                     can_add = True
                     can_delete = False
-                    conn.execute(
-                        "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, ?, ?, ?);",
-                        (user_id, email, "EXTERNAL_AUTH_NO_PASSWORD", int(is_admin), int(can_add), int(can_delete))
+                    session.users.create(
+                        user_id=user_id,
+                        email=email,
+                        password_hash="EXTERNAL_AUTH_NO_PASSWORD",
+                        is_admin=int(is_admin),
+                        can_add=int(can_add),
+                        can_delete=int(can_delete)
                     )
-                    conn.commit()
-                    logger.info("Automatically registered external user %s (%s) in local SQLite cache.", user_id, email)
+                    logger.info("Automatically registered external user %s (%s) in local cache.", user_id, email)
             else:
                 is_admin = bool(row["is_admin"])
                 can_add = bool(row["can_add"])

@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 
 from app.core.config import settings
-from app.core.database import get_db_conn, hash_password, verify_password
+from app.core.database import hash_password, verify_password
+from app.repositories import get_db_session
 from app.core.deps import CurrentUserDep
 from app.core.llm_credentials import (
     LLMCredentialsResponse,
@@ -75,11 +76,9 @@ def signup(payload: AuthRequest, current_user: CurrentUserDep):
             detail="Password must be at least 6 characters long"
         )
 
-    with get_db_conn() as conn:
+    with get_db_session() as session:
         # Check if user already exists
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM users WHERE email = ?;", (email,))
-        if cursor.fetchone():
+        if session.users.get_by_email(email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already registered"
@@ -88,14 +87,14 @@ def signup(payload: AuthRequest, current_user: CurrentUserDep):
         # Create user
         user_id = str(uuid.uuid4())
         pwd_hash = hash_password(password)
-        conn.execute(
-            "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 0, 0);",
-            (user_id, email, pwd_hash)
+        row = session.users.create(
+            user_id=user_id,
+            email=email,
+            password_hash=pwd_hash,
+            is_admin=0,
+            can_add=0,
+            can_delete=0
         )
-        conn.commit()
-
-        cursor.execute("SELECT * FROM users WHERE id = ?;", (user_id,))
-        row = cursor.fetchone()
 
     token = create_jwt(user_id, email)
     user_data = UserResponse(
@@ -113,10 +112,8 @@ def login(payload: AuthRequest):
     email = payload.email.strip().lower()
     password = payload.password
 
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?;", (email,))
-        row = cursor.fetchone()
+    with get_db_session() as session:
+        row = session.users.get_by_email(email)
         
         if not row or not verify_password(password, row["password_hash"]):
             raise HTTPException(
@@ -148,10 +145,8 @@ def list_users(current_user: CurrentUserDep):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can access the user registry"
         )
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, is_admin, can_add, can_delete FROM users ORDER BY email ASC;")
-        rows = cursor.fetchall()
+    with get_db_session() as session:
+        rows = session.users.list_all()
         return [
             UserResponse(
                 id=row["id"],
@@ -187,21 +182,17 @@ def update_permissions(user_id: str, payload: PermissionsUpdate, current_user: C
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can modify user permissions"
         )
-    with get_db_conn() as conn:
-        conn.execute(
-            "UPDATE users SET can_add = ?, can_delete = ? WHERE id = ?;",
-            (int(payload.can_add), int(payload.can_delete), str(user_id))
-        )
-        conn.commit()
-        
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, is_admin, can_add, can_delete FROM users WHERE id = ?;", (str(user_id),))
-        row = cursor.fetchone()
+    with get_db_session() as session:
+        row = session.users.get_by_id(user_id)
         if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
+        row = session.users.update(user_id, {
+            "can_add": int(payload.can_add),
+            "can_delete": int(payload.can_delete)
+        })
         return UserResponse(
             id=row["id"],
             email=row["email"],
@@ -213,10 +204,8 @@ def update_permissions(user_id: str, payload: PermissionsUpdate, current_user: C
 @router.get("/workspaces", response_model=list[WorkspaceResponse])
 def list_workspaces(current_user: CurrentUserDep):
     """List all available workspaces."""
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM workspaces ORDER BY name ASC;")
-        rows = cursor.fetchall()
+    with get_db_session() as session:
+        rows = session.workspaces.list_all()
         return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in rows]
 
 @router.post("/workspaces", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
@@ -230,15 +219,12 @@ def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
         )
     
     workspace_id = name
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM workspaces WHERE id = ?;", (workspace_id,))
-        if cursor.fetchone():
+    with get_db_session() as session:
+        if session.workspaces.get_by_id(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Workspace already exists"
             )
-        conn.execute("INSERT INTO workspaces (id, name) VALUES (?, ?);", (workspace_id, name))
-        conn.commit()
+        session.workspaces.create(workspace_id=workspace_id, name=name)
 
     return WorkspaceResponse(id=workspace_id, name=name)

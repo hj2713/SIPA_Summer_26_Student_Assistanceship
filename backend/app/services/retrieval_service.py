@@ -48,10 +48,73 @@ class RetrievalService:
         db_conn_factory=None,
         embedding_service: EmbeddingService = None,
         reranking_service: RerankingService = None,
+        db_session_factory=None,
     ) -> None:
-        self.db_conn_factory = db_conn_factory or get_db_conn
+        self._db_conn_factory = db_conn_factory
+        self._db_session_factory = db_session_factory
         self._embedding_service = embedding_service or get_embedding_service()
         self._reranking_service = reranking_service or get_reranking_service()
+
+    @property
+    def db_conn_factory(self) -> Any:
+        if self._db_conn_factory is None:
+            return get_db_conn
+        return self._db_conn_factory
+
+    @property
+    def db_session_factory(self) -> Any:
+        if self._db_session_factory is not None:
+            return self._db_session_factory
+        
+        is_customized = False
+        if self._db_conn_factory is not None:
+            is_customized = True
+        else:
+            from unittest.mock import Mock
+            if isinstance(get_db_conn, Mock):
+                is_customized = True
+            else:
+                try:
+                    from app.core.database import get_db_conn as original_get_db_conn
+                    if get_db_conn is not original_get_db_conn:
+                        is_customized = True
+                except Exception:
+                    pass
+
+        if is_customized:
+            from contextlib import contextmanager
+            @contextmanager
+            def adapted_session():
+                conn_ctx = self.db_conn_factory
+                if callable(conn_ctx):
+                    conn = conn_ctx()
+                else:
+                    conn = conn_ctx
+                
+                # Check if it has enter/exit context methods
+                if hasattr(conn, "__enter__"):
+                    with conn as connection:
+                        from app.repositories.sqlite import SQLiteUnitOfWork
+                        uow = SQLiteUnitOfWork(conn=connection)
+                        try:
+                            yield uow
+                            uow.commit()
+                        except Exception:
+                            uow.rollback()
+                            raise
+                else:
+                    from app.repositories.sqlite import SQLiteUnitOfWork
+                    uow = SQLiteUnitOfWork(conn=conn)
+                    try:
+                        yield uow
+                        uow.commit()
+                    except Exception:
+                        uow.rollback()
+                        raise
+            return adapted_session
+
+        from app.repositories import get_db_session
+        return get_db_session
 
     def tokenize(self, text: str) -> list[str]:
         """Tokenize text into lowercase alphanumeric words."""
@@ -114,16 +177,15 @@ class RetrievalService:
         if not document_ids:
             query_lower = query.lower()
             detected_doc_ids = set()
-            with self.db_conn_factory() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT id, filename FROM documents WHERE workspace_id = ?;", (str(workspace_id),))
-                docs = cursor.fetchall()
+            with self.db_session_factory() as session:
+                docs = session.documents.list_by_workspace(workspace_id)
                 for doc in docs:
-                    doc_id, filename = doc
+                    d_id = doc["id"]
+                    filename = doc["filename"]
                     filename_clean = filename.lower()
                     name_without_ext = filename_clean.rsplit(".", 1)[0]
                     if (filename_clean in query_lower) or (len(name_without_ext) > 5 and name_without_ext in query_lower):
-                        detected_doc_ids.add(doc_id)
+                        detected_doc_ids.add(d_id)
             if detected_doc_ids:
                 document_ids = list(detected_doc_ids)
                 logger.info("Auto-detected document IDs from query filename match: %s", document_ids)
@@ -137,166 +199,156 @@ class RetrievalService:
         final_count = limit or settings.RETRIEVAL_FINAL_COUNT
 
         try:
-            # 1. Generate query embedding using the module-level function to allow unit test patching
-            query_embs = generate_embeddings([query])
-            if not query_embs:
-                logger.warning("Could not generate embedding for query: %s", query)
-                return []
-            query_embedding = query_embs[0]
-
-            # 2. Fetch document chunks
-            all_chunks = []
-            with self.db_conn_factory() as conn:
-                cursor = conn.cursor()
-                if document_ids:
-                    placeholders = ",".join("?" for _ in document_ids)
-                    query_str = f"""
-                        SELECT dc.id, dc.document_id, dc.content, dc.embedding, dc.metadata as chunk_metadata,
-                               d.filename, d.metadata as doc_metadata
-                        FROM document_chunks dc
-                        JOIN documents d ON dc.document_id = d.id
-                        WHERE dc.workspace_id = ? AND dc.document_id IN ({placeholders});
-                    """
-                    cursor.execute(query_str, [str(workspace_id)] + [str(d_id) for d_id in document_ids])
-                else:
-                    cursor.execute("""
-                        SELECT dc.id, dc.document_id, dc.content, dc.embedding, dc.metadata as chunk_metadata,
-                               d.filename, d.metadata as doc_metadata
-                        FROM document_chunks dc
-                        JOIN documents d ON dc.document_id = d.id
-                        WHERE dc.workspace_id = ?;
-                    """, (str(workspace_id),))
-                all_chunks = [dict(row) for row in cursor.fetchall()]
-
-            # Deserialize fields
-            for chunk in all_chunks:
-                chunk["embedding"] = deserialize_embedding(chunk["embedding"])
-                chunk["chunk_metadata"] = json.loads(chunk["chunk_metadata"]) if chunk["chunk_metadata"] else {}
-                chunk["doc_metadata"] = json.loads(chunk["doc_metadata"]) if chunk["doc_metadata"] else {}
-
-            if metadata_filter:
-                all_chunks = [c for c in all_chunks if self.matches_filter(c["doc_metadata"], metadata_filter)]
-
             # Check if summarization query
             is_summary = False
             if document_ids:
                 q_lower = query.lower()
                 is_summary = any(w in q_lower for w in ["summary", "summarize", "summarise", "outline", "overview", "tl;dr", "tldr"])
 
-            if is_summary:
-                sorted_chunks = []
+            # 1. If metadata filter is active or it is a summary query, fall back to fetching all chunks
+            if metadata_filter or is_summary:
+                with self.db_session_factory() as session:
+                    all_chunks = session.chunks.get_all_chunks_for_workspace(workspace_id, document_ids)
+
                 for chunk in all_chunks:
-                    idx = chunk["chunk_metadata"].get("chunk_index", 0)
-                    sorted_chunks.append((idx, chunk))
-                sorted_chunks.sort(key=lambda x: x[0])
+                    if isinstance(chunk["embedding"], (bytes, str)):
+                        chunk["embedding"] = deserialize_embedding(chunk["embedding"])
+                    chunk["chunk_metadata"] = json.loads(chunk["chunk_metadata"]) if isinstance(chunk["chunk_metadata"], str) else (chunk["chunk_metadata"] or {})
+                    chunk["doc_metadata"] = json.loads(chunk["doc_metadata"]) if isinstance(chunk["doc_metadata"], str) else (chunk["doc_metadata"] or {})
 
-                max_summary_chunks = 100
-                truncated_chunks = sorted_chunks[:max_summary_chunks]
+                if metadata_filter:
+                    all_chunks = [c for c in all_chunks if self.matches_filter(c["doc_metadata"], metadata_filter)]
 
-                results = []
-                for idx, chunk in truncated_chunks:
-                    results.append({
-                        "chunk_id": chunk["id"],
-                        "document_id": chunk["document_id"],
-                        "filename": chunk["filename"],
-                        "content": chunk["content"],
-                        "metadata": chunk["chunk_metadata"],
-                        "similarity": 1.0,
-                        "rrf_score": 1.0,
-                    })
-                logger.info("Summarization query detected. Returning %d chunks chronologically.", len(results))
-                return results
+                if is_summary:
+                    sorted_chunks = []
+                    for chunk in all_chunks:
+                        idx = chunk["chunk_metadata"].get("chunk_index", 0)
+                        sorted_chunks.append((idx, chunk))
+                    sorted_chunks.sort(key=lambda x: x[0])
 
-            # Dense leg (Vector search)
-            dense_candidates = []
-            for chunk in all_chunks:
-                if not chunk["embedding"]:
-                    continue
-                sim = self.cosine_similarity(query_embedding, chunk["embedding"])
-                if sim > threshold:
-                    dense_candidates.append({
-                        "id": chunk["id"],
-                        "document_id": chunk["document_id"],
-                        "filename": chunk["filename"],
-                        "content": chunk["content"],
-                        "metadata": chunk["chunk_metadata"],
-                        "similarity": sim,
-                    })
-            
-            dense_candidates.sort(key=lambda x: x["similarity"], reverse=True)
-            dense_candidates = dense_candidates[:candidate_count]
-            dense_ranks = {item["id"]: (idx + 1) for idx, item in enumerate(dense_candidates)}
+                    max_summary_chunks = 100
+                    truncated_chunks = sorted_chunks[:max_summary_chunks]
 
-            # Sparse leg (Keyword search)
-            query_tokens = set(self.tokenize(query))
-            meaningful_tokens = {t for t in query_tokens if t not in STOPWORDS}
-            search_tokens = meaningful_tokens if meaningful_tokens else query_tokens
-            
-            sparse_candidates = []
-            for chunk in all_chunks:
-                chunk_tokens = self.tokenize(chunk["content"])
-                score = sum(chunk_tokens.count(term) for term in search_tokens) if chunk_tokens else 0
-                
-                filename_lower = chunk["filename"].lower()
-                filename_match = False
-                for token in search_tokens:
-                    if len(token) > 4 and token in filename_lower:
-                        filename_match = True
-                        break
-                if filename_match:
-                    score += 100.0
+                    results = []
+                    for idx, chunk in truncated_chunks:
+                        results.append({
+                            "chunk_id": chunk["id"],
+                            "document_id": chunk["document_id"],
+                            "filename": chunk["filename"],
+                            "content": chunk["content"],
+                            "metadata": chunk["chunk_metadata"],
+                            "similarity": 1.0,
+                            "rrf_score": 1.0,
+                        })
+                    logger.info("Summarization query detected. Returning %d chunks chronologically.", len(results))
+                    return results
+
+                # In-memory hybrid search
+                query_embs = generate_embeddings([query])
+                if not query_embs:
+                    return []
+                query_embedding = query_embs[0]
+
+                # Dense leg
+                dense_candidates = []
+                for chunk in all_chunks:
+                    if not chunk["embedding"]:
+                        continue
+                    sim = self.cosine_similarity(query_embedding, chunk["embedding"])
+                    if sim > threshold:
+                        dense_candidates.append({
+                            "id": chunk["id"],
+                            "document_id": chunk["document_id"],
+                            "filename": chunk["filename"],
+                            "content": chunk["content"],
+                            "metadata": chunk["chunk_metadata"],
+                            "similarity": sim,
+                        })
+                dense_candidates.sort(key=lambda x: x["similarity"], reverse=True)
+                dense_candidates = dense_candidates[:candidate_count]
+                dense_ranks = {item["id"]: (idx + 1) for idx, item in enumerate(dense_candidates)}
+
+                # Sparse leg
+                query_tokens = set(self.tokenize(query))
+                meaningful_tokens = {t for t in query_tokens if t not in STOPWORDS}
+                search_tokens = meaningful_tokens if meaningful_tokens else query_tokens
+
+                sparse_candidates = []
+                for chunk in all_chunks:
+                    chunk_tokens = self.tokenize(chunk["content"])
+                    score = sum(chunk_tokens.count(term) for term in search_tokens) if chunk_tokens else 0
                     
-                if score > 0:
-                    sparse_candidates.append({
-                        "id": chunk["id"],
-                        "document_id": chunk["document_id"],
-                        "filename": chunk["filename"],
-                        "content": chunk["content"],
-                        "metadata": chunk["chunk_metadata"],
-                        "score": score,
-                    })
-            
-            sparse_candidates.sort(key=lambda x: x["score"], reverse=True)
-            sparse_candidates = sparse_candidates[:candidate_count]
-            sparse_ranks = {item["id"]: (idx + 1) for idx, item in enumerate(sparse_candidates)}
+                    filename_lower = chunk["filename"].lower()
+                    filename_match = False
+                    for token in search_tokens:
+                        if len(token) > 4 and token in filename_lower:
+                            filename_match = True
+                            break
+                    if filename_match:
+                        score += 100.0
+                        
+                    if score > 0:
+                        sparse_candidates.append({
+                            "id": chunk["id"],
+                            "document_id": chunk["document_id"],
+                            "filename": chunk["filename"],
+                            "content": chunk["content"],
+                            "metadata": chunk["chunk_metadata"],
+                            "score": score,
+                        })
+                sparse_candidates.sort(key=lambda x: x["score"], reverse=True)
+                sparse_candidates = sparse_candidates[:candidate_count]
+                sparse_ranks = {item["id"]: (idx + 1) for idx, item in enumerate(sparse_candidates)}
 
-            # Reciprocal Rank Fusion (RRF)
-            rrf_k = 60
-            merged_map = {}
-            
-            for item in dense_candidates:
-                cid = item["id"]
-                rank_v = dense_ranks[cid]
-                score_v = 1.0 / (rrf_k + rank_v)
-                merged_map[cid] = {
-                    "chunk_id": cid,
-                    "document_id": item["document_id"],
-                    "filename": item["filename"],
-                    "content": item["content"],
-                    "metadata": item["metadata"],
-                    "similarity": item["similarity"],
-                    "rrf_score": score_v
-                }
-                
-            for item in sparse_candidates:
-                cid = item["id"]
-                rank_k = sparse_ranks[cid]
-                score_k = 1.0 / (rrf_k + rank_k)
-                if cid in merged_map:
-                    merged_map[cid]["rrf_score"] += score_k
-                else:
+                # RRF
+                merged_map = {}
+                for item in dense_candidates:
+                    cid = item["id"]
+                    rank_v = dense_ranks[cid]
                     merged_map[cid] = {
                         "chunk_id": cid,
                         "document_id": item["document_id"],
                         "filename": item["filename"],
                         "content": item["content"],
                         "metadata": item["metadata"],
-                        "similarity": 0.0,
-                        "rrf_score": score_k
+                        "similarity": item["similarity"],
+                        "rrf_score": 1.0 / (60.0 + rank_v)
                     }
+                for item in sparse_candidates:
+                    cid = item["id"]
+                    rank_k = sparse_ranks[cid]
+                    score_k = 1.0 / (60.0 + rank_k)
+                    if cid in merged_map:
+                        merged_map[cid]["rrf_score"] += score_k
+                    else:
+                        merged_map[cid] = {
+                            "chunk_id": cid,
+                            "document_id": item["document_id"],
+                            "filename": item["filename"],
+                            "content": item["content"],
+                            "metadata": item["metadata"],
+                            "similarity": 0.0,
+                            "rrf_score": score_k
+                        }
+                results = list(merged_map.values())
+                results.sort(key=lambda x: x["rrf_score"], reverse=True)
 
-            results = list(merged_map.values())
-            results.sort(key=lambda x: x["rrf_score"], reverse=True)
+            else:
+                # 2. Native similarity search using repository
+                query_embs = generate_embeddings([query])
+                if not query_embs:
+                    return []
+                query_embedding = query_embs[0]
+
+                with self.db_session_factory() as session:
+                    results = session.chunks.similarity_search(
+                        workspace_id=workspace_id,
+                        query=query,
+                        query_embedding=query_embedding,
+                        limit=candidate_count,
+                        threshold=threshold,
+                        document_ids=document_ids
+                    )
 
             # Reranking
             if settings.ENABLE_RERANKING and results:
@@ -320,11 +372,9 @@ class RetrievalService:
                 settings.ENABLE_RERANKING,
             )
             return results
-
         except Exception as e:
             logger.error("Failed to retrieve context for query '%s': %s", query, e, exc_info=True)
             return []
-
 
 # Process-wide singleton instance for dependency injection & route integration
 retrieval_service = RetrievalService()

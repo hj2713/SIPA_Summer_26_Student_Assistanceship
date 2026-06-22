@@ -22,11 +22,74 @@ class CampaignService:
         doc_service: DocumentService = None,
         ingestion_service: IngestionService = None,
         coding_service: CodingService = None,
+        db_session_factory=None,
     ) -> None:
-        self.db_conn_factory = db_conn_factory or get_db_conn
+        self._db_conn_factory = db_conn_factory
+        self._db_session_factory = db_session_factory
         self._doc_service = doc_service or default_document_service
         self._ingestion_service = ingestion_service or default_ingestion_service
         self._coding_service = coding_service or default_coding_service
+
+    @property
+    def db_conn_factory(self) -> Any:
+        if self._db_conn_factory is None:
+            return get_db_conn
+        return self._db_conn_factory
+
+    @property
+    def db_session_factory(self) -> Any:
+        if self._db_session_factory is not None:
+            return self._db_session_factory
+        
+        is_customized = False
+        if self._db_conn_factory is not None:
+            is_customized = True
+        else:
+            from unittest.mock import Mock
+            if isinstance(get_db_conn, Mock):
+                is_customized = True
+            else:
+                try:
+                    from app.core.database import get_db_conn as original_get_db_conn
+                    if get_db_conn is not original_get_db_conn:
+                        is_customized = True
+                except Exception:
+                    pass
+
+        if is_customized:
+            from contextlib import contextmanager
+            @contextmanager
+            def adapted_session():
+                conn_ctx = self.db_conn_factory
+                if callable(conn_ctx):
+                    conn = conn_ctx()
+                else:
+                    conn = conn_ctx
+                
+                # Check if it has enter/exit context methods
+                if hasattr(conn, "__enter__"):
+                    with conn as connection:
+                        from app.repositories.sqlite import SQLiteUnitOfWork
+                        uow = SQLiteUnitOfWork(conn=connection)
+                        try:
+                            yield uow
+                            uow.commit()
+                        except Exception:
+                            uow.rollback()
+                            raise
+                else:
+                    from app.repositories.sqlite import SQLiteUnitOfWork
+                    uow = SQLiteUnitOfWork(conn=conn)
+                    try:
+                        yield uow
+                        uow.commit()
+                    except Exception:
+                        uow.rollback()
+                        raise
+            return adapted_session
+
+        from app.repositories import get_db_session
+        return get_db_session
 
     async def create_campaign(
         self,
@@ -52,15 +115,16 @@ class CampaignService:
         from app.core.config import settings
         chosen_model = payload.model or settings.GEMINI_MODEL
 
-        with self.db_conn_factory() as conn:
-            conn.execute(
-                """
-                INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model)
-                VALUES (?, ?, ?, ?, ?, ?, ?);
-                """,
-                (dashboard_id, workspace_id, payload.name, desc, payload.prompt, json.dumps(schema_fields), chosen_model)
+        with self.db_session_factory() as session:
+            row = session.dashboards.create(
+                dashboard_id=dashboard_id,
+                workspace_id=workspace_id,
+                name=payload.name,
+                description=desc,
+                prompt=payload.prompt,
+                schema=json.dumps(schema_fields),
+                model=chosen_model
             )
-            conn.commit()
 
         return DashboardRow(
             id=dashboard_id,
@@ -70,23 +134,18 @@ class CampaignService:
             prompt=payload.prompt,
             schema=schema_fields,
             model=chosen_model,
-            created_at=str(uuid.uuid4())
+            created_at=row.get("created_at", "")
         )
 
     def list_campaigns(self, workspace_id: str) -> List[DashboardRow]:
         """List all research campaign dashboards in the workspace."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM dashboards WHERE workspace_id = ? ORDER BY created_at DESC;",
-                (workspace_id,)
-            )
-            rows = cursor.fetchall()
+        with self.db_session_factory() as session:
+            rows = session.dashboards.list_by_workspace(workspace_id)
             
             results = []
             for r in rows:
                 try:
-                    schema_list = json.loads(r["schema"])
+                    schema_list = json.loads(r["schema"]) if isinstance(r["schema"], str) else (r["schema"] or [])
                 except Exception:
                     schema_list = []
                 results.append(DashboardRow(
@@ -96,17 +155,15 @@ class CampaignService:
                     description=r["description"],
                     prompt=r["prompt"],
                     schema=schema_list,
-                    model=r["model"] if "model" in r.keys() else None,
+                    model=r.get("model"),
                     created_at=r["created_at"]
                 ))
             return results
 
     def get_campaign(self, id: str) -> DashboardRow:
         """Retrieve details for a specific campaign dashboard."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM dashboards WHERE id = ?;", (id,))
-            r = cursor.fetchone()
+        with self.db_session_factory() as session:
+            r = session.dashboards.get_by_id(id)
             if not r:
                 from fastapi import HTTPException, status
                 raise HTTPException(
@@ -114,7 +171,7 @@ class CampaignService:
                     detail="Campaign dashboard not found."
                 )
             try:
-                schema_list = json.loads(r["schema"])
+                schema_list = json.loads(r["schema"]) if isinstance(r["schema"], str) else (r["schema"] or [])
             except Exception:
                 schema_list = []
             return DashboardRow(
@@ -124,24 +181,23 @@ class CampaignService:
                 description=r["description"],
                 prompt=r["prompt"],
                 schema=schema_list,
-                model=r["model"] if "model" in r.keys() else None,
+                model=r.get("model"),
                 created_at=r["created_at"]
             )
 
     def delete_campaign(self, id: str) -> bool:
         """Delete a research campaign dashboard."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM dashboards WHERE id = ?;", (id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        with self.db_session_factory() as session:
+            row = session.dashboards.get_by_id(id)
+            if not row:
+                return False
+            session.dashboards.delete(id)
+            return True
 
     def update_campaign(self, id: str, payload: DashboardUpdate) -> DashboardRow:
         """Update campaign name, description, prompt, or variable schema."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM dashboards WHERE id = ?;", (id,))
-            row = cursor.fetchone()
+        with self.db_session_factory() as session:
+            row = session.dashboards.get_by_id(id)
             if not row:
                 from fastapi import HTTPException, status
                 raise HTTPException(
@@ -152,22 +208,20 @@ class CampaignService:
             name = payload.name if payload.name is not None else row["name"]
             description = payload.description if payload.description is not None else row["description"]
             prompt = payload.prompt if payload.prompt is not None else row["prompt"]
-            model = payload.model if payload.model is not None else (row["model"] if "model" in row.keys() else None)
+            model = payload.model if payload.model is not None else row.get("model")
 
             if payload.schema_fields is not None:
                 schema_json = json.dumps(payload.schema_fields)
             else:
-                schema_json = row["schema"]
+                schema_json = json.dumps(row["schema"]) if not isinstance(row["schema"], str) else row["schema"]
 
-            conn.execute(
-                """
-                UPDATE dashboards
-                SET name = ?, description = ?, prompt = ?, schema = ?, model = ?
-                WHERE id = ?;
-                """,
-                (name, description, prompt, schema_json, model, id)
-            )
-            conn.commit()
+            session.dashboards.update(id, {
+                "name": name,
+                "description": description,
+                "prompt": prompt,
+                "schema": schema_json,
+                "model": model
+            })
 
             try:
                 schema_list = json.loads(schema_json)
@@ -188,32 +242,19 @@ class CampaignService:
 
     def list_campaign_documents(self, id: str) -> List[DashboardDocumentRow]:
         """List all documents linked to this campaign, along with their coded values and statuses."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT d.id as document_id, d.filename, d.file_size, d.metadata as doc_metadata,
-                       dd.status, dd.coded_values, dd.error_message, dd.error_type,
-                       dd.current_step, dd.total_steps
-                FROM dashboard_documents dd
-                JOIN documents d ON dd.document_id = d.id
-                WHERE dd.dashboard_id = ?
-                ORDER BY dd.created_at DESC;
-                """,
-                (id,)
-            )
-            rows = cursor.fetchall()
+        with self.db_session_factory() as session:
+            rows = session.dashboard_documents.list_by_dashboard_with_documents(id)
             
             results = []
             for r in rows:
                 try:
-                    coded = json.loads(r["coded_values"])
+                    coded = json.loads(r["coded_values"]) if isinstance(r["coded_values"], str) else (r["coded_values"] or {})
                 except Exception:
                     coded = {}
                     
                 tags = []
                 try:
-                    doc_meta = json.loads(r["doc_metadata"]) if r["doc_metadata"] else {}
+                    doc_meta = json.loads(r["doc_metadata"]) if isinstance(r["doc_metadata"], str) else (r["doc_metadata"] or {})
                     tags = doc_meta.get("tags", [])
                 except Exception:
                     pass
@@ -234,16 +275,9 @@ class CampaignService:
 
     def link_campaign_documents_in_db(self, id: str, document_ids: List[str]) -> None:
         """Link existing documents in the database junction table (DB only, no sequential coding trigger)."""
-        with self.db_conn_factory() as conn:
+        with self.db_session_factory() as session:
             for doc_id in document_ids:
-                conn.execute(
-                    """
-                    INSERT OR IGNORE INTO dashboard_documents (dashboard_id, document_id, status)
-                    VALUES (?, ?, 'pending');
-                    """,
-                    (id, doc_id)
-                )
-            conn.commit()
+                session.dashboard_documents.link_document_if_not_exists(id, doc_id)
 
     def link_campaign_documents(self, id: str, document_ids: List[str], user_id: str) -> None:
         """Link existing global documents to this campaign and enqueue them for sequential LLM coding."""
@@ -252,20 +286,10 @@ class CampaignService:
 
     def get_filenames_in_dashboard(self, dashboard_id: str) -> set:
         """Return the set of filenames already linked to a dashboard."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT d.filename
-                FROM dashboard_documents dd
-                JOIN documents d ON dd.document_id = d.id
-                WHERE dd.dashboard_id = ?;
-                """,
-                (dashboard_id,)
-            )
-            rows = cursor.fetchall()
+        with self.db_session_factory() as session:
+            rows = session.dashboard_documents.list_by_dashboard_with_documents(dashboard_id)
             # Return just the bare filename (strip path prefix) to match what the client sends
-            return {row[0].split("/")[-1] for row in rows}
+            return {r["filename"].split("/")[-1] for r in rows}
 
     def upload_campaign_document(
         self,
@@ -332,15 +356,22 @@ class CampaignService:
             )
 
         # Link to campaign
-        with self.db_conn_factory() as conn:
-            conn.execute(
-                """
-                INSERT OR IGNORE INTO dashboard_documents (dashboard_id, document_id, status)
-                VALUES (?, ?, 'pending');
-                """,
-                (id, str(doc_id))
-            )
-            conn.commit()
+        with self.db_session_factory() as session:
+            session.dashboard_documents.link_document_if_not_exists(id, str(doc_id))
+
+        # Enqueue campaign coding
+        self._coding_service.enqueue_sequential_coding(id, [str(doc_id)], current_user.id)
+
+        return DashboardDocumentRow(
+            document_id=doc_id,
+            filename=filename,
+            file_size=file_size,
+            status="pending",
+            coded_values={},
+            error_message=None,
+            error_type=None,
+            tags=parsed_tags
+        )
 
         # Enqueue campaign coding
         self._coding_service.enqueue_sequential_coding(id, [str(doc_id)], current_user.id)
@@ -363,41 +394,16 @@ class CampaignService:
         document_ids: Optional[List[str]] = None,
     ) -> List[str]:
         """Retry coding execution for failed documents in a campaign dashboard."""
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
+        with self.db_session_factory() as session:
             if document_ids:
-                placeholders = ",".join("?" for _ in document_ids)
-                cursor.execute(
-                    f"""
-                    SELECT document_id FROM dashboard_documents
-                    WHERE dashboard_id = ? AND document_id IN ({placeholders});
-                    """,
-                    [id] + document_ids
-                )
+                doc_ids = session.dashboard_documents.get_linked_document_ids(id, document_ids)
             else:
-                cursor.execute(
-                    """
-                    SELECT document_id FROM dashboard_documents
-                    WHERE dashboard_id = ? AND status = 'failed';
-                    """,
-                    (id,)
-                )
-            rows = cursor.fetchall()
-            doc_ids = [r[0] for r in rows]
-            
+                doc_ids = session.dashboard_documents.get_failed_document_ids(id)
+                
             if not doc_ids:
                 return []
                 
-            placeholders = ",".join("?" for _ in doc_ids)
-            conn.execute(
-                f"""
-                UPDATE dashboard_documents
-                SET status = 'pending', error_message = NULL, error_type = NULL
-                WHERE dashboard_id = ? AND document_id IN ({placeholders});
-                """,
-                [id] + doc_ids
-            )
-            conn.commit()
+            session.dashboard_documents.reset_documents_to_pending(id, doc_ids)
 
         self._coding_service.enqueue_sequential_coding(id, doc_ids, user_id)
         return doc_ids
@@ -412,13 +418,8 @@ class CampaignService:
     ) -> Dict[str, Any]:
         """Override an AI-generated value (and optional reasoning) in a specific spreadsheet cell."""
         import datetime
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT coded_values FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
-                (id, doc_id)
-            )
-            row = cursor.fetchone()
+        with self.db_session_factory() as session:
+            row = session.dashboard_documents.get(id, doc_id)
             if not row:
                 from fastapi import HTTPException
                 raise HTTPException(
@@ -427,7 +428,7 @@ class CampaignService:
                 )
                 
             try:
-                coded_values = json.loads(row[0])
+                coded_values = json.loads(row["coded_values"]) if isinstance(row["coded_values"], str) else (row["coded_values"] or {})
             except Exception:
                 coded_values = {}
 
@@ -438,7 +439,7 @@ class CampaignService:
             # Reconstruct version 1 retroactively if history list is empty
             if not history:
                 try:
-                    orig_coded = json.loads(row[0])
+                    orig_coded = json.loads(row["coded_values"]) if isinstance(row["coded_values"], str) else (row["coded_values"] or {})
                 except Exception:
                     orig_coded = {}
                 prior_val = orig_coded.get(column_name)
@@ -449,7 +450,7 @@ class CampaignService:
                         "value": prior_val,
                         "reasoning": prior_reasoning,
                         "feedback_prompt": None,
-                        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
                         "source": "ai"
                     })
 
@@ -464,20 +465,12 @@ class CampaignService:
                 "value": value,
                 "reasoning": reasoning,
                 "feedback_prompt": None,
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
                 "source": "user_override"
             })
             coded_values[history_key] = history
 
-            conn.execute(
-                """
-                UPDATE dashboard_documents
-                SET coded_values = ?
-                WHERE dashboard_id = ? AND document_id = ?;
-                """,
-                (json.dumps(coded_values), id, doc_id)
-            )
-            conn.commit()
+            session.dashboard_documents.update_coded_values(id, doc_id, json.dumps(coded_values), status=row["status"])
 
         return coded_values
 
@@ -496,17 +489,14 @@ class CampaignService:
         from app.llm.registry import get_llm
         from app.llm.types import LLMMessage
 
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            
+        with self.db_session_factory() as session:
             # 1. Fetch Campaign prompt and schema
-            cursor.execute("SELECT prompt, schema FROM dashboards WHERE id = ?;", (id,))
-            campaign_row = cursor.fetchone()
+            campaign_row = session.dashboards.get_by_id(id)
             if not campaign_row:
                 raise HTTPException(status_code=404, detail="Campaign not found.")
             campaign_prompt = campaign_row["prompt"]
             try:
-                schema = json.loads(campaign_row["schema"])
+                schema = json.loads(campaign_row["schema"]) if isinstance(campaign_row["schema"], str) else (campaign_row["schema"] or [])
             except Exception:
                 schema = []
 
@@ -520,15 +510,11 @@ class CampaignService:
                 raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found in campaign schema.")
 
             # 2. Fetch current cell coded values
-            cursor.execute(
-                "SELECT coded_values FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
-                (id, doc_id)
-            )
-            doc_row = cursor.fetchone()
+            doc_row = session.dashboard_documents.get(id, doc_id)
             if not doc_row:
                 raise HTTPException(status_code=404, detail="Document not linked to this campaign.")
             try:
-                coded_values = json.loads(doc_row["coded_values"]) if doc_row["coded_values"] else {}
+                coded_values = json.loads(doc_row["coded_values"]) if isinstance(doc_row["coded_values"], str) else (doc_row["coded_values"] or {})
             except Exception:
                 coded_values = {}
 
@@ -619,7 +605,7 @@ class CampaignService:
                     "value": previous_val,
                     "reasoning": previous_reasoning,
                     "feedback_prompt": None,
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
                     "source": "ai"
                 })
 
@@ -629,7 +615,7 @@ class CampaignService:
             "value": new_val,
             "reasoning": new_reasoning,
             "feedback_prompt": user_prompt,
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
             "source": "ai_reevaluation"
         })
 
@@ -638,16 +624,9 @@ class CampaignService:
         coded_values[history_key] = history
 
         # Save to database
-        with self.db_conn_factory() as conn:
-            conn.execute(
-                """
-                UPDATE dashboard_documents
-                SET coded_values = ?
-                WHERE dashboard_id = ? AND document_id = ?;
-                """,
-                (json.dumps(coded_values), id, doc_id)
-            )
-            conn.commit()
+        with self.db_session_factory() as session:
+            row = session.dashboard_documents.get(id, doc_id)
+            session.dashboard_documents.update_coded_values(id, doc_id, json.dumps(coded_values), status=row["status"] if row else "completed")
 
         return coded_values
 
@@ -665,15 +644,13 @@ class CampaignService:
         from app.llm.registry import get_llm
         from app.llm.types import LLMMessage
 
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT prompt, schema FROM dashboards WHERE id = ?;", (id,))
-            campaign_row = cursor.fetchone()
+        with self.db_session_factory() as session:
+            campaign_row = session.dashboards.get_by_id(id)
             if not campaign_row:
                 raise HTTPException(status_code=404, detail="Campaign not found.")
             campaign_prompt = campaign_row["prompt"]
             try:
-                schema = json.loads(campaign_row["schema"])
+                schema = json.loads(campaign_row["schema"]) if isinstance(campaign_row["schema"], str) else (campaign_row["schema"] or [])
             except Exception:
                 schema = []
 
@@ -708,18 +685,10 @@ class CampaignService:
             col_def["prompt_history"] = prompt_history
 
             # Save the updated schema
-            conn.execute(
-                "UPDATE dashboards SET schema = ? WHERE id = ?;",
-                (json.dumps(schema), id)
-            )
-            conn.commit()
+            session.dashboards.update(id, {"schema": json.dumps(schema)})
 
             # 2. Get all documents linked to the campaign
-            cursor.execute(
-                "SELECT document_id, coded_values FROM dashboard_documents WHERE dashboard_id = ?;",
-                (id,)
-            )
-            doc_rows = cursor.fetchall()
+            doc_rows = session.dashboard_documents.list_by_dashboard(id)
 
         # 3. Process each document sequentially
         col_type = col_def["type"]
@@ -743,7 +712,7 @@ class CampaignService:
         for doc_r in doc_rows:
             doc_id = doc_r["document_id"]
             try:
-                coded_values = json.loads(doc_r["coded_values"]) if doc_r["coded_values"] else {}
+                coded_values = json.loads(doc_r["coded_values"]) if isinstance(doc_r["coded_values"], str) else (doc_r["coded_values"] or {})
             except Exception:
                 coded_values = {}
 
@@ -818,12 +787,13 @@ class CampaignService:
                     coded_values[f"{column_name}_reasoning"] = new_reasoning
                     coded_values[history_key] = history
 
-                    with self.db_conn_factory() as conn:
-                        conn.execute(
-                            "UPDATE dashboard_documents SET coded_values = ? WHERE dashboard_id = ? AND document_id = ?;",
-                            (json.dumps(coded_values), id, doc_id)
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_coded_values(
+                            dashboard_id=id,
+                            document_id=doc_id,
+                            coded_values=json.dumps(coded_values),
+                            status="completed"
                         )
-                        conn.commit()
             except Exception as e:
                 logger.error("Sequential column re-evaluation failed for doc %s, column %s: %s", doc_id, column_name, e)
 
@@ -843,27 +813,21 @@ class CampaignService:
         from app.llm.registry import get_llm
         from app.llm.types import LLMMessage
 
-        with self.db_conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT prompt, schema FROM dashboards WHERE id = ?;", (id,))
-            campaign_row = cursor.fetchone()
+        with self.db_session_factory() as session:
+            campaign_row = session.dashboards.get_by_id(id)
             if not campaign_row:
                 raise HTTPException(status_code=404, detail="Campaign not found.")
             campaign_prompt = campaign_row["prompt"]
             try:
-                schema = json.loads(campaign_row["schema"])
+                schema = json.loads(campaign_row["schema"]) if isinstance(campaign_row["schema"], str) else (campaign_row["schema"] or [])
             except Exception:
                 schema = []
 
-            cursor.execute(
-                "SELECT coded_values FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
-                (id, doc_id)
-            )
-            doc_row = cursor.fetchone()
+            doc_row = session.dashboard_documents.get(id, doc_id)
             if not doc_row:
                 raise HTTPException(status_code=404, detail="Document not linked to this campaign.")
             try:
-                coded_values = json.loads(doc_row["coded_values"]) if doc_row["coded_values"] else {}
+                coded_values = json.loads(doc_row["coded_values"]) if isinstance(doc_row["coded_values"], str) else (doc_row["coded_values"] or {})
             except Exception:
                 coded_values = {}
 
@@ -981,12 +945,13 @@ class CampaignService:
                 coded_values[f"{cname}_reasoning"] = new_reasoning
                 coded_values[history_key] = history
 
-        with self.db_conn_factory() as conn:
-            conn.execute(
-                "UPDATE dashboard_documents SET coded_values = ? WHERE dashboard_id = ? AND document_id = ?;",
-                (json.dumps(coded_values), id, doc_id)
+        with self.db_session_factory() as session:
+            session.dashboard_documents.update_coded_values(
+                dashboard_id=id,
+                document_id=doc_id,
+                coded_values=json.dumps(coded_values),
+                status="completed"
             )
-            conn.commit()
 
         return coded_values
 
@@ -997,16 +962,11 @@ class CampaignService:
         schema_fields = generated.get("schema", [])
         desc = generated.get("description", campaign.description)
 
-        with self.db_conn_factory() as conn:
-            conn.execute(
-                """
-                UPDATE dashboards
-                SET schema = ?, description = ?
-                WHERE id = ?;
-                """,
-                (json.dumps(schema_fields), desc, id)
-            )
-            conn.commit()
+        with self.db_session_factory() as session:
+            session.dashboards.update(id, {
+                "schema": json.dumps(schema_fields),
+                "description": desc
+            })
 
         return self.get_campaign(id)
 

@@ -1,11 +1,28 @@
+import sys
+from unittest.mock import MagicMock
+
+# Mock docling package dynamically if not installed to prevent import errors in tests
+try:
+    import docling
+except ImportError:
+    docling_mock = MagicMock()
+    sys.modules["docling"] = docling_mock
+    sys.modules["docling.document_converter"] = MagicMock()
+    sys.modules["docling.datamodel"] = MagicMock()
+    sys.modules["docling.datamodel.accelerator_options"] = MagicMock()
+    sys.modules["docling.datamodel.pipeline_options"] = MagicMock()
+    sys.modules["docling.datamodel.base_models"] = MagicMock()
+
 import os
 import time
 
-# Force test secret globally before other modules import settings
+# Force test secret and SQLite provider globally before other modules import settings
 TEST_SECRET = "test-secret-32-bytes-long-enough!!"
 os.environ["JWT_SECRET"] = TEST_SECRET
+os.environ["DB_PROVIDER"] = "sqlite"
 from app.core.config import settings
 settings.JWT_SECRET = TEST_SECRET
+settings.DB_PROVIDER = "sqlite"
 
 import jwt
 import pytest
@@ -43,11 +60,13 @@ def cleanup_test_db():
 
 @pytest.fixture()
 def client(monkeypatch):
-    """Test client with JWT secret patched."""
+    """Test client with JWT secret and DB provider patched."""
     monkeypatch.setenv("JWT_SECRET", TEST_SECRET)
+    monkeypatch.setenv("DB_PROVIDER", "sqlite")
     # Re-import settings so monkeypatch takes effect
     from app.core import config
     config.settings.JWT_SECRET = TEST_SECRET
+    config.settings.DB_PROVIDER = "sqlite"
     with TestClient(app) as c:
         yield c
 

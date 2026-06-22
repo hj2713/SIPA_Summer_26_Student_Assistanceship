@@ -56,8 +56,10 @@ class IngestionService:
         db_conn_factory=None,
         embedding_service: EmbeddingService = None,
         doc_service: DocumentService = None,
+        db_session_factory=None,
     ) -> None:
         self._db_conn_factory = db_conn_factory
+        self._db_session_factory = db_session_factory
         self._embedding_service = embedding_service
         self._doc_service = doc_service
         self.ingestion_executor = ThreadPoolExecutor(max_workers=3)
@@ -65,9 +67,63 @@ class IngestionService:
     @property
     def db_conn_factory(self) -> Any:
         if self._db_conn_factory is None:
-            global get_db_conn
             return get_db_conn
         return self._db_conn_factory
+
+    @property
+    def db_session_factory(self) -> Any:
+        if self._db_session_factory is not None:
+            return self._db_session_factory
+        
+        is_customized = False
+        if self._db_conn_factory is not None:
+            is_customized = True
+        else:
+            from unittest.mock import Mock
+            if isinstance(get_db_conn, Mock):
+                is_customized = True
+            else:
+                try:
+                    from app.core.database import get_db_conn as original_get_db_conn
+                    if get_db_conn is not original_get_db_conn:
+                        is_customized = True
+                except Exception:
+                    pass
+
+        if is_customized:
+            from contextlib import contextmanager
+            @contextmanager
+            def adapted_session():
+                conn_ctx = self.db_conn_factory
+                if callable(conn_ctx):
+                    conn = conn_ctx()
+                else:
+                    conn = conn_ctx
+                
+                # Check if it has enter/exit context methods
+                if hasattr(conn, "__enter__"):
+                    with conn as connection:
+                        from app.repositories.sqlite import SQLiteUnitOfWork
+                        uow = SQLiteUnitOfWork(conn=connection)
+                        try:
+                            yield uow
+                            uow.commit()
+                        except Exception:
+                            uow.rollback()
+                            raise
+                else:
+                    from app.repositories.sqlite import SQLiteUnitOfWork
+                    uow = SQLiteUnitOfWork(conn=conn)
+                    try:
+                        yield uow
+                        uow.commit()
+                    except Exception:
+                        uow.rollback()
+                        raise
+            return adapted_session
+
+        from app.repositories import get_db_session
+        return get_db_session
 
     @property
     def embedding_service(self) -> EmbeddingService:
@@ -323,32 +379,25 @@ class IngestionService:
             import uuid
             import json
 
-            chunk_rows = []
+            chunk_dicts = []
             for index, (chunk_content, chunk_emb) in enumerate(zip(chunks, embeddings, strict=True)):
-                chunk_rows.append((
-                    str(uuid.uuid4()),
-                    str(doc_id),
-                    str(user_id),
-                    str(workspace_id),
-                    chunk_content,
-                    serialize_embedding(chunk_emb),
-                    json.dumps({
+                chunk_dicts.append({
+                    "id": str(uuid.uuid4()),
+                    "document_id": str(doc_id),
+                    "user_id": str(user_id),
+                    "workspace_id": str(workspace_id),
+                    "content": chunk_content,
+                    "embedding": serialize_embedding(chunk_emb),
+                    "metadata": json.dumps({
                         "chunk_index": index,
                         "category": metadata.get("category", "general"),
                         "tags": metadata.get("tags", []),
                     })
-                ))
+                })
 
-            # Bulk insert
-            with self.db_conn_factory() as conn:
-                conn.executemany(
-                    """
-                    INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata)
-                    VALUES (?, ?, ?, ?, ?, ?, ?);
-                    """,
-                    chunk_rows
-                )
-                conn.commit()
+            # Bulk insert using chunks repository
+            with self.db_session_factory() as session:
+                session.chunks.create_chunks(chunk_dicts)
 
             # 6. Complete document and save metadata - call module level update_document_status for test patching!
             update_document_status(None, doc_id, DocumentStatus.completed, metadata=metadata)

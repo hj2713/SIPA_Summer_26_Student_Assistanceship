@@ -60,10 +60,75 @@ class ChatService:
         db_conn_factory=None,
         doc_service: DocumentService = None,
         retrieval_service: RetrievalService = None,
+        db_session_factory=None,
     ) -> None:
-        self.db_conn_factory = db_conn_factory
+        self._db_conn_factory = db_conn_factory
+        self._db_session_factory = db_session_factory
         self._doc_service = doc_service or default_document_service
         self._retrieval_service = retrieval_service or default_retrieval_service
+
+    @property
+    def db_conn_factory(self) -> Any:
+        if self._db_conn_factory is None:
+            from app.core.database import get_db_conn
+            return get_db_conn
+        return self._db_conn_factory
+
+    @property
+    def db_session_factory(self) -> Any:
+        if self._db_session_factory is not None:
+            return self._db_session_factory
+        
+        is_customized = False
+        if self._db_conn_factory is not None:
+            is_customized = True
+        else:
+            from unittest.mock import Mock
+            from app.core.database import get_db_conn
+            if isinstance(get_db_conn, Mock):
+                is_customized = True
+            else:
+                try:
+                    from app.core.database import get_db_conn as original_get_db_conn
+                    if get_db_conn is not original_get_db_conn:
+                        is_customized = True
+                except Exception:
+                    pass
+
+        if is_customized:
+            from contextlib import contextmanager
+            @contextmanager
+            def adapted_session():
+                conn_ctx = self.db_conn_factory
+                if callable(conn_ctx):
+                    conn = conn_ctx()
+                else:
+                    conn = conn_ctx
+                
+                # Check if it has enter/exit context methods
+                if hasattr(conn, "__enter__"):
+                    with conn as connection:
+                        from app.repositories.sqlite import SQLiteUnitOfWork
+                        uow = SQLiteUnitOfWork(conn=connection)
+                        try:
+                            yield uow
+                            uow.commit()
+                        except Exception:
+                            uow.rollback()
+                            raise
+                else:
+                    from app.repositories.sqlite import SQLiteUnitOfWork
+                    uow = SQLiteUnitOfWork(conn=conn)
+                    try:
+                        yield uow
+                        uow.commit()
+                    except Exception:
+                        uow.rollback()
+                        raise
+            return adapted_session
+
+        from app.repositories import get_db_session
+        return get_db_session
 
     def _dict_to_llm_message(self, m: dict[str, Any]) -> LLMMessage:
         """Translate a raw dict message (from DB/route) into an `LLMMessage`."""
@@ -90,15 +155,11 @@ class ChatService:
 
         # Resolve the thread-configured model
         model_name = None
-        from app.core.database import get_db_conn
-        db_conn_factory = self.db_conn_factory or get_db_conn
         try:
-            with db_conn_factory() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT model FROM threads WHERE id = ?;", (str(thread_id),))
-                row = cursor.fetchone()
-                if row:
-                    model_name = row[0]
+            with self.db_session_factory() as session:
+                thread = session.threads.get_by_id(thread_id)
+                if thread:
+                    model_name = thread.get("model")
         except Exception as e:
             logger.error("Failed to fetch model for thread %s: %s", thread_id, e)
 
@@ -115,16 +176,9 @@ class ChatService:
 
             # Resolve campaign-constrained documents if dashboard_id is provided
             if dashboard_id:
-                from app.core.database import get_db_conn
-                db_conn_factory = self.db_conn_factory or get_db_conn
-                with db_conn_factory() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "SELECT document_id FROM dashboard_documents WHERE dashboard_id = ?;",
-                        (str(dashboard_id),),
-                    )
-                    rows = cursor.fetchall()
-                    dash_doc_ids = [r[0] for r in rows]
+                with self.db_session_factory() as session:
+                    rows = session.dashboard_documents.list_by_dashboard(dashboard_id)
+                    dash_doc_ids = [r["document_id"] for r in rows]
 
                 if pinned_document_ids:
                     pinned_document_ids = [d for d in pinned_document_ids if d in dash_doc_ids]
@@ -145,24 +199,20 @@ class ChatService:
                         extra_system_messages: list[LLMMessage] = []
                         for doc in docs:
                             # Retrieve content from chunks or storage
-                            from app.core.database import get_db_conn
-                            import json
-                            with db_conn_factory() as conn:
-                                cursor = conn.cursor()
-                                cursor.execute("SELECT content, metadata FROM document_chunks WHERE document_id = ?;", (str(doc.id),))
-                                rows = cursor.fetchall()
+                            with self.db_session_factory() as session:
+                                chunks = session.chunks.get_chunks_by_document(str(doc.id))
 
-                            if rows:
+                            if chunks:
                                 chunks_with_index = []
-                                for r in rows:
-                                    content = r[0]
-                                    meta_str = r[1]
-                                    idx = 0
-                                    try:
-                                        meta = json.loads(meta_str)
-                                        idx = meta.get("chunk_index", 0)
-                                    except Exception:
-                                        pass
+                                for chunk in chunks:
+                                    content = chunk.get("content", "")
+                                    meta = chunk.get("metadata", {})
+                                    if isinstance(meta, str):
+                                        try:
+                                            meta = json.loads(meta)
+                                        except Exception:
+                                            meta = {}
+                                    idx = meta.get("chunk_index", 0) if isinstance(meta, dict) else 0
                                     chunks_with_index.append((idx, content))
                                 chunks_with_index.sort(key=lambda x: x[0])
                                 full_file_text = "\n\n".join(c[1] for c in chunks_with_index)

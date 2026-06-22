@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # Auth/JWT settings
     JWT_SECRET: str = _AUTO_JWT_SECRET  # Falls back to stable auto-generated secret
 
+    # Database Settings
+    DB_PROVIDER: str = "sqlite"  # 'sqlite' or 'postgres'
+    DATABASE_URL: str = ""       # postgresql connection URI
+
     # Supabase settings (optional, for future cloud authentication / storage migrations)
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""

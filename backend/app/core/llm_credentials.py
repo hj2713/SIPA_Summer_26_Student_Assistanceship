@@ -73,24 +73,16 @@ def get_user_llm_credentials(user_id: str | None) -> UserLLMCredentials | None:
     if not user_id:
         return None
 
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT llm_provider, llm_api_key_encrypted, llm_model, llm_base_url
-            FROM users
-            WHERE id = ?;
-            """,
-            (str(user_id),),
-        )
-        row = cursor.fetchone()
+    from app.repositories import get_db_session
+    with get_db_session() as session:
+        row = session.users.get_by_id(user_id)
 
-    if not row or not row["llm_api_key_encrypted"]:
+    if not row or not row.get("llm_api_key_encrypted"):
         return None
 
-    provider = normalize_provider(row["llm_provider"] or settings.LLM_PROVIDER or "gemini")
-    model = (row["llm_model"] or "").strip() or DEFAULT_MODEL_BY_PROVIDER[provider]
-    base_url = (row["llm_base_url"] or "").strip() or None
+    provider = normalize_provider(row.get("llm_provider") or settings.LLM_PROVIDER or "gemini")
+    model = (row.get("llm_model") or "").strip() or DEFAULT_MODEL_BY_PROVIDER[provider]
+    base_url = (row.get("llm_base_url") or "").strip() or None
     api_key = decrypt_api_key(row["llm_api_key_encrypted"])
 
     return UserLLMCredentials(
@@ -102,28 +94,20 @@ def get_user_llm_credentials(user_id: str | None) -> UserLLMCredentials | None:
 
 
 def get_user_llm_credentials_summary(user_id: str) -> LLMCredentialsResponse:
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT llm_provider, llm_api_key_encrypted, llm_model, llm_base_url
-            FROM users
-            WHERE id = ?;
-            """,
-            (str(user_id),),
-        )
-        row = cursor.fetchone()
+    from app.repositories import get_db_session
+    with get_db_session() as session:
+        row = session.users.get_by_id(user_id)
 
     if not row:
         return LLMCredentialsResponse()
 
-    provider = row["llm_provider"] or settings.LLM_PROVIDER or "gemini"
+    provider = row.get("llm_provider") or settings.LLM_PROVIDER or "gemini"
     provider = provider if provider in SUPPORTED_LLM_PROVIDERS else "gemini"
     return LLMCredentialsResponse(
         provider=provider,
-        model=(row["llm_model"] or "").strip() or DEFAULT_MODEL_BY_PROVIDER[provider],
-        base_url=(row["llm_base_url"] or "").strip(),
-        has_api_key=bool(row["llm_api_key_encrypted"]),
+        model=(row.get("llm_model") or "").strip() or DEFAULT_MODEL_BY_PROVIDER[provider],
+        base_url=(row.get("llm_base_url") or "").strip(),
+        has_api_key=bool(row.get("llm_api_key_encrypted")),
     )
 
 
@@ -137,25 +121,16 @@ def update_user_llm_credentials(user_id: str, payload: LLMCredentialsUpdate) -> 
     if payload.api_key and payload.api_key.strip():
         encrypted_api_key = encrypt_api_key(payload.api_key.strip())
 
-    with get_db_conn() as conn:
-        if should_update_key:
-            conn.execute(
-                """
-                UPDATE users
-                SET llm_provider = ?, llm_model = ?, llm_base_url = ?, llm_api_key_encrypted = ?
-                WHERE id = ?;
-                """,
-                (provider, model, base_url, encrypted_api_key, str(user_id)),
-            )
-        else:
-            conn.execute(
-                """
-                UPDATE users
-                SET llm_provider = ?, llm_model = ?, llm_base_url = ?
-                WHERE id = ?;
-                """,
-                (provider, model, base_url, str(user_id)),
-            )
-        conn.commit()
+    updates = {
+        "llm_provider": provider,
+        "llm_model": model,
+        "llm_base_url": base_url,
+    }
+    if should_update_key:
+        updates["llm_api_key_encrypted"] = encrypted_api_key
+
+    from app.repositories import get_db_session
+    with get_db_session() as session:
+        session.users.update(user_id, updates)
 
     return get_user_llm_credentials_summary(user_id)

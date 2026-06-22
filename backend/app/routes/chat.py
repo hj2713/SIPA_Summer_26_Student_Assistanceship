@@ -79,31 +79,20 @@ async def chat_stream(request: ChatRequest, current_user: CurrentUserDep):
         
         # Inject dynamic campaign/dashboard context if active
         if request.dashboard_id:
-            from app.core.database import get_db_conn
-            with get_db_conn() as conn:
-                cursor = conn.cursor()
+            from app.repositories import get_db_session
+            with get_db_session() as session:
                 # 1. Fetch campaign details
-                cursor.execute("SELECT name, description, prompt FROM dashboards WHERE id = ?;", (str(request.dashboard_id),))
-                camp_row = cursor.fetchone()
+                camp_row = session.dashboards.get_by_id(request.dashboard_id)
                 
                 # 2. Fetch linked files status
-                cursor.execute(
-                    """
-                    SELECT d.filename, dd.status
-                    FROM dashboard_documents dd
-                    JOIN documents d ON dd.document_id = d.id
-                    WHERE dd.dashboard_id = ?;
-                    """,
-                    (str(request.dashboard_id),)
-                )
-                doc_rows = cursor.fetchall()
+                doc_rows = session.dashboard_documents.list_by_dashboard_with_documents(request.dashboard_id)
             
             if camp_row:
-                camp_name = camp_row[0]
-                camp_desc = camp_row[1]
-                camp_codebook = camp_row[2]
+                camp_name = camp_row["name"]
+                camp_desc = camp_row["description"]
+                camp_codebook = camp_row["prompt"]
                 
-                files_summary = "\n".join(f"- `{r[0]}` (Status: {r[1]})" for r in doc_rows) if doc_rows else "No files linked yet."
+                files_summary = "\n".join(f"- `{r['filename']}` (Status: {r['status']})" for r in doc_rows) if doc_rows else "No files linked yet."
                 
                 system_prompt = (
                     f"You are a specialized AI Research Assistant for the Campaign: '{camp_name}'.\n"

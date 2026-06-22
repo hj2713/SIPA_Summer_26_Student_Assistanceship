@@ -258,27 +258,25 @@ async def get_document_content(document_id: str, current_user: CurrentUserDep):
         if os.path.exists(full_path):
             return FileResponse(full_path, media_type=doc.content_type, filename=doc.filename)
             
-    # Fallback: retrieve from document_chunks table in SQLite database
-    from app.core.database import get_db_conn
+    # Fallback: retrieve from document_chunks table
+    from app.repositories import get_db_session
     import json
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT content, metadata FROM document_chunks WHERE document_id = ?;", (str(document_id),))
-        rows = cursor.fetchall()
+    with get_db_session() as session:
+        chunks = session.chunks.get_chunks_by_document(str(document_id))
         
-    if not rows:
+    if not chunks:
         raise HTTPException(status_code=404, detail="Document content not found on disk or database")
         
     chunks_with_index = []
-    for row in rows:
-        content = row[0]
-        meta_str = row[1]
-        idx = 0
-        try:
-            meta = json.loads(meta_str)
-            idx = meta.get("chunk_index", 0)
-        except Exception:
-            pass
+    for chunk in chunks:
+        content = chunk.get("content", "")
+        meta = chunk.get("metadata", {})
+        if isinstance(meta, str):
+            try:
+                meta = json.loads(meta)
+            except Exception:
+                meta = {}
+        idx = meta.get("chunk_index", 0) if isinstance(meta, dict) else 0
         chunks_with_index.append((idx, content))
         
     chunks_with_index.sort(key=lambda x: x[0])

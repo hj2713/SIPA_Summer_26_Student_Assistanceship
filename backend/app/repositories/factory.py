@@ -51,12 +51,16 @@ def get_db_session() -> BaseUnitOfWork:
     """Returns the active Unit of Work according to DB_PROVIDER."""
     if settings.DB_PROVIDER == "postgres":
         pool = get_postgres_pool()
-        conn = pool.getconn()
-        conn.autocommit = False
-        if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
-            from app.tests.base import SafeTestConnection
-            conn = SafeTestConnection(conn)
-        return PostgresUnitOfWork(conn, on_close_callback=lambda c: pool.putconn(c))
+        conn = pool.getconn(timeout=10.0)
+        try:
+            conn.autocommit = False
+            if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+                from app.tests.base import SafeTestConnection
+                conn = SafeTestConnection(conn)
+            return PostgresUnitOfWork(conn, on_close_callback=lambda c: pool.putconn(c))
+        except Exception:
+            pool.putconn(conn)
+            raise
     else:
         # SQLite
         db_path = get_db_path()

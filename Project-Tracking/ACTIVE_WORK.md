@@ -78,3 +78,17 @@ This is an example-level calibration check, not a permanent project principle. I
 
 Next Action:
 Track this in `Project-Tracking/BENCHMARK_LOG.md` until it is either resolved by prompt changes, resolved by source-document correction, or formalized in an automated benchmark set.
+
+## 2026-06-22 - Reusable Coding Workflow Engine
+
+Status: Needs Review
+Area: Product
+
+Problem:
+Campaigns currently duplicate prompts and column schemas even when multiple document sets use the same evaluation method. Dependencies cannot express deterministic branches, multi-field stage outputs, minimal LLM context, or reusable/versioned research protocols.
+
+Why It Matters:
+The delegation and discretion work is a staged quantitative coding methodology. It must be reusable, benchmarkable, inspectable, cost-aware, and pinned to immutable versions for research reproducibility.
+
+Next Action:
+Visually review the standalone Workflow Library and Builder, then approve Phase 3 campaign adoption. Do not modify current campaign execution until that approval.

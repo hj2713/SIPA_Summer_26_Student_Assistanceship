@@ -29,6 +29,6 @@ class MessageRow(BaseModel):
 class ChatRequest(BaseModel):
     thread_id: str | None = None   # None → create new thread
     message: str
-    workspace_id: str = "TEST"
+    workspace_id: str = "PRODUCTION"
     pinned_document_ids: list[str] | None = None
     dashboard_id: str | None = None

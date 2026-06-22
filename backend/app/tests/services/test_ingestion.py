@@ -130,5 +130,5 @@ def test_background_ingestion_sets_user_context_for_llm_calls():
             filename="test.txt",
             content=b"Some document text.",
             content_type="text/plain",
-            workspace_id="TEST",
+            workspace_id="QA",
         )

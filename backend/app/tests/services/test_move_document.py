@@ -11,7 +11,7 @@ def test_move_document_success(client, auth_headers):
     chunk_id = "22222222-2222-2222-2222-222222222222"
     # Seed workspace, user, document and chunk in SQLite
     with get_db_conn() as conn:
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
         conn.execute(
             "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
             (TEST_USER_ID, "test@test.com", "mock_hash")
@@ -21,14 +21,14 @@ def test_move_document_success(client, auth_headers):
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
             """,
-            (doc_id, TEST_USER_ID, "TEST", "old_folder/my_file.txt", f"00000000-0000-0000-0000-000000000001/{doc_id}/old_folder/my_file.txt", 123, "text/plain", "completed")
+            (doc_id, TEST_USER_ID, "QA", "old_folder/my_file.txt", f"00000000-0000-0000-0000-000000000001/{doc_id}/old_folder/my_file.txt", 123, "text/plain", "completed")
         )
         conn.execute(
             """
             INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content)
             VALUES (?, ?, ?, ?, ?);
             """,
-            (chunk_id, doc_id, TEST_USER_ID, "TEST", "some chunk text content")
+            (chunk_id, doc_id, TEST_USER_ID, "QA", "some chunk text content")
         )
         conn.commit()
 
@@ -76,18 +76,18 @@ def test_move_document_duplicate_error(client, auth_headers):
     doc_id_2 = "44444444-4444-4444-4444-444444444444"
     # Seed workspace, user, and documents in SQLite
     with get_db_conn() as conn:
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
         conn.execute(
             "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
             (TEST_USER_ID, "test@test.com", "mock_hash")
         )
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_1, TEST_USER_ID, "TEST", "folder/file_1.txt", "path_1", 10, "text/plain", "completed")
+            (doc_id_1, TEST_USER_ID, "QA", "folder/file_1.txt", "path_1", 10, "text/plain", "completed")
         )
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_2, TEST_USER_ID, "TEST", "folder/file_2.txt", "path_2", 10, "text/plain", "completed")
+            (doc_id_2, TEST_USER_ID, "QA", "folder/file_2.txt", "path_2", 10, "text/plain", "completed")
         )
         conn.commit()
 
@@ -106,7 +106,7 @@ def test_move_document_permission_denied(client):
     doc_id = "55555555-5555-5555-5555-555555555555"
     # Seed workspace and user with can_add=0 in SQLite
     with get_db_conn() as conn:
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
         conn.execute(
             "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 0, 0);",
             (TEST_USER_ID, "test@test.com", "mock_hash")

@@ -1,14 +1,14 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends
 
-from app.core.deps import CurrentUserDep
+from app.core.deps import CurrentUserDep, get_workspace_id
 from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload
 from app.services import campaign_service
 from app.services.coding_service import generate_schema_and_description, enqueue_sequential_coding
 from app.core.client import get_user_client
-from app.core.constants import MAX_FILE_SIZE_BYTES, DEFAULT_WORKSPACE_ID
+from app.core.constants import MAX_FILE_SIZE_BYTES
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/dashboards", tags=["dashboards"])
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/dashboards", tags=["dashboards"])
 async def create_campaign(
     payload: DashboardCreate,
     current_user: CurrentUserDep,
-    workspace_id: str = DEFAULT_WORKSPACE_ID
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Create a new research campaign dashboard.
     
@@ -38,7 +38,7 @@ async def create_campaign(
 @router.get("", response_model=List[DashboardRow])
 async def list_campaigns(
     current_user: CurrentUserDep,
-    workspace_id: str = DEFAULT_WORKSPACE_ID
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """List all research campaign dashboards in the workspace."""
     return campaign_service.list_campaigns(workspace_id)
@@ -140,7 +140,7 @@ async def upload_campaign_document(
     current_user: CurrentUserDep,
     file: UploadFile = File(...),
     relative_path: str = Form(None),
-    workspace_id: str = Form(DEFAULT_WORKSPACE_ID),
+    workspace_id: str = Form(None),
     tags: str = Form(None),
 ):
     """Upload a file directly to a campaign: saves file globally first and links/codes in campaign."""
@@ -150,6 +150,7 @@ async def upload_campaign_document(
             detail="You do not have permission to add documents."
         )
 
+    workspace_id = get_workspace_id(workspace_id)
     user_client = get_user_client(current_user.jwt, workspace_id)
     filename = relative_path or file.filename
     if not filename:

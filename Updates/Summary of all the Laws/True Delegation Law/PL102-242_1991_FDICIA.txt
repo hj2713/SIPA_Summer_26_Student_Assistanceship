@@ -1,0 +1,1828 @@
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 1 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Banking
+1998 Congress Clears Legislation
+Allowing Credit Unions To Expand
+Membership
+1995 House Shelves Banking Overhaul
+1994 Other Banking Legislation
+Considered in 1994
+1994 Community Development Banking
+Provisions
+1994 Banking Law Undergoes Revision
+1991 Congress Clears Slimmed-Down
+Banking Bill
+1991 Banking Nominations
+1988 Caught in Turf Battle, Bank
+Powers Bill Dies
+1986 Major Banking Legislation Stalls
+in Last Hours
+1985 Banking Bills Fail to Reach House
+Floor
+1979 Banking Deregulation
+1978 Electronic Banking Services
+1978 Banking Regulation
+1976 Banking Changes Blocked
+1975 Senate Approves Broader Banking
+Powers
+1974 Citicorp Notes
+1974 Banking Insurance, Credit Bill
+Cleared
+1970 Regulation Extended to One-
+Bank Holding Companies
+1969 Bank Holding Companies
+1967 Truth-In-Lending Bill Passed by
+Senate
+1966 Bank Supervision
+1966 Bank Holding Company Act
+Exemptions Changed
+1965 Bank Investigation
+1957 Banking Revision
+1955 Bank Companies
+Antitrust
+Federal Reserve
+Savings and Loan Industry
+Stock Market and Financial Services
+Congress Clears Slimmed-Down Banking Bill
+An article from CQ Almanac 1991
+Document Outline
+The Administration'S Plan
+House Action On Hr 6
+Subsequent House Action
+Senate Action
+Conference, Final Action
+Features
+Faced with a rising tide of bank failures and their natural consequence —
+bankruptcy for the federal fund that protected bank depositors — Congress
+moved expeditiously in 1991 to overhaul the nation's deposit insurance
+system and to pump needed cash into the insurance fund.
+With just hours to spare, House and Senate conferees reached agreement on
+a comprehensive deposit insurance bill (S 543) on Nov. 27, following an all-
+night session that concluded at dawn on the last day of the session.
+Congressional aides rushed to prepare legislative language for the 437-page
+bill, and as soon as they were finished, the House adopted the conference
+report by voice vote. As almost the last act of the session, the Senate did
+likewise by a vote of 68–15, clearing the bill for the president. (Vote 279, p.
+36-S)
+As enacted, S 543 (PL 102 - 242 ), gave the Federal Deposit Insurance
+Corporation (FDIC) authority to borrow up to $30 billion to cover depositor
+losses in failed banks. An additional amount (roughly $45 billion) could be
+borrowed to acquire assets from failed banks that would be sold later. All the
+borrowing costs (including interest) were to be covered by insurance
+premiums levied on banks and by the proceeds from asset sales. In addition,
+the FDIC and other bank regulators were given broad new powers to prevent
+banks from taking risks that would expose them to failure, and to close weak
+banks before their capital was completely exhausted and their failure caused
+a loss to the insurance fund. (Major provisions, p. 79)
+What Congress was unable to do in 1991 was to repeal or otherwise radically
+revise a half-century's worth of laws restricting the activities of the nation's
+banks. President Bush had asked for such a revision, in addition to the
+deposit-insurance overhaul, to make banks more profitable and less subject to
+the failures that had plagued the nation's financial system.
+Congress came close to agreeing with the president — much closer than in
+1988, when a more limited banking law overhaul bill never even reached the
+House floor. (1988 Almanac, p. 230)
+The administration's proposal survived markup in the House Banking
+Committee, and in many respects it also survived in the Senate Banking
+Committee markup. But key elements never faced floor votes in either chamber. Deal-making intended to expedite
+passage caused many controversial changes to be dropped without votes.
+In the end, the broader administration effort succumbed to institutional doubts, to a serious lack of consensus
+among lawmakers who wanted some change but could not agree on how much, and most importantly to pressure
+from assorted interest groups that opposed wholesale change. Ironically, it was Democrats who helped lead the
+administration's charge; Republicans provided key opposition.
+The House voted on three separate banking bills in 1991, each progressively narrower than the first. The first two —
+HR 6 and HR 2094 — were rejected by the full House. The third — HR 3768 — was passed and provided the basis
+for the conference agreement that eventually cleared.
+The Senate moved significantly more slowly than the House, deferring markup on its bill (S 543) until a month after
+ 
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 2 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+The Senate moved significantly more slowly than the House, deferring markup on its bill (S 543) until a month after
+the House Banking Committee approved HR 6, it's first effort. Senate floor action on S 543 did not begin until after
+the House voted to kill HR 6, but it concluded within hours of the House having passed HR 3768, that chamber's
+third banking bill of the year. (Comparison of House, Senate bills, p. 88)
+The Administration'S Plan
+The Bush administration on Feb. 5 unveiled a long-awaited plan to overhaul the nation's financial system. The
+proposal was an outgrowth of the savings and loan crisis, and was ordained by the 1989 thrift salvage law (PL 101-
+73), which required the Treasury Department to study the nation's deposit insurance system. Treasury used the
+opportunity to propose sweeping changes in banking laws to complement deposit insurance reforms. (1989
+Almanac, p. 117)
+“Our banking system is under stress,” said Treasury Secretary Nicholas F. Brady in releasing the plan. “Technology
+is changing the way financial institutions do business, but our banks are hampered by out-of-date laws.”
+Treasury proposed to sweep clean an array of laws that prevented banks from being owned by large commercial
+conglomerates, from opening offices across state lines and from expanding into securities, insurance and other
+arenas. At the same time, it proposed putting stiff new limits on deposit insurance coverage and streamlining federal
+bank regulation. (Administration plan, p. 92)
+There were few surprises in the 700-page administration report, “Modernizing the Financial System,” except that
+Treasury officials at first brushed aside concerns that the FDIC's Bank Insurance Fund was desperately in need of
+cash. The administration's initial legislative proposal ignored the FDIC's immediate problem, and only weeks later did
+officials submit a plan for replenishing the fund.
+Many members of Congress knew, however, that the money issue would drive the debate; it would be the engine
+that could pull along a bill making other changes in the banking system.
+Reserves in the Bank Insurance Fund had been declining steadily under pressure from more than 1,000 bank
+failures since 1985. Every report from the FDIC, the General Accounting Office (GAO), the Congressional Budget
+Office (CBO) and outside experts was more depressing than the one before: The insurance fund would be
+technically insolvent by the end of 1991. A month before the administration released its plan to reform the industry,
+the problem had made national headlines, with the Jan. 6 failure of the Bank of New England. That failure,
+expected to cost the FDIC $2.3 billion, brought the problem home to taxpayers who were still reeling from the cost
+of salvaging the savings and loan industry.
+No one wanted to talk about a taxpayer bailout of the banks, and none of the proposals on the table in 1991 called
+for infusion of taxpayer money. All costs were to be borne by the industry itself. But that was a difficult point to get
+across, and in the face of the thrift crisis, it carried a hollow ring.
+Larger banks immediately praised the administration proposal as a way to consolidate and strengthen the banking
+industry. At the same time smaller banks and insurance agents, who stood to lose out to big financial
+conglomerates, opposed the proposal. Consumer groups also complained, worrying about the costs and dangers
+associated with banking consolidation.
+The securities industry, long opposed to sharing its business with banks, called the Treasury plan “innovative,”
+though in need of changes. That stance reflected the industry's weakened state, after years of riding a Wall Street
+roller coaster.
+But it also grew from a split in the industry's position. Despite the 1933 Glass-Steagall Act, which was supposed to
+keep banks out of the securities business, bank regulators and the courts in recent years had allowed banks to
+make inroads into both securities dealing and underwriting. Some securities firms continued to oppose repealing
+Glass-Steagall, at least unless stiff new rules were imposed on actions between banks and their affiliated securities
+companies. Others, however, saw an opportunity to benefit from affiliations with banks and were willing to permit the
+change — but only in the context of full-blown commercial affiliations with banks, since many securities houses had
+non-financial subsidiaries.
+Before the year was out, however, the split in the securities industry was papered over, thanks to the efforts of John
+D. Dingell, D-Mich. chairman of the House Energy and Commerce Committee. The most outspoken and powerful
+opponent of the administration's plan for change, Dingell erected the roadblocks that derailed the broader bill. And,
+as he did in 1988, Dingell proved to be the most important force preventing change in the banking industry.
+On the other side, there was no such central player. Except for the incipient crisis in the bank deposit insurance
+fund, there was no apparent urgency driving the overhaul proposal. Members believed that they had more to lose
+than to gain if they granted banks broad new powers and found that a taxpayer bailout of the insurance fund was
+required somewhere down the road.
+Many said at the outset that it would take a strong hands-on effort by Brady and Bush to move the plan. But such a
+push did not materialize. Brady — who had a long career on Wall Street before coming to the Treasury — did take
+a personal interest in the banking proposals. He briefed a roomful of reporters for an hour about the plan Feb. 5
+and later that day did the same for a small group of key trade association leaders. Later, several said they were
+impressed with Brady's command of the subject — if not his ideas on how to reshape their industries. (Brady's
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 3 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+impressed with Brady's command of the subject — if not his ideas on how to reshape their industries. (Brady's
+views, p. 94)
+But Bush never really engaged on the subject. And Brady's own views seemed confused at times. During the early
+markup sessions in the House, the administration refused to compromise — and it won those initial battles. But later,
+it seemed that the administration was too willing to compromise and to permit unrelated issues to be linked in the
+debate. One such linkage connected a proposal to allow banks to freely open branch offices across state lines with
+efforts by insurance agents to roll back bank inroads into their business.
+Branching was far more important to Brady and most administration officials than any other single piece of the bill,
+but the linkage proved a killer. Banks that wanted branching found themselves pitted against those that wanted to
+preserve their insurance sales ability; the result was that branching powers were rejected, and the insurance agents
+did not win their rollback. Many proponents of the administration bill argued that had the issues not been linked,
+both the branching proponents and the insurance agents could have won separate showdowns on the floor.
+House Action On Hr 6
+The House spent much of the year preparing for, debating and finally rejecting the broad administration proposal.
+House Banking Chairman Henry B. Gonzalez, D-Texas and the panel's ranking Republican, Chalmers P. Wylie of
+Ohio, each introduced deposit insurance bills on the opening day of the 102nd Congress (HR 6, HR 15). Both were
+“narrow” by the standard set a month later; neither addressed the broader issues of banking law that the
+administration said were so crucial. Along with Senate Banking Committee Chairman Donald W. Riegle Jr., D-Mich.
+both Gonzalez and Wylie said they thought it was crucial to overhaul the deposit insurance system before making
+other changes.
+Two key congressional advisers shared their view: Congressional Budget Office Director Robert D. Reischauer and
+Comptroller General Charles A. Bowsher, who headed the GAO. Reischauer told the Senate Banking Committee
+March 5 that he generally supported the Treasury proposal, but he criticized many of its details. He, too, urged that
+deposit insurance reform be in place before banks were allowed new powers, although he conceded that such
+changes might provide greater long-term stability to the financial system.
+That question — whether to pass a narrow deposit insurance bill first — was to dominate the banking debate all
+year.
+Another major issue was how to provide the necessary cash for the Bank Insurance Fund. Disagreement on that
+point was one reason why the administration failed to include a financing plan in its initial reform proposal.
+On Feb. 12, a week after that plan was released, a collection of banking industry groups wrote to the FDIC,
+suggesting a “contingency plan” for raising the money, should the FDIC need it, without appearing to put taxpayers
+at risk. The banks' plan was that the FDIC would raise up to $10 billion by selling bonds that would not be explicitly
+guaranteed by the federal government (but certainly would carry an implicit guarantee). Banks would be assessed a
+special premium to repay the bonds.
+The proposal was deemed unsatisfactory on several grounds. It was not expected to raise enough money; the lack
+of an explicit federal guarantee for the bonds would mean that they would have to pay higher interest than
+government bonds with similar maturities; and the plan would have required a cap on regular bank deposit
+insurance premiums, which at the time could be increased as needed by the FDIC.
+FDIC Chairman L. William Seidman offered his own financing plan on Feb. 28, rejecting much of the banks'
+proposal in the process. Seidman wanted to use existing FDIC authority to borrow $10 billion to be repaid through a
+premium increase. And he suggested the agency get a second $20 billion line of credit with the Treasury or the
+Federal Reserve, that would be secured by another, dedicated premium increase. (Seidman departure, above)
+The administration finally released the text of its banking bill March 20, complete with its FDIC replenishment plan.
+The Treasury plan called for the FDIC to borrow up to $25 billion from the Fed. But Fed Chairman Alan Greenspan
+rejected that idea on April 23 in testimony to the Senate Banking Committee. He said the move would send the
+wrong signal to world markets about the Fed's role and its independence. He added that there was no economic
+benefit to borrowing from the Fed rather than from the Treasury. To provide the cash, the Fed would have to sell
+part of its stock of U.S. government securities to the public, which was exactly how the Treasury would raise the
+money.
+Some members, such as Frank Annunzio, D-Ill. who chaired the House Banking Subcommittee on Financial
+Institutions, had their own plans. Annunzio wanted banks to transfer 1 percent of their deposits to the FDIC. That
+would have provided quick cash to the agency and was the method used in the mid-1980s to shore up the deposit
+insurance fund for credit unions. But it was not seen as a permanent solution, and it might have helped push over
+the edge those banks with very slim profit or capital margins.
+The trial balloons over how to finance a replenishment eventually burst, leaving only the idea of a loan from the
+Treasury. By May, that was the informally agreed upon plan, and the only issue on the table not to be debated
+again all year.
+Developing a Markup Strategy
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 4 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Gonzalez and Wylie agreed April 11 to work together on a narrow banking bill that would replenish the insurance
+fund and make a few changes in the deposit-insurance system in an effort to protect taxpayers and restore public
+confidence. They said they would shelve for the time being the broader administration package — especially
+proposals to give banks wide new investment powers and allow commercial enterprises to own banks — although
+Gonzalez said he expected the committee to continue debating the proposals. Both said the urgency of providing
+more money for the Bank Insurance Fund and the contentiousness of the administration's proposals made it
+necessary to separate the two issues.
+Wylie was never particularly enamored of the broad Treasury plan, but under pressure from Brady, he backed off
+his agreement with Gonzalez within two weeks.
+Key Democratic supporters of the overhaul bill, and most House Banking Committee Republicans, feared that
+Gonzalez and Wylie were trying to scuttle the bigger bill altogether.
+Two senior committee Democrats, Doug Barnard Jr. of Georgia and Charles E. Schumer of New York, wrote to
+Bush on April 18, complaining that the sweeping reform bill “has been largely abandoned” by the White House.
+Then, on April 24, Brady met with committee Republicans, in a successful attempt to keep them on board. Wylie
+announced that he was not prepared to keep the bill as narrow as Gonzalez wanted. “We got off track as to where
+the chairman and I started out,” Wylie said.
+But the same week, Gonzalez and Annunzio introduced a new, narrow FDIC replenishment and deposit insurance
+overhaul bill (HR 2094), and Annunzio said his subcommittee would begin work on it the first week of May. Gonzalez
+said he wanted to stick by his narrow-bill strategy. In particular, he wanted to finish work on a banking bill before
+Congress had to turn to another contentious issue — a new infusion of cash into the savings and loan salvage
+operation. Gonzalez said he did not want the two issues entangled. (Thrift bailout, p. 98)
+However, Schumer, Barnard and nine other Democrats signed a letter from Stephen L. Neal, D-N.C. to Annunzio,
+urging that the early May markup be expanded to consider “some of the more important structural and regulatory
+changes recommended by the administration.” Banking Committee Democrats — 31 of the panel's 52 members —
+met May 1 and agreed not to pursue Gonzalez's single, narrow bill plan. Instead, they embraced a two-bill strategy:
+They decided to support marking up a narrow bill (HR 2094) that would be held in reserve and sent to the floor only
+if the committee failed to approve a broader bill by the end of June.
+The scheduling agreement appeared to satisfy all sides — those who wanted to press for an early solution to the
+insurance fund's problems and those who feared that enactment of a narrow bill would take the wind out of the sails
+of the broad measure. Wylie praised it and said it also pleased Brady.
+Banking Subcommittee Action
+Action on both the broad and narrow banking bills got under way May 7 in Annunzio's Financial Institutions
+Subcommittee, where HR 2094 — the narrow measure — was approved by a 34–1 vote. (The text of HR 2094 was
+later to become the first title of the broader bill — HR 6).
+The narrow bill, which contained a $30 billion line of credit for the FDIC with the Treasury (actually an increase from
+an existing-law $5 billion line of credit), also would have made numerous changes in the deposit-insurance system;
+most but not all of them were not controversial.
+In addition to providing money to the FDIC, the bill, as approved in subcommittee, would have required closer
+supervision of banks and quicker regulatory action against those headed for insolvency. Most significantly, it would
+have altered dramatically the method used most often by the FDIC to close the books on failed banks and cover
+their insured deposits. The intent was to save money by ending the practice of granting de facto 100 percent
+insurance coverage in nearly every case.
+The issue of de facto 100 percent insurance was part of a bigger fight over the FDIC's so-called too-big-to-fail
+policy, under which some banks were deemed to be so critical to the nation's financial system that the FDIC
+stepped in and covered all deposits, and often all creditors, when the bank failed. The subcommittee did not directly
+address that issue in marking up HR 2094. It did strike language from the bill that would have restricted lending by
+the Fed to weak banks to no more than five days in a three-month period. Opponents of too-big-to-fail argued that
+Fed lending to weak banks was an integral part of that policy. But Fed Chairman Greenspan vigorously opposed
+limits on the Fed's role as “lender of last resort” to the financial system.
+The tough deposit insurance issues — rolling back coverage and ending too-big-to-fail — were all set aside for the
+following week, when the subcommittee began work on the broader bill.
+The subcommittee approved the broad bill (still in draft form) on May 23, by a vote of 36–0. It was an overwhelming
+victory for the administration, which lost only one significant battle during five long days of work on the measure.
+Banking industry lobbyists said they were amazed. Treasury officials beamed. And members of the subcommittee
+gave Annunzio a standing ovation.
+As approved by the subcommittee, the bill would have torn away an imperfect statutory barrier to banks engaging in
+securities activities. It would have opened the door to indirect ownership of banks by non-bank businesses, an even
+more radical idea that included allowing banks to affiliate indirectly with real estate and insurance companies. It
+would have allowed banks to operate nearly unfettered across state lines. And it would have preserved existing
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 5 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+would have allowed banks to operate nearly unfettered across state lines. And it would have preserved existing
+deposit insurance rules for individuals, effectively allowing multiple accounts at a single institution, each insured up
+to $100,000.
+The latter provision was the only major instance where the subcommittee parted with the administration.
+The administration wanted to roll back coverage to $100,000 per individual per bank and ultimately to restrict it to
+$100,000 nationwide.
+Markup began May 14 on the draft bill, modeled after the administration bill (which had been introduced March 20
+as HR 1505). Left out were all the provisions involving replenishment of the Bank Insurance Fund and other deposit
+insurance changes that were included in HR 2094, and that later became the first of six titles in the broader bill.
+In the initial two days of markup on May 14 and 16, the Treasury lost its effort to roll back deposit insurance
+coverage, and the subcommittee also refused to force credit unions to write off the 1 percent of deposits they had
+paid into their deposit insurance fund.
+The Treasury, however, defeated an attempt to preserve “pass-through” coverage, which allowed deposits from
+huge pension funds to be fully insured. And it effectively won a battle over the right of states to allow banks to
+engage in certain activities that the Treasury did not regard as risky.
+During the remainder of the markup, the Treasury did even better. So did bigger banks, which won nearly every
+issue they contested. They postponed a fight on affiliations between banks and commercial businesses, beat back
+one effort to severely curtail their future ability to branch across state lines and preserved the bill's new securities
+powers for banks with only minor changes.
+Smaller banks had a mixed experience, preventing the rollback of individual deposit insurance coverage, which they
+said would spark deposit flows into bigger banks, but losing on interstate branching, which they feared could have a
+similar effect.
+But the interstate issue was far from settled. The subcommittee soundly defeated, 12–24, an amendment by Bruce
+F. Vento, D-Minn. that would have preserved states' rights to decide whether to allow banks to branch. But members
+and lobbyists said the May 22 vote was hardly the last word.
+Meanwhile, consumer advocates were stunned by a series of defeats in a panel that had long been supportive of
+their efforts. Not only did they fail to win big gains in consumer protections imposed on bankers, they saw existing
+laws rolled back. And there seemed to be little they could do to stop the juggernaut.
+Consumer advocates singled out for criticism a pair of amendments by Paul E. Kanjorski, D-Pa. that they said would
+have had the effect of exempting 92 percent of all banks from the central federal “anti-redlining” law, the 1977
+Community Reinvestment Act that required bank regulators to rate institutions on their willingness to lend in their
+communities. Banks that received low grades could be prohibited from opening branches or acquiring other banks.
+Also, an amendment by Joseph P. Kennedy II, D-Mass., to require banks to cash government checks and provide
+certain low-cost bank services to consumers was defeated by an overwhelming 9–27 vote May 23. A similar
+amendment had been approved by the Banking Committee in 1988.
+Despite numerous changes made by the subcommittee, the bill as approved preserved most key elements of the
+administration's proposal. But not every battle was joined.
+Foremost among the issues left untouched was that of allowing affiliation between banks and commercial firms. At
+Brady's request, Jim Leach, R-Iowa withheld an amendment to delete that section of the bill. Brady met with
+subcommittee Republicans on May 20 and asked that Leach refrain so as not to stifle the momentum that was
+building.
+Banking Committee Action
+Action in the full Banking Committee got under way slowly June 19 and 20. But the following week the committee
+picked up steam. On June 28, after six days of markup during which 160 amendments were considered, the panel
+agreed to a broad banking overhaul bill that was little changed from the subcommittee version.
+Most issues that were left untouched in subcommittee were addressed by the full panel, and there were some close
+votes. But the administration bill survived largely intact. The committee agreed to send HR 6 to the House floor by a
+31–20 vote, after amending Gonzalez's original narrow bill (HR 6) with the much broader language that won
+acceptance in committee.
+The strength of the vote reflected the feeling among many members that it was time to eliminate laws that banks
+believed gave a competitive edge to securities firms and insurance companies. But many critics of the bill warned
+that the margin of support was not large enough to overcome opposition from Dingell's Energy and Commerce
+Committee and from other quarters.
+The committee made no significant changes to the portion of the bill replenishing the Bank Insurance Fund. In
+addition to giving the nearly insolvent fund more cash to close failing banks, the bill would have required regulators
+to move quickly to close weakened banks before their net worth, or stockholders' equity, was completely exhausted.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 6 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+And it would have required the FDIC to use the least costly method of closing failed banks. This provision was
+intended to sharply limit — if not end — the FDIC's discretion to cover uninsured depositors by selling all deposits of
+a failed bank to new owners. After 1994, the bill would have ended the FDIC's ability to declare a bank too big to
+fail and to protect all of its depositors despite other restrictions on the cost of resolving bank failures.
+The committee showed no hesitation about the need to restructure the financial services industry. Only three years
+before, the House had failed to act on a comparatively minor effort to repeal restrictions on bank activities. But in
+1991, wholesale change was the order of the day in the Banking Committee.
+The committee bill would have for the first time allowed banks near-unfettered opportunities to open branch offices
+nationwide. It would have repealed the 58-year-old Glass-Steagall Act. And it would have for the first time in 35
+years removed federal bans on bank ownership by non-banking companies, throwing open the door for companies
+such as General Motors Corp. or IBM to operate a bank.
+Treasury Department lobbyists, who fought off repeated assaults on the bill, prevailed at almost every turn. For
+instance, Leach's amendment to strike the section permitting commercial ownership of banks failed June 26 on a
+20–32 vote.
+The issue of rolling back deposit insurance rose again, only to be knocked down by united bank opposition. Carroll
+Hubbard Jr., D-Ky. again led the banks' charge. And by a vote of 13–37, the committee on June 27 rejected a
+Gonzalez amendment to limit individuals to $100,000 of deposit insurance coverage across the banking system, plus
+an additional $100,000 for pensions.
+The FDIC viewed the idea as impractical to administer and a nightmare to explain. The Treasury preferred to limit
+insurance to $100,000 per person per institution (plus a pension account). A Gonzalez amendment to implement the
+Treasury limit was defeated 16–33 on June 28. And an amendment by Thomas R. Carper, D-Del. to phase in such a
+plan over five years failed the same day on a 20–29 vote.
+Bankers fought the idea hard, and they were joined by some consumer advocates. The American Association of
+Retired Persons had supported retaining existing law, but AARP lobbyists were angered when Hubbard refused to
+support amendments requiring banks to provide low-cost checking accounts and to cash government checks. They
+stopped working in Hubbard's behalf, but their action had no noticeable effect on the outcome.
+Gonzalez had one major victory, despite his inability to restrict insurance coverage. He extracted a compromise from
+the Fed, which was added to the bill, that the Fed would not have free rein in the future to pump cash into weak
+banks. The Fed would be able to do so but only at the risk of incurring a loss that would be passed along to
+taxpayers. That was intended to give the Fed second thoughts. The change was a key element in Gonzalez's hope
+to put an end to the doctrine that some banks were too big to fail.
+Consumer groups that had been battered in subcommittee won a victory of sorts by reversing several subcommittee
+decisions that would have substantially weakened federal anti-redlining law.
+Bus loads of community activists traveled from New York, Chicago, St. Louis and other cities to Washington to sit in
+during the full committee markup. Committee members received telephone calls from some mayors and others
+worried that banks would use their broader powers to siphon deposit money out of communities and to make loans
+across the country or overseas.
+But the consumer activists still faced a wall of Republicans and a sufficient number of Democrats (including several
+freshmen) to ensure their defeat. So, led by Maxine Waters, D-Calif. they began brokering a deal to strike all
+subcommittee-approved amendments to the anti-redlining law — those sponsored by Kanjorski and one that
+consumer groups favored. The latter, sponsored by Kennedy, would have set new standards for banks with
+interstate branches. Working in the consumer advocates' favor was a threat from the House Democratic leadership
+that the bill would be in jeopardy if it contained any rollback of the law.
+Ultimately, Wylie joined with Gonzalez in proposing to strike the Kennedy and Kanjorski amendments. The motion to
+strike was adopted June 20 on a 40–12 vote. The turn of events caught Kanjorski and some consumer advocates
+— who thought they might win an up-or-down vote against him — by surprise.
+The committee also abandoned an effort to restructure the maze of federal bank and thrift regulatory agencies. The
+Treasury had halfheartedly backed one reorganization plan, but the subcommittee knocked it out of the bill and
+substituted nothing in its place. Turf fights and an inability to cut the Gordian knot led the full committee also to
+abandon the effort.
+Several committee members backed a further radical change in banking law beyond those already in the bill.
+Schumer and Jim Slattery, D-Kan. cosponsored an amendment that would have limited deposit insurance to so-
+called core banks — which would be restricted in the amount of interest they could pay on deposits and in the size
+of loans they could make. Presumably such core banks could affiliate with uninsured banks that could engage in all
+manner of theretofore prohibited activities.
+For many Democrats, the core bank idea provided the best hope of restricting deposit insurance coverage
+sufficiently to make the other banking regulation changes in the bill palatable. But the committee rejected core
+banks June 26 on a 23–28 vote. Schumer, however, said the vote was far stronger than he had hoped only weeks
+earlier, and he said he would try to win passage for the proposal on the House floor.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 7 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Lobbying Against HR 6
+The Banking Committee formally reported HR 6 to the House on July 12, two weeks after it voted to approve the
+bill. House Speaker Thomas S. Foley, D-Wash. then struggled to balance demands from four other committees that
+wanted a crack at amending the bill with his promise to Treasury Secretary Brady that Congress would move the bill
+expeditiously to limit risk to the teetering insurance fund.
+On July 23, Foley announced that the Agriculture, Energy and Commerce, Judiciary, and Ways and Means
+committees would each have until Sept. 27 to act on the bill, ensuring that there would be a rush to complete action
+before adjournment, then set for mid-October. The deadline for the committees to report was later extended a week
+until Oct. 4.
+The multiple referrals were directly related to a developing opposition strategy by insurance agents, securities firms,
+small banks and consumer groups, all of which were unhappy with the Banking Committee bill.
+For example, the Independent Bankers Association of America, a small-bank lobbying group, pursued a wide-
+ranging strategy to try to force Congress to enact a very narrow bill. It allied with consumer groups that were worried
+about financial concentration and with state government officials who did not want to lose control over institutions
+that operated nationwide and others.
+The self-styled Main Street Coalition hoped in the House to get Energy and Commerce to roll back significantly
+provisions allowing banks to affiliate broadly with commercial businesses, and especially to engage in securities and
+insurance activities.
+The same coalition appealed to Agriculture and Judiciary in an effort to restrain the Banking Committee bill's
+provisions allowing full interstate branching.
+To win support for their views in the Senate, the Independent Bankers even threw their support behind a consumer
+provision in a draft bill circulated by Senate Banking Chairman Riegle that would have required banks to give low-
+income customers some basic banking services, such as government check-cashing or inexpensive checking
+accounts.
+Energy and Commerce Action
+For years, Energy and Commerce Chairman Dingell had made it clear that he opposed allowing banks to affiliate
+freely with securities firms, insurance companies and non-financial businesses. Banks hoped that he might have
+moderated his views in 1991 — or at least be willing to compromise. On July 10, however, Dingell gave a clear
+signal that his views had changed little since he thwarted House passage of a banking overhaul bill in 1988.
+“Should the federal government loosen regulatory controls on banks and allow them to enter into other financial
+fields… and allow the officers and owners to have entangled, conflicting fiduciary duties?” Dingell asked during a
+committee hearing on HR 6. “The best and simplest answer is no.”
+Dingell also issued a sharp challenge to the Banking Committee, asking the GAO to review HR 6 to assess the
+degree to which it contained special-interest provisions that contradicted its public policy aims.
+It was an odd request — and patently political — since most observers marveled that the measure seemed
+unusually free of special-interest items. Gonzalez fired back, urging Dingell to withdraw the request. “You are the
+first to unsheathe the two-edged sword,” he wrote. The GAO review was never done.
+Edward J. Markey, D-Mass. whose Energy and Commerce Subcommittee on Finance was the first of two
+subcommittee stops for HR 6, held a series of hearings before Congress took its monthlong August recess to allow
+his members to sharply question Brady and then to allow witnesses to attack the bill.
+Markey called consumer advocate Ralph Nader, an ardent foe of many elements of HR 6, to testify along with Edwin
+J. Gray, the nation's top savings and loan regulator in the mid-1980s. As a regulator, Gray had attempted — largely
+unsuccessfully — to rein in some practices that critics alleged helped wreck the thrift industry. He also fingered the
+so-called Keating Five senators, accusing them of improperly trying to block federal investigations into the Lincoln
+Savings and Loan Association in Irvine, Calif. The failure of Lincoln was projected to cost taxpayers in excess of $2
+billion. Gray testified that HR 6 would lead the nation's banks down the same disastrous path taken by the thrifts.
+(Keating hearings, p. 26)
+After the August recess, Markey's Finance Subcommittee and the companion Subcommittee on Commerce,
+Consumer Protection and Competitiveness each met Sept. 16 and rejected major portions of the reform agenda put
+forth by the administration and bigger banks.
+Without adopting a single controversial amendment, the Finance Subcommittee approved draft language put
+forward by Markey and Dingell, focusing chiefly on securities issues. The subcommittee bill would have allowed
+banks and securities firms to join forces, but only under the most restricted of ways.
+The only controversial amendment involved a section of the Markey-Dingell draft that would have prevented banks
+from affiliating with non-banking companies — by retaining existing law that severely restricted bank ownership.
+Matthew J. Rinaldo, R-N.J. objected that the ban on affiliations between banks and commercial companies was no
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 8 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+longer necessary. He proposed that non-banking businesses be allowed at least to buy failing banks — to bring new
+capital to the banking industry and save the deposit insurance fund from paying to close some failed banks.
+Markey said the amendment would be “more than the camel's nose under the tent,” and Dingell said no commercial
+business would buy a bank under those circumstances “except for the most corrupt motives.” The amendment was
+defeated on an 11–15 party-line vote, with only one Democrat, Rick Boucher of Virginia, voting for it.
+The Competitiveness Subcommittee approved language drafted by Chairman Cardiss Collins, D-Ill. that was mostly
+intended to limit banks' ability to get into the insurance business, in the process rolling back opportunities for banks
+that were permitted by existing law.
+Both subcommittees approved their versions of HR 6 by voice vote.
+The full Energy and Commerce Committee met Sept. 25 and on a 29–12 vote ratified nearly all the actions of the
+two subcommittees.
+Particularly galling to bankers were the high fire walls that Energy and Commerce wanted to erect to restrict financial
+connections between a bank and its securities affiliate.
+But Energy and Commerce members agreed to mute a key fire wall provision approved in subcommittee that would
+have virtually ensured that a securities firm affiliated with a bank would get little business from companies that were
+customers of the bank. The change agreed to by the full committee would have preserved opportunities for a bank
+to lend to a commercial customer while the bank's securities affiliate underwrote stock or bond offerings for the
+same company.
+For some bankers, that was the whole point: They wanted to be able to satisfy their customers' demands for non-
+bank financial services but not lose any existing business.
+An amendment, offered by James H. Scheuer, D-N.Y. and approved by voice vote, would have permitted a bank to
+lend to an established customer that was also a client of its securities affiliate for a period of 60 days before, or 90
+days after, the securities firm underwrote a stock or bond offering for the client. The subcommittee bill would have
+banned such loans. The provision had been the subject of more than a week of negotiations between several big
+banks and securities firms, and final language was not agreed upon until a few hours before the markup.
+Committee Republicans made a final attempt to win permission for non-banking companies to own banks. Rinaldo
+offered an amendment similar to one defeated a week earlier in subcommittee that would have allowed any
+company to buy a failing bank. It was defeated on a party-line, 15–26 vote.
+Supporters of Rinaldo's amendment argued that the wall between banking and commerce had already been
+breached in three places. Commercial companies could buy savings and loans. Some commercial giants owned so-
+called non-bank banks, which had deposit insurance but were not subject to laws restricting affiliations between
+banks and other businesses. These affiliations had slipped through a loophole in the Bank Holding Company Act
+that was closed in August 1987. And existing law permitted foreign commercial companies that owned banks abroad
+to own U.S. banks, although the Energy and Commerce bill would have changed that.
+In fact, the Dingell-Markey version of the bill retained House Banking Committee language that would have permitted
+further exploitation of the non-bank bank loophole: It would have allowed existing non-bank banks to buy thrifts and
+avoid an existing-law cap on their growth. And the bill would only apply its new stringent fire walls to banks, not to
+non-banks or thrifts.
+Markey said he focused primarily on curtailing provisions in the Banking Committee bill, not rolling back existing law.
+“That's where we put our political capital,” he said, insisting that he was trying to prevent a bigger breach in the wall
+between banking and commerce. He denied administration charges that his bill catered to special interests by
+permitting existing loopholes to remain. “We tried not to let the perfect be the enemy of the good,” Markey said.
+Agriculture Action
+The Agriculture Committee also met Sept. 25, in the process handing smaller banks and consumer groups a victory
+by taking a swipe at the interstate branching provisions of HR 6.
+The Agriculture Committee had sought referral of the bill on the basis of narrow but serious concerns about a series
+of provisions relating to failed banks and their role in the settlement of contracts for future delivery of commodities,
+according to a July 23 letter to Foley from Chairman E. “Kika” de la Garza, D-Texas.
+But by the time the panel met, concerns about branching had attracted the attention of committee members, who
+expressed fears that nationwide branching by large banks might reduce competition in rural areas and shrink the
+amount of credit available to farmers. The committee adopted an amendment to HR 6 that would have forced federal
+regulators to review the lending operations of interstate branches under certain conditions, to ensure that deposits
+were not being siphoned out of rural areas. Approval of the amendment was by an 11–10 show-of-hands vote, with
+de la Garza providing the deciding vote, following several hours of debate. De la Garza had worried that the
+amendment trod on Banking Committee jurisdiction.
+Sponsored by Glenn English, D-Okla. the amendment would have allowed bank regulators to close a rural branch of
+an out-of-state bank if it were shown that the branch was not meeting the credit needs of the region it served. A
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 9 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+an out-of-state bank if it were shown that the branch was not meeting the credit needs of the region it served. A
+review of lending activities would be triggered if the loan total as a percentage of deposits was less than half the
+statewide average.
+The committee also adopted by voice vote two relatively non-controversial amendments. One was to a portion of the
+bill aimed at ensuring that a failing bank would not escape obligations to cover losses at the same time it collected
+on gains from such trades. The other would have provided so-called pass-through deposit insurance coverage to
+futures contract brokers who deposited their clients' money in a bank during settlement procedures. The deposits,
+though nominally in the name of the broker, were to carry deposit insurance of up to $100,000 for each client.
+Judiciary Action
+Despite pressure from small banks and consumer groups to wade into the branching issue, the Judiciary Committee
+agreed when it met Oct. 3 to approve two relatively narrow amendments to HR 6.
+By voice vote the committee approved an amendment that was described as an effort to navigate between the
+Banking and Energy and Commerce panels on the question of preventing banks from “tying” their services to those
+provided by non-banking affiliates.
+The panel also voted 27–5 to adopt an amendment striking Banking Committee language that would have subjected
+individuals who owned banks to the same conditions on ownership of non-banking companies that applied to
+corporate owners of banks. That amendment was strongly opposed by smaller banks. Despite their opposition to big
+banking conglomerates, many small-bank owners also owned small-town real estate, insurance or other businesses.
+Big-bank critics hoped that Judiciary Chairman Jack Brooks, D-Texas would use his panel's jurisdiction over antitrust
+matters to restrain interstate branching. But Brooks did not seem interested.
+Small banks and consumer advocates, in raising the specter of massive consolidation of the banking industry,
+complained that after NCNB Corp. of North Carolina bought the failed First RepublicBank system in Texas in 1988,
+NCNB had siphoned money out of the state. Brooks, who owned a major interest in several smaller Texas banks,
+said that he was not personally aware of problems with NCNB in Texas and that such matters were the province of
+the Banking Committee, not his.
+Ways and Means Action
+Ways and Means was the only committee to adopt amendments that would not change the banking regulatory core
+of the bill. The committee's interest was chiefly in a provision of HR 6 that would have allowed the FDIC to raise
+cash by selling bonds to banks — instead of by borrowing from the Treasury.
+Ways and Means met Sept. 25 and adopted two amendments to HR 6, both by voice vote.
+One would have required that bonds sold to commercial banks as a means to recapitalize the deposit insurance
+fund would have to pay interest at Treasury bond rates and be subject to statutory caps on borrowing by the FDIC
+and the government as a whole. The other was intended to ensure that changes in bank ownership and activities
+contemplated by the bill would not affect existing tax treatment of banks and the companies that owned them.
+Without the change, Ways and Means was concerned that somewhat more-generous tax provisions that applied to
+banks but not other corporations could result in a slight revenue loss to the Treasury.
+Seeking a Compromise
+As other committees weighed in and pressure mounted against the Banking Committee version of HR 6, Gonzalez
+repeatedly lashed out at the wide scope of his panel's bill and at the delay that had effectively halted action since
+his committee acted at the end of June. Gonzalez also complained that Brady had backed away from the pressure
+he had put on Congress earlier in the year to act to replenish the insurance fund.
+“It is my responsibility to say… that the majority [of the committee], the industry and its spokesmen, and the
+secretary of the Treasury, in particular, are playing craps with the safety and soundness of the system,” Gonzalez
+said July 24. “The fund is broke, and I don't see why anyone wants to kid themselves.”
+After Energy and Commerce had taken steps to thwart the Banking Committee's intent, members of that panel met
+to decide whether to go forward or to retreat to the narrow-bill approach long advocated by Gonzalez. Banking
+Committee Democrats informally agreed at a two-hour closed-door caucus Oct. 3, to press forward with HR 6.
+Some Democrats on the committee joined Gonzalez in opposition to its broad sweep; others said they would have
+preferred a narrow bill to avoid a bloody showdown on the floor and to expedite action on replenishing the
+insurance fund. But most wanted to press ahead. The action allied a majority of the panel's Democrats with a nearly
+united phalanx of House Republicans and with the administration in preparation for the upcoming floor fight.
+Wylie, ranking Republican on the Banking Committee, said Bush had strongly urged support for HR 6 at a private
+White House meeting Sept. 24. At a House GOP caucus Oct. 2, said Wylie, no one objected to his suggestion that
+they press for passage of the bill. He said he had dropped his personal opposition to allowing commercial
+companies to own banks because Bush had argued in favor of retaining that provision.
+The jockeying for position between supporters and opponents of HR 6 continued well into October, but the die was
+cast the week of Oct. 21, when Gonzalez struck a deal with Dingell that undermined the position of his committee
+colleagues. In essence, Gonzalez agreed to a substitute for the key title of the bill governing bank affiliations with
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 10 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+colleagues. In essence, Gonzalez agreed to a substitute for the key title of the bill governing bank affiliations with
+securities, insurance and commercial companies.
+Aside from issues of substance that had arisen in disputes between the Banking panel and Energy and Commerce,
+there were also concerns about turf. Banking members were upset that Energy and Commerce had to be given
+such broad jurisdiction over bank matters, and they were worried that Energy and Commerce would expand that
+jurisdictional grab as time passed.
+The deal between Gonzalez and Dingell appeared to give the Energy and Commerce Committee a victory on
+substance but not on jurisdiction.
+The compromise would not have permitted commercial companies to own banks; it would have imposed higher and
+thicker fire walls than those in the Banking Committee version of HR 6; and in most instances, the insurance sales
+activities of banks would have been more severely limited than they were in the Banking Committee version or
+existing law. At the same time, Dingell dropped demands for new regulation of banks by the Securities and
+Exchange Commission that would have enhanced his panel's jurisdiction over the banking industry, and he signed a
+memorandum of understanding to the effect that his committee would not gain jurisdiction.
+For obvious reasons, the Gonzalez-Dingell deal angered big banks and left them wondering what strategy to pursue
+as the bill moved forward. It pleased smaller banks and the insurance industry. Brady said the compromise “turns
+back the clock” on bank powers. But his strong opposition to the deal did not stop behind-the-scenes negotiations
+aimed at getting a bill passed.
+The deal did not directly affect language in the bill permitting banks to open branch offices across state lines.
+However, administration officials began quietly agreeing to accept restrictions on interstate branching because they
+feared the whole bill was sinking. Some big banks and their congressional allies began promoting a strategy to
+knock the bank affiliations title out of the bill altogether. They hoped to preserve interstate branching and at the
+same time to continue wearing away at legal restrictions on securities and insurance activities through regulatory
+changes and court decisions. The strategies pursued by big banks and by the administration eventually collided —
+when interstate branching became inextricably linked to securities and insurance powers.
+HR 6 Floor Defeat
+Concern had been building for weeks that with a pre-Thanksgiving adjournment target looming and no Senate floor
+action yet on a banking bill, Congress might quit for the year without shoring up the insurance fund. The Gonzalez-
+Dingell compromise cleared the way for House floor action beginning Oct. 30 — even if it did not please all parties.
+In the end, the deal did not come close to helping pass the bill. During four days on the floor, HR 6 barely survived
+two procedural votes that would have killed it. Then it was overwhelmingly rejected on Nov. 4 by a vote of 89–324.
+(Vote 375, p. 92–H)
+The Rules Committee began meeting on the bill Oct. 29, the same day Bush issued a veto threat because of the
+changes in the Gonzalez-Dingell deal. The House Democratic leadership was split on the issue: Foley had promised
+Brady to move the bill to the floor, though he had not guaranteed what would happen there; Majority Leader Richard
+A. Gephardt, D-Mo. and others plainly preferred Dingell's vision of banking reform to that in the Banking Committee
+version of HR 6.
+Both parties held caucuses the morning of Oct. 30, but neither meeting seemed to clear the air or instill a sense of
+confidence in what the House was about to do. Members of both parties became increasingly uneasy — and were
+vocal in their lack of confidence in the bill.
+The Democratic gathering was sparsely attended, and members who were present said most of the participants
+were from the Banking and Energy and Commerce committees and were well-versed in the issues. There was no
+effort to get the caucus to express a point of view on any of the issues raised by the bill, members said.
+Republicans met with Brady, who made a strong pitch for the bill as approved by the Banking Committee. Brady got
+“a cordial and sympathetic reception,” said Dick Armey, R-Texas who had voted against the bill during Banking
+Committee deliberations. Another Banking Committee member, Marge Roukema, R-N.J. said, “I don't know if they
+don't want to talk about it, or if it's too complicated.
+The Rules Committee then had difficulty deciding how to structure debate on the bill. Two rules were crafted. The
+first allowed the House to begin debate Oct. 30 but gave no instructions about what amendments would be allowed.
+After a day of closed-door maneuverings, Rules agreed late in the evening of Oct. 30 to a second rule that
+permitted the House to consider only 24 of 78 amendments that members wanted to offer.
+Rules took one action that particularly offended many members: It dropped the Banking Committee's version of the
+bank affiliations title — and substituted the Gonzalez-Dingell compromise. Further compounding the anger directed
+at Rules, the committee refused to let the full House even consider the Banking Committee's original language.
+Though many of its proponents conceded that the original version could not have prevailed on the floor, it became a
+matter of principle that they should have had their shot.
+Rules also disregarded the interstate branching amendment adopted in the Agriculture Committee; the Ways and
+Means amendments were incorporated into the bill, as were the futures trading amendments adopted by Agriculture.
+The anti-tying language adopted by Judiciary was subsumed in the Gonzalez-Dingell compromise.
+When the House took up the second rule on Oct. 31, an angry phalanx of 153 Republicans, joined by 54 pro- and
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 11 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+When the House took up the second rule on Oct. 31, an angry phalanx of 153 Republicans, joined by 54 pro- and
+anti-bank Democrats and independent Bernard Sanders of Vermont, nearly defeated it. That would have sidetracked
+the measure at least temporarily — and some suspected permanently. Several members switched at the end; at
+one point after time for the vote had run out, the electronic vote-tally board in the House chamber showed the rule
+losing 208–209. The final vote was 210–208. (Vote 358, p. 88–H)
+Eight Republicans joined 202 Democrats to support the rule. But it took Foley to corral the necessary votes. He
+personally worked the floor, persuading Barnard and Minority Leader Robert H. Michel, R-Ill. to vote yes, despite their
+opposition. (Both the administration and Barnard had been given permission to offer every amendment they sought.)
+Barnard's support was tempered by a blistering floor speech in which he attacked the Democratic leadership for
+trampling over the Banking Committee's work. “I hate to say this about my leadership, but this is dastardly,” Barnard
+said.
+House GOP Whip Newt Gingrich of Georgia decided late Oct. 30 to try to defeat the rule, after sensing growing
+opposition to the Gonzalez-Dingell compromise. But, although the administration had issued a veto threat over the
+compromise, the White House declined to support his effort. Had it done so, Gingrich almost certainly would have
+prevailed. A Treasury official refused to discuss the matter. But all along the administration had made compromises
+in order to retain as much as possible of what it had originally sought.
+The crucial vote on Oct. 31 came on Barnard's amendment to strike the Gonzalez-Dingell bank-powers language
+from the bill.
+For years, Barnard had been the leading House supporter of allowing new investment and affiliation powers for
+banking companies. However, the restrictions contained in the compromise persuaded him that the best course
+would be to have nothing in the bill on that subject.
+But Barnard could not overcome Dingell, who warned that without the sorts of safeguards contained in his version
+of the bill, “rapacious scoundrels” — a favored term for greedy financiers — will engage in “rascality” that will
+threaten the financial system and taxpayers. The amendment to strike the Gonzalez-Dingell compromise was
+defeated 200–216, with 28 Republicans joining Dingell, and 70 Democrats joining Barnard. (Vote 362, p. 88–H)
+That outcome led directly to a Nov. 1 vote to abort the bill. Republicans tried a rare tactic of amending the bill to
+strike its enacting clause — in effect neutering it. At best the move would have sent the bill back to committee, and
+it might have killed it. But Democratic leaders enforced party discipline on the vote, and only Barnard and Carper —
+out of scores of sympathetic Democrats — voted with the Republicans. The motion failed 158–243. (Vote 364, p.
+88–H)
+Shortly after that vote, which came on a Friday, the bill was shelved until Monday, Nov. 4.
+For a time, the House leadership urged members to vote for passage to keep the legislative process moving, with a
+near certainty that the bill would be changed in conference. Noting that a sizable majority of Democrats had voted to
+retain the controversial Gonzalez-Dingell compromise and that there would be few Republican votes for final
+passage, leadership aides tried to make the vote an issue of party loyalty — as they had on the Friday motion to
+strike the enacting clause.
+It didn't work this time, and by midafternoon Nov. 4, it was hard to find a member who planned to back the bill on
+final passage. The effort to whip up support fizzled, and HR 6 was defeated overwhelmingly that evening, 89–324.
+Almost all the support came from Democrats — much of it from committee chairmen, members of the leadership and
+members of Banking and Energy and Commerce. Even then, only 12 of 31 Banking Committee Democrats and 17 of
+27 Energy and Commerce Democrats voted for the bill.
+During debate on the bill, the House approved one key amendment that had failed to win committee approval and
+rejected several others:
+By a vote of 366–4, the House agreed to a Vento interstate branching amendment to give state legislatures three years
+in which to vote to “opt out” of allowing out-of-state banks to open branch offices within their borders. At the same time,
+the House rejected, 142–250, a much more tightly drawn “opt-in” amendment and refused by 20–374 to strike the entire
+interstate branching section from the bill.  A similar Vento amendment had been rejected in a Banking subcommittee, but
+the floor amendment was incorporated into HR 2094, a subsequent banking bill that was sent to the House just after the
+defeat of HR 6. (Votes 367, 368, 369, p. 90-H)
+By a vote of 153–264, the House rejected Wylie's amendment to roll back deposit-insurance coverage to $100,000 per
+person, per bank (with provision for a second $100,000 insured account for a pension plan). Similar amendments had
+been rejected in committee. (Vote 372, p. 90–H)
+By a vote of 106–312, the House rejected Schumer's core bank proposal that had failed in committee. (Vote 361, p. 88–
+H)
+By a vote of 137–272, the House rejected Rinaldo's amendment to permit commercial companies to buy failing banks,
+which had failed in committee. (Vote 363, p. 88–H)
+By a vote of 152–241, the House rejected a Kennedy amendment that would have imposed stiff new “fair lending”
+restrictions on banks, requiring them to develop plans to lend to minorities where data showed a disparity in their lending
+habits. The amendment had been given a boost by an Oct. 21 Federal Reserve report showing that poor whites were
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 12 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+habits. The amendment had been given a boost by an Oct. 21 Federal Reserve report showing that poor whites were
+more likely to be granted mortgages than well-to-do blacks. But, opposed by most banks and the administration, and
+possibly tarred by the fights over unrelated issues in the bill,  the amendment failed. (Vote 366, p. 88–H)
+Subsequent House Action
+Following the defeat of HR 6, supporters of broad changes in banking law began scrambling to preservá as much of
+the bill as possible. In the weeks leading up to the floor vote on HR 6, the administration had given up much of its
+overhaul plan.
+Following the overwhelming vote on HR 6, Treasury Secretary Brady conceded that Congress would not agree in
+1991 to allow commercial companies to own banks or to allow banks to affiliate with securities firms. (The Senate bill
+never included the former provision and the latter was dropped unceremoniously from the Senate bill after the
+House vote on HR 6.)
+Interstate branching was the last remaining major piece of the package. It was still in the Senate bill — and Brady
+was not yet of a mind to give that up, even though most of the banking industry had. The fight in the House then
+became one over how to preserve interstate branching.
+As a result, the House walked the plank on a second banking bill (HR 2094) that was amended on the floor to
+permit interstate branching. That bill was defeated Nov. 14, by a vote of 191–227. (Vote 399, p. 96–H)
+Finally, a very narrow bill (HR 3768) aimed solely at overhauling the deposit-insurance system and replenishing the
+insurance fund passed overwhelmingly — 344–84. (Vote 415, p. 100–H)
+Committee Action on HR 2094
+Two days after HR 6 was rejected, the House Banking Committee quickly met to send HR 2094 to the floor. The bill
+had been held in abeyance since it was marked up in subcommittee the first week of May.
+The committee voted somewhat reluctantly to discard almost all that was in the first bill, retaining only those
+provisions designed to keep the deposit-insurance system afloat. An amended version of HR 2094 contained the
+first of six titles in HR 6. But in that form, the bill was plainly too narrow for anyone's taste and stood no chance of
+passage.
+The committee met Nov. 6 and, at the insistence of Gonzalez, kept the bill very narrow. As approved by the
+committee, the bill would have provided the FDIC with a $30 billion line of credit with the Treasury; it would have
+permitted regulators to close failing banks before they were completely insolvent; and it would have largely closed
+the too-big-to-fail loophole that resulted in protection for uninsured depositors when very large banks failed.
+Wylie supported Gonzalez's request to fight off all other amendments to HR 2094 but said he would fight hard to
+permit interstate branching when the bill reached the floor.
+Their agreement effectively prevented a revolt that could have loaded the bill down so that it was not very different
+from HR 6. But many Democrats objected that the result was the loss of other, mostly non-controversial changes in
+banking law — beyond the broad questions of powers and branching — that had been included in HR 6.
+“I have serious reservations,” said Peter Hoagland, D-Neb. “We're emasculating our jurisdiction. What's the point of
+sitting on this committee if we're not going to make decisions in this room?”
+Al McCandless, R-Calif. then moved to pre-empt further amendments by ordering an up-or-down vote on the bill. His
+motion carried narrowly, 28–24. The committee then approved the narrow bill, 37–15. In both cases, there were
+large blocks of Republicans and Democrats voting on each side.
+Floor Action on HR 2094
+Following the committee action, it was plain that the interstate branching issue was not dead. So House leaders
+held lengthy negotiations among members, interest groups and administration officials over how to structure floor
+amendments to win support for the measure.
+Gonzalez, who had wanted the narrowest possible banking bill all year long, washed his hands of the process. “It's
+out of our control — out of mine,” he told his Banking colleagues Nov. 6. “It's what the leadership wants to do.”
+Vote-counting, not careful consideration of public policy, drove the backroom discussions, particularly since it was
+widely believed that at least 100 — and maybe many more — of the 267 Democrats in the House would vote
+against anything related to a banking bill. Evidence of that was clear in the 16 roll call votes taken during floor
+action on HR 6. With the sole exception of a vote to curtail banks' ability to open branch offices across state lines
+and one procedural vote that Foley personally lobbied, huge numbers of Democrats consistently voted no. That
+included votes on amendments promoting bread-and-butter party issues such as prohibiting discrimination in bank
+lending and other consumer protections.
+Moreover, it was difficult to find the right mixture of policy choices that could hold a majority of those who were not
+automatic no votes. That was especially important if the bill was to get any Republican support. Many members
+wanted to help banks expand their businesses. They were in conflict with those defending the securities and
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 13 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+wanted to help banks expand their businesses. They were in conflict with those defending the securities and
+insurance industries from encroachment by banks. And they were opposed by members who feared concentration of
+the financial services industry and increased risk to the deposit insurance system from increased bank powers.
+As Schumer put it: “You can do a narrow bill, but Republicans won't vote for it without interstate branching. If you
+do interstate, people want insurance restrictions. If you do insurance, the securities industry wants a moratorium [on
+new powers]. People fall off with every addition. It's one big mess.”
+Administration officials said Nov. 7 that they would insist that any bill allow banks to operate freely across state lines,
+but they signaled a willingness to accept some restraints that might be imposed by the states. They also said they
+would not accept a moratorium that would prevent federal regulators from granting new powers to banks. Such a
+moratorium was put in place for one year in 1987; since it was lifted in 1988, the Federal Reserve Board and other
+regulators had expanded the authority of banks to affiliate in limited ways with securities firms.
+But the administration negotiated with some bankers and with insurance agents to craft a compromise that would
+put restrictions on the existing ability of some banks to sell insurance across state lines.
+The negotiations eventually yielded two substantive floor amendments, which were made in order by the Rules
+Committee. House leaders and administration officials crossed their fingers that when the bill came to the floor Nov.
+14, their careful vote-counting would pay off.
+One amendment, which was non-controversial and was approved by voice vote, restored a variety of banking law
+reforms that the committee had thrown overboard in its effort to craft the narrowest possible bill.
+The other, offered by Wylie, allowed interstate branching but rolled back some existing bank powers to sell
+insurance and sealed forever a closed window for banks to operate real estate brokerages. Although insurance and
+real estate agents often appeared invincible on Capitol Hill, they were able to muster only the barest majority for the
+amendment. It was adopted 210–208, after Dennis Hastert, R-Ill. switched to vote yes. (Vote 398, p. 96–H)
+An odd coalition then formed to kill the measure. Virtually the entire banking industry opposed the bill, joined by
+many of the banks' sharpest critics, including consumer groups and securities firms that did not want banks invading
+their turf. Insurance and real estate agents, together with a few regional banks and administration allies, did not
+have enough muscle to win passage. Foley and the House Democratic leadership put on a mild effort to whip up
+support for the bill, but less than a third of House Democrats voted yes. At the same time, nearly a third of House
+Republicans voted no, despite a personal appeal by President Bush. The bill failed 191–227. (Vote 399, p. 96–H)
+Committee and Floor Action on HR 3768
+With the defeat of a second major banking bill in little more than a week, it was clear to House leaders that only a
+narrow bill could win support on the floor. Administration officials reluctantly conceded the point.
+The Banking Committee met Nov. 19 and approved HR 3768 by a vote of 44–7. The bill as introduced was virtually
+identical to the version of HR 2094 that was rejected — including the non-controversial floor amendment on banking
+regulation but not including the Wylie interstate branching amendment. The markup did not go as swiftly as hoped,
+however, and Gonzalez, in league with Wylie, fought off several amendments.
+The Rules Committee met the following day and agreed to allow no amendments on the floor.
+Floor debate Nov. 21 was largely desultory and almost entirely in support of the bill — though little of it was
+enthusiastic. Gephardt drew polite applause with a defense of the bill and the deposit-insurance system generally,
+but there was none of the usual self-congratulation that accompanied passage of a major bill. Gerald B. H. Solomon,
+R-N.Y. an ally of the insurance agents, was the only member to forcefully oppose the bill. Solomon, a member of
+the Rules Committee, was denied the chance to offer a floor amendment roiling back bank insurance powers.
+Before the final vote, the House rejected 74–355 a procedural motion offered by Armey that would have had the
+effect of adding a frequently rejected amendment to pare back deposit-insurance coverage to a single $100,000
+account per person per bank. The House then passed the bill 344–84. (Votes 414, 415, p. 100-H)
+Senate Action
+For much of the year, action in the Senate was confined to closed-door negotiations intended to satisfy a majority of
+the 21 members of the Banking Committee — and the banking, securities, insurance, consumer and administration
+interests that they represented.
+Many of the same battles that were waged publicly in the House were also fought in the Senate — only in private.
+Formal action in the Senate lagged the House all year long, and as the House moved progressively toward a
+narrower bill, Senate deliberations did likewise.
+Riegle was the leading advocate in the Senate of moving slowly: first replenishing the insurance fund, then
+overhauling the deposit-insurance system generally, and only later lifting limits on banking in a significant way. He
+had introduced a deposit-insurance bill (S 3103) in late 1990 that served as an early model for elements of both the
+administration's bill and HR 6. Riegle's 1990 bill was revised and reintroduced in 1991 as S 543.
+However, Riegle abandoned his narrow-bill approach under pressure from members of both parties who wanted to
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 14 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+However, Riegle abandoned his narrow-bill approach under pressure from members of both parties who wanted to
+broaden the measure, in particular to permit interstate branching and to repeal Glass-Steagall. Thus he spent much
+of the spring and early summer in consultation with his committee members, trying to find a combination of
+provisions that would appeal to a majority in committee and on the floor.
+By mid-July, the consultations had gone as far as they could without submitting some contentious issues to votes in
+committee. Riegle had hoped to gain the support of a majority of the panel, and especially that of the ranking
+Republican on the panel, Jake Garn of Utah. But just days before Riegle finally unveiled a draft bill for markup, it
+was clear that he had failed in his quest for consensus.
+“There are still some issues here that need to be ventilated,” said Richard C. Shelby, D-Ala. one of several committee
+members pressing for as broad a measure as possible.
+Riegle released his draft bill July 16 without Garn's endorsement. It was far less bold than the administration or
+House Banking versions in key areas, and it clearly reflected the pressures that were being placed on the House bill
+— which was by then awaiting action in the House Energy and Commerce Committee.
+Riegle's bill would not have permitted commercial companies to affiliate with banks, leaving in place existing
+statutory restrictions on bank ownership. However, it would have allowed strong banks the right to affiliate with
+securities firms. And it would have put stricter limits on banks seeking to branch nationwide.
+On some points, the measure was similar to HR 6. Riegle's approach to requiring banking regulators to move quickly
+to shut down failing banks was little changed from his 1990 bill. While there were differences in detail on that point
+with HR 6, the provisions were very compatible in broad terms. Riegle's bill also would have provided the FDIC with
+a $30 billion line of credit with the Treasury, but with a number of refinements, including a swifter payback schedule
+and a controversial means of assessing banks for the cost.
+Riegle's bill also contained a host of provisions not a part of any companion House measure, many of them
+controversial. Some would have created new consumer responsibilities for banks; others would have granted so-
+called lender liability protection to banks stuck with foreclosed real estate that turned out to contain toxic waste sites.
+Riegle said his bill was as near to a consensus draft as could be prepared. But the measure drew immediate and
+antagonistic response from the interests that won biggest in the House Banking Committee, and support from those
+who had lost. “We disagree, but agreeably,” Garn said after ticking off a list of a half-dozen issues over which he
+and the chairman parted company.
+Administration officials were privately said to be deeply upset over parts of Riegle's bill, though publicly they were
+restrained. “We think it's good that it's as comprehensive as it is,” Treasury Under Secretary Robert R. Glauber said
+the day Riegle released his bill. “Obviously, there are elements we would like to see changed.” But Riegle insisted
+that while changes at the margins might be acceptable, he would not support big revisions. “This bill has the items
+that I, for one, think have to be there,” he said.
+Opposition to the draft developed immediately within the committee. Aides to as many as 15 committee members —
+representing some key Democrats as well as most Republicans — met July 17 to discuss their objections and
+identify proposed changes around which members hoped to form majorities.
+Garn, for example, strongly objected to tapping the deposits held in overseas branches of some of the nation's
+biggest banks as a source of revenue to replenish the insurance fund. Foreign deposits were nominally not insured,
+but banks would have paid special premiums on them under the Riegle bill in order to raise the cash to pay back
+any money borrowed from the Treasury.
+Terry Sanford, D-N.C. worked hard to relax restraints on interstate branching that were included by Riegle. Shelby
+and Connie Mack, R-Fla. wanted to strike the block of consumer-oriented provisions, which were hated by banks.
+And Alan J. Dixon, D-Ill. wanted to give the Federal Reserve Board more discretion to relax fire walls that the bill
+would have erected to limit financial dealings between banks and their securities affiliates.
+Each of these cut to the heart of what Riegle said he wanted to accomplish in the bill.
+Despite the brewing objections, Riegle decided at the last minute before Congress left town for its August recess to
+mark up the bill. He was afraid that delay would be dangerous to the deposit-insurance fund. But he also was
+concerned that advocates of more dramatic changes in banking than those he favored might win the upper hand if
+he put off the markup until September.
+The decision to go forward turned up the heat on the private negotiations — and led to the resolution of some, but
+not all, disputes. Democratic and Republican committee aides met throughout the week of July 22, often late into
+the night; Riegle met several times with Garn, and the two settled a pair of key issues. In return for Garn's
+assurance that he would not press for broad bank ownership, Riegle agreed to relax fire walls between banks and
+securities firms.
+Banking Committee Action
+Many accommodations and some tough votes were required as the committee struggled through three long days of
+markup July 31-Aug. 2. The course was slow and painful at times; the committee made virtually no decisions
+through the first day and a half. But for most of the final day the committee moved through controversial
+amendments at breakneck speed.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 15 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+In the last hours of markup a contentious dispute over a series of amendments that would have tightened existing
+restraints on insurance activities by banks threatened to derail the process. Several were adopted, and Garn
+threatened at one point to walk out and stop the markup if yet another amendment to curtail insurance activities
+were offered.
+In the end, the committee approved S 543 by a fairly narrow 12–9 vote. Riegle's bill suffered some bruises but
+remained remarkably intact, However, the final vote reflected the feeling of liberals that the measure went too far
+toward allowing banks into unchartered waters, and of conservatives that it did not go far enough.
+Several Democrats — led by Paul S. Sarbanes of Maryland — not only voted against the bill but denounced it as a
+mistake. “This bill is the seeds of our destruction,” Sarbanes exclaimed. “It is an assault on safety and soundness…
+that will come back to haunt us in the years ahead.”
+Pete V. Domenici, R-N.M. expressed the majority's feeling that the bill was an acceptable compromise. “I did not
+believe three days ago we would report out a bill,” he said. “I think there is far more good than bad, and I don't think
+we ought to defeat it.”
+In major action, the committee made the following changes to Riegle's draft bill:
+Interstate branching. As in the House, branching was one of the most important fights in the markup. And in what may
+have been the first key compromise reached, members agreed to allow banking companies to begin in 1993 to cross
+state lines, both to buy banks and to consolidate their multibank systems into single banks with a network of branch
+offices. States, however, would have been permitted to opt-out of interstate branching by voting to do so within three
+years of enactment.
+Bank Insurance Fund replenishment. The committee adopted some changes in Riegle's original proposal for letting
+the FDIC borrow $30 billion from the Treasury. Surviving banks would have been forced to pay special premiums over a
+period of 15 years to pay off the first $10 billion borrowed to cover losses in failed banks. The committee struck a
+Riegle-backed plan to assess that special premium not only against all domestic deposits — even those above
+$100,000, which were nominally not covered by insurance — but also against deposits in overseas branches of U.S.
+banks, which also did not carry deposit insurance. The compromise was to assess only domestic deposits.
+The change was a victory for bigger banks with large amounts of foreign deposits, but smaller banks got a piece of the
+deal: In the future, if the FDIC should cover foreign deposits in a failure, the cost to the fund would be charged explicitly
+against those banks that held foreign deposits.
+Deposit insurance overhaul. These provisions in the Riegle draft generally survived. They would have created new
+procedures for closing failing banks before they were completely broke and virtually ended the practice of protecting big
+banks as too big to fail. The committee refused to cut back on existing law that guaranteed deposit insurance of
+$100,000 per account. Bob Graham, D-Fla. tried to substitute a limit of $100,000 per account per institution, but that
+was defeated.
+The committee agreed to let the FDIC cover uninsured deposits when to do so would cost less than any other method of
+closing a failed bank. But the panel also agreed to let the FDIC impose a 10 percent “haircut,” or loss, on those
+uninsured depositors. However, the committee rejected on a 9–12 vote an amendment by Phil Gramm, R-Texas to strike
+language that would have prevented the Federal Reserve from making secured loans to weak banks. The bill was
+similar to the House measure in that it would have required the Fed to take a loss if it lent to a weak bank that failed,
+and that loss would have been passed along to taxpayers.
+The committee also agreed to allow well-capitalized, well-managed banks to accept insured deposits placed by
+securities brokers, provided the interest rates paid were not substantially above market norms.
+Securities affiliations. By a 10–11 vote, the committee rejected an amendment sponsored by Richard H. Bryan, D-
+Nev. that would have stiffened the fire walls the bill would have erected between banks and their securities affiliates.
+Riegle, who negotiated a fire wall compromise with Garn, opposed Bryan and a majority of the panel's Democrats. In
+return for Riegle's support on fire walls, Garn never pressed amendments that would have opened the door to bank
+affiliations with commercial companies.
+Bank regulatory agencies. The committee dropped a Riegle-drafted provision, adamantly opposed by the
+administration, that would have created a new bank regulatory agency independent of the Treasury Department, in
+which most federal banking regulation had been lodged since the Civil War. The issue was too contentious for the
+Senate committee (as it had been in the House). And though some senators wanted to renew the fight on the floor, it
+never resurfaced.
+Senate Floor
+Nearly two months after the committee voted, a draft report to the Senate was still circulating among committee
+members. With the administration eager for progress, Riegle blamed committee Republicans for the delay.
+After the committee report was filed on Oct. 1, the delay continued. As November approached, there was hope that
+the Senate could act roughly in tandem with the House; those hopes hinged on the Gonzalez-Dingell compromise
+on securities and insurance activities of banks. Members in both chambers believed that if the House were to
+accept the Gonzalez-Dingell compromise, the two bills would move close enough to each other that a House-
+Senate conference could quickly reconcile differences, increasing the likelihood that a broad banking bill could be
+enacted before Congress adjourned.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 16 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+With the House defeat of HR 6 on Nov. 4, those plans were dashed, and the Senate's plans to act on S 543 were
+abandoned. “I want to study the aftermath,” Riegle said.
+Nine days later, on Nov. 13, as the House prepared to take up the second of its three banking bills, S 543 finally
+came to the floor. The Senate made progress Nov. 13–14, disposing of several issues before the bill was
+sidetracked for the balance of that week by a protracted debate over extending unemployment benefits, and by the
+failure of the second bill in the House. (Unemployment benefits, p. 301)
+The Senate returned to the bill the following week and slogged through nearly two dozen amendments, adopting 17.
+Riegle worked hard to push his committee's comprehensive bill through, cutting dozens of deals in the process.
+Many of those deals were accommodated in a 165-page “managers' amendment” adopted without debate by voice
+vote an hour before the bill finally passed. Lobbyists said the next day that they were still trying to find out exactly
+what the amendment did. “We accommodated everybody who wanted to be accommodated,” Riegle said.
+On the evening of Nov. 21, in a sudden and surprising voice vote with fewer than 10 senators in the chamber, the
+Senate passed S 543. The action came within two hours of the House having passed HR 3768; the confluence of
+events appeared to be more than happenstance.
+That passage came on a voice vote was also hardly a coincidence. “A lot of people don't want to have to vote… to
+refinance the bank insurance fund,” Riegle told reporters afterward. Senate aides also said there was a concern that
+the overwhelming House vote for a narrow bill might also stall momentum on the broader Senate measure, so they
+wanted to act quickly.
+Moments before, Dale Bumpers, D-Ark. a strong opponent of interstate branching, asked for a roll-call vote, but none
+of the few other senators present would second his request. Riegle talked Bumpers into backing off, and the bill
+passed, leaving lobbyists outside the chamber still working on potential amendments.
+An hour later, Paul Wellstone, D-Minn. took to the floor in protest: “I guess I would not have believed that we would
+have voted on a bill, tens of billions of dollars, on a voice vote…. I think it reflects poorly on the Senate.”
+During the first two days of floor action, however, the Senate agreed to several changes that were seen by the bill's
+advocates as enhancing its chances of passage, and one that threatened to blow up in its face.
+Alfonse M. D'Amato, R-N.Y. caught nearly everyone by surprise with an amendment to cap credit card interest rates.
+The amendment was adopted 74–19 on Nov. 13. With credit card rates averaging nearly 19 percent, many senators
+found the amendment difficult to oppose. And there was a brief flurry of support for the idea in the House. The
+amendment was seen as certain veto bait, however. And Garn correctly predicted soon after the amendment was
+adopted that it would be dropped in negotiations with the House. (Credit cards, p. 85; vote 251, p. 33–S)
+Behind-the-scenes negotiations the first two days also resulted in the adoption Nov. 14 by voice vote of three
+amendments to critical parts of the bill:
+Securities powers. Provisions that would have partially repealed the Glass-Steagall Act were the first to be dropped.
+Similar language had already been stripped from the House bill,  and senators did not want to fight over how strictly to
+limit financial and other ties between banks and affiliated securities firms. This action angered Dixon, who denounced
+the outcome as “junk” and complained that real opportunities for banks to improve their profitability and competitiveness
+were gone. Dixon blamed the Bush administration for giving up too easily on the Glass-Steagall repeal, arguing that it
+was worth taking the issue to a joint House-Senate conference. “The administration will accept anything so they can say
+they got a bill,  declare victory and go home,” Dixon said.
+Insurance powers. Language in the committee version was modified to allow national banks to sell insurance in those
+states that allowed state-chartered banks to do so. But it would have preserved provisions in the bill that would have
+closed loopholes that permitted a few banks to sell insurance nationwide. This change eased the unhappiness of Garn
+and Gramm, who were strongly opposed to the severe insurance restrictions in the committee version. But it also upset
+insurance agents, who opposed letting banks into their business at all costs.
+Interstate branching. The committee version would have permitted banks to open branch offices across state lines
+unless a state voted to prohibit branching. It was altered by an amendment by Wendell H. Ford, D-Ky. As approved on
+the floor, banks would have been permitted to branch only by buying an existing bank — unless a state specifically
+voted to allow the creation of new branches. The Senate action also would have delayed for three years the ability of
+banking companies that owned banks in multiple states to consolidate those institutions into a single branch network.
+The committee bill would have allowed consolidation in about 18 months.
+Before adopting the Ford amendment, the Senate rejected an amendment by Bumpers that would have permitted
+interstate branching only in states that explicitly voted to allow it. The Bumpers amendment was killed, 55–39, on a
+tabling motion. (Vote 252, p. 33–S )
+Several amendments that could have been bill killers were defeated during the week of Nov. 18. One rejected
+amendment would have struck an entire title devoted to consumer protection, and another would have greatly restricted
+the FDIC's access to the money it needed to close failed banks. The Senate refused, 34–62, to table an amendment by
+Thad Cochran, R-Miss. to strike one consumer section that would have required banks to provide low-income
+consumers with basic banking or government check-cashing services at modest cost. His amendment was then
+adopted Nov. 19 by voice vote. (Vote 257, p. 34–S )
+Senators also adopted a negotiated amendment that was certain to cause trouble with the House. Bryan wanted to
+reverse a June 1991 Supreme Court decision that closed the door on numerous securities fraud lawsuits seeking
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 17 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+reverse a June 1991 Supreme Court decision that closed the door on numerous securities fraud lawsuits seeking
+monetary damages from such notables as former “junk” bond king Michael R. Milken and former thrift owner Charles H.
+Keating Jr.
+Determined to thwart Bryan, Domenici argued that a small number of law firms and professional plaintiffs were lying in
+wait to exploit securities laws to force unwarranted legal settlements that would harm stockholders and damage
+corporate competitiveness. The two agreed to preserve lawsuits that were pending at the time of the court decision and
+would have been halted by it, but they agreed to prevent future cases.
+The Senate also adopted a host of non-banking amendments involving such disparate issues as repeal of an excise tax
+on yachts, a ban on imports of goods made by Chinese prison labor, U.S. policy toward Yugoslavia, the production of
+chemical and biological weapons, and the pension rights of Trans World Airlines employees. The Senate-passed bill
+also retained a provision to require the minting of a newly designed $1 circulating coin.
+Conference, Final Action
+A two-day House-Senate conference that ended in a marathon overnight session Nov. 26–27, produced a
+compromise bill that did what all sides conceded was the bare minimum — and largely avoided controversy.
+The conference concluded at 4:57 a.m., and the House adopted the conference agreement by voice vote six hours
+later, acting just as soon as congressional staff had finished putting together the legislative language. The Senate
+adopted the conference agreement later in the afternoon, by a vote of 68–15, clearing the measure for the
+president. (Vote 279, p. 36–S)
+The action fulfilled the pressing need to replenish the nearly depleted Bank Insurance Fund by granting the FDIC a
+$30 billion line of credit with the Treasury to cover losses in failed banks. The $30 billion plus interest was to be
+repaid over 15 years from higher insurance premiums charged to banks, and at the time of enactment was not
+expected to result in a direct or indirect cost to taxpayers.
+The FDIC was also allowed to borrow additional money on a short-term basis, secured by assets that the agency
+seized from failed banks. As those assets were sold, the so-called working capital was to be repaid from the
+proceeds.
+In addition, the bill made key changes in the deposit-insurance system in an effort to further reduce losses to the
+fund. But members resigned themselves to having done only half the job that they had been asked to do by the
+Bush administration, and that many believed was necessary to prevent major bank failures in the future.
+“As far as fixing the problem for the long term, we don't do it,” said North Carolina's Stephen Neal, during House
+floor debate on the final bill Nov. 27. “We do provide some important regulatory reform, several hundred pages of
+it…. We knew how to do much more, and we should have done much more and we didn't.”
+Wylie conceded that “no one was completely satisfied with the product we came out with.” He and other members
+talked of resuming the fight in 1992, but few members of the House or Senate Banking committees had the
+stomach for reopening the battle wounds they received during 1991.
+In the days immediately after the House and Senate passed HR 3768 and S 543, it was not clear that there would
+be a conference — or that differences between the bills could be reconciled before adjournment. The narrow House
+bill was still 339 pages long. And the Senate bill, which contained a wealth of provisions with no counterpart in the
+House measure, was 829 pages.
+Staff and members of the House and Senate Banking committees met over the weekend of Nov. 23–24 to see how
+far they could get in working out differences informally. Aides worried that as many as nine House committees
+would have to get involved, so sweeping was the Senate measure. That could have required a huge formal
+conference committee and delicate negotiations to ensure that all jurisdictional concerns were accommodated.
+The biggest question, of course, was interstate branching. The House had twice rejected bills that would have
+allowed interstate branching, raising doubts that such a provision could survive in conference. Nevertheless, Brady
+and Riegle decided to try to fight to preserve the provision in a final bill.
+Riegle's position was out of character, because he had been reluctant to address issues beyond overhauling the
+deposit-insurance system since the first of the year. And, ironically, Garn, who favored sweeping changes in bank
+regulation, seemed to give up on branching. “We're going to end up with a narrow bill,” he predicted well before the
+conference convened.
+Congressional leaders met with rank-and-file members and Treasury Department officials over the Nov. 23–24
+weekend in repeated efforts to overcome the House's reluctance to accepting interstate branching. But those
+meetings did not yield a compromise, in large part because insurance and securities lobbyists had succeeded in
+linking their issues to branching. A compromise that would give insurance agents and the securities industry what
+they wanted, in return for branching, was not seen as a bargain by the banks. That was particularly true since not
+all bankers wanted branching, and some who did not could have been harmed by the changes sought by insurance
+and securities interests.
+On Nov. 25, however, the House finally asked for a conference on S 543, after amending it with the text of the
+much narrower HR 3768.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 18 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Riegle tried to pressure his colleagues to act by calling an eleventh-hour hearing on Nov. 25 with the new chairman
+of the FDIC, William Taylor. Riegle apparently hoped that Taylor would embrace the need for broader banking
+reform. Instead, while Taylor agreed that some broader change in banking law would be helpful over the long term,
+his short-term need for money far outweighed those considerations. “We need the money, and we need all of it,”
+Taylor said. Other changes could wait, he said.
+In a letter the same day to Riegle, Brady complained that “the narrow bill that we understand is the basis for
+House/Senate negotiations provides critically needed funding but is otherwise inadequate to the task at hand.” But
+Treasury was clearly resigned to cutting deals that would at least get a narrow bill out of conference and did not
+insist on a broader measure.
+In the end, Riegle criticized administration officials for failing to push hard for a broader bill. “There just wasn't
+enough appetite for it in the administration,” he said at the conclusion of the conference negotiations. “The Treasury
+had to pursue more aggressively, and they didn't do that.”
+Although all sides referred to what was passed as a narrow bill, it was hardly anorexic. The final bill weighed in at
+437 pages and was still credited as a sweeping measure.
+Supporters stressed that the bill contained substantial reforms, particularly language requiring the FDIC to close
+failed banks in the least costly way possible and to step in to close banks before they went completely broke. The
+latter provision was tied to a series of tighter rules aimed at forcing banks to maintain a capital cushion against
+failure and requirements that regulators conduct annual, on-site examinations of the books of all mid-size and large
+banks. The least-cost provision was intended to eliminate findings by the regulators that banks were too big to fail,
+except in the most dire circumstances. Only when the Treasury secretary, the president, the Federal Reserve Board
+and the FDIC board agreed that a “systemic risk” existed could the FDIC protect all deposits in a failing bank —
+including those that exceeded the $100,000 limit or were not insured for other reasons.
+Supporters noted that the bill placed tighter restrictions on the operations of foreign banks in the United States.
+Those provisions were drafted largely by the Federal Reserve Board to respond to the worldwide scandal involving
+the Bank of Credit and Commerce International and its illegal ownership of several large U.S. banks, among them
+the Washington, D.C.-based First American Bankshares.
+The bill also included the Truth-in-Savings Act, a measure that required banks to give their customers more
+complete and understandable information about the interest earned on deposits. Both the House and Senate had
+passed versions of the measure numerous times but never in concert with each other. (1988 Almanac, p. 248)
+There was never much doubt that the conference agreement would drop language permitting interstate branching
+and that it would not contain any of the other changes sought by the administration and some banking interests to
+improve the industry's profitability. Not only had the House failed to pass bills that contained such provisions, but
+the chamber cast an overwhelming 398–3 vote on Nov. 25 insisting that conferees stick with the narrow House-
+passed bill. (Vote 423, p. 102 –H)
+It was also virtually assured that the conference would drop the Senate's credit card rate-cap amendment.
+In fact, most of what was contained solely in the Senate measure fell on the floor, including provisions that would
+have restricted the ability of banks to sell insurance, given banks some immunity from the costs of cleaning up toxic
+waste sites that they inherited through foreclosures, and pressed other countries to grant U.S. banks and securities
+firms treatment similar to that given to their own firms (the so-called Fair Trade in Financial Services Act, which was
+also incorporated in other measures). (Defense production act, p. 109)
+Ultimately — although it took time to work through the complex bills and to settle differences that seemed more a
+matter of style than substance — there were few real fights in conference and very few cases in which conferees
+actually had to vote to resolve matters.
+The House forced the Senate to accept language marginally increasing supervision of credit unions, creating new
+FDIC programs to promote the disposition of low-income housing, giving incentives to banks that made loans in low-
+income neighborhoods and including the Truth-in-Savings Act.
+The Senate forced the House to drop language requiring state-chartered banks, thrifts and credit unions to obtain
+federal deposit insurance.
+Features
+Boxscore
+Banking Overhaul (S 543, HR 3768; two House bills rejected: HR 6, HR 2094). The bill provided $30 billion in
+borrowing authority for the Federal Deposit Insurance Corporation to cover depositor losses in failed banks. It also
+made numerous changes in the federal deposit insurance system to reduce the chance for losses in the future.
+Reports: S Rept 102 –167, H Rept 102 –330, H Rept 102 –407; H Rept 102 –157, Parts I-VI; H
+Rept 102 –293.
+KEY ACTION
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 19 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+June 28 — House Banking Committee approved HR 6, a broad overhaul bill, by a vote of 31–20.
+Aug. 2 — Senate Banking Committee approved S 543, a broad overhaul bill, by a vote of 12–9.
+Sept. 25 — House Agriculture, Energy and Commerce, and Ways and Means committees approved amendments to
+HR 6.
+Oct. 3 — House Judiciary Committee approved amendments to HR 6.
+Nov. — House killed HR 6 by a vote of 89–324.
+Nov. 6 — House Banking Committee approved a new, narrower bank overhaul bill, HR 2094, by a vote of 37–15.
+Nov. 14 — House killed HR 2094 by a vote of 191–227.
+Nov. 19 — House Banking Committee approved its third bill, HR 3768, by a vote of 44–7
+Nov. 21 — House passed HR 3768 by a vote of 344–84. Senate passed S 543 by voice vote.
+Nov. 23 — House passed S 543, after substituting text of HR 3768, and asked for a conference.
+Nov. 27 — House-Senate conferees approved a slimmed-down version of S 543. House adopted the conference
+report by voice vote. Senate adopted the conference report by a vote of 68–15, clearing the bill for the president.
+Dec. 19 — President Bush signed S 543 — PL 102 – 242 .
+FDIC's Seidman Resigns; Taylor Takes His Place
+In the midst of debate over how to proceed on the banking overhaul bill, a leading proponent of change and the
+most respected banking regulator in Washington left his job. L. William Seidman — chairman of the Federal Deposit
+Insurance Corporation (FDIC) since 1985, and by virtue of that job, also head of the Resolution Trust Corporation
+(RTC) created in 1989 to salvage the failing thrift industry — stepped down Oct. 16.
+He headed the FDIC for six years, and departed with the savings and loan bailout roughly half complete, with the
+administration's request for $80 billion more from taxpayers to close failing thrifts still on the table, and with a
+potentially serious banking crisis still in the formative stages. (Thrift bailout, p. 98; banking overhaul, p. 75)
+The House and Senate Banking Committee chairmen, Rep. Henry B. Gonzalez, D-Texas and Sen. Donald W. Riegle
+Jr., D-Mich. both praised Seidman, following his announcement Aug. 6 that he would step down when his term
+ended.
+“This is a great loss for the government…. I have the highest regard for him, and he will be very difficult to replace,”
+Riegle said. Gonzalez said: “He has been a strong voice, willing to lay out the hard facts about the industry's
+problems. He maintained great credibility on Capitol Hill during the most difficult period in the history of the Federal
+Deposit Insurance Corporation.”
+Smaller community banks, whose continued survival Seidman championed in the face of a growing trend toward
+bank consolidation, also were sad to see him retire at age 70.
+That was not true of many members of the Bush administration, even though they relied on his credibility on Capitol
+Hill. When Seidman publicly disagreed with other administration officials in early 1990 over the cost of the thrift
+bailout, saying that their estimates were too low, White House Chief of Staff John H. Sununu tried to get the FDIC
+chief to step down early. Seidman refused, playing a cat and mouse game over the timing of his retirement and
+eventually serving out his term.
+Taylor Named Successor
+Seidman was replaced as FDIC chairman by William Taylor, 52, who had been top banking regulator with the
+Federal Reserve System, where he had spent most of his professional career. The Senate Banking Committee
+recommended Taylor's confirmation by a 21–0 vote on Oct. 18; he was confirmed by the full Senate by voice vote
+on Oct. 22. His term was to expire Feb. 28, 1993.
+President Bush had indicated at the time of the Sununu-Seidman flap in 1990 that he intended to appoint Taylor to
+the FDIC post. As soon as his troubles with Sununu flared up, Seidman publicly recommended Taylor for the job.
+For the first days after Seidman announced he would leave in October 1991, however, the president was quiet and
+allowed speculation that Taylor would not get the nod.
+As top regulator at the Fed, Taylor came in for questioning in 1991 about an international scandal involving the
+Bank of Credit and Commerce International (BCCI). Three congressional committees looked into the scandal —
+which involved allegations of fraud, money laundering, loss of perhaps $10 billion by BCCI depositors worldwide and
+the secret, decade-long, illegal ownership of several large U.S. banks. Among those was First American
+Bankshares, one of the largest in Washington, D.C., which was headed by longtime Democratic Party activist Clark
+Clifford.
+Taylor was questioned closely about what the Fed knew, and when. He and other Fed officials maintained that they
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 20 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Taylor was questioned closely about what the Fed knew, and when. He and other Fed officials maintained that they
+were misled about BCCI's ownership of those banks. The Fed's failure to catch BCCI's illegal activities ultimately did
+not taint Taylor's nomination.
+Seidman's other job, that of running the RTC, was not handed over to Taylor. In the thrift financing bill enacted at
+the end of the session (HR 3435), Congress separated the FDIC from the RTC and created the new position of
+RTC chief executive officer, who was to be nominated by the president and confirmed by the Senate.
+Deposit Insurance Overhaul Bill Provisions
+As signed by President Bush on Dec. 19, 1992, the major provisions of HR 543 – PL 102 – 242 :
+Bank Insurance Fund Replenishment
+Borrowing Authority
+Treasury line of credit. Allowed the Federal Deposit Insurance Corporation (FDIC) to borrow up to $30 billion
+unsecured from the federal Treasury to cover losses in failed banks — principally to pay off insured depositors.
+Previously, the FDIC had a $5 billion line of credit with the Treasury, which it never tapped.
+Working capital. Altered the statutory limit on other FDIC borrowing, chiefly used to provide temporary working capital
+for the purchase of assets from failed banks. Such borrowing was to be repaid from the proceeds of the assets when
+they were sold to another bank or to the general public. The law allowed the FDIC to borrow from multiple sources
+(principally the Federal Financing Bank, an arm of the Treasury) an amount equal to 90 percent of the fair market value
+of the assets the agency took from failed banks. Prior law allowed the FDIC to borrow up to nine times its net worth for
+working capital needs. But as the insurance fund neared insolvency, that limit became meaningless.
+Borrowing from banks. Gave the FDIC the option of borrowing from banks instead of the Treasury to cover insurance
+fund losses. The borrowing was subject to the $30 billion cap on money borrowed to cover losses; it was subject to the
+public debt limit that governed general Treasury borrowing; and the bonds had to be priced identically to comparable
+Treasury issues, to hold down interest rates.
+Repayment by Banks
+Repayment schedule. Required the Treasury and the FDIC to agree to a schedule of deposit insurance premium
+payments by banks to repay any money borrowed to cover FDIC losses plus interest. The FDIC and the Treasury were
+required to consult with the House and Senate Banking committees on repayment schedules, and the FDIC had to
+demonstrate that insurance premiums paid by banks were sufficient to meet the schedule. The FDIC was also
+authorized to adjust premiums at any time during the year and to set them at any level. Under prior law, premiums could
+only be raised at two specific times each year.
+Emergency special assessments. Allowed the FDIC to impose special premium assessments on bank deposits in
+addition to regular assessments in order to repay loans from the Treasury or from banks.
+GAO audit. Required the General Accounting Office (GAO) to report quarterly to Congress on the repayment of money
+borrowed by the FDIC from the Treasury and on the FDIC's success at estimating the market value of assets that it
+purchased with borrowed working capital.
+Recapitalization schedule. Required the FDIC to devise a schedule of deposit insurance premiums to increase the
+Bank Insurance Fund's reserves to 1.25 percent of insured deposits within 15 years of enactment. The FDIC could
+adjust the recapitalization schedule but not in ways that would extend the deadline for meeting the required reserve
+ratio.
+Deposit Insurance System Overhaul
+Early Intervention
+Minimum capital requirements. Required all federal banking regulators to review their minimum capital requirements
+for banks and thrifts every other year to ensure that they were sufficient to minimize losses to the deposit insurance
+funds. At least two standards were required — a leverage standard of total capital as measured against total assets and
+a risk-based standard of total capital as measured against assets that had been weighted for their relative riskiness.
+Similar standards existed previously for banks and thrifts. Regulators were permitted to impose additional standards
+employing other measures. Within 18 months, banking regulators would have to adjust their risk-based standards to
+account for the risks associated with fluctuations in interest rates, concentrations of loans and non-traditional activities.
+The Federal Reserve Board was required to discuss with foreign bank regulators similar changes to international risk-
+based capital standards.
+Capital levels. Established five levels for measuring the capital of banks and thrifts. Supervision and enforcement
+actions were specified for an institution based on its capital level.
+“Well-capitalized” institutions carried amounts of capital measured in several ways that significantly exceeded mandatory
+minimums. “Adequately capitalized” institutions met the minimum requirements. “Undercapitalized” institutions did not
+meet all minimums. “Significantly undercapitalized” institutions fell considerably short of minimums. And “critically
+undercapitalized” institutions failed to meet a “critical capital level.”
+Regulators were allowed to establish numerical minimums for each category, but the law set the critical capital level at
+no less than 2 percent equity capital (excluding some items frequently included in calculations of total capital) as
+measured against total assets, and at no more than 65 percent of the minimum standard. The critical capital level was
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 21 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+measured against total assets, and at no more than 65 percent of the minimum standard. The critical capital level was
+to be used to trigger specific regulatory actions leading to closure of banks or thrifts. (See prompt action, below)
+Non-capital performance standards. Allowed regulators to downgrade the rating of a bank or thrift that was found to
+be operating in an unsafe and unsound manner. The new rating would have to be one level lower than that for which
+the bank or thrift would qualify based solely on its capital.
+Regulators could also downgrade an institution if it were found to have less than satisfactory assets, management,
+earnings or liquidity — factors that were used along with capital in routine ratings.
+Enhanced supervision. Required the FDIC and other banking regulators to devise standards to measure the
+operations and management of banks and thrifts, as well as the appropriate proportion of bad loans to total assets and
+the amount of earnings needed to offset loan losses.
+As a part of these standards, federal regulators were required to determine at what point salaries and benefits to
+officers, employees, directors or stockholders constituted excessive compensation or, could cause a material loss to an
+institution.
+Banks and thrifts that failed to meet these standards were required to submit plans to overcome the shortfall. If they
+failed to do so, regulators could impose restrictions, including limiting the growth of assets, limiting interest rates paid on
+deposits and requiring an increase in capital.
+In addition, unless a bank or thrift received explicit permission from federal regulators, it could not pay dividends to
+stockholders if doing so would cause the institution's capital to fall below minimum standards. Also, institutions could not
+pay management fees if doing so would cause them to become undercapitalized.
+Prompt corrective action. Required any undercapitalized (or worse) bank or thrift to submit a capital restoration plan
+showing how it would meet minimum standards without increasing its risk of failure, and prohibited any such institution
+from paying dividends until  it met all minimum capital requirements.
+Bank regulators could not approve a capital restoration plan unless any company having control over the bank or thrift (a
+bank or thrift holding company) guaranteed the bank's or thrift's compliance with the plan. The holding company would
+be liable for an amount up to 5 percent of the value of the bank or thrift, or the amount that would have been required to
+recapitalize the institution at the time it was found not to be in compliance, if that amount were less.
+Regulators had to sharply limit the growth of undercapitalized banks, making exceptions only where asset growth was
+consistent with an approved capital restoration plan and equity capital was increasing according to schedule.
+Acquisitions and branching were permitted only where consistent with the plan, or where the FDIC chose to waive that
+requirement.
+For significantly undercapitalized institutions (or those that failed to submit and act on capital restoration plans), the
+payment of salary increases and bonuses to officers was prohibited, and regulators were required to take other actions,
+such as requiring the sale of additional stock, prohibiting the acceptance of deposits from other banks and capping the
+interest paid on deposits. Additional actions could be ordered, including further restrictions on growth or a reduction in
+the bank's size; replacement of officers, directors or outside auditors; and sale of the bank or any affiliate that the
+regulators believed threatened the bank's health.
+In addition, critically undercapitalized banks generally could not make interest or principal payments on subordinated
+debt (a class of bond that was not payable until  all  other creditors were satisfied and that often counted as capital)
+issued after July 15, 1991. And the FDIC was generally required to prohibit such institutions from making material
+changes in their business.
+Prompt closure. Required federal banking regulators to take control of (by appointing a conservator) or seize and close
+(by appointing a receiver) any bank or thrift that failed to maintain capital in excess of the “critical capital level,” unless
+an alternative action was more likely to protect the deposit insurance fund.
+Notwithstanding contrary state laws, regulators were required to take action within 90 days after an institution's capital
+fell below the critical level. Regulators could choose to take less drastic action than closure for 90-day periods if they
+determined that such action would better protect the deposit insurance fund.
+If the institution's capital remained below the critical level for one year, regulators would have to appoint a receiver and
+close the institution in most cases. Regulators could allow an institution to stay open if they certified it to be viable and if
+the institution had a positive net worth, was in substantial compliance with its capital restoration plan, had sustained
+improvement in earnings and was reducing its proportion of non-performing loans. Undercapitalized thrifts that prior to
+enactment had agreed to capital restoration plans under the 1989 thrift salvage law (PL 101-73) were not subject to the
+law's prompt closure provisions until  after July 1, 1994.
+Inspector general reports. Required the FDIC inspector general to report to the agency and to the GAO whenever the
+insurance fund suffered a material loss because it provided unreimbursed assistance to a failing bank or thrift or
+because it closed a bank or thrift whose assets were worth less than the cost of closing the institution. This provision
+was to take effect July 1, 1993, and was to be triggered only when the FDIC incurred a loss greater than $25 million or
+2 percent of the value of the bank or thrift. Inspector general reports were to be made public upon request.
+Effective date. Required federal regulators to put final regulations for these provisions into effect one year after
+enactment.
+Too-Big-to-Fail Banks
+Least-cost resolution. Required the FDIC to use the least-costly method of protecting insured depositors when it
+closed institutions and sold them in whole or in part. The purpose was to greatly limit the circumstances under which
+uninsured deposits were fully protected by preventing the FDIC from incurring a loss when it protected them. When
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 22 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+uninsured deposits were fully protected by preventing the FDIC from incurring a loss when it protected them. When
+uninsured depositors were not protected, they had to wait along with unsecured creditors (including the FDIC) for the
+bank's assets to be sold. Uninsured depositors and other creditors then shared in the proceeds, generally a large
+fraction of what they were owed.
+Under prior practice, most failed banks and many failed thrifts were sold virtually intact through so-called purchase and
+assumption transactions. The FDIC believed that such deals, which usually provided full protection to insured and
+uninsured depositors alike, were easier to manage and cost less. The law specifically permitted the FDIC to continue its
+practice of selling (and thereby protecting) the uninsured deposits of a failed bank or thrift. But to do so, it had to show
+that it did not incur a greater loss than it would have had it not sold them.
+When making least-cost calculations, the FDIC was required to evaluate the long-term costs of various methods of case
+resolution. The FDIC had to discount all costs and receipts from sales of assets to “present value,” subtracting for the
+long-term effects of inflation. The cost of forgone tax revenues resulting from the transaction had to be included as if
+they were revenues forgone by the FDIC. And the FDIC could not consider broad economic effects or the effects of a
+particular method on overall financial industry stability, unless specific consequences for the insurance fund could be
+identified.
+Open-bank assistance. Allowed the FDIC to continue to provide financial assistance to weak banks that were in
+danger of failing, rather than take control of or close them. However, the FDIC could provide such assistance only if
+doing so would cost less than closing the bank.
+‘Systemic risk.' Permitted the government, under very narrow circumstances, to waive the general rule created by the
+law that the FDIC could take no action to protect uninsured depositors that would cause a loss to the insurance fund.
+In those cases where a large bank failure posed a “systemic risk” to the nation's financial system, the FDIC could sustain
+a loss by protecting all deposits and non-deposit liabilities in a failing bank or thrift. Such action had to be approved in
+advance by a two-thirds vote of the FDIC board of directors, by a two-thirds vote of the Federal Reserve Board of
+Governors and by the Treasury secretary in consultation with the president. The Treasury secretary had to notify the
+House and Senate Banking committees of any systemic risk determination and the justification for it.
+Any loss to the insurance fund from a systemic risk determination had to be recovered expeditiously through a special
+premium assessment levied against the total assets held by banks, minus their capital. By specifying total assets, that
+formula had the effect of requiring that insured banks pay premiums on deposits held in their overseas branches. Such
+foreign deposits were nominally not insured, even under prior law, but were almost always protected when big banks
+failed. (Banks always paid insurance premiums on the total amount of their domestic deposits, even those that were in
+excess of the insured amount.)
+The effect of the provision was to severely restrict the regulator-devised policy under prior law of fully protecting so-
+called too-big-to-fail banks. Under prior law, the FDIC could protect fully all bank depositors and creditors, regardless of
+cost, if the bank was deemed essential to its community.
+GAO audit. Required the GAO to report annually to Congress on the FDIC's compliance with the least-cost provisions
+and to report on each instance where the government protected all depositors because of a finding of systemic risk.
+Federal Reserve assistance. Prevented the Fed from making loans to banks that failed to meet all capital standards for
+more than 60 days of a 120-day period, unless a banking regulator (which could be the Fed) certified that the bank had
+capital above the critical capital level and was not expected to be closed.
+The Fed was permitted to make loans to critically undercapitalized institutions (or other undercapitalized institutions that
+were not certified as viable) for more than five days, but not without risk. If the FDIC was later forced to close the bank,
+and the cost of resolution was greater than it would have been to liquidate the bank at the time of the loan, the Fed was
+liable to the FDIC for the excess loss. The Fed would have to pay an amount equal either to the interest it earned on the
+loan or to the loss the Fed would have taken had its loan to the failed bank been unsecured, whichever was smaller.
+Losses by the Fed would reduce the central bank's earnings and thereby cut its annual payments to the Treasury. The
+Fed was required to report to Congress on any loss it incurred under this provision.
+Limiting Fed lending to weak banks was an essential element of the law's effort to constrict the too-big-to-fail policy. The
+concern was that unrestrained Fed lending to a failing bank gave uninsured depositors time to withdraw their money,
+imposing a higher cost on the FDIC when the bank eventually failed.
+Final settlement procedure. Authorized the FDIC at the time it closed an insolvent bank or thrift to make payments to
+uninsured depositors and unsecured creditors at a rate equal to the FDIC's historic cost of closing failed institutions.
+Such payments would end all depositor and creditor claims on the bank's assets. In previous years, the FDIC had
+recovered about 85 percent of the book value of bank assets when they were sold.
+Effective date. Required the FDIC to produce final regulations by Jan. 1, 1994, that would put the least-cost resolution
+provisions into effect as of Jan. 1, 1995. The restraints on Fed loans were to take effect two years after enactment.
+State Bank Powers
+Restrictions on activities. Prohibited, with exceptions, insured state-chartered banks from engaging in activities not
+permitted for federally chartered banks. As a general rule, national banks could not engage in non-banking activities or
+take an ownership (equity) interest in a non-banking activity. This provision paralleled restrictions imposed on state-
+chartered thrifts in the 1989 thrift-industry salvage law (PL 101-73).
+The prohibitions on state banks applied to direct activities of state-chartered banks and to activities of the subsidiaries
+of state banks (which generally could not engage in activities that were not permitted to subsidiaries of national banks).
+State banks were given five years after enactment to sell any prohibited equity investment.
+A bank or bank subsidiary that met all minimum capital standards would be exempt from the general limits on
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 23 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+A bank or bank subsidiary that met all minimum capital standards would be exempt from the general limits on
+permissible activities if the FDIC did not object and found that the activity posed no significant risk to the insurance fund,
+except that the FDIC could not waive the general ban on equity investments of state banks.
+Stock ownership exceptions. Permitted state banks to hold equity stakes in subsidiaries that they controlled. And
+state banks could invest as limited partners in projects to build, acquire or rehabilitate low-income housing. State banks
+that were permitted to own publicly traded stocks on Sept. 30, 1991, and were doing so before Nov. 26, 1991, could
+continue to do so, provided the aggregate investment by a bank did not exceed its capital. Excess investments had to
+be divested over three years after enactment. State banks were also permitted to own up to 15 percent of a “bankers'
+bank” that serviced its investor banks.
+Insurance activities. Prohibited state banks and their subsidiaries from underwriting most insurance, as long as such
+activities were prohibited for national banks. The law permitted well-capitalized state banks that existed as of Nov. 21,
+1991, to continue underwriting insurance, and it permitted state banks that were required before June 1, 1991, by their
+charter to underwrite title insurance to continue to do so.
+The law also grandfathered the life insurance underwriting activities of New England savings banks but required the
+FDIC to study that issue within a year of enactment to determine if it posed a risk to the insurance fund. If the FDIC
+found a risk to exist, it could require a grandfathered bank to modify or terminate its insurance activities.
+The law did not affect the ability of states to allow the sale of insurance by banks chartered in those states and by the
+subsidiaries of such banks.
+Effective date. Put the general bar on state-bank activities into effect one year after enactment.
+Deposit Insurance Coverage Limits
+Individual accounts. Made no change in existing law on the amount of deposit insurance coverage provided.
+Individuals could still have multiple accounts at a single institution, each insured to the maximum amount of $100,000.
+Brokered deposits. Prohibited banks and thrifts that did not exceed minimum capital requirements from soliciting
+deposits by paying significantly higher interest rates than did other institutions in the same market.
+On a case-by-case basis, the FDIC could allow well-capitalized institutions (and certain institutions under
+conservatorship) to accept brokered deposits, which typically were placed through securities dealers seeking the highest
+rates of interest nationwide. Rates paid on brokered deposits could not significantly exceed rates paid on deposits of
+similar maturity either in the local market area of the bank or nationwide.
+Securities brokers who solicited such deposits had to register with and report periodically to the FDIC.
+Undercapitalized institutions not only could not accept brokered deposits but could not advertise interest rates
+significantly above those in their local market area.
+Regulations to enforce this provision were to take effect 180 days after enactment.
+Pass-through insurance. Required the FDIC to insure very large deposits placed in well-capitalized banks by pension
+funds as if each beneficiary of the affected pension plan received coverage totaling $100,000. The same restrictions that
+applied to accepting brokered deposits limited the types of banks that could accept deposits carrying so-called pass-
+through insurance coverage.
+The law expressly prohibited pass-through coverage for certain types of negotiated certificates of deposit — called bank
+investment contracts — for which banks agreed to permit periodic withdrawals without penalty for the purpose of paying
+benefits.
+The law continued pass-through coverage for bundled real estate escrow accounts and similar trust accounts for which
+the depositor was acting as agent for a large number of individuals and the total deposit exceeded the $100,000 limit.
+The bar on pass-through coverage for banks that were not well-capitalized was to take effect one year after enactment.
+Foreign deposits. Except as allowed under provisions permitting the FDIC to cover foreign deposits under least-cost
+calculations or findings of systemic risk, the law prohibited the insurance fund from protecting foreign deposits.
+Deposit insurance study. Required the FDIC to study, in conjunction with the Fed, the feasibility and cost of tracking
+insured and uninsured deposits, which would be necessary in any effort to establish a systemwide limit on individual
+deposit insurance. The FDIC was required to report to Congress on this issue, along with recommendations, within 18
+months of enactment.
+Accounting and Examination Changes
+Annual exams. Required the FDIC and other applicable federal banking regulators (the Federal Reserve System, Office
+of Comptroller of the Currency or Office of Thrift Supervision) to conduct annual on-site examinations of most banks
+and thrifts. Regulators could allow 18 months between examinations for those banks with assets of less than $100
+million that were well-capitalized, well-managed, received the highest of five regulatory ratings and had not been
+purchased within the previous year. Examination reports from state banking regulators could be substituted for federal
+exams in alternate years.
+The requirement for annual examinations was to take effect a year after enactment. However, until  Dec. 31, 1993,
+exams were required only every 18 months, except for institutions that were found in their most recent exam to be in
+less than satisfactory condition, or those that had been purchased.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 24 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+The law also required federal banking regulators to devise coordinated examination improvement programs to increase
+the quality and objectivity of exams.
+Charges and penalties. Permitted the FDIC to assess charges against banks and their affiliates for annual exams in
+amounts necessary to cover the cost of the exams. The FDIC could impose a $5,000-per-day civil penalty on any bank
+or thrift that refused to allow an on-site exam or refused to provide any information required for such an exam.
+Annual independent audits. Required larger banks and thrifts to undergo annual independent audits of their financial
+statements after 1992. Such audits had to include the auditor's assessment of a bank's compliance with certain laws
+and regulations designated by the FDIC. Banks with less than $150 million in assets were exempt from this requirement.
+Only independent auditors that agreed to provide working papers and received a peer review acceptable to the FDIC
+were to be permitted to perform audits. The FDIC could bar an accounting firm from such work for good cause.
+Accounting standards. Required federal banking regulators to adopt uniform accounting standards for banks and
+thrifts that were consistent with, and no less stringent than, generally accepted accounting principles. Differences in
+accounting treatment among regulators had to be explained to the House and Senate Banking committees.
+The law also required that, within one year of enactment, banks and thrifts disclose so-called off-balance-sheet assets
+and liabilities in their financial statements and quarterly, reports of condition to federal regulators.
+And within a year of enactment, federal regulators were required to devise a means of reporting, to the extent feasible,
+the market value (in addition to the book value) of the assets and liabilities of banks and thrifts.
+Real estate loans. Required federal bank regulators to adopt, within nine months of enactment, uniform standards for
+making loans for real estate acquisition, development or construction. Regulations to enforce this provision were to take
+effect not more than 15 months after enactment.
+Other Changes
+Risk-based premiums. Required the FDIC to impose a system of deposit insurance premium assessments for banks
+and thrifts that varied based on the relative risk that each bank and thrift posed to its insurance fund. Risk-based
+assessments could be derived from all risks posed by a bank's capital levels, the activities in which it engaged, its mix of
+assets, its holding of foreign deposits and the balance of rates and maturities between assets and deposits.
+Banks and thrifts were to be treated separately, and the FDIC could devise separate assessments for large and small
+institutions.
+Proposed regulations for a risk-based premium system would have to be issued by Dec. 31, 1992, and final regulations
+would have to be issued by July 1, 1993. Risk-based assessments for banks were to take effect no later than Jan. 1,
+1994. For thrifts, the risk-based assessment system were not to take effect until  Jan. 1, 1998.
+Uninsured state-chartered institutions. Required all state-chartered banks, thrifts and credit unions that did not carry
+federal deposit insurance to prominently disclose that fact to existing and prospective customers, along with the fact that
+depositors were not guaranteed return of their money if the institution failed. The provision also applied to any other
+institution that might be mistaken for a bank. (Federally chartered banks were insured as a matter of course, but the law
+required them to apply formally to the FDIC for insurance, which could be denied.)
+FDIC backup authority. Authorized the FDIC to recommend that other federal bank regulators take enforcement action
+against banks or thrifts that posed a significant risk to the insurance funds. The FDIC could itself take action if the other
+regulators failed to act within 60 days. And the FDIC could adopt rules for taking expedited action without regard to the
+60-day period.
+Insider abuse. Limited and in some cases prohibited preferential treatment in the granting of loans or other services to
+officers, directors or principal shareholders of banks. Generally, under the law, loans to insiders had to be made on
+terms used for outside applicants.
+Limits on interbank liabilities. Required the Fed to devise limits on the amounts that banks could lend to or place on
+deposit with other banks. The purpose was to reduce the threat of systemic risk to the nation's financial industry posed
+by large bank failures.
+Appraisal standards. Deferred from July 1, 1991, to Dec. 31, 1992, the effective date for mandatory state standards for
+licensed real estate appraisers. This provision was also included in a bill providing additional money for the savings and
+loan salvage operation (HR 3545) that Congress cleared before adjourning.
+Other Regulatory Issues
+Foreign-Owned Banks
+Deposit-taking. Prohibited foreign banks from accepting deposits in amounts less than $100,000 except through
+subsidiary banks that were chartered and regulated in the United States and insured by the FDIC. Branch offices of
+foreign banks that were insured by the FDIC and accepted such deposits on the date of enactment could continue to
+accept such deposits.
+New operations. Required Fed approval before any foreign bank could open a branch office or buy a bank, thrift or
+commercial lending company in the United States. Existing law rarely gave the Fed jurisdiction in these areas, although
+it and other federal banking regulators had some control over foreign bank operations.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 25 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+The Fed was not allowed to approve an application from a foreign company that was not engaged in banking abroad
+and was not subject to comprehensive supervision in its home country. In addition, the Fed had to consider whether the
+foreign bank's U.S. operations were approved by foreign regulators, whether its financial and managerial resources were
+sufficient, whether the foreign bank had violated U.S. laws and whether the foreign bank had agreed to supply
+information to U.S. regulators.
+The law allowed the Fed to close a state-chartered bank or branch owned by a foreign bank for safety and soundness
+reasons if the bank or any affiliate had violated U.S. law or if the foreign bank was not subject to comprehensive
+regulation in its home country. The Fed could recommend such action to the Comptroller of the Currency for federally
+chartered banks or branches owned by foreign banks.
+In addition, purchase of shares in a U.S. bank with the use of loans from a foreign bank that were secured by such
+shares had to be disclosed to the Fed.
+The Fed was allowed to guarantee confidentiality for information provided about foreign banks by their overseas
+regulators.
+After one year, state-chartered banks or offices owned by a foreign bank were required to phase out any activity that
+was not permitted for national banks or offices, unless the Fed found that the activity was consistent with sound banking
+and, in the case of an insured branch, the FDIC also approved.
+State offices of foreign banks. Gave the Fed authority to regulate certain non-banking offices of foreign banks, which
+were generally subject only to state regulation under existing law.
+Capital standards. Required the Fed and the Treasury to study the capital standards applicable to foreign banks
+operating in the United States and determine if such standards were equivalent to those applied to domestic banks. The
+Fed and the Treasury were required to report their findings to the House and Senate Banking committees no later than
+180 days after enactment, and revise their report annually thereafter.
+Consumer statutes. Gave federal regulators explicit authority to apply federal consumer protection laws to foreign
+banks in the United States.
+Penalties. Permitted civil penalties against foreign banks for violations similar to those prohibited under the Bank
+Holding Company Act for U.S. companies that owned banks.
+The law increased from $1,000 to $10,000 a day the penalty for failure to comply with a Fed or FDIC subpoena. And it
+created a criminal penalty for intentionally violating the International Banking Act (which governed most foreign bank
+activities in the United States) with the intent to deceive or cause financial gain or loss to any person. The penalty was
+up to five years imprisonment and a fine of up to $1 million a day, or both.
+Consumer Issues
+Incentives for services in distressed communities. Reduced deposit insurance premiums for banks offering certain
+services to low-income people or in economically distressed neighborhoods.
+Banks that offered special, low-cost checking accounts to poor people were to pay half the usual insurance premium for
+deposits in such accounts.
+Banks that increased their deposits or housing-related loans in specially designated distressed communities would
+receive a 5 percent credit against their deposit insurance premium payments. Banks that established special Community
+Development Corporations in distressed neighborhoods would receive a 15 percent credit against their insurance
+premiums.
+Low-income housing preferences. Created within the FDIC a program to give preference to low-income persons and
+to state and local housing agencies in disposing of low- and moderate-income single-family and multifamily housing.
+The program, which paralleled one created under the Resolution Trust Corporation for the disposal of houses acquired
+from failed thrifts, was to take effect six months after enactment and run for three years. Low-income individuals would
+get a right of first refusal for six months on qualified single-family properties. Housing agencies would get preferences
+for acquisition of multifamily buildings. The FDIC was authorized to finance purchases at or below market rates. The
+program was subject to annual appropriations to cover losses due to disposal of properties at less than market rates.
+Truth-in-savings. Required banks, thrifts and credit unions to disclose clearly the terms and conditions on savings
+accounts. They were required to calculate the interest paid on such accounts based on the full account balance, but the
+law did not specify a particular method of calculation or whether or how interest would be compounded. The law
+imposed civil fines on institutions that violated these provisions. The savings account disclosure rules were to take effect
+within 15 months of enactment.
+Branch-closing notification. Required banks and thrifts to notify their customers and federal regulators 90 days before
+the scheduled closing of a branch office. Banks would have to establish specific policies for internal review of branch-
+closure decisions.
+Small-business loan reporting. Required banks to provide federal bank regulators annually with details of their loans
+to small businesses and small farms. In an effort to assess credit availability, regulators could require specific data for
+aggregate dollar amounts of commercial and mortgage loans to small businesses, charge-offs of bad loans and interest
+income from such loans. The requirement was to take effect six months after enactment.
+Deposits in automatic teller machines. Permitted banks to hold for up to four days deposits made at automatic teller
+machines not owned by the bank.
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 26 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Whistleblower protections. Prohibited banks and federal bank regulatory agencies from firing, punishing or
+discriminating against an employee for providing information to bank regulators or the Justice Department regarding
+possible violations of law or regulations by the bank, the agency or any official of the bank or agency.
+Regulatory burden. Required the Treasury secretary and federal banking regulators to report to Congress a year after
+enactment on laws and regulations that unduly limited the profitability of banks and on the need for changes in or repeal
+of those laws. The report was to consider the degree to which changes might harm the safety and soundness of banks
+or adversely affect consumer protections.
+Miscellaneous, Studies
+Savings and loan associations. Permitted thrifts that converted to federal bank charters to continue being treated as
+savings associations, therefore subject to somewhat different regulation than other banks. They had to meet certain
+conditions, including the so-called qualified thrift lender test, which was designed to concentrate a thrift's loans and other
+assets in home mortgages and related loans. The law revised the test to reduce the total percentage of qualifying loans
+from 70 percent over two years to 65 percent for nine out of every 12 months. The changes also permitted a larger
+amount of non-housing loans and other assets to count toward the test and permitted federally chartered thrifts to hold
+a larger share of consumer loans.
+The law also made it easier for banks to acquire thrifts or thrift branches and allowed so-called non-bank banks to
+acquire thrifts without regard to a statutory cap on annual growth by non-bank banks. The effect of the latter provision
+was to permit commercial companies that acquired insured banks under a pre-1987 loophole in the Bank Holding
+Company Act to greatly increase the size of their non-bank banks through thrift acquisitions.
+Private deposit insurance. Required the FDIC to study and conduct a demonstration project, in which the agency
+would seek to have private companies provide “reinsurance” of up to 10 percent of the liabilities at several banks.
+Within 18 months of enactment, the FDIC was required to report its analysis of the project and its recommendations on
+the feasibility of instituting a permanent private program to absorb some of the deposit insurance risk borne by the FDIC.
+Uninsured deposit-taking. Required the FDIC to study and report to Congress within six months of enactment on the
+feasibility and risk associated with allowing banks to accept both insured and uninsured deposits.
+Payment of imputed interest on reserves study. Required the Fed, the FDIC and other federal banking regulators to
+study the effects of paying interest on reserves that depository institutions were required to keep in Federal Reserve
+banks. The study was to look at the consequences for the Federal Reserve System, the deposit insurance system and
+depository institutions. It was due to Congress six months after enactment.
+Federal Reserve lending to securities firms. Clarified that, in extraordinary circumstances, the Fed could lend from its
+discount window to anyone, including securities firms, not just to banks. The law also made it somewhat easier for the
+Fed to make such loans but retained an existing requirement that borrowers show that they needed the Fed's cash to
+remain in business, could not borrow elsewhere and had secure collateral to back up the loans.
+Rhode Island credit unions. Required the Treasury secretary to guarantee repayment of up to $180 million borrowed
+by the state of Rhode Island to cover deposits in banks and credit unions that were not covered by federal deposit
+insurance, provided certain conditions were met. To qualify, the loans had to be fully secured by a dedicated sales tax
+or assets held by the state's deposit insurance corporation. The Treasury could assess a guarantee fee equal to one-
+half of 1 percent of the outstanding guaranteed principal amount, computed daily.
+Payments system protections. Clarified that a failed bank could not claim money due it through the federal system of
+interbank payments and at the same time decline to make payments that it owed. Payments to a failed bank through the
+system were limited to the net amount due in excess of payments that the failed bank owed.
+Freedom National Bank. Required the FDIC to fully protect deposits placed in the defunct Freedom National Bank by
+charitable and religious organizations. Freedom National, based in Harlem, New York City, held millions of dollars in
+deposits from organizations such as the United Negro College Fund. When the bank failed in November 1990, the FDIC
+could not find a buyer and was forced to liquidate it. As a result, deposits in excess of $100,000 were not fully protected;
+the FDIC paid about 50 cents on the dollar for uninsured deposits.
+Securities law statute of limitations. Reinstated securities fraud claims that had been dismissed under the terms of a
+June 1991 Supreme Court decision in Lampf v. Gilbertson. The court established a uniform nationwide statute of
+limitations for certain securities fraud cases; and in so doing foreclosed some pending cases. The law did not alter the
+statute of limitations for cases not filed before the decision.
+Secrecy ban. Prohibited the FDIC from agreeing not to disclose the terms of settlement of an action brought by the
+FDIC in its capacity as conservator or receiver of a failed bank or thrift.
+Credit Card Interest Cap Flares and Dies
+Like a fleeting comet, the idea of Congress voting to mandate a nationwide cap on credit card interest rates flared
+brightly for a week in mid-November and quickly disappeared.
+Just days after the Senate voted in favor of such a cap — and House Democratic leaders rushed to sign on —
+House Speaker Thomas S. Foley, D-Wash. went before television cameras on Nov. 18 to urge restraint. “I suggest
+that the Banking Committee consider any action on credit card rates very, very carefully,” Foley-said. He added that
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 27 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+that the Banking Committee consider any action on credit card rates very, very carefully,” Foley-said. He added that
+a study of competition in rates “would be useful” and suggested that Congress might vote for one. But that did not
+happen.
+The furor was set off by a last-minute insertion in a Nov. 11 campaign fundraising speech, in which President Bush
+called for lower credit card rates. Foley appeared to let Bush off the hook, saying, “I don't know that he anticipated
+what would happen in the Senate.”
+The Senate voted 74–19 for a rate cap Nov. 13, adopting an amendment by Alfonse M. D'Amato, R-N.Y. to a broader
+bank overhaul bill (S 543). Foley and other Democratic leaders immediately predicted that the House would join the
+Senate's action. (Vote 251, p. 33-S)
+But in the days that followed, banks threatened to pull back credit cards from perhaps half of those who had them,
+bank stocks tumbled, the obscure but huge market in securities backed by credit card debt was rocked, and the
+Dow Jones industrial average plunged 120 points. The Nov. 15 drop was the fifth-largest numerical decline in the
+Dow's history; however it could hardly be attributed solely to the credit card rate cap proposal; analysts said
+weakness in bank stocks was a factor.
+Treasury Secretary Nicholas F. Brady appeared on the NBC News program “Meet the Press” on Nov. 17, calling
+D'Amato's amendment, “wacky, senseless legislation.”
+By the end of the week of Nov. 18, a House Banking subcommittee had scheduled, and then postponed indefinitely,
+a credit card bill markup. Several members went to work to craft a bill calling for a study of rate caps that would
+produce results — and not upset financial markets.
+Reps. Esteban E. Torres, D-Calif. chairman of the Consumer Affairs Subcommittee, and Charles E. Schumer, D-N.Y.
+developed a bill (HR 3860) requiring the General Accounting Office (GAO) to study interest-rate competitiveness
+among credit card issuers and whether the interest rates were set artificially high to boost bank profits. The GAO
+would have had to report in nine months.
+If it were to find that the industry was not competitive, the president could within a nine-month period impose a rate
+cap tied to the average price of six-month Treasury securities. The Torres-Schumer bill would have produced a cap
+of 15.5 percent at the time it was drafted. The D'Amato cap, which was tied to the interest charged by the Internal
+Revenue Service on overdue tax payments, would have produced a 14 percent rate cap at the time the amendment
+was being considered.
+No committee action on the Torres-Schumer bill was ever scheduled, and it did not surface as an option to
+D'Amato's amendment when House and Senate conferees met on the banking bill. The D'Amato amendment was
+quietly dropped in conference, without ever being discussed publicly.
+House, Senate Banking Bills Compared
+Following is a comparison of the way key issues were treated in three versions of the bank overhaul bill: the House
+Banking Committee bill (HR 6 — H Rept 102–157, Part 1) approved June 28, amendments to HR 6 approved by
+the House Energy and Commerce Committee Sept. 25, and a bill (S 543) approved by the Senate Banking
+Committee on Aug. 2:
+House
+Banking
+House Energy & Commerce Senate Banking
+Bank
+Ownership
+Would permit any company to own a bank, ending legal restrictions
+that effectively prohibited affiliations between commercial businesses
+(including insurance and diversified financial companies) and banks.
+Would retain existing law. Would retain existing law.
+Glass-
+Steagall
+Repeal
+Would effectively repeal the 1933 Glass-Steagall Act, which barred
+most affiliations between banks and securities firms.
+Essentially the same as House
+Banking.
+Essentially the same as
+House Banking but would bar
+mergers between the largest
+banks and securities houses.
+Fire Walls Would severely limit financial links between banks and their
+securities affiliates. Banks generally could not finance the purchase
+of securities underwritten by an affiliated securities firm or lend
+money that would be used to pay principal,  interest or dividends, for
+instance.
+Similar to House Banking, but
+tougher. If a bank's securities
+affiliate issued stocks or bonds
+for a company, the bank could
+not lend to that company for any
+purpose for three months
+afterward. Regulators would have
+some leeway to relax fire walls,
+however.
+Similar to House Banking.
+The Federal Reserve could
+relax fire walls beginning
+three years after enactment.
+Insurance Would roll back regulatory and judicial interpretations of current law
+— in some cases still under legal challenge — that allow banks or
+their affiliates some insurance sales and underwriting powers.
+Existing law provisions that allowed only federally chartered banks
+located in towns of less than 5,000 people to sell  insurance would
+be tightened so that a bank could only sell  to people in that town or
+in similar small towns in the same state. Also, only those state
+banks or their affiliates currently in the business of selling insurance
+out of state would be permitted to continue doing so; this would
+permit a Delaware bank owned by Citicorp to market insurance
+nationwide.
+Would go further than House
+Banking in rolling back existing
+law by closing the Delaware
+insurance sales loophole. Also,
+consumer protections would be
+imposed on bank insurance
+activities, such as limits on
+disclosure of customer
+information and a ban on
+soliciting borrowers for insurance
+until loan applications had been
+approved.
+Would go further than House
+Banking in rolling back
+existing law. The town-of-
+5,000 loophole would be
+more tightly curtailed,
+permitting sales only in the
+town and not in adjacent rural
+areas or in similar small
+towns in the same state. The
+Delaware insurance sales
+loophole also would be
+closed.
+Interstate
+Branching
+Would permit a bank to open branches in any state where it could
+own another separately chartered and capitalized bank. Existing
+state laws limiting or barring interstate bank ownership would be
+Would not affect interstate
+branching provisions of HR 6.
+Would permit interstate
+ownership of existing banks
+after one year and creation of
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 28 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+state laws limiting or barring interstate bank ownership would be
+overridden after three years.
+after one year and creation of
+new banks across state lines
+after two years. Nationwide
+branching would be allowed
+after three years, but states
+could vote to “opt out” of
+branching.
+Administration Bill Highlights
+Following is a summary of the key points in the administration's banking industry bill. Most changes were to take
+effect one to two years after enactment; some were to take effect in three years.
+Deposit Insurance Reform
+Insurance limits. Individual depositors would be protected to a maximum of $100,000 per institution, plus an
+additional $100,000 coverage per institution for retirement savings. “Pass-through” coverage — such as multimillion-
+dollar pension accounts previously insured to $100,000 per beneficiary — would be eliminated in most cases. So
+would coverage for brokered deposits. The Federal Deposit Insurance Corporation (FDIC) would study the feasibility
+of capping insurance at $100,000 per person systemwide.
+Too big to fail. The FDIC would be explicitly prohibited from covering uninsured deposits in a failed bank unless
+that would cost less than simply paying off insured deposits. The FDIC could not consider losses that might be
+incurred at other institutions as a result of a bank's failure. But the Federal Reserve Board and the Treasury could
+authorize the FDIC to protect all depositors if a bank failure would pose a “systemic risk.”
+Risk-based premiums. The FDIC would have to assess insurance premiums based on a bank's relative riskiness,
+determined principally by a bank's capitalization.
+State-chartered banks. For the most part, state-chartered banks would be prohibited from making investments or
+engaging in activities prohibited to federally chartered banks. The prohibition would extend to subsidiaries of state-
+chartered banks. The FDIC could grant exceptions to this rule for well-capitalized banks.
+Tighter supervision. New rules for bank examinations would be imposed, based on capital levels and an
+institution's size. Poorly capitalized banks would be subject to prompt takeover by the FDIC.
+Private insurance. The FDIC would have to conduct a pilot program to examine the opportunities for private
+deposit “coinsurance” that would run in tandem with FDIC coverage.
+Bank Insurance Fund Recapitalization
+New borrowing authority. The FDIC would be permitted to borrow up to $25 billion from the Federal Reserve
+System, to be repaid at Treasury security rates and secured by dedicated increases in bank insurance premiums.
+The borrowed money could be used to cover losses due to failed banks or to assist troubled banks. The FDIC could
+use its existing authority to borrow from Treasury to leverage other loans.
+Premium limits. Bank insurance premiums would be capped at 30 cents per $100 in the aggregate; risk-based
+premiums for individual institutions could exceed the cap.
+Regulatory Restructuring
+Regulators combined. Federal supervision of banks and savings and loan associations, now split among four
+agencies, would be combined. Federally chartered banks, their holding companies and subsidiaries, and all savings
+and loans would be supervised by a new Treasury Department agency, the Office of Depository Institutions
+Supervision. State-chartered banks, their holding companies and subsidiaries would be supervised by the Federal
+Reserve.
+FDIC role. The FDIC would retain its authority to examine insured banks.
+Credit unions. Credit unions would remain separately regulated and insured. They would have to write off over 12
+years the 1 percent of deposits they maintain as reserves in the National Credit Union Share Insurance Fund.
+New Bank Powers
+Holding companies. Two new kinds of companies would be created to own banks. Financial services holding
+companies could directly own banks, insurance companies and securities houses. Banks themselves could not be
+holding companies. Only financial services holding companies whose banks were well-capitalized could engage in
+non-banking financial activities. Diversified holding companies could affiliate with any commercial enterprise and
+could own well-capitalized banks but only indirectly, through financial services holding companies. All holding
+companies would have to maintain their banks' capital requirements or divest.
+Fire walls. Stiff limits would be put on loans from banks to their financial services affiliates to prevent unfair
+competitive advantages and risk to the deposit-insurance system. Loans to affiliated commercial businesses would
+be prohibited. Distinctions between insured and uninsured products of banks and their affiliates would have to be
+made clear to consumers.
+Insurance. Federally chartered banks could sell insurance directly, as opposed to through an affiliate, only where
+7/3/09 12:27 PMCQ Almanac Online Edition
+Page 29 of 29http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal91-1110000&type=hitlist&num=1
+Insurance. Federally chartered banks could sell insurance directly, as opposed to through an affiliate, only where
+state-chartered banks were permitted to do so. But states could not prevent banks from affiliating with insurance
+companies.
+Securities. Some securities activities now permitted to banks themselves would have to be transferred to affiliates.
+Real estate. Real estate development and brokerage activities would not qualify as financial services, so banks
+could affiliate with real estate firms only indirectly through diversified holding companies. State-chartered banks
+could continue existing real estate brokerage activities.
+Interstate banking. Financial services holding companies would be permitted to buy banks in any state. Moreover,
+nationally and state-chartered banks could open initial branches in states other than where they are based. States
+would continue to regulate additional authority to open branches.
+Brady's Concern
+Treasury Secretary Nicholas F. Brady, in presenting the administration's plan to overhaul the financial services
+industry on Feb. 5, talked about the need to relieve banks' stress and to put more money in the hands of
+consumers and businesses by making banks more profitable.
+But what Brady really had his eye on was the fact that U.S. banks were no longer the biggest in the world.
+“What we're trying to do is something here that strengthens the American banking system, provides more services to
+the consumer and makes sure that we do something about this situation here where the top bank in the United
+States is 27th in the world.”
+Not once but three times Brady pointed to a big chart showing the world's top 30 banks in 1969 and 1989. It
+showed U.S. banks in the top three spots a generation ago, but none there today. Citibank, the largest in the
+United States, was the 27th largest in the world at the end of 1990.
+It was clear that rankled Brady. “You know,” he said, “if there's one chart that's stuck in my mind since the very
+beginning of this study, that's it.”
+Top Banks in 1969
+1. Bank of America
+2. Chase Manhattan Bank
+3. First National City Bank
+Top Banks in 1989
+4. Dai-Ichi Kangyo Bank
+5. Sumitomo Bank
+6. Mitsubishi Bank
+Document Citation
+"Congress Clears Slimmed-Down Banking Bill." CQ Press Electronic Library, CQ Almanac Online Edition, cqal91-1110000.
+Originally published in CQ Almanac 1991 (Washington: Congressional Quarterly, 1992).
+http://library.cqpress.com/cqalmanac/cqal91-1110000 (accessed July 3, 2009).
+Document ID: cqal91-1110000
+Document URL: http://library.cqpress.com/cqalmanac/cqal91-1110000
+© 1992, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

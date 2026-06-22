@@ -10,6 +10,8 @@ import { DashboardPage } from "@/routes/DashboardPage";
 import { DashboardListPage } from "@/routes/DashboardListPage";
 import { DashboardDetailPage } from "@/routes/DashboardDetailPage";
 import { SettingsPage } from "@/routes/SettingsPage";
+import { WorkflowLibraryPage } from "@/routes/WorkflowLibraryPage";
+import { WorkflowBuilderPage } from "@/routes/WorkflowBuilderPage";
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
@@ -33,6 +35,8 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/campaigns" element={<DashboardListPage />} />
             <Route path="/campaigns/:id" element={<DashboardDetailPage />} />
+            <Route path="/workflows" element={<WorkflowLibraryPage />} />
+            <Route path="/workflows/:id" element={<WorkflowBuilderPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 

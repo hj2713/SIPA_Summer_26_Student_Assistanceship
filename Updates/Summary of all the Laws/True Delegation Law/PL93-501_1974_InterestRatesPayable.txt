@@ -1,0 +1,301 @@
+7/2/09 3:27 PMCQ Almanac Online Edition
+Page 1 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224204&type=hitlist&num=6
+Banking
+1998 Congress Clears Legislation
+Allowing Credit Unions To Expand
+Membership
+1995 House Shelves Banking Overhaul
+1994 Other Banking Legislation
+Considered in 1994
+1994 Community Development Banking
+Provisions
+1994 Banking Law Undergoes Revision
+1991 Congress Clears Slimmed-Down
+Banking Bill
+1991 Banking Nominations
+1988 Caught in Turf Battle, Bank
+Powers Bill Dies
+1986 Major Banking Legislation Stalls
+in Last Hours
+1985 Banking Bills Fail to Reach House
+Floor
+1979 Banking Deregulation
+1978 Electronic Banking Services
+1978 Banking Regulation
+1976 Banking Changes Blocked
+1975 Senate Approves Broader Banking
+Powers
+1974 Citicorp Notes
+1974 Banking Insurance, Credit Bill
+Cleared
+1970 Regulation Extended to One-
+Bank Holding Companies
+1969 Bank Holding Companies
+1967 Truth-In-Lending Bill Passed by
+Senate
+1966 Bank Supervision
+1966 Bank Holding Company Act
+Exemptions Changed
+1965 Bank Investigation
+1957 Banking Revision
+1955 Bank Companies
+Antitrust
+Federal Reserve
+Savings and Loan Industry
+Stock Market and Financial Services
+Citicorp Notes
+An article from CQ Almanac 1974
+Document Outline
+Provisions
+Background
+House Action
+Senate Action
+Conference Action
+Congress Oct. 11 cleared S 3838 (PL 93 - 501 ), giving federal bank
+regulatory agencies authority over variable interest rate securities sold by
+bank holding companies.
+As cleared, the bill would give the Federal Reserve Board and other federal
+banking agencies power to control innovative types of securities that could
+compete with funds-starved savings and loan associations for investments by
+small-scale savers.
+Although that danger did not materialize, Congress enacted the measure in
+response to the sale of variable interest rate notes that were first offered in
+June by Citicorp, the parent holding company of the First National City Bank
+of New York (Citibank). Because the notes were sold in relatively small
+denominations and carried interest rates pegged to U.S. Treasury bills, they
+were considered attractive to average investors who otherwise would keep
+their money in savings accounts subject to comparatively low federally
+imposed interest rate ceilings.
+Some members of Congress were concerned that the Citicorp notes and
+similar offerings by other corporations would draw substantial amounts of
+funds from the thrift institutions that support the nation's housing markets. But
+the Federal Reserve Board contended that it could not regulate the Citicorp
+notes because the proceeds would not be passed through directly to the
+subsidiary bank.
+S 3838 accordingly gave the Federal Reserve power to regulate such
+offerings by bank holding companies, regardless of how the funds were used.
+It conferred similar authority on the Federal Deposit Insurance Corporation
+and the Federal Home Loan Bank Board.
+In its final version, the measure also included Senate amendments that would
+temporarily override state usury laws that restricted interest paid by banks in
+Tennessee, Arkansas, Montana and California. The Senate Sept. 25 had
+passed those provisions as separate legislation (S 3817).
+Provisions
+As signed into law, S 3838:
+Gave the Federal Reserve Board, Federal Deposit Insurance Corporation and Federal Home Loan Bank Board authority
+to regulate debt obligations issued by parent holding companies of financial institutions under their jurisdiction,
+regardless of how the funds raised by selling the obligations were used.
+Exempted from regulation obligations issued by a bank holding company that had irrevocably declared to federal
+regulatory agencies its intention to divest itself of its banking subsidiary.
+Exempted from federal banking agency regulation debt obligations sold by a bank holding company or its non-bank
+subsidiary in large denominations chiefly to institutional investors.
+ 
+7/2/09 3:27 PMCQ Almanac Online Edition
+Page 2 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224204&type=hitlist&num=6
+Allowed all national banks, federally regulated state banks and savings and loan associations and small business
+investment companies in making loans of $25,000 or more to business or agriculture before July 1, 1977, to charge
+interest rates up to 5 per cent higher than the Federal Reserve System's discount rate. (By allowing interest of up to 13
+per cent on such loans, the provision in effect bypassed state usury laws in Tennessee, Arkansas and Montana that
+limited interest on business and agriculture loans to 10 per cent.)
+Exempted until  July 1, 1977, variable interest rate notes issued by California bank holding companies from the state
+constitution's 10 per cent interest rate limit.
+Exempted certificates of deposits of $100,000 or more in California banks from the state constitution's 10 per cent
+interest rate limit until  July 1, 1977.
+Background
+S 3838 and the House version (HR 15928) were aimed” at a new type of investment security pioneered in June by
+Citicorp.
+Seeking to attract funds from small investors who were dissatisfied with the interest they could earn from savings
+accounts, Citicorp proposed to issue “floating interest rate notes” starting at $5,000 that could be cashed in at six-
+month intervals. After an initial rate of 9.7 per cent, the interest earned by the notes would be pegged to 1 per cent
+more than the average rate paid by the U.S. Treasury on its three-month bills sold to the public.
+With savings and loan institutions prohibited by federal regulations from paying more than 6 per cent interest on
+savings accounts, the Citicorp notes offered an attractive alternative investment for persons who had savings of
+$5,000 or more. Since the notes could be redeemed on the six-month interest payment dates, investors who bought
+them also would not be tying up their savings for prohibitively long periods.
+After Citicorp announced its offering—and as other companies made similar plans—members of Congress and
+housing industry officials expressed concern that their availability would worsen the plight of savings and loan
+associations. Thrift institutions already were plagued by disintermediation—the process of losing to other
+investments the savings that provide the funds used to make mortgage loans.
+Some members, notably Banking and Currency Committee Chairman Wright Patman (D Texas), charged that variable
+interest notes were an attempt by bank holding companies to circumvent Regulation Q, the federal rule that puts
+limits on interest paid by banks and thrift institutions.
+1969 Law
+In a 1969 credit control measure (PL 91-151), Congress gave the Federal Reserve authority to apply its regulations
+to obligations issued by a bank holding company, but only to the extent that proceeds from their sale went to the
+company's affiliated bank. (1969 Almanac p. 925)
+In the case of Citicorp notes, the Federal Reserve determined that it had no grounds for objecting to their issue or
+for limiting the interest rates.
+Although legislation was introduced to mandate limits on the variable interest notes, the measures passed by the
+House and Senate simply clarified existing law by providing specific power to regulate such obligations issued by
+bank holding companies. Neither bill gave power to regulate similar notes sold by other types of corporations,
+however.
+After the initial furor in June, Citicorp moved to meet some concerns voiced by the Federal Reserve by reducing the
+total offering to $650-million from $850-million and by requiring that the notes be held at least until June 1, 1976.
+Subsequent offerings of similar notes by other companies had not been as widespread as first anticipated.
+House Action
+Committee
+In reporting HR 15928 (H Rept 93 –1259) on Aug. 5, the House Banking and Currency Committee made clear
+its concern that variable interest note offerings could add further strains on funds-starved thrift institutions.
+When Citicorp announced its “floating interest rate notes” in June, “it was immediately recognized that the issuance
+of such notes by a company which is so closely identified…with one of the largest banking institutions of the
+nation…could cause severe disintermediation and would undoubtedly set a pattern for similar issuances by like
+institutions,” the committee said. “That fear has been substantiated.”
+HR 15928 “would remove any uncertainty about the authority” of federal bank regulatory agencies to regulate notes,
+debentures or other debt obligations issued by a bank holding company, “regardless of the use of the proceeds
+within the holding company.”
+While the bill did not require any action by the regulatory agencies, the committee stated that in using the power
+conferred by HR 15928 “the agencies should seek first and foremost to assure that any potentially destructive
+7/2/09 3:27 PMCQ Almanac Online Edition
+Page 3 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224204&type=hitlist&num=6
+conferred by HR 15928 “the agencies should seek first and foremost to assure that any potentially destructive
+competition between thrift institutions' deposits and bank holding company note issues aimed at the general public is
+ameliorated.”
+Supplemental Views
+Three committee members filed supplemental statements to the report. For different reasons, all three expressed
+doubt that the bill would accomplish its purpose.
+John H. Rousselot (R Calif.) suggested that the measure “might be counter-productive.” While conferring authority to
+regulate bond issues by holding companies that were affiliated with banking institutions—and whose borrowings
+could he used in mortgage lending activities by those institutions—the bill made no provision for regulating similar
+bond issues by corporations that had no links to the banking industry, Rousselot pointed out.
+That being the case, Rousselot went on, the bill allowed limits “on issues which might devote some or all of the
+funds raised to the making of mortgages while doing nothing to limit competition for savings funds from other
+quarters.”
+James M. Hanley (D N. Y.) argued that HE 15928 would accomplish nothing because the Federal Reserve Board had
+made clear it would not act promptly to regulate variable interest bond issues by bank holding companies. Because
+such issues “violate the letter and spirit” of federal banking regulations, Hanley said, “if the board will not outlaw the
+practice, the Congress should.”
+Edward I. Koch (D N.Y.), on the other hand, opposed the bill as discriminatory against small investors. By allowing
+federal officials to limit interest on issues such as the Citicorp notes, Koch contended, the bill would “reinforce a
+policy which forces small savers to subsidize mortgage borrowers, big and small, by curtailing their investment
+opportunities.”
+The House Sept. 11 passed the bill by a 317–5 vote. (Vote 382, p. 118-H)
+Floor Action
+In brief floor action on HR 15928, the House made no changes in the committee's recommendations, rejecting the
+only amendment that was offered.
+By voice vote, the House defeated an amendment by James V. Stanton (D Ohio) that would have deleted provisions
+giving the Federal Home Loan Bank Board power to regulate notes issued by holding companies affiliated with
+savings and loan associations, which were under the board's jurisdiction.
+On passage, the five votes against HR 15928 were cast by Koch, Bella S. Abzug (D N.Y.), John Conyers Jr. (D Mich.),
+Robert McClory (R Ill.) and Ogden R. Reid (D N.Y.). After passing HR 15982, the House by voice vote substituted its
+provisions for the Senate bill and passed S 3838 as amended.
+Senate Action
+Committee
+The Senate Banking, Housing and Urban Affairs Committee Aug. 21 reported S 3838 (S Rept 93 –1120),
+combining provisions similar to those of HR 15928 with two other measures making changes in federal banking
+laws.
+One provision, first approved by the committee Aug. 8 as separate legislation (S 1933), would permit federally
+regulated banks to underwrite and deal in revenue bonds issued by state and local governments.
+The other, originally approved Aug. 8 as S 3817, would bypass usury laws in Tennessee, Arkansas and Montana by
+permitting national banks and federally insured thrift institutions to charge more than 10 per cent interest on
+business and agriculture loans.
+Revenue Bonds
+As amended by the committee, S 3838 would end after another 18 months a 40-year ban against commercial bank
+dealing in state and local bonds that were secured by revenues earned by providing essential public services.
+By allowing banks to underwrite (guarantee sale of) revenue bond issues, the committee argued, the measure would
+expand state and local government access to financial markets and reduce borrowing costs.
+In separating commercial from investment banking in the Glass-Steagall Act of 1933, Congress prohibited
+commercial banks to underwrite and deal in investment securities issued by private corporations. To facilitate
+government debt financing, however, the act allowed banks to deal in federal government bonds and in general
+obligation bonds issued by state and local governments and backed by their full faith and credit.
+The 1933 act nevertheless continued earlier laws that prohibited banks from underwriting for public sale revenue
+bonds that were backed by expected revenues from user charges on government services. Banks were allowed,
+however, to buy. revenue bonds for their own investment accounts.
+7/2/09 3:27 PMCQ Almanac Online Edition
+Page 4 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224204&type=hitlist&num=6
+Since 1933, revenue bonds had become a much more common form of government financing for public projects
+such as water and sewer facilities, mass transit systems, hospitals and other services supported by fees paid by
+persons using them. Once regarded as more risky investments than general obligation bonds, in recent years
+revenue bonds were considered of better quality, according to the committee's report.
+To put safeguards against abuses by banks dealing in revenue bonds, the committee included provisions that would:
+Prohibit a bank from transferring bonds it had bought as an underwriter to its own investment account.
+Prohibit a bank acting as underwriter or dealer from selling a bond to any of its trust accounts unless so directed by court
+order.
+Require a bank to disclose its role as underwriter or dealer to depositors, customers or other banks that bought the
+bonds.
+Require that bonds underwritten by a bank meet standards set by the comptroller of the currency for bonds included in
+the bank's own investment portfolio.
+Business Loans
+To end a money market squeeze on banks in three states, the committee's bill would permit all national banks and
+federally insured savings and loan associations to charge interest rates on business and agriculture loans up to 5
+per cent more than the Federal Reserve System's discount rate, regardless of state usury restrictions.
+By allowing interest of up to about 13 per cent on such loans, the bill would enable institutions in Tennessee,
+Arkansas and Montana to bypass state laws that put 10 per cent ceilings on business and agriculture loans. Under
+those limits, business and agriculture loans were unprofitable to financial institutions that had to pay up to 13 per
+cent interest to borrow money themselves.
+Most states exempted business loans from interest-rate limits—or set limits on such loans at levels that posed no
+problem in the current money market. But three states had 10 per cent ceilings, Montana by statute and Tennessee
+and Arkansas by state constitutional provisions.
+The committee offered the measure as an interim solution for those three states, applying its provisions only to
+loans made before July 1, 1977. The legislation was intended, the report said, “to give the state legislatures and
+constitutional conventions sufficient time to act and to avoid unemployment and severe economic repercussions
+during the interim.”
+Floor Action
+Before passing S 3838 by voice vote Sept. 10, the Senate adopted amendments that would extend usury-law relief
+to California banks and to investment companies set up to finance small businesses. By voice vote, the Senate
+adopted an amendment by Alan Cranston (D Calif.) that in effect would exempt borrowings by California banking
+institutions from a 10 per cent interest ceiling established by the state's constitution.
+Although California's usury provision did not apply to interest charged by banks and savings and loan associations
+on loans, it had been interpreted as preventing banking institutions—and bank holding companies—from paying
+interest of more than 10 per cent in borrowing funds from the public or other sources. That interpretation would
+prohibit California corporations from issuing variable interest notes such as the Citicorp notes.
+With any change in the state constitution's usury restrictions requiring a referendum that could not be held until June
+1976, the California legislature Aug. 29 petitioned Congress to provide relief from its unintended effects until a
+constitutional amendment could be considered. Accordingly, Cranston's amendment would pre-empt state
+restrictions on interest paid by banking institutions until July 1, 1977, with exceptions for any state that passed
+another law setting an interest-rate limit on banking institution borrowing.
+Small Business
+To encourage small business development in Tennessee, Arkansas and Montana, the Senate by voice vote
+adopted an amendment by Banking, Housing and Urban Affairs Committee Chairman John Sparkman (D Ala.) that
+would exempt small business investment companies (SBICs) from those states' 10 per cent interest rate ceilings.
+Set up under Small Business Administration (SBA) regulation to provide loans to start and develop small firms,
+SBICs were prohibited by SBA rules from charging interest of more than 15 per cent a year. In states with usury
+laws, however, SBICs could not charge more than the state-imposed interest ceilings. (SBIC background, Congress
+and the Nation Vol. II, p. 295; Vol. III, p. 186)
+As a result, few SBICs had been established in Tennessee, Arkansas and Montana, and few loans had gone to
+firms in those states. As provided for banking institutions under S 3838, Sparkman's amendment would allow SBICs
+to charge interest rates of not more than 5 per cent above the Federal Reserve discount rate.
+Other Amendments
+7/2/09 3:27 PMCQ Almanac Online Edition
+Page 5 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224204&type=hitlist&num=6
+By voice vote, the Senate adopted an amendment by John G. Tower (R Texas) that would turn the proceeds from
+unused travelers checks or money orders over to the government of the state in which they were purchased. Under
+existing law, the proceeds went to the state where the company issuing the instruments was headquartered, usually
+New York state.
+The Senate sidestepped more drastic action against abuses in bank bond underwriting by rejecting by voice vote an
+amendment by Philip A. Hart (D Mich.), chairman of the Judiciary Committee Subcommittee on Antitrust and
+Monopoly.
+Hart's amendment would have applied to bank dealings in state and local general obligation bonds the safeguards
+set by S 3838 against abuses in dealings in revenue bonds. It also would have prohibited banks from buying bonds
+from an underwriting syndicate at terms more favorable than the syndicate offered to the general public.
+Sparkman and William Proxmire (D Wis.), the Banking, Housing and Urban Affairs Committee's second-ranking
+Democrat, opposed Hart's amendment as likely to increase state and local government borrowing costs by ending
+negotiation of bond prices.
+Conference Action
+In the conference report on S 3838 (H Rept 93–1440) filed on Oct. 8, conferees resolved largely technical
+differences between the House and Senate language conferring authority to regulate bank holding company bonds.
+Conferees kept a House provision that exempted from regulation bonds issued by a bank holding company that had
+declared its intention to sell its banking subsidiary. They also kept a Senate amendment that specifically exempted
+debt obligations, such as those termed commercial paper, that holding companies and non-bank subsidiaries
+generally sold in large denominations to institutional investors such as life insurance companies, pension funds and
+banks.
+While keeping the Senate's amendments to override state usury law restrictions, the conferees dropped other
+Senate amendments that would have:
+Permitted federally regulated banks to deal in and underwrite the sale of revenue bonds by state and local
+governments. That ended a 40-year ban against bank dealing in revenue bonds, which were secured by revenues
+earned by the project being financed.
+Directed that unclaimed money orders or unused travelers checks be turned over to the state government in the state
+where sold.
+Congress Oct. 11 enacted the provision dealing with disposal of money orders and travelers checks as an
+amendment to comprehensive banking legislation (HR 11221). (Story on HR 11221, this chapter)
+Final Action
+Congress completed action on S 3838 when the Senate Oct. 9 and the House Oct. 11, both by voice votes,
+approved the conference report.
+Document Citation
+"Citicorp Notes." CQ Press Electronic Library, CQ Almanac Online Edition, cqal74-1224204. Originally published in CQ Almanac
+1974 (Washington: Congressional Quarterly, 1975). http://library.cqpress.com/cqalmanac/cqal74-1224204 (accessed July 2,
+2009).
+Document ID: cqal74-1224204
+Document URL: http://library.cqpress.com/cqalmanac/cqal74-1224204
+© 1975, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

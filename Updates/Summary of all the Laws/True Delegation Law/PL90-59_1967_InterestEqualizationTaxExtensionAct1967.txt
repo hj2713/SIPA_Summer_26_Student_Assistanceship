@@ -1,0 +1,319 @@
+2/8/10 1:22 PMCQ Almanac Online Edition
+Page 1 of 6http://library.cqpress.com.ezproxy.cul.columbia.edu/cqalmanac/docu…tion=print&time=1265653285711&PHPSESSID=s2npaf4fmjnrvfa8k3mbd9bdt5
+Document Outline
+Provisions
+Background
+House
+Senate
+Conference
+Interest Equalization Tax Extended for Two Years
+An article from CQ Almanac 1967
+Congress July 31 cleared an Administration-backed bill (HR 6098) extending the Interest Equalization Tax (IET) for two more
+years and giving the President the authority to eliminate the tax or to set it at any level up to 50 percent above the current
+amount of the levy. Congress completed action and the President signed the bill only hours before the tax was to expire.
+The Interest Equalization Tax Extension Act of 1967 (PL 90 - 59 ) continued a tax – first imposed in 1963 and extended by
+Congress in 1965 – to help relieve the chronic U.S. balance-of-payrnents deficit by making it more expensive for foreigners to
+borrow from U.S. sources.
+HR 6098 extended the tax from July 31, 1967, through July 31, 1969. It continued the existing tax rates which, in effect, provided
+the equivalent of an annual 1-percent increase in interest costs for foreign borrowers obtaining capital by selling securities to U.S.
+creditors. (These were a flat 15-percent tax on stocks and a variable levy on bonds according to their maturities.) In addition, the
+bill gave the President discretionary authority to drop the IET altogether or to establish it at any level up to an interest equivalent
+of 1.5 percent. This flexibility ensured that the President would be able to adjust the tax, as domestic or foreign interest rates
+fluctuated, so that it would cost foreigners as much to borrow from U.S. creditors as from foreign creditors.
+However, fearing that U.S. creditors would quickly purchase large amounts of foreign securities in anticipation of an increase in
+the IET, Congress adopted an Administration-proposed provision making an effective rate of 1.5 percent mandatory over the
+period from Jan. 26, 1967, the day the President proposed the bill, until 30 days after enactment. Unless the President ordered
+the 1.5-percent rate retained or established some other rate, the charge at the end of the 30-day period automatically would
+revert to the 1-percent rate of existing law. on Aug. 28, President Johnson signed an Executive Order reducing the effective rate
+of the IET from 1.5 percent to 1.25 percent. In addition to reducing the variable levy on bonds, the new rate, which went into
+effect Aug. 30, resulted in setting the flat tax on purchase of foreign stocks at 18.75 percent. (Under the 1.5-percent IET, the tax
+on stock purchases had been 22.5 percent.)
+The bill also included language eliminating an alleged loophole in the law which the Treasury said allowed stock market
+“operators” to evade payment of the tax. Utilizing an existing exemption from the levy for foreign securities transactions between
+Americans, the Treasury said, the operators had purchased the securities at lower costs in foreign markets and then sold them at
+higher prices tax-free in U.S. markets by attaching fraudulent certificates of U.S. ownership. The new bill contained strict rules
+which allowed tax-free sales only when American sellers had obtained validation from either the Internal Revenue Service or an
+authorized securities dealer that the tax had been paid or that the security otherwise was exempt from payment.
+(At the outset, the private dealers authorized to validate the securities were to include any member of the New York or American
+Stock Exchanges, large banks in major cities, and the larger member dealers affiliated with the National Assn. of Securities
+Dealers. (For details, see provisions, below.) Eventually, however, the procedure was to be tightened to limit participation to those
+institutions which agreed to comply with Treasury bookkeeping, auditing, reporting and other requirements issued to implement
+the provision.)
+President Johnson, in requesting the bill Jan. 26, had asked for the two-year extension of the tax together with discretionary
+authority to vary the levy between the equivalent interest rates of zero and 2 percent. Both the House and the Senate provided
+the full two-year extension, but the House restricted the President's flexible rate-making authority to a range of only 1.0 to 1.5
+percent. House and Senate conferees in agreeing on a final version of the bill accepted the House ceiling of 1.5 percent together
+with the Senate and Administration-proposed floor of zero.
+In debate on the bill, Republicans in both chambers criticized the Administration for continuing to seek mere “palliatives” (as they
+called the IET) to solve the balance-of-payments problem and contended that the President should begin to seek a permanent
+solution. Some Republicans charged that the “real problem” was “excessive Government spending abroad” such as the foreign
+aid program.
+Provisions
+2/8/10 1:22 PMCQ Almanac Online Edition
+Page 2 of 6http://library.cqpress.com.ezproxy.cul.columbia.edu/cqalmanac/docu…tion=print&time=1265653285711&PHPSESSID=s2npaf4fmjnrvfa8k3mbd9bdt5
+As signed into law (PL 90 - 59 ) July 31, HR 6098, the Interest Equalization Tax Extension Act of 1967:
+Extension of Tax. Extended the Interest Equalization Tax for two years, from July 31, 1967, through July 31, 1969.
+Continued the existing tax, which in effect provided the equivalent of a 1-percent increase in interest costs for foreign borrowers
+obtaining capital from U.S. sources either from the sale of stocks or from the sale of bonds or other debt obligations with
+maturities of one year or more.
+Provided discretionary authority for the President to eliminate the tax altogether or to set it at any level up to the equivalent of an
+interest charge of 1.5 percent.
+Provided that during the period from Jan. 26, 1967, the day the President made his request to Congress, until 30 days after
+enactment of HR 6098, a tax equivalent to a 1.5-percent interest cost was to be in effect to forestall large purchases of foreign
+stocks and debt obligations in anticipation of an increase in the tax rate by Presidential order.
+Anti-Evasion Provision. Authorized the continuation of tax-free sale of foreign securities from one American or American firm to
+another only when the seller obtained validation that the tax had been paid on the securities or that the securities were exempt
+from the tax. (Existing law required the sellers only to prove American ownership of the securities – a condition which presumed
+but did not ensure that the tax had been paid or that the securities were exempt.)
+Stipulated that the validation requirement could be satisfied by the seller's receiving either a “validation certificate” issued by the
+Internal Revenue Service or an “IET clean confirmation” issued by an authorized private institution.
+Stipulated that, during a transitional period extending from July 15 to Aug. 14, 1967, the institutions authorized to issue the “clean
+confirmations” were to include all members and member firms of the New York and American Stock Exchanges; large member
+firms of the National Assn. of Securities Dealers (those whose net worth was over $750,000 or who engaged in 300 or more
+transactions in foreign securities during the week of either July 2 or July 9, 1967); and all Federal Reserve Banks classified as
+“reserve city banks” (generally large banks in major cities).
+Provided that after the transitional period ended, the firms initially participating could continue to issue the confirmations only if
+they filed statements with the Treasury that they would comply with documentation, bookkeeping, reporting and auditing
+requirements issued by the Treasury to implement the provision. Also stipulated that during this permanent phase, members of
+any other national securities exchange or association (so long as the national grouping was registered with the Securities and
+Exchange Commission) could become participants if they agreed to comply with the Treasury requirements.
+Exemptions. Provided an exemption from the tax for foreign mortgage notes and other debt obligations acquired by Americans in
+connection with the sale of real property located outside the United States which they held prior to initiation of the tax in July
+1963. Specifically provided that the exemption was to include obligations received with respect to the sale of real property by: (1)
+the estates or trusts of deceased Americans when the property was acquired by the deceased person prior to the 1963
+imposition of the tax and was held continuously by him until his death; and (2) trusts set up by living Americans when the person
+establishing the trust had acquired the property prior to imposition of the tax and subsequently had put it into trust.
+Exempted foreign stock or debt obligations acquired by a foreigner during the first 90 days of his residency in the United States.
+Provided, however, that securities purchased under the exemption would be subject to the tax if subsequently sold to Americans.
+Made several other minor exemptions and modifications in the existing provisions of the tax.
+Background
+REFERENCES – 1965 Almanac p. 870; 1964 Almanac p. 545.
+The Interest Equalization Tax was enacted by Congress in 1964 (PL 88-563) as a temporary measure to reduce a heavy and
+continued outflow of dollars resulting from borrowing and stock issues of foreign governments and businesses in U.S. money
+markets. In order to prevent a large outflow of dollars during the period the measure was moving through the Congress, the law
+was made retroactive to the July 1963 date on which it was proposed by President Kennedy, and it remained in effect through
+Dec. 31, 1965.
+The tax worked this way: Americans would pay the tax, at rates provided in the bill, when they acquired a foreign security
+(primarily stocks or bonds). The Americans then would pass on the extra cost of the tax to the foreign borrower, either through
+charging a higher interest rate on a loan or by demanding a discount on the purchase of the stock. With that increase, the cost of
+obtaining capital in the United States was expected to be at a level comparable with European markets.
+For example, an American buying $100 worth of foreign stock would have to pay the Government a flat 15 percent, or $15, in tax.
+He presumably would insist that the foreign seller reduce the price of the stock to $85. If the American were buying debt
+obligations (primarily bonds), the tax would range from 1.05 percent on obligations of 1-year maturity to 15 percent on those of
+28-1/2 years or longer maturity. The seller would be expected to increase the interest he would pay on the loan to compensate
+for the tax the American would pay.
+Final 1963 balance-of-payments figures indicated that the tax did hold down long-term foreign borrowing in U.S. money markets.
+Sales of new foreign securities to U.S. residents fell from a total of $999 million in the first half of 1963 to $251 million in the
+second half of that year.
+An exemption from the tax, provided in the law for commercial bank loans, proved to be a serious loophole. Lending abroad by
+2/8/10 1:22 PMCQ Almanac Online Edition
+Page 3 of 6http://library.cqpress.com.ezproxy.cul.columbia.edu/cqalmanac/docu…tion=print&time=1265653285711&PHPSESSID=s2npaf4fmjnrvfa8k3mbd9bdt5
+An exemption from the tax, provided in the law for commercial bank loans, proved to be a serious loophole. Lending abroad by
+U.S. banks increased substantially during 1964. President Johnson Feb. 10, 1965, issued an Executive Order extending the tax
+to cover U.S. bank loans made to foreigners (with maturities of 1 to 3 years) under standby authority given him in the original law
+if he decided the exemption were being abused.
+(On Feb. 20, 1967, the President modified his Feb. 10, 1965, order to put U.S. branch banks abroad “on an equal footing with
+foreign banks in dollar operations, and to increase the sources of offshore funds available to U.S. corporations and their foreign
+subsidiaries for their foreign operations.” The effect of the Executive Order was to remove dollar loans made to foreigners by U.S.
+branch banks abroad from liability for the tax.)
+Other exemptions were provided by authorizing the President to exempt new securities issues of a foreign country if he decided
+the tax imperiled the stability of the intermonetary system; this was intended to benefit Canada. Another exemption was made for
+securities of less developed countries (to be designated by the President).
+In his Feb. 10, 1965, balance-of-payments message, Mr. Johnson also announced that all new securities issued or guaranteed
+by the Japanese Government would be exempted up to a total of $100 million annually.
+Congress in the summer of 1965 passed an Administration bill extending the tax for 19 months through July 31, 1967. As signed
+into law (PL 89-243) Oct. 9, 1965, the bill broadened the scope of the tax to cover the purchase of foreign bonds with a maturity
+period of 1 to 3 years; the original Act taxed only purchases of bonds of more than three years maturity.
+1967 Action
+The President, in his 1967 Economic Report to Congress Jan. 26, asked that the tax be extended for two years and
+strengthened. He said, “This tax has proved extremely useful in limiting the borrowing of developed countries in our capital
+markets and in reinforcing the Federal Reserve voluntary program (to reduce dollar outflow). As we move toward easier money in
+the United States, foreign borrowing in our financial markets may tend to increase.”
+He asked for discretionary authority to vary the tax between zero and 2 percent to reflect changes in the spread of interest rates
+between U.S. and foreign money markets.
+House
+COMMITTEE – Ways and Means.
+HELD HEARINGS – Feb. 15 and 16 on the Administration's bill (HR 3813), introduced Jan. 25 by Committee Chairman Wilbur D.
+Mills (D Ark.).
+TESTIMONY – Feb. 15 – Treasury Under Secretary Frederick L. Deming related the legislation directly “to the Administration's
+efforts to ease the domestic credit situation.” He said, “In fostering easier domestic credit…we cannot ignore the potential effects
+on international capital flows and therefore on the U.S. balance of payments.”
+Deming said that in December 1966 the average yield on outstanding long-term bonds issued by West European governments
+was almost 1.5 percentage points above the yield on U.S. Treasury long-term bonds. He said many of the potential foreign
+borrowers were foreign governments which would seek to attract U.S. investors who might otherwise invest in U.S. Government
+bonds or other high-grade U.S. issues. In the first half of 1963, prior to enactment of the IET, he said, foreign governments were
+borrowing here at an annual rate of $200 million. With the growing number of large international corporations, there also was
+increasing private resort to international capital markets, he added.
+Despite the tax, he said, private firms and government agencies in advanced countries between Feb. 10, 1965, and Dec. 31,
+1966, drew an estimated $275 million of long-term funds, under U.S. bank commitments.
+He said the balance-of-payments problem was not solved and so long as the Viet Nam war continued “our payments position will
+be unusually heavily burdened.”
+“In mid-1963, we were faced with an alarming acceleration of foreign demand for long-term U.S. portfolio capital. Between 1961
+and 1962, new foreign security-issues in our market approximately doubled (from $523 million to $1,076,000,000). During the first
+half of 1963, the level of new issues continued upward at a rapid pace. These increases were accompanied by a deterioration in
+our overall balance-of-payments position.”
+By contrast, Deming said, in 1966 there were only $19 million of taxable new security issues, and in 1965 there were $93 million
+(of which all but $13 million reflected a special situation of United Kingdom firms borrowing here to finance direct-investment
+expenditures in the United States).
+During 1966, an important factor curtailing foreign portfolio borrowing here was the heavy loan demands by U.S. borrowers, he
+said.
+Deming stressed the President's need for flexibility because the interest rate differential between the United States and abroad
+could move in either direction.
+He said the legislation was regulatory rather than a revenue measure; the total tax collected from its inception through 1966 was
+only $54 million. He said the President was not requesting Congress to delegate its taxing power.
+Feb. 16 – The New York Stock Exchange called for exemptions on outstanding stocks of foreign companies. A spokesman said
+2/8/10 1:22 PMCQ Almanac Online Edition
+Page 4 of 6http://library.cqpress.com.ezproxy.cul.columbia.edu/cqalmanac/docu…tion=print&time=1265653285711&PHPSESSID=s2npaf4fmjnrvfa8k3mbd9bdt5
+Feb. 16 – The New York Stock Exchange called for exemptions on outstanding stocks of foreign companies. A spokesman said
+that the balance-of-payments problem worsened because Europeans sold their stocks in U.S. corporations when the tax
+undermined reciprocal relationships. The Exchange also asked that the extension be limited to one year, that the rates on new
+issues of foreign securities not be raised, and questioned giving the President authority to vary the rate.
+The Investment Bankers Assn. of America, urged a one-year extension, a more positive long-term solution to the problem, no
+increases in rates on stocks, and authority for the President to vary rates on bonds and other debt securities up to twice the
+existing rate.
+The American Bankers Assn. (ABA) opposed the new provisions of the bill but said it would not object to an extension of the
+existing tax up to 18 months.
+Others opposed to the bill included the National Assn. of Manufacturers (NAM), the Investors League, Inc., and the National
+Assn. of Securities Dealers (NASD).
+ACTION. The Committee March 6 reported a clean bill (HR 6098 – H Rept 68) which had been introduced Feb. 27 by Mills. The
+principal difference from the Administration bill was to limit the authority of the President to vary the tax rate from an interest
+equivalent of 1 to 1.5 percent rather than from zero to 2 percent as he requested.
+Majority Views. The IET, used in conjunction with other Administration endeavors, had lessened considerably the balance-of-
+payments problem, the report said. (Measured on an over-all or “liquidity” basis, which reflected private foreign dollar holdings as
+well as holdings of foreign central banks and other foreign official accounts, the deficit fell from an average of $2.5 billion in 1961
+through 1964, to $1.3 billion in 1965 and, despite the increased overseas spending necessitated by the Viet Nam war, to an
+estimated $1.4 billion in 1966.)
+The two-year extension was meant to emphasize that the tax would not be considered as a permanent component of the tax
+structure, but as a transitional device to permit orderly progress to a satisfactory long-run solution to the problem, the majority
+contended.
+As monetary pressures in the United States eased, the report said, renewed pressure might be created for an outflow of U.S.
+capital; however the interest rate differential between the United States and other industrialized nations was unlikely to widen
+beyond 1.5 percent. As a result, the majority concluded, it was necessary to provide the President authority to vary the tax rate
+between narrow limits to ensure that the levy remained a flexible instrument.
+Treasury Secretary Henry H. Fowler submitted a letter to the Committee stating that the Administration did not regard the grant of
+authority to vary the rates as a precedent for a grant of similar authority with respect to the domestic tax system.
+Republican Views. Byrnes (Wis.), Schneebeli (Pa.), Collier (Ill.), Broyhill (Va.), Conable (N.Y.) and Bush (Texas) agreed with
+Republican colleagues (below) that the Administration had failed to adopt appropriate measures to meet the balance-of-payments
+problem, but said even temporary measures might be preferable to no action.
+Curtis (Mo.), Utt (Calif.), Betts (Ohio) and Baffin (Mont.) said they were opposed to the enactment of HR 6098 and to an increase
+in the rate of tax. They said the bill “merely serves to becloud the real problem – excessive Government spending abroad.”
+Government expenditures produced a deficit in the balance of payments of more than $3 billion per year, exclusive of Viet Nam,
+they said, but the private sector of the economy did not give rise to the problem. Nearly four years since the “temporary”
+measure was first proposed, the Administration still saw no solution, the four Republicans said.
+Floor Action
+The House March 15 passed HR 6098 by a 261–138 roll-call vote. (See vote 21, p. 12-H.)
+Prior to passage, the House by a voice vote rejected a motion by Thomas B. Curtis (R Mo.) to recommit (kill) the bill.
+Also prior to passage, the House by voice vote accepted three committee amendments, generally involving technical aspects of
+the legislation.
+John B. Anderson (R Ill.) said the original legislation was requested by the President “on a stopgap or temporary basis to buy
+time….” He said HR 6098, the second renewal of the legislation “serves to illustrate that in Government parlance, there is nothing
+quite so permanent as a temporary tax.” He viewed with “some concern” the granting of discretionary authority to the President
+because previous administrations had wanted the authority “to tinker on some kind of discretionary basis with the tax structure of
+this country.”
+Curtis criticized the Department of Commerce and the Federal Reserve Board for sending the Committee press releases when
+the Committee had asked for statements about the balance-of-payments problem. He called the Government's spending abroad
+in aid and loan programs “the real villain.”
+Mills said the Committee viewed the measure as temporary. He said he hoped that by July 1969 “it will not be necessary to
+extend the tax further.” He said it would be repealed as soon as the balance-of-payments situation permitted. He also said there
+was a need for flexibility in the tax but insisted the authority granted the President was not a precedent for other areas of the tax
+law. “We do it (in HR 6098) because we do not know how far our rates of interest will drop here in the next few months
+compared to how far the rates of interest will drop in some of these foreign countries.”
+Curtis argued that the bill was designed to curb private investment abroad but there was no inclination on the part of the
+Administration to curb Government investment abroad. He called the bill a “palliative” which does nothing about correcting “the
+basic disease.”
+2/8/10 1:22 PMCQ Almanac Online Edition
+Page 5 of 6http://library.cqpress.com.ezproxy.cul.columbia.edu/cqalmanac/docu…tion=print&time=1265653285711&PHPSESSID=s2npaf4fmjnrvfa8k3mbd9bdt5
+PROVISIONS – As passed by the House, HR 6098:
+Extended the Interest Equalization Tax for two years, from July 31, 1967, to July 31, 1969.
+Continued the existing tax which, in effect, provided the equivalent of a 1-percent increase in interest costs for foreign borrowers
+obtaining capital from U.S. sources either from the sale of stock or from the sale of debt obligations with a maturity of one year or
+more.
+Authorized the President to vary the tax between the interest equivalents of 1 percent and 1.5 percent.
+Provided that during the period from Jan. 26, 1967, the day the President made his requests to Congress, until 30 days after the
+enactment of HR 6098, a tax equivalent to a 1.5-percent interest cost was to be in effect to forestall large purchases of foreign
+stocks and debt obligations in anticipation of an increase in the tax rate by Presidential order.
+Exempted debt obligations acquired by Americans in connection with the sale of real property located outside the United States
+which they held before the initiation of the tax in July 1963.
+Exempted stock or debt obligations acquired by a foreigner during the first 90 days of residency in the United States. Provided,
+however, that securities purchased under the exemption would be subject to the tax if subsequently sold to Americans.
+Made several other minor modifications in the existing provisions of the tax.
+Senate
+COMMITTEE – Finance.
+HELD HEARINGS – July 14 and 17 on HR 6098.
+TESTIMONY – July 14 – Frederick L. Deming, Under Secretary of the Treasury for Monetary Affairs, called for strong action to
+prevent “unscrupulous persons” from selling foreign securities tax free in the United States by means of false representation of
+American ownership. Deming said investigations by the Internal Revenue Service had determined illegal security transactions of
+this kind on the order of $100 million to $150 million a year. (Numerous press accounts said other high officials believed the
+volume of such transactions was more likely in the range of an annual $250 million to $1 billion.)
+Stanley S. Surrey, Assistant Treasury Secretary for Tax Policy, explained that the evasion scheme worked by operators buying
+and selling stocks through dummy corporations chartered in foreign countries and paying expatriate Americans $10 or more to
+sign false certificates of stock ownership. Surrey said that one American woman of “insubstantial means” who lived in Bermuda
+had signed certificates over the last six months affirming ownership of over $10 million in foreign stocks.
+The two officials submitted an amendment to tighten the loophole by requiring American sellers of foreign securities to obtain
+validation from the IRS or certain approved private institutions that the tax actually had been paid. In anticipation of
+Congressional action, they said, the IRS July 15 would begin issuing “validation certificates” to American holders of foreign
+securities who already had paid the tax, and approved private institutions would begin issuing “IET clean confirmations” on new
+transactions. Concerns eligible to issue the confirmations were to include all member firms of the New York and American stock
+exchanges, large banks in major U.S. cities, and the larger members of the National Assn. of Securities Dealers (NASD). (It was
+widely believed that the restriction of NASD eligibility to the larger dealers was intended to eliminate from the foreign securities
+market a number of small firms that the IRS suspected of participating in the evasion scheme.) So that sellers of securities would
+begin using the validations immediately, the Treasury asked that the validation requirement be made retroactive to July 15.
+Sen. John J. Williams (R Del.), a member of the Committee, strongly criticized the Treasury officials for not learning of the evasion
+scheme until three years after the tax had been enacted. Surrey replied that the Treasury had made every effort to enforce the
+tax but had learned of the new scheme through the Securities and Exchange Commission (SEC) only several months before.
+Since that time, he said, investigators had worked “day and night” to determine who was involved in the transactions and how to
+tighten the loophole.
+ACTION – The Committee July 21 reported HR 6098 (S Rept 405) with amendments. The measure was approved by a 12–3
+vote. All the major changes adopted by the panel were key Administration requests: (1) approval of the requirement that
+American sellers of foreign securities acquire validation of their payment of the tax; (2) restoration of a maximum tax rate
+equalling an interest charge of 2 percent; and (3) restoration of the President s discretionary authority to vary the tax rate
+between interest equivalents of zero and 2 percent.
+Floor Action
+The Senate July 25 passed HR 6098 by voice vote and sent the measure to conference with the House.
+Prior to passage, the Senate by a 45–39 roll-call vote accepted an amendment by Eugene J. McCarthy (D Minn.) authorizing
+exemptions from the IET on foreign mortgage notes and other debt obligations acquired by trusts set up by living Americans
+through sales of real property located outside the United States which the person setting up the trust had held prior to initiation of
+the tax in July 1963. (The House bill had authorized the exemption for obligations acquired by private Americans, and the Senate
+Finance Committee had broadened the provision to make it applicable to trusts set up by a will.) The amendment was designed
+to accommodate a sale of $2.5 million in trust property in the Bahamas which otherwise would be subject to the tax. (See vote
+140, p. 33-S.)
+2/8/10 1:22 PMCQ Almanac Online Edition
+Page 6 of 6http://library.cqpress.com.ezproxy.cul.columbia.edu/cqalmanac/docu…tion=print&time=1265653285711&PHPSESSID=s2npaf4fmjnrvfa8k3mbd9bdt5
+The McCarthy amendment was opposed strongly by two members of the Finance Committee, John J. Williams (R Del.) and Albert
+Gore (D Tenn.), who contended its purpose was only to aid “special interests.” Proponents, however, said the exemption would
+help improve the U.S. balance of payments by giving the trusts an inducement to repatriate proceeds of their property sales to
+the United States.
+In other action, the Senate by a 34–51 roll call rejected an amendment by Williams to reduce the extension period of the IET
+from two years to one. Williams argued that the shorter extension would allow Congress to “better evaluate” the continuing “effect
+and effectiveness” of the tax. Because U.S. interest rates currently were almost competitive with those in Europe, he said, “the
+need to close the interest rate gap through the interest equalization tax is…less than urgent.” (See vote 139, p. 33-S.)
+PROVISIONS – As passed by the Senate, HR 6098 contained the same major provisions as the House-passed bill with the
+exception of the committee and floor amendments discussed above.
+Amendment Accepted
+July 25 – Eugene J. McCarthy (D Minn.) – Provide an exemption from the IET for foreign mortgage notes and other debt
+obligations acquired by trusts set up by living Americans through sales of real property located outside the United States which
+the person setting up the trust had held prior to initiation of the tax in July 1963. Roll-call vote 45–39.
+Amendment Rejected
+July 25 – John J. Williams (R Del.) – Reduce the bill's extension period for the IET from two years to one Roll-call, 34–51.
+Conference
+REPORT – House and Senate conferees July 27 filed a conference report (H Rept 518) resolving differences between the two
+versions of the bill. on the major variations between the measures, conferees: (1) accepted the Senate provision (not requested
+by the Treasury until after House action) which required American sellers of foreign securities to secure validation that tax
+requirements had been satisfied before they could make a transaction tax-free; and (2) agreed to a compromise settlement on the
+issue of the President's discretionary authority to vary the rates of the tax. The compromise retained the Senate provision to
+authorize the President to eliminate the levy or set it at any level below the existing interest equivalent of 1 percent, and it also
+retained the House provision for a ceiling on the President's rate-making authority of no more than an effective rate of 1.5
+percent (as opposed to the Senate maximum of 2 percent).
+FINAL ACTION – The House July 31 by a 224–83 roll-call vote and the Senate the same day by voice vote adopted the
+conference report on HR 6098. (See vote 104, p. 48-H.)
+The actions sent the bill to the President, who signed it into law (PL 90 - 59) only hours prior to the scheduled expiration of
+the tax.
+Document Citation
+"Interest Equalization Tax Extended for Two Years." CQ Press Electronic Library, CQ Almanac Online Edition, cqal67-1314183. Originally
+published in CQ Almanac 1967 (Washington: Congressional Quarterly, 1968). http://library.cqpress.com/cqalmanac/cqal67-1314183 (accessed
+February 8, 2010).
+Document ID: cqal67-1314183
+Document URL: http://library.cqpress.com/cqalmanac/cqal67-1314183
+© 1968, 2010, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

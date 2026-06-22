@@ -115,7 +115,7 @@ class DocumentService:
         content_type: str,
         content_hash: str | None = None,
         metadata: dict[str, Any] | None = None,
-        workspace_id: str = "TEST",
+        workspace_id: str = "PRODUCTION",
     ) -> DocumentRow:
         """Create a new document record in the database under a specific workspace."""
         import uuid
@@ -317,7 +317,7 @@ def create_document(
     content_type: str,
     content_hash: str | None = None,
     metadata: dict[str, Any] | None = None,
-    workspace_id: str = "TEST",
+    workspace_id: str = "PRODUCTION",
 ) -> DocumentRow:
     return document_service.create_document(
         client, user_id, filename, file_path, file_size, content_type, content_hash, metadata, workspace_id

@@ -10,6 +10,8 @@ from app.repositories.base import (
     BaseDocumentChunkRepository,
     BaseDashboardRepository,
     BaseDashboardDocumentRepository,
+    BaseWorkflowRepository,
+    BaseWorkflowVersionRepository,
     BaseThreadRepository,
     BaseMessageRepository,
     BaseLlmUsageLogRepository,
@@ -470,6 +472,77 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
     def delete_by_document(self, document_id: str) -> None:
         self.conn.execute("DELETE FROM dashboard_documents WHERE document_id = ?;", (str(document_id),))
 
+class SQLiteWorkflowRepository(BaseWorkflowRepository):
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+
+    def get_by_id(self, workflow_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute("SELECT * FROM coding_workflows WHERE id = ?;", (workflow_id,)).fetchone()
+        return dict(row) if row else None
+
+    def create(self, workflow_id: str, workspace_id: str, name: str, description: str, draft_definition: str, created_by: str) -> Dict[str, Any]:
+        self.conn.execute(
+            """
+            INSERT INTO coding_workflows
+                (id, workspace_id, name, description, status, draft_definition, revision, latest_version, created_by)
+            VALUES (?, ?, ?, ?, 'draft', ?, 1, 0, ?);
+            """,
+            (workflow_id, workspace_id, name, description, draft_definition, created_by),
+        )
+        return self.get_by_id(workflow_id)
+
+    def update(self, workflow_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        if updates:
+            keys = list(updates.keys())
+            assignments = ", ".join(f"{key} = ?" for key in keys)
+            values = [updates[key] for key in keys] + [workflow_id]
+            self.conn.execute(
+                f"UPDATE coding_workflows SET {assignments}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?;",
+                values,
+            )
+        return self.get_by_id(workflow_id)
+
+    def delete(self, workflow_id: str) -> None:
+        self.conn.execute("DELETE FROM coding_workflows WHERE id = ?;", (workflow_id,))
+
+    def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM coding_workflows WHERE workspace_id = ? ORDER BY updated_at DESC;",
+            (workspace_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+class SQLiteWorkflowVersionRepository(BaseWorkflowVersionRepository):
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+
+    def create(self, version_id: str, workflow_id: str, version: int, definition_json: str, definition_hash: str, changelog: str, created_by: str) -> Dict[str, Any]:
+        self.conn.execute(
+            """
+            INSERT INTO coding_workflow_versions
+                (id, workflow_id, version, definition_json, definition_hash, changelog, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+            """,
+            (version_id, workflow_id, version, definition_json, definition_hash, changelog, created_by),
+        )
+        return self.get(workflow_id, version)
+
+    def get(self, workflow_id: str, version: int) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT * FROM coding_workflow_versions WHERE workflow_id = ? AND version = ?;",
+            (workflow_id, version),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def list_by_workflow(self, workflow_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM coding_workflow_versions WHERE workflow_id = ? ORDER BY version DESC;",
+            (workflow_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 class SQLiteThreadRepository(BaseThreadRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
@@ -645,12 +718,18 @@ class SQLiteUnitOfWork(BaseUnitOfWork):
             self.conn.execute("PRAGMA foreign_keys = ON;")
             self.conn.row_factory = sqlite3.Row
         
+        if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+            from app.tests.base import SafeTestConnection
+            self.conn = SafeTestConnection(self.conn)
+            
         self._users = SQLiteUserRepository(self.conn)
         self._workspaces = SQLiteWorkspaceRepository(self.conn)
         self._documents = SQLiteDocumentRepository(self.conn)
         self._chunks = SQLiteDocumentChunkRepository(self.conn)
         self._dashboards = SQLiteDashboardRepository(self.conn)
         self._dashboard_documents = SQLiteDashboardDocumentRepository(self.conn)
+        self._workflows = SQLiteWorkflowRepository(self.conn)
+        self._workflow_versions = SQLiteWorkflowVersionRepository(self.conn)
         self._threads = SQLiteThreadRepository(self.conn)
         self._messages = SQLiteMessageRepository(self.conn)
         self._usage_logs = SQLiteLlmUsageLogRepository(self.conn)
@@ -678,6 +757,14 @@ class SQLiteUnitOfWork(BaseUnitOfWork):
     @property
     def dashboard_documents(self) -> BaseDashboardDocumentRepository:
         return self._dashboard_documents
+
+    @property
+    def workflows(self) -> BaseWorkflowRepository:
+        return self._workflows
+
+    @property
+    def workflow_versions(self) -> BaseWorkflowVersionRepository:
+        return self._workflow_versions
 
     @property
     def threads(self) -> BaseThreadRepository:

@@ -4,13 +4,14 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from app.core.database import get_db_conn
 from app.services import coding_service
 
+from app.tests.conftest import TEST_USER_ID
+
 @pytest.fixture
 def clean_db():
     """Ensure dashboards and dashboard_documents are clean before each test."""
     with get_db_conn() as conn:
-        conn.execute("DELETE FROM dashboard_documents;")
-        conn.execute("DELETE FROM dashboards;")
-        conn.execute("DELETE FROM documents;")
+        conn.execute("DELETE FROM documents WHERE user_id = ?;", (TEST_USER_ID,))
+        conn.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
         conn.commit()
     yield
 
@@ -59,7 +60,7 @@ def test_list_and_get_campaigns(client, auth_headers, clean_db):
     db_id = "test-dashboard-123"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Test C', 'Desc C', 'Prompt C', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Test C', 'Desc C', 'Prompt C', '[]');",
             (db_id,)
         )
         conn.commit()
@@ -81,13 +82,13 @@ def test_link_campaign_documents_and_override_cell(client, auth_headers, clean_d
     
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Campaign Override', 'Desc', 'Prompt', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Campaign Override', 'Desc', 'Prompt', '[]');",
             (db_id,)
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
-            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
             """,
             (doc_id,)
         )
@@ -132,7 +133,7 @@ def test_delete_campaign(client, auth_headers, clean_db):
     db_id = "test-dashboard-delete"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'To Delete', 'Desc', 'Prompt', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'To Delete', 'Desc', 'Prompt', '[]');",
             (db_id,)
         )
         conn.commit()
@@ -151,7 +152,7 @@ def test_update_campaign_details_and_schema(client, auth_headers, clean_db):
     db_id = "test-dashboard-update-settings"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Old Name', 'Old Desc', 'Old Prompt', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Old Name', 'Old Desc', 'Old Prompt', '[]');",
             (db_id,)
         )
         conn.commit()
@@ -194,13 +195,13 @@ def test_override_cell_value_and_reasoning(client, auth_headers, clean_db):
     doc_id = "test-doc-override-reason"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Campaign Override', 'Desc', 'Prompt', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Campaign Override', 'Desc', 'Prompt', '[]');",
             (db_id,)
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
-            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
             """,
             (doc_id,)
         )
@@ -230,13 +231,13 @@ def test_history_tracking_on_manual_override(client, auth_headers, clean_db):
     doc_id = "test-doc-override-history"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Campaign Override History', 'Desc', 'Prompt', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Campaign Override History', 'Desc', 'Prompt', '[]');",
             (db_id,)
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
-            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
             """,
             (doc_id,)
         )
@@ -302,13 +303,13 @@ def test_cell_reevaluation_ai(client, auth_headers, clean_db):
     
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Campaign Reeval', 'Desc', 'Prompt', ?);",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Campaign Reeval', 'Desc', 'Prompt', ?);",
             (db_id, json.dumps(schema))
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
-            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
             """,
             (doc_id,)
         )
@@ -363,7 +364,7 @@ def test_regenerate_campaign_schema(client, auth_headers, clean_db):
     db_id = "test-db-regenerate-schema"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Regen Schema', 'Old Desc', 'Test Prompt', '[]');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Regen Schema', 'Old Desc', 'Test Prompt', '[]');",
             (db_id,)
         )
         conn.commit()
@@ -435,13 +436,13 @@ def test_column_reevaluation_endpoint(client, auth_headers, clean_db):
     
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Col Reeval', 'Desc', 'Prompt', ?);",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Col Reeval', 'Desc', 'Prompt', ?);",
             (db_id, json.dumps(schema))
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
-            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
             """,
             (doc_id,)
         )
@@ -497,13 +498,13 @@ def test_row_reevaluation_endpoint(client, auth_headers, clean_db):
     
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'TEST', 'Row Reeval', 'Desc', 'Prompt', ?);",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Row Reeval', 'Desc', 'Prompt', ?);",
             (db_id, json.dumps(schema))
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status)
-            VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
+            VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'test_doc.txt', 'some/path', 123, 'text/plain', 'completed');
             """,
             (doc_id,)
         )

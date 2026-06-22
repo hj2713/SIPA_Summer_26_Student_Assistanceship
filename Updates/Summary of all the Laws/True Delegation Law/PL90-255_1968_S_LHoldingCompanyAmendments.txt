@@ -1,0 +1,163 @@
+7/2/09 1:24 PMCQ Almanac Online Edition
+Page 1 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal68-1283528&type=hitlist&num=0
+Document Outline
+Background
+Committee Action
+Floor Action
+S&L Holding Companies
+An article from CQ Almanac 1968
+The Senate Jan. 30 cleared for the President's signature a bill (S 1542) to provide additional federal control over
+savings and loan holding companies . Final action came when the Senate accepted House amendments to the
+legislation.
+The purpose of the bill was to give the Federal Savings and Loan Insurance Corp. (FSLIC), which was administered
+by the Federal Home Loan Bank Board (FHLBB), authority to protect savings and loan (S&L) associations from
+abuses by parent savings and loan holding companies . S 1542 in effect replaced the existing law dealing with
+S&L holding companies . That law – the 1959 Spence Act – limited the expansion of holding companies
+but did not provide strong regulatory powers to control the activities of the industry.
+The 1968 legislation was requested several times by President Johnson, most recently in his Feb. 1 Economic
+Report. S 1542 was passed by the Senate in 1967 and by the House on Jan. 23 (see below). (For story on
+Economic Report, see p. 183.)
+Administration officials contended that much greater regulatory problems occurred with S&L associations that were
+controlled by holding companies  than with associations not subject to holding -company control. The
+officials noted that although only about 12.5 percent of all assets of the savings and loan industry were owned by 
+holding companies , the S&L associations which were owned by holding companies  accounted for more than
+60 percent of the “serious (financial) problem cases” before the FHLBB.
+The increased regulatory powers conferrred by the bill were said to be necessary to prevent holding companies
+from ruining S&L associations which they controlled. Holding companies  could – and sometimes did – use the
+assets of controlled S&Ls to pay for activities in other areas. If these other activities ran into financial trouble, the
+S&L assets could be dipped into more deeply and the associations could be pressured to increase their earnings
+through financially shakey practices such as investing in speculative real estate. One proponent of the bill, Rep.
+Henry S. Reuss (D Wis.), contended that holding companies  had been known to invest in racetrack and gambling
+operations. In addition, FHLBB officials said the existing Spence Act did not permit access to holding  company
+books and records, which greatly limited regulation, and was not strong enough even to prevent evasion of the
+minimal controls that were in force.
+Individual accounts at S&L associations were not directly threatened by failures because of FSLIC insurance against
+default. However, the financial resources of the FSLIC as well as public confidence in the S&L system could be
+impaired, officials contended.
+There was relatively little controversy over the bill. Both Democrats and Republicans supported it, although some
+GOP House Members were critical of certain parts of the bill.
+S&L holding companies  were concentrated in a small number of states and primarily in California (48), Ohio
+(14), Texas (7), Illinois (11) and Colorado (5). These states had 85 of the 98 companies  in existence at the end
+of 1966.
+PROVISIONS—As signed by the President, S 1542 (PL 90-255):
+Required S&L holding companies  to register with the FHLBB and issue periodic reports; gave the FHLBB
+investigative and examination authority over the holding companies .
+Tightened several loopholes in the Spence Act to prohibit self-dealing financial transactions between a controlled
+S&L and the parent holding  company or its subsidiaries or any affiliate.
+Required holding companies  controlling more than one S&L to divest themselves of unrelated activities within
+two years with an additional three-year period allowed upon FHLBB approval. (There were 12 holding companies
+ of the total of 98 which would be affected.)
+ 
+7/2/09 1:24 PMCQ Almanac Online Edition
+Page 2 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal68-1283528&type=hitlist&num=0
+Gave the FHLBB additional authority over the debt structure of the holding companies  by requiring a holding
+ company to obtain FHLBB approval for debts equal to more than 15 percent of the company's net worth. Broadly
+defined “debt” to include any note or other instrument “commonly used as evidence of indebtedness” or any contract
+or agreement requiring the eventual payment of money.
+In the case of a holding  company with only one association and which was primarily in another line of
+business, the FHLBB was given authority to exercise a veto over dividends paid by the subsidiary S&L.
+Prohibited future holding companies  from acquiring S&Ls in two or more states, but exempted three existing
+interstate holding companies .
+Repealed the Spence Act provision prohibiting holding companies  from acquiring S&Ls through acquisition and
+merger on the theory it was no longer necessary in view of the additional control given to the FHLBB. Acquisition
+through purchase or merger would be subject to FHLBB approval.
+Authorized action in a U.S. district court to enforce compliance with the law or to require divestiture of unrelated
+activities.
+Provided penalties for any company of up to $1,000 in fines for each day a violation of the law continued. Provided
+penalties for any individual of up to $10,000 in fines and/or up to one year in prison.
+Background
+Savings and loan associations had been part of the U.S. banking community since before 1900. The industry
+included federal associations, authorized by the Home Owner's Loan Corp. Act of 1933 (PL 73-43), and state
+chartered associations. All federal associations and most state associations were mutual organizations owned by
+savers through purchase of withdrawable shares in the association. Some states permitted stock associations that
+resembled ordinary business corporations except that the capital represented by the savers' stock was retained in
+the association as a guarantee for the payment of the savers' withdrawable shares. In recent years holding
+companies  began buying the stock of stock associations at an increasing pace and thus gaining control of a
+number of associations.
+Spence Act. The growth of savings and loan holding companies  prompted Congress in 1959 to enact a law
+(PL 86-374), known as the Spence Act after its sponsor, Rep. Brent Spence (D Ky. 1931–63), to halt the accelerating
+trend of acquisition of stock associations by S&L holding companies . The law prohibited existing S&L holding
+companies  from acquiring any additional stock S&L institutions except in emergency situations to prevent failure of
+an association; however, new holding companies  could be formed to control one association. Certain financial
+transactions between the associations and the parent holding  company or its subsidiaries also were prohibited.
+The Spence Act did not prohibit a S&L holding  company from acquiring additional businesses, such as banks,
+insurance companies , and real estate development corporations.
+Federal officials who oversee S&L companies  said that the Spence Act restriction, although helpful, had not
+been as effective or desirable in preventing abuses in holding  company operations.
+FHLBB Report. The Spence Act required the Federal Home Loan Bank Board to survey the S&L holding
+company industry to determine if new legislation was required.
+The FHLBB report was issued in 1960. The findings of the report, combined with the continuing rapid growth of S&L
+holding companies , led the FHLBB to recommend legislation in the 88th and 89th Congresses. No action was
+taken on the recommended bills.
+President Johnson, in his Economic Messages for 1966, 1967, and 1968, recommended stronger regulation of
+savings and loan holding companies , but no action occurred. In 1966, however, Congress enacted other
+legislation (S 3158 – PL 89-695) which gave federal officials new regulatory powers over certain financial institutions,
+including savings and loan associations. One provision of the bill amended the Spence Act to permit holding
+companies  to control more than one federally insured institution, provided the FHLBB deemed it advisable in order
+to prevent a failure. (1966 Almanac p. 748)
+Senate Action. The Senate June 26, 1967, passed its version of the legislation (S 1542). (1967 Almanac p. 888)
+Committee Action
+COMMITTEE – House Banking and Currency.
+HELD HEARINGS – The Subcommittee on Domestic Finance of the Banking and Currency Committee held
+hearings Aug. 21–22, 1967, on HR 8696 introduced April 18 by Wright Patman (D Texas), chairman.
+ACTION – Dec. 6 reported HR 8696 (H Rept 997) amended.
+The purpose of HR 8696 was to provide a comprehensive statutory framework for the registration, examination and
+7/2/09 1:24 PMCQ Almanac Online Edition
+Page 3 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal68-1283528&type=hitlist&num=0
+The purpose of HR 8696 was to provide a comprehensive statutory framework for the registration, examination and
+regulation of holding companies  controlling one or more savings and loan associations.
+The provisions of HR 8696, as amended by the Committee, were in most cases identical to those of S 1542 passed
+by the Senate June 26. HR 8696 was reported from Committee by a 30–1 vote with the negative vote cast by
+Chalmers P. Wylie (R Ohio).
+One important difference between S 1542 and HR 8696 as reported was in the debt allowed by holding
+companies . To avoid situations where holding companies  might have to rely too much on the S&L
+subsidiaries to repay debts, HR 8696 required parent concerns to obtain FHLBB approval for total debts exceeding
+15 percent of the holding  company's net worth. S 1542 contained a 5 percent provision applicable only to short-
+term debt.
+Minority Views. Twelve of 14 Committee Republicans said there were three defects in the bill. The two who did not
+sign the views were Chester L. Mize (Kan.) and Sherman P. Lloyd (Utah).
+They said one defect was the debt control provision. The Republicans said the definition of “debt” was so broad that
+it would enable the FHLBB “to usurp the functions of management and actually control operating expenses,
+including officer salaries, of a savings and loan holding  company.”
+A second defect, Republicans said, was required holding  company divestiture without appropriate tax relief for
+proceeds of the sales.
+The third objection pertained to prohibited transactions between a holding  company or its affiliates and a
+subsidiary S&L institution. The bill required FSLJC written approval if such transactions exceeded the lesser of
+$100,000 or one-tenth of one percent of the insured association's assets. The Republicans said the holding
+company industry believed these limitations to be unduly and unnecessarily restrictive.
+Floor Action
+The House Jan. 23 passed HR 8696 by voice vote after limited debate.
+The bill was passed essentially as reported. One relatively minor floor amendment was accepted. Several major
+Republican-sponsored amendments were rejected. The amendments were directed at parts of the bill which the
+GOP criticized in the Committee report.
+After passage of HR 8696, the House substituted the language of HR 8696 for that of S 1542 and passed S 1542 by
+voice vote.
+Both Democrats and Republicans agreed that new legislation to regulate holding companies  was needed.
+Debate centered mainly on the amount of control.
+Amendment Accepted
+Jan. 23 – Thomas L. Ashley (D Ohio) – Provide that during the first year the law is in effect, a holding  company
+may be classified as diversified (and thus not subject to as strict controls under the bill) at any time that it meets
+qualifications in the bill. (After the first year, a company's classification will be determined as of the last day of its
+preceding fiscal year.) Voice vote.
+Amendments Rejected
+Jan. 23 – Del Clawson (R Calif.) – Exempt existing holding companies  from divestiture of unrelated activities.
+Standing vote, 18–29.
+Clawson – Provide that divestiture proceedings would not be required until an amendment to Congress enacted tax-
+relief legislation to assist companies  affected by the requirement. Standing, 31–46.
+William B. Widnall (R N.J.) – Narrow the definition of “debt security” to cover only notes or similar certificates of
+indebtedness. (This eliminated broader language which covered any “instrument commonly used” to indicate
+indebtedness or any other agreement requiring payment of money. Accepted, teller, 76–73; rejected, roll call 156–
+189. (See vote 2, p. 2-H.)
+Ashley – Allow business transactions between a holding company and a subsidiary S&L if such transactions
+occur at “established market prices.” Standing, 40–54.
+Document Citation
+"S&L Holding Companies." CQ Press Electronic Library, CQ Almanac Online Edition, cqal68-1283528. Originally published in
+CQ Almanac 1968 (Washington: Congressional Quarterly, 1969). http://library.cqpress.com/cqalmanac/cqal68-1283528
+(accessed July 2, 2009).
+7/2/09 1:24 PMCQ Almanac Online Edition
+Page 4 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal68-1283528&type=hitlist&num=0
+Document ID: cqal68-1283528
+Document URL: http://library.cqpress.com/cqalmanac/cqal68-1283528
+© 1969, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

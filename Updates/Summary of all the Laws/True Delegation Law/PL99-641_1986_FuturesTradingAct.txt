@@ -1,0 +1,224 @@
+7/3/09 11:45 AMCQ Almanac Online Edition
+Page 1 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal86-1150438&type=hitlist&num=3
+Document Outline
+Provisions
+House Action
+Senate Action
+Conference
+Commodity Futures Trading Commission (CFTC) Bill Clears
+An article from CQ Almanac 1986
+The Senate Oct. 17 cleared a three-year funding authorization (HR 4613 — PL 99 - 641 ) for the Commodity
+Futures Trading Commission (CFTC) after acceding to House demands to continue to permit so-called “leverage”
+contracts in precious metals.
+Leverage contracts are long-term installment contracts for the purchase of silver, gold and other non-agricultural
+commodities. They are not like futures contracts, which are commitments to buy and sell a commodity on a set date
+at a price determined by auction in exchange markets. Instead, leverage contracts are traded privately by only two
+authorized dealers: Monex of Newport Beach, Calif., and International Precious Metals of Fort Lauderdale, Fla.
+Buyers of the contracts seldom accept delivery of the commodity but make installment payments in the hope that
+the commodity's value will increase over time.
+The bill, passed by the House July 16 by a 401-7 vote, limited leveraged contracts to gold, silver and platinum.
+However, the bill allowed other companies to enter the business after a two-year period. (Vote 199, p. 60-H)
+The Senate began debate Sept. 30 on its reauthorization measure, but final action was blocked by Pete Wilson, R-
+Calif., who objected to the bill's banning all leveraged transactions in two years. However, Wilson agreed to let the
+measure proceed after he was assured a seat on the conference committee. The Senate Oct. 6 by a vote of 83-1
+approved HR 4613 after substituting the text of its bill (S 2045). (Vote 331, p. 54-S)
+In conference, Wilson joined House members in sucessfully insisting on the House language to protect the practice
+of leverage.
+Proponents of leverage were aided by an unusual shift of position by the administration. Although the CFTC board,
+comprised of presidential appointees, first proposed that leveraged transactions be abolished, officials in the Justice
+Department later countermanded that position and lobbied in favor of retaining the House language to preserve the
+special form of commodities trading.
+The bill as agreed to by conferees in sessions Oct. 8-9 combined a Senate floor amendment on grain quality and a
+similar House-passed bill (HR 5407), agreeing to prohibit exporters from adding dust and foreign material to grain at
+points of export.
+Conferees also rejected a Senate amendment, sponsored by Agriculture Committee Chairman Jesse Helms, R-N.C.,
+to eliminate U.S. sugar quotas for countries that imported sugar from Cuba or failed to cooperate with U.S. anti-drug
+efforts. (Drugs, p. 92)
+The House by a vote of 274-130 deleted a Senate provision from the conference report (H Rept 99 –995),
+which had the effect of rejecting the conference agreement. That provision would have transferred certain National
+Forest System lands to the state of Nebraska. When that language had been deleted, members approved the
+agreement by voice vote. (Vote 429, p. 120-H)
+The Senate agreed to the change by voice vote Oct. 17, clearing the measure for the president, who signed it Nov.
+10
+Provisions
+Major provisions of HR 4613:
+Authorized fiscal 1987-89 appropriations for the CFTC at whatever level Congress determined necessary.
+Restricted leverage contracts to precious metals (gold, silver and platinum), effectively prohibiting future leverage
+transactions on foreign currencies and copper.
+ 
+7/3/09 11:45 AMCQ Almanac Online Edition
+Page 2 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal86-1150438&type=hitlist&num=3
+Removed a CFTC moratorium on allowing new firms to enter the leverage business, effective in two years. The CFTC
+must survey firms interested in entering the business and report to Congress within two years, offering proposals for
+regulations to govern leverage dealing and a finding on whether such trading served an “economic purpose.”
+Repealed the limitations on options trading, currently allowed on a trial basis, and required the CFTC to establish a
+permanent program for commodity options trading on contract markets.
+Clarified that fraud was prohibited in both off-exchange and on-exchange trading activities, giving the CFTC express
+authority, along with individual states, to prosecute fraud committed by off-exchange operators.
+Allowed the National Futures Association, an industry self-regulatory group, to impose disciplinary action against
+members while those actions were being appealed to the CFTC. The bill also required an expedited appeals process.
+Authorized the commission, on a majority vote, to serve investigatory subpoenas on persons outside the United States.
+Permitted CFTC employees and commissioners to invest in commodities as long as no non-public information was used
+and the transactions did not involve futures, options or leverage. The commission could develop appropriate exceptions
+to the restrictions, such as permitting modest holdings in large mutual funds that hedged their portfolios in the futures
+market.
+Authorized the CFTC to seek appointment of a temporary receiver to protect and manage the property of persons while
+the commission sought a restraining order to freeze assets or records to prevent suspected law violators from
+destroying records or removing funds or property.
+House Action
+The House Agriculture Committee May 7 approved a three-year authorization (HR 4613) for the CFTC after
+compromising on efforts to restrict leverage contracts.
+The panel rejected 12-30 an amendment by Dan Glickman, D-Kan., to remove the special regulatory treatment of
+leverage contracts and to effectively ban their use.
+The committee then approved by voice vote a compromise offered by James M. Jeffords, R-Vt., to restrict lever-aged
+contracts to gold, silver and platinum, removing the authority for contracts on copper and foreign currencies. In
+addition, the CFTC in two years would have to permit a gradual expansion of the number of firms dealing in lever-
+aged transactions.
+The report (H Rept 99 –624) was filed June 6.
+Before approving the bill by 401-7 July 16, the House at first accepted and then rejected Glickman's amendment to
+end separate regulatory treatment of leverage transactions. The resounding vote masked sharply divided opinions on
+the subject of leverage. (Vote 199, p. 60-H)
+Glickman at first prevailed on a 219-193 vote. (Vote 195, p. 58-H)
+But supporters of leverage claimed that many members did not understand the subject of the amendment, much
+less the esoteric arguments for and against the practice of leverage.
+E. Thomas Coleman, R-Mo., said many members were confused about what amendment was pending: other
+expected floor amendments to HR 4613 dealt with the effect of cattle futures on beef markets.
+“There are a lot of people who came into this chamber who thought that the Glickman amendment had something to
+do with the cattle industry, that this had something to do with agricultural products,” Coleman said.
+Coleman demanded another vote on the amendment, and on the second roll call, 33 members who previously
+voted for the Glickman proposal switched sides and the House voted 192-218 to reject the plan. (Vote 198, p. 60-
+H)
+Other amendments included those by:
+James R. Jones, D-Okla., directing the Agriculture Committee to study the economic purpose of trading in cattle futures,
+whether the trading was being manipulated and what the economic effects were. Adopted, 406-1. (Vote 197, p. 58-H)
+Wes Watkins, D-Okla., to end authority for futures trading in live cattle by December 1987 unless a majority of cattlemen
+approved such markets in a referendum. Rejected, 142-265. (Vote 196, p. 58-H)
+Summary: As passed by the House, HR 4613:
+Reauthorized appropriations for the Commodity Futures Trading Commission for fiscal 1987-89.
+7/3/09 11:45 AMCQ Almanac Online Edition
+Page 3 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal86-1150438&type=hitlist&num=3
+Restricted leverage contracts to precious metals (gold, silver and platinum), thereby prohibiting future leveraged
+transactions on foreign currencies and copper.
+Removed a moratorium on allowing new firms to enter the leverage business, effective in two years. The CFTC must
+survey firms interested in entering the leverage business and report the results to Congress within two years, along with
+proposals for regulations to govern leverage dealing and the commission's finding on whether such trading served an
+“economic purpose.” The regulations would take effect 45 days after being submitted to Congress, although the
+commission could provide for gradual entry of new firms.
+Repealed the limitations on options trading, currently allowed on a trial basis, and required the commission to establish
+a permanent program for commodity-options trading on contract markets.
+Permitted commission employees and commissioners to invest in commodities as long as no non-public information
+was used and the transactions did not involve futures, options or leverage. The commission could develop appropriate
+exceptions to the restrictions, such as to permit modest holdings in large mutual funds that hedged their portfolios in the
+futures market.
+Required the Agriculture Committee to study the impact of cattle futures trading on the beef industry, and to report
+legislation to the House if the study determined that manipulation of cattle futures trading adversely affected cattle
+producers or the beef industry.
+Senate Action
+The Senate Agriculture Committee March 25 approved a measure (S 2045) that would have put leveraged
+transactions for precious metals under the same federal trading rules as commodity futures contracts.
+Because leveraged contracts were not sold on exchange markets, the CFTC was required to regulate them
+separately from other transactions.
+The CFTC argued that the separate regulation was neither logical nor necessary. S 2045 eliminated the requirement
+for the special treatment for leveraged transactions, thereby barring leveraged transactions unless they were
+conducted on an exchange and supervised by self-regulatory organizations.
+But the panel adopted by voice vote an amendment by Richard G. Lugar, R-Ind., that delayed the repeal of the
+separate regulations for leveraged contracts for two years after enactment.
+Wilson, a junior member of the committee, argued that a sudden repeal could put the two companies dealing in
+leveraged contracts out of business.
+The report (S Rept 99-291) was filed April 29.
+The bill was considered Sept. 24, and after substituting the text for that of the House-passed bill, HR 4613, the
+Senate passed HR 4613 by a vote of 83-1 Oct. 6. (Vote 331, p. 54-S)
+On Sept. 24, members by a vote of 71-26 tabled an amendment by James Abdnor, R-S.D., and other that would
+have eliminated cattle as a subject for trading on the commodity market. Abdnor argued that the speculation in
+cattle futures had created price instability that damaged the industry. (Vote 290, p. 48-S)
+Helms urged members to vote against the proposal because the impact of such trading on the cattle market was
+under study by the comptroller general.
+The Senate adopted by voice vote a catchall amendment by Rudy Boschwitz, R-Minn., which gave the agriculture
+secretary discretionary authority to vary the frequency of on-site inspection of processed meat products; sped up the
+income-subsidy payments scheduled to be made to wheat producers for the 1986 crop; exempted the producers of
+extra-long staple cotton from requirements that they comply with acreage controls on other government-subsidized
+crops; and allowed highly erodible land previously planted to alfalfa and other grass crops to enter the conservation
+reserve program.
+Also by voice vote, the Senate agreed to an amendment by Charles E. Grassley, R-Iowa, tightening the guidelines on
+the quality of grain shipped for export.
+The Senate also passed by voice votes two amendments that would later prove to be major roadblocks to reaching
+a final compromise with the House.
+One amendment, offered by Agriculture Chairman Helms, would cut off sugar quotas to nations, notably Canada,
+that imported sugar from Cuba, would eliminate quotas for countries involved in the drug trade that failed to
+cooperate with U.S. anti-drug efforts, and would guarantee Caribbean Basin nations, Ecuador and the Philippines
+1987 sugar quotas at or above 1986 levels, even though quotas were expected to drop for other countries.
+The committee's ranking Democrat, Edward Zorinsky. Neb., also won quick floor approval for an amendment
+requiring the U.S. Forest Service to cede over 173 acres of land to the state of Nebraska for use as park land.
+Summary: As approved by the Senate, the bill:
+7/3/09 11:45 AMCQ Almanac Online Edition
+Page 4 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal86-1150438&type=hitlist&num=3
+Clarified and strengthened the enforcement capabilities of the CFTC.
+Made explicit that the anti-fraud provision of the Commodities Exchange Act applied to off-exchange transactions and
+that the CFTC could serve administrative subpoenas outside the United States.
+Allowed the CFTC, when seeking a restraining order against an alleged violator to freeze assets, to name a receiver to
+administer the assets.
+Lifted a provision of current law that permitted an automatic stay of disciplinary action against a member of the National
+Futures Association while that action was being appealed.
+Extended funding authorization through fiscal 1992 at whatever sums Congress considered appropriate.
+Eased some restrictions that had barred a CFTC commissioner or employee from participating in certain transactions.
+Conference
+The dispute over leverage contracts dominated the conference to resolve differences.
+Ultimately, divided Senate negotiators gave in to the unified House contingent, which had denied Glickman a seat
+on the committee.
+In sessions Oct. 8-9, House conferees held fast to their provision to permit the continued trading of precious metals
+by certain businesses operating outside certified futures exchange markets.
+Senior members of the Senate Agriculture Committee supported their chamber's view, but Wilson's presence gave
+the Senate a devided front in the conference.
+“On our side, we have two sides,” Helms admitted at the outset.
+Lugar made only a token effort at a compromise before caving in to Wilson and the House negotiators.
+Lugar cited Wilson's ability to prevent the conference report from returning to the Senate floor for final approval in
+the waning days of the session. He said CFTC officials, who first pushed for the ban on leverage, finally told him
+they would rather get reauthorization for the commission than lose the entire bill over the leverage controversy.
+“It was a question of debating the issue for two hours or two minutes,” said Lugar, who opted for the latter “in the
+interests of time.”
+Sugar Amendment Dropped
+Helms had no better fortune with his amendment dealing with sugar quotas.
+Helms had put an identical amendment on the Senate's version of an omnibus drug bill (HR 5484), but the House
+stripped it from a revised version of that bill Oct. 8.
+Although Helms had no problem attaching the amendment to the CFTC bill Oct. 6, in conference he ran into one of
+the House's peculiar “turf” battles. Sugar quotas were in the domain of the Ways and Means Subcommittee on
+Trade, and eight members from that panel were conferees on the CFTC bill, along with members of the Agriculture
+Committee.
+Rep. Sam Gibbons, D-Fla., Trade Subcommittee chairman, insisted that the amendment would damage U.S.
+relations with Canada and violate international trade agreements.
+Gibbons promised a hearing and “possibly a marked up bill” in 1987 but rejected all of Helms” attempts at
+compromise.
+“This is something I care about very, very much,” Helms insisted, although he winced when Gibbons suggested that
+“the best thing we could do for Caribbean Basin countries is to remove some of the textile tariffs” — an issue that hit
+even closer to home for the North Carolina senator.
+Senate conferees prevailed on the Senate floor amendment to allow wheat farmers to receive all of their income-
+support payments in November, rather than partial payments in November and June. They combined a Senate floor
+amendment on grain quality and a similar House-passed bill (HR 5407), agreeing to prohibit exporters from adding
+dust and foreign material to grain at points of export.
+Bill Bogs Down
+After wending its way through the political controversies associated with leverage trading and sugar quotas, the
+CFTC bill almost bogged down entirely over a seemingly innocuous Senate provision to turn U.S. forest land over to
+the Nebraska Game and Parks Commission.
+7/3/09 11:45 AMCQ Almanac Online Edition
+Page 5 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal86-1150438&type=hitlist&num=3
+Zorinsky's park land amendment drew strong objections from Rep. Charles Whitley, D-N.C., chairman of the
+Agriculture Subcommittee on Forests. Whitley said Zorinsky's insistence that the federal land be given away would
+set a dangerous precedent.
+When the conference report went to the House on Oct. 15, Whitley led a successful fight to reject Zorinsky's
+provision to give the land to his home state. The vote was 274-130. (Vote 429, p. 120-H)
+Zorinsky, however, threatened to filibuster the conference report when it came up for a vote in the Senate Oct. 17.
+Only the intervention of Agriculture Secretary Richard E. Lyng enabled the Senate to take final action on the CFTC
+bill before adjourning for the year.
+Lyng gave Zorinsky written assurance that the forest land would be turned over to the state of Nebraska in a
+bargain-rate, 30-year lease arrangement. The deal meant the state could lease the 173-acre tract for 3 percent of
+fair market value, rather than the usual 5 percent rate.
+The Senate then cleared HR 4613 by voice vote.
+Document Citation
+"Commodity Futures Trading Commission (CFTC) Bill  Clears." CQ Press Electronic Library, CQ Almanac Online Edition, cqal86-
+1150438. Originally published in CQ Almanac 1986 (Washington: Congressional Quarterly, 1987).
+http://library.cqpress.com/cqalmanac/cqal86-1150438 (accessed July 3, 2009).
+Document ID: cqal86-1150438
+Document URL: http://library.cqpress.com/cqalmanac/cqal86-1150438
+© 1987, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

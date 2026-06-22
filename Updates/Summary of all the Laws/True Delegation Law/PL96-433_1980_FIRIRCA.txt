@@ -1,0 +1,43 @@
+7/2/09 4:48 PMSearch Results - THOMAS (Library of Congress)
+Page 1 of 1http://thomas.loc.gov/cgi-bin/bdquery/z?d096:HR07939:@@@D&summ2=m&|TOM:/bss/d096query.html|
+The Library of Congress > THOMAS Home > Bills, Resolutions > Search Results
+NEW SEARCH | HOME | HELP | ABOUT SUMMARIES
+H.R.7939 
+Title: A bill to amend the Securities Investor Protection Act to increase the amount of protection
+available under such Act to customers of brokers and dealers, and to provide for the applicability
+of the Right to Financial Privacy Act of 1978 to the Securities and Exchange Commission. 
+Sponsor: Rep Scheuer, James H. [NY-11] (introduced 8/18/1980)      Cosponsors (11) 
+Latest Major Action: 10/10/1980 Public Law 96-433.
+SUMMARY AS OF: 
+8/18/1980--Introduced.
+Amends the Securities Investor Protection Act to increase from $100,000 to $500,000 the
+maximum amount which the Securities Investor Protection Corporation may distribute to a
+customer in the liquidation of a broker-dealer. Permits up to $100,000 of such amount
+(presently, $40,000) to be used to satisfy a claim for cash.
+Amends the Right to Financial Privacy Act of 1978 to apply its provisions to the Securities and
+Exchange Commission, except as provided in the Securities Exchange Act of 1934.
+Amends the Securities Exchange Act of 1934 to authorize the Commission to obtain copies of
+information contained in financial records of a customer from a financial institution without prior
+notice to the customer upon an ex parte showing to an appropriate district court that the
+Commission: (1) seeks such records pursuant to a subpoena issued in conformity with the
+requirements of the Federal securities laws; and (2) has reason to believe that specified acts or
+results will occur.
+Requires, upon expiration of any authorized period of delay of notification, that the customer be
+served with a copy of the subpoena along with a specified notice which describes the nature of
+the investigation.
+Directs the Commission to compile an annual tabulation of the occasions on which the
+Commission obtains access to financial records of a customer as authorized under this Act and
+include such tabulation in its annual report to Congress.
+Permits a customer, following the expiration of the period of delay of notification, to reopen the
+proceeding in the district court. Authorizes such court to grant civil penalties against the
+Commission or issue injunctive relief if the Commission has obtained records in violation of this
+Act.
+Directs the Office of Personnel Management to initiate a proceeding to determine whether
+disciplinary action should be taken against an employee of the Commission who acted in a willful
+and intentional manner and without good faith with respect to the violation.
+Authorizes the Commission to transfer financial records to any government authority in
+accordance with the Right to Financial Privacy Act, but permits customer notice to be delayed
+upon an appropriate showing under this Act.
+Authorizes the Commission to obtain financial records from a financial institution or transfer such
+records in accordance with the Right to Financial Privacy Act of 1978.
+THOMAS Home | Contact | Accessibility | Legal | FirstGov

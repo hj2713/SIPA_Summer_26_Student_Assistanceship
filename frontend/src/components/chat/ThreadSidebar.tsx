@@ -230,7 +230,7 @@ export function ThreadSidebar() {
       </ScrollArea>
       <Separator />
       <div className="p-3 space-y-2">
-        {(pathname.startsWith("/documents") || pathname.startsWith("/dashboard") || pathname.startsWith("/campaigns")) ? (
+        {(pathname.startsWith("/documents") || pathname.startsWith("/dashboard") || pathname.startsWith("/campaigns") || pathname.startsWith("/workflows")) ? (
           <Button
             variant="outline"
             size="sm"
@@ -253,6 +253,18 @@ export function ThreadSidebar() {
             Back to Chat
           </Button>
         ) : null}
+
+        <Button
+          variant={pathname.startsWith("/workflows") ? "secondary" : "outline"}
+          size="sm"
+          className="w-full gap-2"
+          onClick={() => navigate("/workflows")}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="6" cy="5" r="2" /><circle cx="18" cy="12" r="2" /><circle cx="6" cy="19" r="2" /><path d="M8 5h3a4 4 0 0 1 4 4v1" /><path d="M8 19h3a4 4 0 0 0 4-4v-1" />
+          </svg>
+          Coding Workflows
+        </Button>
 
         <Button
           variant={pathname.startsWith("/campaigns") ? "secondary" : "outline"}

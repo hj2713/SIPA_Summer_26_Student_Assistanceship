@@ -10,6 +10,8 @@ from app.repositories.base import (
     BaseDocumentChunkRepository,
     BaseDashboardRepository,
     BaseDashboardDocumentRepository,
+    BaseWorkflowRepository,
+    BaseWorkflowVersionRepository,
     BaseThreadRepository,
     BaseMessageRepository,
     BaseLlmUsageLogRepository,
@@ -580,6 +582,85 @@ class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
         with self.conn.cursor() as cursor:
             cursor.execute("DELETE FROM dashboard_documents WHERE document_id = %s;", (str(document_id),))
 
+class PostgresWorkflowRepository(BaseWorkflowRepository):
+    def __init__(self, conn: psycopg.Connection):
+        self.conn = conn
+
+    def get_by_id(self, workflow_id: str) -> Optional[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM coding_workflows WHERE id = %s;", (workflow_id,))
+            return cursor.fetchone()
+
+    def create(self, workflow_id: str, workspace_id: str, name: str, description: str, draft_definition: str, created_by: str) -> Dict[str, Any]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO coding_workflows
+                    (id, workspace_id, name, description, status, draft_definition, revision, latest_version, created_by)
+                VALUES (%s, %s, %s, %s, 'draft', %s, 1, 0, %s);
+                """,
+                (workflow_id, workspace_id, name, description, draft_definition, created_by),
+            )
+        return self.get_by_id(workflow_id)
+
+    def update(self, workflow_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        if updates:
+            keys = list(updates.keys())
+            assignments = ", ".join(f"{key} = %s" for key in keys)
+            values = [updates[key] for key in keys] + [workflow_id]
+            with self.conn.cursor() as cursor:
+                cursor.execute(
+                    f"UPDATE coding_workflows SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                    values,
+                )
+        return self.get_by_id(workflow_id)
+
+    def delete(self, workflow_id: str) -> None:
+        with self.conn.cursor() as cursor:
+            cursor.execute("DELETE FROM coding_workflows WHERE id = %s;", (workflow_id,))
+
+    def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM coding_workflows WHERE workspace_id = %s ORDER BY updated_at DESC;",
+                (workspace_id,),
+            )
+            return list(cursor.fetchall())
+
+
+class PostgresWorkflowVersionRepository(BaseWorkflowVersionRepository):
+    def __init__(self, conn: psycopg.Connection):
+        self.conn = conn
+
+    def create(self, version_id: str, workflow_id: str, version: int, definition_json: str, definition_hash: str, changelog: str, created_by: str) -> Dict[str, Any]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO coding_workflow_versions
+                    (id, workflow_id, version, definition_json, definition_hash, changelog, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                """,
+                (version_id, workflow_id, version, definition_json, definition_hash, changelog, created_by),
+            )
+        return self.get(workflow_id, version)
+
+    def get(self, workflow_id: str, version: int) -> Optional[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM coding_workflow_versions WHERE workflow_id = %s AND version = %s;",
+                (workflow_id, version),
+            )
+            return cursor.fetchone()
+
+    def list_by_workflow(self, workflow_id: str) -> List[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM coding_workflow_versions WHERE workflow_id = %s ORDER BY version DESC;",
+                (workflow_id,),
+            )
+            return list(cursor.fetchall())
+
+
 class PostgresThreadRepository(BaseThreadRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
@@ -777,6 +858,8 @@ class PostgresUnitOfWork(BaseUnitOfWork):
         self._chunks = PostgresDocumentChunkRepository(self.conn)
         self._dashboards = PostgresDashboardRepository(self.conn)
         self._dashboard_documents = PostgresDashboardDocumentRepository(self.conn)
+        self._workflows = PostgresWorkflowRepository(self.conn)
+        self._workflow_versions = PostgresWorkflowVersionRepository(self.conn)
         self._threads = PostgresThreadRepository(self.conn)
         self._messages = PostgresMessageRepository(self.conn)
         self._usage_logs = PostgresLlmUsageLogRepository(self.conn)
@@ -804,6 +887,14 @@ class PostgresUnitOfWork(BaseUnitOfWork):
     @property
     def dashboard_documents(self) -> BaseDashboardDocumentRepository:
         return self._dashboard_documents
+
+    @property
+    def workflows(self) -> BaseWorkflowRepository:
+        return self._workflows
+
+    @property
+    def workflow_versions(self) -> BaseWorkflowVersionRepository:
+        return self._workflow_versions
 
     @property
     def threads(self) -> BaseThreadRepository:

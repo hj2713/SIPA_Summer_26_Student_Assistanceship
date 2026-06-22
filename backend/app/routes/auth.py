@@ -228,3 +228,30 @@ def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
         session.workspaces.create(workspace_id=workspace_id, name=name)
 
     return WorkspaceResponse(id=workspace_id, name=name)
+
+
+@router.get("/workspaces/active", response_model=WorkspaceResponse)
+def get_active_workspace_endpoint(current_user: CurrentUserDep):
+    """Get the current active workspace from RAM."""
+    from app.core.workspace import get_active_workspace
+    active_id = get_active_workspace()
+    return WorkspaceResponse(id=active_id, name=active_id)
+
+
+@router.post("/workspaces/active", response_model=WorkspaceResponse)
+def set_active_workspace_endpoint(payload: WorkspaceCreate, current_user: CurrentUserDep):
+    """Set the current active workspace in RAM."""
+    from app.core.workspace import set_active_workspace
+    workspace_id = payload.name.strip().upper()
+    if not workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Workspace name cannot be empty"
+        )
+    # Verify the workspace exists in the database, create if not
+    with get_db_session() as session:
+        if not session.workspaces.get_by_id(workspace_id):
+            session.workspaces.create(workspace_id=workspace_id, name=workspace_id)
+    set_active_workspace(workspace_id)
+    return WorkspaceResponse(id=workspace_id, name=workspace_id)
+

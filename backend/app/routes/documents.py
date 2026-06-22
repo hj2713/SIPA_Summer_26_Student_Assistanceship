@@ -1,13 +1,14 @@
 """API routes for uploading and managing documents."""
 import logging
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends
 
-from app.core.deps import CurrentUserDep
+from app.core.deps import CurrentUserDep, get_workspace_id
+from app.core.workspace import get_active_workspace
 from app.schemas.document import DocumentRow, DocumentStatus, DocumentUploadResponse, RetryBatchRequest
 from app.services import document_service, ingestion_service
 from app.core.client import get_user_client
 
-from app.core.constants import MAX_FILE_SIZE_BYTES, DEFAULT_WORKSPACE_ID
+from app.core.constants import MAX_FILE_SIZE_BYTES
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -19,7 +20,7 @@ async def upload_document(
     current_user: CurrentUserDep,
     file: UploadFile = File(...),
     relative_path: str = Form(None),
-    workspace_id: str = Form(DEFAULT_WORKSPACE_ID),
+    workspace_id: str = Form(None),
     tags: str = Form(None),
 ):
     """Upload a document file, checking for duplicates or updates using a content hash under a workspace.
@@ -32,6 +33,7 @@ async def upload_document(
             detail="You do not have permission to add documents."
         )
 
+    workspace_id = get_workspace_id(workspace_id)
     client = get_user_client(current_user.jwt, workspace_id)
     
     filename = relative_path or file.filename
@@ -185,7 +187,7 @@ async def upload_document(
 @router.get("", response_model=list[DocumentRow])
 async def list_documents(
     current_user: CurrentUserDep,
-    workspace_id: str = DEFAULT_WORKSPACE_ID,
+    workspace_id: str = Depends(get_workspace_id),
 ):
     """Retrieve all documents belonging to the workspace."""
     client = get_user_client(current_user.jwt, workspace_id)

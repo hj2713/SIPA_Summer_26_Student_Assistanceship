@@ -1,0 +1,282 @@
+7/9/09 4:04 PMCQ Almanac Online Edition
+Page 1 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal02-236-10364-664075&type=hitlist&num=16
+Corporate Fraud
+2002 Provisions of the Corporate Fraud
+Bill
+2002 New Rules for Corporations
+1994 Clinton Signs Bill To Curb
+Telemarketing Fraud
+1988 Government Contract Fraud
+1986 Congress Puts More Teeth in
+Anti-Fraud Law
+Whistleblower Protection
+Provisions of the Corporate Fraud Bill
+An article from CQ Almanac 2002
+Document Outline
+Oversight Board
+Accounting Standards
+Auditor Independence
+Corporate Responsibility
+Disclosure and Transparency Requirements
+Securities Analysts
+SEC Resources and Authority
+Studies and Reports
+Corporate Fraud
+White-Collar Crime
+Corporate Tax Returns
+Corporate Fraud Accountability
+The following are provisions of the new law overhauling regulation of the accounting industry and increasing
+corporate accountability. The measure was signed into law July 30 (HR 3763 — PL 107 – 204).
+Oversight Board
+Board. The law created a new, independent regulatory body, the Public Company Accounting Oversight Board, to
+oversee the auditing of publicly traded companies in order to protect the interests of investors. The board, which is
+classified as a District of Columbia-based nonprofit corporation, operates under Securities and Exchange Commission
+(SEC) oversight. All the board's rules, decisions and sanctions must be submitted to the SEC for approval. The SEC can
+censure or limit the board's activities, operations and members for cause.
+Membership. The board is composed of five full-time members appointed by the SEC in consultation with the Federal
+Reserve chairman and the Treasury secretary. No more than two of the board members may have worked previously as
+certified public accountants. Board members serve for five years with staggered terms. They must serve full time, and
+are not to be employed in any other business or professional activity during their terms. Board members are limited to
+two terms.
+Registration and inspection. Accounting firms that audit publicly traded companies are required to register with the
+oversight board. The board must conduct annual inspections of accounting firms that regularly audit more than 100
+publicly traded companies, and inspect other accounting firms at least once every three years. Foreign public
+accounting firms that audit companies whose shares trade on U.S. exchanges are subject to the new law.
+Powers. The board has the authority to establish and enforce auditing standards, and to investigate and discipline
+accountants or accounting firms that violate those standards. It is empowered to require registered accounting firms to
+provide documents and testimony in the course of an investigation. It also can ask other companies and individuals to
+provide documents and testimony, as well as request the SEC issue subpoenas.
+Penalties. The board can suspend or bar individuals from being associated with registered accounting firms, and
+suspend or revoke accounting firms' registration. It can levy civil money penalties of not more than $100,000 for an
+individual or $2 million for a corporation. Intentional, knowing or reckless conduct is punishable by a penalty of up to
+$750,000 for an individual and $15 million for a corporation.
+Funding. To ensure its independence, the board is funded through annual accounting fees assessed on publicly traded
+companies, with each company's assessment determined by its average annual market capitalization (the company's
+share price multiplied by the number of shares issued).
+Auditing standards. The board is required to establish or adopt standards for audits of public companies. The
+standards must require registered accounting firms to prepare and maintain audit work papers for seven years, including
+an evaluation of the internal financial controls of their public company clients.
+Accounting Standards
+ 
+7/9/09 4:04 PMCQ Almanac Online Edition
+Page 2 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal02-236-10364-664075&type=hitlist&num=16
+Funding. To ensure its independence, the Financial Accounting Standards Board (FASB), which sets national
+accounting standards, must be funded by fees assessed on publicly traded companies.
+Membership. A majority of FASB's board must be composed of individuals who have not been affiliated with
+accounting firms during their service or in the two years prior to their service.
+Accounting system. FASB is directed to conduct a study on the possible use of a “principles-based” accounting
+system, in which accounting guidelines are loosely drawn and based on principle, rather than the existing “rules-based”
+accounting system, which relies on specifically enumerated rules.
+Auditor Independence
+Audit committees. Auditors must be hired by, and report to, a company's audit committee (or if there is no audit
+committee, the company's entire board of directors). The audit committee is to set compensation levels for outside
+accountants and be able to seek outside advice at company expense. Accounting firms must report to audit committees
+regarding accounting policies and procedures, alternative treatments of financial information that the auditors have
+discussed with company management, if any, and material written communications between the auditors and company
+man-agement. Audit committees must set up a procedure for receiving complaints regarding the company's accounting
+and auditing, as well as confidential, anonymous information provided by company employees.
+Each member of a corporation's audit committee must be “independent” — not part of the company's management and
+not receiving any compensation from the company for consulting or other services. The SEC can make exceptions.
+Accounting firms are prohibited from auditing a corporation if the chief executive officer (CEO), chief financial officer
+(CFO), controller, chief accounting officer, or any person serving in an equivalent position previously worked for the
+accounting firm and participated in the company audit during the previous year.
+Non-audit services. Auditors are barred from providing specified non-audit services to the same publicly traded
+companies they audit. Barred services include: bookkeeping or other services related to accounting records or financial
+statements; financial information systems design and implementation; appraisal or valuation services; actuarial services;
+internal audits; management or human resources; broker/dealer, investment adviser or investment banking services;
+legal and expert services; or other services the board decides are not permitted. The board can grant case-by-case
+exceptions to the banned services.
+Accounting firms can provide certain other non-audit services, including tax services, to a corporation, if approved in
+advance by the audit committee. Prior approval by the audit committee, or a designated subset of the audit committee, is
+not required if combined compensation for all such non-audit services is 5 percent or less of the total compensation paid
+by the corporation to the auditor during the fiscal year, or if such services were not recognized as non-audit services by
+the client at the time of engagement, or if such services are promptly brought to the audit committee's attention and
+approved by either the audit committee or one or more of its members before the completion of the audit.
+Auditor rotation. Accounting firms must periodically rotate their lead audit partners, and the review partners, so that no
+one partner either leads an audit for a specific public company or reviews it for more than five years in a row.
+GAO study. The Comptroller General is directed to study the possible impact of requiring mandatory rotation of entire
+accounting firms on audits of publicly traded companies.
+Corporate Responsibility
+Executive responsibility. Corporate CEOs and CFOs and those persons performing similar functions at publicly
+traded companies — including U.S. companies that establish a shell headquarters abroad — are required to certify the
+accuracy of annual and quarterly company financial reports to the SEC. The executives must attest that they have
+reviewed the report and, based on their knowledge, vouch that it does not contain any untruths or misstatements of any
+significant facts and that they represent an accurate description of the company's financial condition in all material
+respects. They also must verify that they have established, and are maintaining and periodically evaluating, internal
+controls so that they can become aware of any material changes in the company's financial condition.
+Improper influence on audits. Company officers and directors are forbidden from, directly or indirectly, fraudulently
+influencing, coercing, manipulating or misleading the company's outside auditors.
+CEO and CFO forfeitures. If a company is later forced to restate its earnings because of material non-compliance or
+misconduct regarding financial reporting requirements, the CEO and CFO will be required to repay the company any
+bonuses or compensation based on incentives or stock, as well as any profits they earned from sales of company stock
+during the 12 months following the initial financial statement. The SEC can make exceptions.
+Officer and director bars. The SEC can ask a federal court to bar persons from serving as officers or directors of
+publicly traded companies if the person's conduct demonstrates “unfitness.” The previous standard was “substantial
+unfitness.”
+Stock trading restrictions. The new law prohibits corporate directors or executive officers from buying, selling or
+transferring company stock during “blackout” periods of at least three consecutive business days when at least 50
+percent of all participants and beneficiaries in the company-sponsored pension or 401(k) plan are barred from doing so.
+If an executive illegally conducts a stock transaction during blackout periods, the company may go to court to recover
+7/9/09 4:04 PMCQ Almanac Online Edition
+Page 3 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal02-236-10364-664075&type=hitlist&num=16
+If an executive illegally conducts a stock transaction during blackout periods, the company may go to court to recover
+any profits made from the transaction, subject to a two-year statute of limitations. Shareholders can also go to court,
+after waiting 60 days for the company to take action.
+Applicable blackout periods do not include regularly scheduled blackout periods that are part of the plan and disclosed
+to employees, or those that are imposed when participants or beneficiaries either begin or cease to be part of the plan
+as a result of a merger, acquisition, divestiture or similar transaction that involves either the retirement plan or the plan
+sponsor.
+Plan administrators are generally required to notify participants and beneficiaries 30 days in advance of any blackout
+period — including the reasons for the blackout and when it is expected to begin and end — and issue a statement
+advising the participants or beneficiaries to review their individual investment decisions in light of the blackout period.
+The secretary of Labor may fine plan administrators up to $100 per day per participant or beneficiary for failing or
+refusing to provide required notices.
+Attorney responsibility. Within 180 days of enactment, the SEC must issue rules requiring attorneys who appear and
+practice before the commission on behalf of publicly traded companies to report material securities law violations,
+breaches of fiduciary duty or similar violations to the company's chief legal counsel or its CEO. If those officers do not
+appropriately respond to the report, the attorney is required to inform either the company's audit committee, another
+committee of independent directors or the entire board of directors.
+Fund for defrauded investors. Money collected through court-ordered disgorgements (refunds of money by
+defendants because of securities law violations), settlements involving disgorgements, or civil penalties must, at the
+SEC's discretion, be put into a fund to be paid to victims of the particular violation. The SEC also can accept gifts and
+bequests made to the United States for the fund.
+The SEC is required to study its own enforcement actions during the previous five years to identify ways to effectively
+pay restitution to defrauded investors, and report to the House Financial Services and Senate Banking committees
+within 180 days.
+Disclosure and Transparency Requirements
+Off-balance-sheet disclosures. Corporations must include in their annual and quarterly financial reports to the SEC
+any information on off-balance-sheet transactions or partnerships that may have an effect on the company's financial
+condition. A company's “pro forma” financial statements, such as preliminary reports or releases issued in advance of
+quarterly and annual SEC reports, may not contain any untrue material statements or omit material information that
+makes the statement misleading, and must depict the financial conditions and operations of the company under
+generally accepted accounting principles.
+Special-purpose entities. The SEC will study filings by publicly traded companies to determine the extent to which off-
+balance-sheet transactions and special-purpose entities (complex business arrangements that can be used to transfer
+and hide debt) are used, and whether generally accepted accounting rules provide for transparent disclosure to
+investors. The SEC is required to report to the president, the Senate Banking and the House Financial Services
+committees as to the number of off-balance-sheet transactions employed by publicly traded companies, the extent to
+which special-purpose entities are used as part of such transactions, whether generally accepted accounting principles
+or SEC rules provide for transparent disclosure of off-balance-sheet transactions, and issue SEC recommendations for
+improving the reporting of off-balance-sheet transactions.
+Conflicts of interest. Publicly traded companies are barred from making loans to directors or officers. Exceptions
+include home improvement and manufactured home loans; consumer credit; charge cards; and margin accounts for
+employees of securities brokers and dealers, so long as they are provided in the ordinary course of the company's
+consumer credit business and made available to the public on terms that are at least as favorable.
+The prohibition also does not apply to loans made or maintained by insured depository institutions if the loans are
+subject to prior restrictions on insider lending.
+Directors, officers, and owners of more than 10 percent of stock in a publicly traded company must file statements with
+the SEC indicating the amount of stock held and any changes in ownership before the end of the second business day
+that follows the day the relevant transaction occurred.
+Internal controls. Annual company reports to the SEC must contain statements of management responsibility for
+establishing and maintaining internal controls and financial reporting procedures, along with an assessment of their
+effectiveness. The company's outside accounting firm also must evaluate those statements and assessments.
+Codes of ethics. Public companies are required to report to the SEC regarding whether or not they have codes of
+ethics for their senior financial officers. Companies also must immediately disclose any changes to or waivers of their
+codes of ethics.
+Audit committee financial experts. Public companies must report to the SEC as to whether at least one member of
+the audit committee is a “financial expert,” defined as someone who understands generally accepted accounting
+principles, including for estimates, accruals and reserves; has experience in preparing or auditing financial statements at
+similar companies; and has experience with internal accounting controls as well as an understanding of the role of audit
+committees.
+Enhanced SEC review. The SEC is required to review public company filings at least once every three years, paying
+particular attention to companies that have restated their financial results, have especially volatile stock prices, have the
+largest market capitalizations and “significantly affect” particular economic sectors.
+7/9/09 4:04 PMCQ Almanac Online Edition
+Page 4 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal02-236-10364-664075&type=hitlist&num=16
+Real-time disclosures. Publicly traded companies must plainly and publicly disclose “on a rapid and current basis” any
+material changes in their operations or financial conditions.
+Securities Analysts
+Conflicts of interest. The SEC, or registered securities associations or national securities exchanges that the SEC
+designates, must adopt rules to prevent conflicts of interest by stock analysts.
+The rules must limit the ability of investment bankers who underwrite stocks to supervise or affect the compensation of
+stock analysts who work for the same firm; restrict advance approval of analyst reports by investment bankers; prevent
+investment bankers from retaliating against affiliated stock analysts who issue unfavorable recommendations against
+stocks; and create structural and informational firewalls to separate the investment and research divisions of investment
+banks.
+The rules must define periods surrounding initial public offerings of stock during which involved brokers and dealers
+should not publish or distribute research reports on the stock of the issuing company.
+They also must require a stock analyst, in preparing research reports and when making public appearances, to disclose
+the extent to which he owns the stock being discussed; whether the analyst or his employer has received any income
+from the company whose stock is being discussed; whether his employer has had any business dealings in the past year
+with the company; and whether the analyst's compensation was tied to investment banking revenues collected by his
+employer.
+SEC Resources and Authority
+Fiscal 2003 authorization. The law authorizes $776 million for the SEC for fiscal 2003, $317.4 million more than the
+agency's fiscal 2002 appropriation. Of that amount, $102.7 million is designated for commission salaries and benefits,
+$108.4 million for information technology, security, and recovery from the Sept. 11 terrorist attacks, and $98 million for
+hiring not fewer than 200 additional staff members.
+Additional SEC authority. The SEC can censure or bar from appearing or practicing before the commission any person
+whom it finds to be lacking in qualifications or integrity, or to have engaged in improper or unethical conduct.
+Penny stock bars. Courts have the authority to bar persons found to have engaged in misconduct from any offering of
+penny stocks, which are high-risk stocks that typically sell for less than one dollar per share. The SEC can grant
+exceptions.
+Studies and Reports
+Accounting firm consolidation. The law directs the Comptroller General to study the consolidation of public
+accounting firms since 1989, along with the impact on stock markets and capital formation and any problems faced by
+businesses because of “limited competition” among public accounting firms. The findings, as well recommendations on
+increasing competition, are to be submitted to the Senate Banking and House Financial Services committees.
+SEC reports. The SEC is required to submit studies to the Senate Banking and House Financial Services committees
+concerning: the role and function of credit rating agencies; securities law violations by accountants, investment bankers,
+brokers, attorneys and others between Jan. 1, 1998, and Dec. 31, 2001; and the SEC's own enforcement actions during
+the past five years involving reporting violations and financial restatements, along with an analysis of which reporting
+requirements are most susceptible to fraud.
+Investment banking. The Comptroller General is required to report to Congress on whether investment banks and
+financial advisers had a hand in concealing the true financial condition of publicly traded companies, especially Enron
+Corp. and Global Crossing Ltd., with recommended regulatory or legislative steps to address concerns.
+Corporate Fraud
+Document falsification and shredding. Knowingly altering, falsifying or destroying records, documents or tangible
+objects with the intent to obstruct justice is punishable by a fine and/or up to 20 years in prison.
+Audit records. Accountants must keep audit and review records for five years after the end of the fiscal period during
+which the audit or review occurred. The SEC is required to establish rules within 180 days. Violation of the five-year
+retention requirement is punishable by a fine and/or up to 10 years in prison.
+Debts in bankruptcy. Federal bankruptcy law is amended so that debts resulting from judgments, orders or settlements
+incurred because of securities law violations or common law fraud are non-dischargeable in bankruptcy proceedings.
+Statute of limitations. In a provision backed by plaintiff lawyers, the statute of limitations for civil lawsuits related to
+securities fraud is expanded to up to two years after discovery of the fraud or five years after the fraud occurred.
+Previously, the limit was one year after discovery of the fraud or three years after the fraud occurred.
+7/9/09 4:04 PMCQ Almanac Online Edition
+Page 5 of 5http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal02-236-10364-664075&type=hitlist&num=16
+Whistleblower protections. Publicly traded companies and their agents are prohibited from retaliating against
+whistleblowers who provide information or otherwise assist in an investigation being conducted by the company, federal
+regulators or law enforcement, or members of Congress or congressional committees. Whistleblowers who claim they
+have been retaliated against have 90 days to file a complaint to the secretary of Labor. If there is no final decision in the
+dispute within 180 days, the whistleblower can seek redress in federal court.
+Securities fraud felony. A “scheme or artifice” to defraud shareholders or to obtain money or property in connection
+with securities fraud is punishable by a fine and/or up to 25 years in prison.
+White-Collar Crime
+Mail and wire fraud. Criminal penalties for mail and wire fraud are increased to a maximum of 20 years in prison, up
+from five.
+Pension law violations. Violations of the Employee Retirement Income Security Act of 1974 (PL 93–406 ) are
+punishable by a fine of up to $100,000 and/or 10 years in prison; the old penalty was a fine of up to $5,000 and one
+year in prison. Corporations are subject to a fine of up to $500,000; the old penalty was a fine of up to $100,000.
+Review by U.S. Sentencing Commission. The U.S. Sentencing Commission has 180 days to review — and amend,
+as appropriate — federal sentencing guidelines related to securities fraud.
+Certification of financial reports. CEOs and CFOs must certify that SEC filings fully comply with legal requirements
+and that they fairly describe, in all material respects, the company's operations and financial condition. Knowing
+violations are punishable by a fine of up to $1 million and 10 years in prison. Willful violations are punishable by a fine
+of up to $5 million and 20 years in prison.
+Attempt and conspiracy. Attempting or conspiring to commit offenses under the chapter are crimes that carry
+punishments equal to those for committing the crime itself.
+Corporate Tax Returns
+Sense of the Senate. The sense of the Senate is that CEOs should sign corporate federal income tax returns.
+Corporate Fraud Accountability
+Record tampering. Destroying or tampering with records, documents or other objects, or attempting to do so, to
+obstruct or impede official proceedings is subject to a fine and/or up to 20 years in prison.
+Temporary freeze authority. The SEC can petition a federal court to order that extraordinary payments by a public
+company under investigation to its officers, directors, employees or other persons be held in escrow for up to 90 days.
+Officer and director bars. The SEC is empowered to prohibit persons, either temporarily or permanently, from serving
+as officers or directors of publicly traded companies upon a finding that they are unfit to do so.
+Increased criminal penalties. Violations of the Securities and Exchange Act of 1934 are punishable by a fine of up to
+$5 million and/or 20 years in prison; the old penalties were a $1 million fine and/or 10 years in prison. Corporations are
+subject to a fine of up to $25 million; the old penalty was a fine of up to $2.5 million.
+Whistleblower protections. Anyone who knowingly retaliates against a person who provides truthful information to a
+law enforcement officer shall be fined and/or imprisoned for up to 10 years.
+Document Citation
+"Provisions of the Corporate Fraud Bill." CQ Press Electronic Library, CQ Almanac Online Edition, cqal02-236-10364-664075.
+Originally published in CQ Almanac 2002 (Washington: Congressional Quarterly, 2003).
+http://library.cqpress.com/cqalmanac/cqal02-236-10364-664075 (accessed July 9, 2009).
+Document ID: cqal02-236-10364-664075
+Document URL: http://library.cqpress.com/cqalmanac/cqal02-236-10364-664075
+© 2003, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

@@ -155,6 +155,40 @@ class BaseDashboardDocumentRepository(ABC):
     def delete_by_document(self, document_id: str) -> None:
         pass
 
+class BaseWorkflowRepository(ABC):
+    @abstractmethod
+    def get_by_id(self, workflow_id: str) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def create(self, workflow_id: str, workspace_id: str, name: str, description: str, draft_definition: str, created_by: str) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def update(self, workflow_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def delete(self, workflow_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
+        pass
+
+class BaseWorkflowVersionRepository(ABC):
+    @abstractmethod
+    def create(self, version_id: str, workflow_id: str, version: int, definition_json: str, definition_hash: str, changelog: str, created_by: str) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def get(self, workflow_id: str, version: int) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def list_by_workflow(self, workflow_id: str) -> List[Dict[str, Any]]:
+        pass
+
 class BaseThreadRepository(ABC):
     @abstractmethod
     def get_by_id(self, thread_id: str) -> Optional[Dict[str, Any]]:
@@ -227,6 +261,16 @@ class BaseUnitOfWork(ABC):
     @property
     @abstractmethod
     def dashboard_documents(self) -> BaseDashboardDocumentRepository:
+        pass
+
+    @property
+    @abstractmethod
+    def workflows(self) -> BaseWorkflowRepository:
+        pass
+
+    @property
+    @abstractmethod
+    def workflow_versions(self) -> BaseWorkflowVersionRepository:
         pass
 
     @property

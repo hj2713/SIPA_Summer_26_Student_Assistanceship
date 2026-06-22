@@ -35,3 +35,13 @@ Prompt experiments need freedom to change quickly, while the app's coding servic
 Implication:
 Experimental helpers should live in clearly marked experiment areas and should not silently affect user-facing campaign runs.
 
+## 2026-06-22 - Reusable Versioned Workflows Are The Research Instrument
+
+Decision:
+Move campaign coding toward reusable, versioned Coding Workflows. Workflows define typed multi-field outputs, LLM stages, deterministic conditions/actions, dependencies, source-context policy, validation, and dashboard outputs. Campaigns select an immutable published workflow version and apply it to documents.
+
+Reason:
+The professor's process is a staged and reproducible coding methodology. Re-entering prompts and columns per campaign duplicates the method, obscures intermediate results, prevents safe deterministic shortcuts, and makes comparisons across document sets harder to reproduce.
+
+Implication:
+Build a workflow library and builder as a separate product surface. Use a validated DAG as the executable model, keep canvas layout separate, prohibit arbitrary pasted code, and preserve node-level inputs, outputs, provenance, costs, and histories. Existing campaigns will be migrated through generated legacy workflow drafts rather than destructively rewritten. See `Project-Tracking/RULE_ENGINE_IMPLEMENTATION_PLAN.md`.

@@ -1,0 +1,348 @@
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 1 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+Document Outline
+Provisions
+Background
+Senate Committee Action
+Senate Floor Action
+House Committee Action
+House Floor Action
+Conference Action
+Commodity Futures Agency
+An article from CQ Almanac 1978
+President Carter Sept. 30 signed into law a bill (S 2391 - PL 95 - 405 ) extending the life of the Commodity
+Futures Trading Commission (CFTC) through fiscal 1982. The agency's authorization was to have expired that day.
+The Senate had approved the conference report on the bill by voice vote Sept. 28 and the House, also by voice
+vote, cleared the measure for the president Sept. 29. The Senate originally had approved a six-year extension July
+12 and the House passed a three-year bill (HR 10285) July 26.
+The unpopular agency that regulates the intricate and risky business of trading futures contracts on commodities
+won a four-year reauthorization despite congressional animosity and Carter administration efforts to dismember it.
+In the end, members decided that many of the young agency's troubles were inevitable growing pains, and that it
+should continue its difficult task - with more congressional oversight.
+The four-year-old commission had been severely and repeatedly criticized as sloppy and ineffective. Most recently a
+House appropriations subcommittee and the General Accounting Office turned in damaging reports alleging, among
+other things, that the CFTC had improperly diverted its resources to problems with options sales originating in
+London. Much of the criticism centered on outspoken CFTC Chairman William T. Bagley, characterized by Sen.
+Thomas F. Eagleton, D-Mo., as a “windbag” who did not understand the complexities of the futures market. (Bagley
+resigned his post on Nov. 3 to join a California law firm.)
+These controversies showed up in final provisions of the bill. The fixed term of the commission chairman was
+changed to one served at the pleasure of the president, and trading on most options was suspended until the CFTC
+could show congressional agriculture committees that it could handle regulation responsibility.
+Another change required the CFTC to clear proposed market contracts on financial instruments of the U.S.
+government or stocks with interested agencies - the Treasury Department, Securities and Exchange Commission
+(SEC) or the Federal Reserve Board. The administration had proposed transferring regulatory authority for these
+types of futures contracts to the Treasury and the SEC, and demoting the CFTC to sub-Cabinet status.
+The final bill did not include a provision passed by the House and backed by many farmers that would have required
+public reporting of export sales of commodities within three days. Farmers had complained that market “insiders”
+had an unfair advantage from advance knowledge of major sales, such as the Russian wheat sales of 1972 and
+1977. Conferees, however, decided that that proposal would duplicate an existing program of the Agriculture
+Department (USDA).
+Provisions
+As signed into law, S 2391:
+Empowered the president to appoint the CFTC chairman from among the five commissioners, to serve at the president's
+pleasure.
+Directed the CFTC chairman to follow budget and administrative priorities set by the whole commission when spending
+commission funds or carrying out its functions.
+Deleted a requirement that the Senate confirm the CFTC executive director.
+Prohibited commissioners and high-ranking CFTC officials from transacting business for others with the commission for
+one year after leaving office; made the provision effective four months after enactment. The ban covered officials at the
+ 
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 2 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+one year after leaving office; made the provision effective four months after enactment. The ban covered officials at the
+GS 16 level and above, and Schedule C appointees - those exempt from civil service by reason of their specialized
+responsibilities.
+Relaxed a requirement that the CFTC staff a liaison office at the Department of Agriculture (USDA), directing the
+commission instead to “maintain liaison.”
+Required the CFTC to keep the Treasury Department, Federal Reserve Board and Securities and Exchange
+Commission informed of its activities relating to the responsibilities of the agencies, and to seek agency views on the
+market and financing implications of futures trading in securities and financial instruments under their jurisdiction. Before
+the commission could approve an application for a contract market dealing in securities issued or guaranteed by the U.S.
+government, the application had to be submitted for comment to both the Treasury Department and the Federal Reserve
+Board. The commission was required to make any agency views on an application part of the public record, and was
+barred from approving an application for 45 days, or until  agency comments were received. Lawsuits based on any
+aspect of this provision were barred.
+Prohibited commodity options transactions, with two exceptions, until  30 days after the CFTC sent evidence to
+congressional agriculture committees that it could regulate the transactions; exempted from this ban “trade options”
+(those between entities that buy or sell the commodity on which the option is based), and certain entities that had been
+in the business as of May 1, 1978; required any future CFTC regulations on options transactions to set minimum
+financial and management standards, spelled out in the bill.
+Required a public hearing and a finding that an individual's options transactions were “contrary to the public interest”
+before the commission could terminate an individual's right to trade options.
+Authorized the commission to bar any options transactions on physical commodities that it finds contrary to the public
+interest, but only after a public notice and hearing.
+Authorized the commission to permit commingling of customers' segregated funds for different types of transactions,
+under conditions set by the commissions.
+Exempted from mandatory registration and related reporting requirements persons active in “cash market” transactions
+on agricultural commodities, and non-profit farm groups that advise on cash commodities. (A cash market is one for
+immediate delivery of the payment for commodities.) These persons were not exempt from other provisions of the
+Commodity Exchange Act (CEA).
+Required the commission to publish, at least 30 days before adoption, any proposed changes in contract market
+regulations that it considers of major economic significance; allowed the CFTC up to 60 days after receipt to approve
+such proposed changes, unless it notifies a market that its proposal violates the commission's statute or regulations. In
+the latter case, a hearing was required.
+Established CFTC statutory authority to subpoena witnesses and take other actions relating to investigations. (Under
+existing law, CFTC investigative authority was derived from the Interstate Commerce Act.)
+Required an on-the-record hearing, before cease-and-desist orders or fines were imposed, for a board of trade whose
+designation as a contract market had been denied, suspended or revoked.
+Empowered states to take civil action against violations of the CEA or regulations based on it. States could seek
+injunctions or fines. Entitled the CFTC to intervene in any state action brought under this section. Exempted from state
+actions these entities: contract markets, floor brokers, boards of trade licensed by the commission, and clearing houses.
+Affirmed that nothing in this section interfered with states' rights to prosecute alleged violations of state anti-fraud
+statutes.
+Barred the CFTC from disclosing information about traders' business dealings and customers, unless the data had been
+disclosed in an administrative, judicial or congressional proceeding.
+Eliminated a requirement that the CFTC publish information about traders and their market positions when that data had
+been supplied to a congressional committee.
+Authorized the CFTC to fingerprint applicants for registration.
+Ended CFTC authority to publish market positions of traders when it is “communicating” with exchange officials or
+committees about potentially disruptive or harmful market developments.
+Authorized establishment of mandatory-membership professional associations for regulating business practices of
+members.
+Raised to $15,000, from $5,000, the amount of damages that had to be alleged for arbitration proceedings by a
+professional association.
+Authorized the commission to delegate registration to professional associations.
+Required each exchange to disclose findings and reasons for any disciplinary action or denial of membership.
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 3 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+Raised to felony, from misdemeanor status, various fraudulent and deceptive practices, including falsifying registration
+information.
+Raised to $500,000, from $100,000, the maximum fine for felonies committed by organizations; raised to $100,000, from
+$10,000, the maximum fine for felonies committed by CFTC staff and agents.
+Authorized appropriations as needed for commission operations for four years, through fiscal 1982.
+Affirmed that reparations proceedings were in order whether the alleged violation was committed by a registered
+individual or one who had not registered even though required to do so.
+Made a hearing optional, not mandatory, in reparations cases where alleged damages were under $5,000.
+Prohibited leverage transactions on agricultural commodities; required the commission to regulate leverage transactions
+in gold and silver; authorized it to prohibit or regulate leverage transactions on all other commodities by Oct. 1, 1979;
+authorized the commission to regulate any leverage transaction as a futures contract if it found that to be appropriate.
+(But conferees told the CFTC to hold off implementing its decision to treat all gold and silver leverage contracts as
+futures contracts, until  House and Senate committees could hold hearings on the proposal.)
+Authorized the commission to grant use immunity to witnesses appearing before the commission. (Under use immunity,
+the government grants a witness immunity from prosecution for specific offenses, while at the same time compelling him
+to testify. The witness is not protected from prosecution relating to the crime on which he testified if the government can
+obtain evidence independent from the testimony.)
+Required the secretary of agriculture to study and report within one year of enactment on the impact of futures trading
+on potato marketing.
+Authorized the CFTC to collect “user fees” from entities regulated by the commission, to cover the costs of regulation;
+barred the commission from implementing any user fee plan until  the plan had been approved by both House and
+Senate Agriculture committees; provided for payment of the fees to the U.S. Treasury, and stipulated that income from
+the fees would be spent “in accordance with the appropriations process.”
+Background
+Congressional action in 1974 extended the Commodity Exchange Act to cover all commodities that had not been
+regulated and all other services, rights and interests in contracts for future delivery. (About one-third of the
+commodities traded in 1973 involved unregulated commodities.) The 1974 act (PL 93-463) created the independent
+five-member commission in place of a regulatory unit within the Department of Agriculture. It also gave the CFTC
+the discretion to regulate or ban options trading that was not already illegal, authorized injunctive relief against
+various violations and empowered the commission to intervene in contract markets to restore orderly trading in
+emergency situations. Registration requirements were extended to more professionals dealing with the contracts.
+The 1974 act also included a “sunset” clause allowing the CFTC to expire in 1978 unless it were reauthorized. (1974
+Almanac p. 215)
+Both the General Accounting Office (GAO) and the House Appropriations Subcommittee on Agriculture turned in
+highly critical reports on the four-year-old agency earlier in 1978. Among other things, the CFTC was said to be
+ineffective at screening firms and individuals for registration, slow to move against manipulations of the market,
+slower still at processing reparations claims, and lacking in internal structure. The reports also said the commission
+had improperly allowed itself to to be sidetracked from its main responsibility by the problems with London options.
+The Carter administration recommended transferring CFTC authority over registered securities to the SEC, and
+giving the Treasury Department the final right to approve or disapprove designation of markets for trading futures
+contracts on government financial instruments, such as Treasury bonds. The Office of Management and Budget
+(OMB) proposal also said that the CFTC should be eliminated and that its function should be assigned to a sub-
+Cabinet agency, comparable to the Environmental Protection Agency. However, the proposal was not received until
+the final day of Senate Agriculture Committee markup, too late to be considered, according to Chairman Herman E.
+Talmadge, D-Ga.
+Senate Committee Action
+In its May 15 report (S Rept 95 –850) on S 2391, the Senate Agriculture Committee said the 1974 bill had
+brought “progress toward encouraging honest and sound dealing.… The basic conclusion reached in 1974 that there
+should be a single regulatory agency responsible for futures trading is as valid now as it was then,” it said.
+The greatest “substantive” problem since 1974, the committee said, had been with dishonest commodity-related
+transactions traded “off-exchange” - that is, off the organized, designated contract markets. The CFTC therefore had
+been forced to divert futures personnel to options-related activities. Thirty of 38 options firms were under
+investigation and injunctions had been obtained against 60 firms and individuals, the committee said. The states had
+been effectively prevented from helping crack down on fraudulent options operations by the 1974 law, which
+preempted their commodities futures regulatory authority, the committee said.
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 4 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+Nevertheless, witnesses had told the committee that the young commission had “done a credible job in light of the
+enormous tasks with which it found itself confronted.” Splitting up CFTC regulatory authority among several agencies
+“would only lead to costly duplication and possible conflict or over-regulation,” the committee concluded.
+Senate Floor Action
+After heaping verbal abuse on the unpopular agency, the Senate decided to give it six more years to shape up.
+By an 84–6 vote the Senate July 12 voted to extend the life of the CFTC through fiscal 1984, with no major
+structural changes. (Vote 206, p. 34-S)
+Complaints against the commission ranged from sloppy management to failure to fulfill  its basic mandate, regulation
+of the trillion-dollar futures market. Eagleton said he thought the CFTC was “the most messed up federal agency in
+the government, bar none.”
+Even the floor manager of the reauthorization bill, Patrick J. Leahy, D-Vt., conceded that the troubled commission
+was “a strong contender” for the title of “worst” federal agency.
+CFTC Chairman William T. Bagley and his four fellow commissioners came in for unusually acid criticism during the
+Senate debate on S 2391. “Bumblers and sycophants” is the way Orrin G. Hatch, R-Utah, referred to them, and
+Eagleton claimed that “a lot of the troops on the commission think [Bagley] is a windbag. I happen to think he is,
+too.”
+Before passing the reauthorization bill, the Senate rejected an attempt to unseat Bagley and another new,
+controversial commissioner, David G. Gartner. The vote was on a proposal to dissolve the existing five-member
+commission and replace it with a newly appointed, three-member unit.
+Gartner had come under fire for having accepted, before his appointment, sizable gifts of stock for his children from
+the president of a Midwest grain company whose business was partially regulated by the CFTC. President Carter
+and Vice President Mondale had both tried, unsuccessfully, to secure Gartner's resignation when the gifts were
+publicized after his confirmation. Under existing law, CFTC commissioners could be removed only by impeachment.
+But Leahy defended Gartner who, he said, had “bent over backwards” to inform both the White House and the
+Senate Agriculture Committee of the gifts before his appointment. Leahy urged his colleagues not to “damage …a
+significant piece of legislation just because somebody at the White House screwed up.”
+While the Senate refused to unseat Gartner and Bagley, the bill as passed reined in the commission's
+independence somewhat. The fixed, five-year term of the chairman was changed to a position served at the
+president's pleasure. States were empowered to move against violations of the federal commodities futures statute,
+and industry associations were authorized to handle reparations proceedings.
+The Senate bill also suspended trading in commodity options except for dealers meeting stiff financial and
+professional standards, and stipulated that the CFTC should not permit options trading to resume unless it could
+show it had the resources and expertise to regulate it. The risky options market had hatched some notable recent
+scandals. (An option is, basically, a chance to buy a contract at a future date.)
+Also included in the Senate bill was a $1 million-a-year study on the effect of futures trading on the price of farm
+commodities.
+Eagleton launched the attack on the CFTC with an amendment to replace the existing commission with a new one,
+headed by a single chief. This move would improve the CFTC administratively and had “absolutely and categorically
+nothing to do with the Gartner controversy,” Eagleton maintained. He subsequently withdrew the amendment,
+saying he had been advised that slashing the commission from five members to one was too drastic.
+John Melcher, D-Mont., then proposed to replace the existing commission with a new, three-member Commodities
+Trading Commission. Melcher said his amendment would extricate both the commission and Gartner from the
+embarrassment of his continuing as a commissioner.
+Opposing Melcher were Leahy, Walter “Dee” Hudleston, D-Ky., and Bob Dole, R-Kan., who said that if the Senate had
+been mistaken in confirming Gartner, it should not try to undo the mistake at the expense of the commission and
+the new commissioner. Gartner “came to us with clean hands” and no new charges had turned up since his
+confirmation, Dole said. Leahy moved to table the Melcher amendment, winning by a 69–23 vote. (Vote 205, p. 33-
+S)
+Other Amendments
+The Senate took these other actions:
+Agreed by voice vote to a Huddleston amendment re-establishing a maximum fine of $100,000 for felonies under the
+commodities act. The amendment also specified which sections of the act would carry criminal penalties for violations of
+CFTC rules and regulations.
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 5 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+The committee bill had raised the maximum criminal penalty to $500,000 and had broadly authorized criminal
+penalties for violations of the commodities futures statute and of all CFTC regulations and rules based on that
+statute. Huddleston said the higher criminal fine could exhaust funds that would otherwise be available to pay
+defrauded customers reparations. And, he said, “the bureaucracy should not have total leeway to create new crimes,
+particularly felonies, through the issuance of rules, regulations and orders.”
+Agreed by voice vote to an Eagleton amendment authorizing “user fees” to be paid to the CFTC by persons whose
+transactions the commission regulated.
+Agreed by voice vote to a Bellmon, R-Okla., amendment to expand the bill's authorization for state enforcement of the
+Commodity Exchange Act and CFTC regulations and rules. Bellmon's amendment empowered states to bring civil suits
+for financial settlements, as well as injunctions, on behalf of residents, if the CFTC were notified of the suit.
+Agreed by voice vote to a Leahy amendment deleting a one-house veto of any CFTC proposal to regulate renewed
+trading in commodity options.
+Leahy said he wanted the veto provision removed “just simply to give us some time to better evaluate” a recent
+Carter declaration that he would not honor the legislative vetoes. Leahy said the House bill included a similar veto
+provision, and that he expected the issue to be dealt with in conference.
+Rejected by voice vote an Eagleton amendment to suspend trading in most “leverage” contracts until  the CFTC had
+developed “effective” regulatory methods. These contracts, most commonly used for long-term purchase of precious
+metals like gold, involve installment payments against future delivery of the commodity.
+Leahy said the commission should be allowed to use new discretionary power authorized by the bill to deal with any
+problems. Huddleston also objected to an outright ban on leverage transactions. Since the scope of this
+“developing…activity…in trading” was not yet known, it was unreasonable “to assume that every trade is a
+fraudulent trade,” Huddleston said. He added that anti-fraud laws could also be used to curb abuses.
+House Committee Action
+Like its Senate counterpart, the House Agriculture Committee rejected an administration proposal to reduce the
+commission to sub-Cabinet status and parcel out major CFTC responsibilities to the Securities and Exchange
+Commission (SEC) and the Treasury Department.
+Maintaining a “strong, prestigious independent commission” was the best way to ensure a “fair, open” futures
+market, the committee said in its May 15 report on HR 10285 (H Rept 95 –1181).
+The committee recommended a three-year reauthorization, because the rapid rate of expansion and change in the
+industry made early review of the CFTC's mandate “desirable.”
+House Floor Action
+After three sessions (July 21, 25–26) on the complex bill and 14 amendments, the House approved a three-year
+reauthorization of the CFTC (HR 10285) by a 401–6 vote July 26 and then moved to substitute its text for the
+Senate-passed measure (S 2391) and request a conference. (Vote 524, p. 150-H)
+Major issues debated were whether commodities export sales should be quickly publicized to cut the advantage of
+market “insiders,” and whether states should be allowed to pre-empt federal enforcement of key portions of the
+commodities statute.
+The House by a 273–125 vote adopted an amendment by Neal Smith, D-Iowa, requiring reporting within 48 hours of
+export sales and related information, with public disclosure of the reports on the third day after the sale. (Vote 523,
+p. 150-H)
+The amendment was prompted by farmer discontent with the secrecy surrounding massive grain sales to the Soviet
+Union in 1977 and 1972. In these sales, Smith charged, big grain companies had been able to buy up farmers'
+stocks at unfair, low prices by masking the “real demand” for the wheat.
+The House rejected 141–260 a Baldus, D-Wis., amendment that would allow states to pass and enforce
+commodities laws if they were identical to key sections of the federal commodities statute. (Vote 522, p. 150-H)
+Baldus said his amendment was needed to ensure adequate policing of the industry, since the CFTC was not given
+either “resources (or) manpower to monitor the industry on a nationwide basis.” But opponents argued that even
+though the text of state and federal laws would be identical, interpretations could vary among different state courts,
+“causing regulatory chaos,” according to Steven D. Symms, R-Idaho. Anything other than uniform national
+enforcement would be a hardship for the industry, opponents said.
+The House also:
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 6 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+Agreed by voice vote to a Glickman, R-Kan., amendment requiring the Securities and Exchange Commission, the
+General Accounting Office and the CFTC to evaluate the relationship between futures in general and futures on financial
+instruments like government bonds.
+Agreed by voice vote to a Findley, R-Ill., amendment limiting to nine months a discretionary exemption for certain firms
+from a general ban on futures trading.
+Rejected by a 6–24 standing vote a Symms amendment to end what Symms called a “double jeopardy” situation. Under
+existing law, the commission could move in both federal court and administrative proceedings against alleged violations.
+Opponents of Symms' amendment argued that the authority for dual action should be retained, because the courts could
+move quickly to enjoin questionable activity while administrative judges with appropriate expertise could deal with the
+substance of a commodities futures problem.
+Agreed by voice vote to a Foley, D-Wash, amendment deleting a requirement in the committee bill that states could only
+prosecute certain violations of the commodities statute and regulations under the parens patriae doctrine. Foley argued
+that the “confusing” doctrine, which required a state to demonstrate that a violation had injured its citizens, held up
+action against criminal violations. With Foley's amendment, states had only to demonstrate that a violation had occurred
+in order to proceed.
+Agreed by voice vote to a Foley amendment narrowing the bill's conflict-of-interest provision for high-ranking officials by
+limiting its application to those with confidential or policy-making responsibilities. Foley said the committee's provision,
+which covered all positions at the GS 16 level or above, would make it hard for the agency to recruit high-caliber
+lawyers, economists and others with needed expertise.
+Agreed by voice vote to a Panetta, D-Calif., amendment raising to $500,000, from $100,000, the maximum criminal
+penalty for organizations violating the commodities statute.
+Agreed by voice vote to an AuCoin, D-Ore., amendment requiring a 30-day public notice and comment period before the
+CFTC approved any contract market rules of “major economic significance.”
+Agreed by voice vote to a Richmond, D-N.Y., amendment broadening a provision prohibiting disclosure of confidential,
+market-sensitive information or the identity of traders and customers until  the information had been disclosed in judicial,
+congressional or administrative proceedings.
+Agreed by voice vote to a Cohen, R-Maine, amendment directing the General Accounting Office (GAO) to study and
+report within a year on the market impact of futures contracts in Irish potatoes.
+Rejected amendments to disqualify potential commissioners who had received gifts from individuals with interests
+regulated by the CFTC, and to exempt commodities clearinghouses from direct CFTC regulation.
+Conference Action
+In most respects the House and Senate bills differed more in detail than in intent. Conferees settled on a four-year
+reauthorization, compared with the three-year House extension and the six-year extension passed by the Senate.
+With a few exceptions they simply blended differing features of both bills, retaining most items passed by each
+house. The report (S Rept 95–1239) was filed Sept. 25.
+On the regulation of options, conferees indicated that they did not intend a suspension of trading to become a
+permanent ban on options transactions. The commission should “expeditiously proceed with plans to implement
+exchange trading … to assure that options will, in fact, be traded on domestic exchanges, to the extent possible with
+existing commission resources,” conferees said.
+On the subject of leverage transactions, the conferees expressed surprise at a September CFTC decision to treat
+leverage contracts in gold and silver as futures contracts, for purposes of regulation. (These contracts, most
+commonly used for long-term purchase of precious metals, involve installment payments against future delivery of
+the commodity.) Conferees told the CFTC to hold off final action on the reclassification of the leverage contracts until
+House and Senate Agriculture conference committees could hold hearings on the proposed change.
+Conferees followed the House in substantially beefing up fines for criminal violations of the commodities statute by
+organizations. They chose a narrower House conflict-of-interest provision over a Senate version that would have
+covered many more employees. The Senate bill applied restrictions on post-employment contacts to officials at the
+GS 15 level and above. The final version imposed restrictions beginning at the GS 16 level.
+These provisions were not included by conferees in the final bill:
+A Senate-approved provision designed to protect customer funds from being seized in bankruptcy proceedings against a
+futures merchant was dropped because the 1978 bankruptcy reform act (HR 8200) included a provision on the treatment
+of these funds. (Bankruptcy act, p. 179)
+Conferees dropped a Senate provision requiring the commission to monitor forward contracts on agricultural
+commodities for six years and recommend policy changes on the contracts, if needed. Instead, conferees said, Rep.
+Thomas S. Foley, D-Wash., and Sen. Herman E. Talmadge, D-Ga., chairmen of the House and Senate Agriculture
+7/2/09 4:32 PMCQ Almanac Online Edition
+Page 7 of 7http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal78-1239108&type=hitlist&num=3
+Thomas S. Foley, D-Wash., and Sen. Herman E. Talmadge, D-Ga., chairmen of the House and Senate Agriculture
+committees, had asked the secretary of agriculture to conduct the study. In a similar decision, conferees retained a
+House-passed provision mandating a year-long study of the impact of potato futures contracts on the potato market, but
+assigned responsibility for the study to the Agriculture Department instead of the commission.
+A House-passed requirement that exporters make detailed reports on commodity export sales to the CFTC within 48
+hours, with publication of the data the following day, was dropped because the Agriculture Department “already has an
+export sales reporting program,” according to conferees. They noted that the secretary had recently appointed a
+committee to review the export reporting system and to recommend improvements.
+A Senate provision establishing a national commission to study and report on the impact of futures trading on farm
+income was deleted, without comment.
+Document Citation
+"Commodity Futures Agency." CQ Press Electronic Library, CQ Almanac Online Edition, cqal78-1239108. Originally published in
+CQ Almanac 1978 (Washington: Congressional Quarterly, 1979). http://library.cqpress.com/cqalmanac/cqal78-1239108
+(accessed July 2, 2009).
+Document ID: cqal78-1239108
+Document URL: http://library.cqpress.com/cqalmanac/cqal78-1239108
+© 1979, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

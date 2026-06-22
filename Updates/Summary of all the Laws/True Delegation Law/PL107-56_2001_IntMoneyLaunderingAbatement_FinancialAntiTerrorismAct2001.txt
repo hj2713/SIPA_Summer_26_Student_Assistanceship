@@ -1,0 +1,603 @@
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 1 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Counterterrorism and Domestic
+Intelligence
+2007 TRIA Extension Backs Up Insurers
+2007 Sept. 11 Recommendations
+Enacted, Making Good on
+Democrats' Pledge
+2007 FISA Gets Temporary Fix as
+Congress Debates Immunity for
+Telecom Firms
+2007 Bipartisan CFIUS Overhaul Calls
+for Tighter Review of Foreign
+Investment
+2006 Ports Debate Focuses on
+Screening
+2006 NSA Program Prompts Flurry of
+Bills
+2005 Disputes Delay Reauthorization
+Of Anti-Terrorism Act Provisions
+2004 Terrorism Insurance Extension
+Dies
+2003 Congress Re-Examines Patriot
+Act
+2003 Bioshield Funding Decision
+Delayed
+2002 Law Calls for Tighter Port
+Security
+2001 Provisions of the Anti-Terrorism
+Law
+2001 Hill Meets Intelligence Needs
+2001 CJS Bill Includes Anti-Terror
+Funds
+2001 Bio-Terrorism Bill Founders
+2001 Anti-Terror Bill Zooms Into Law
+1998 Intelligence Agencies Receive
+Small Spending Increase,
+Expanded Wiretap Authority
+1996 President Signs Anti-Terrorism
+Bill
+1996 Anti-Terrorism Provisions
+1995 Lawmakers Take Aim at
+Terrorism
+1994 Bill Facilitates Police Wiretapping
+1985 Presidential Address: Reagan on
+World-Wide Terrorism
+1978 Controls Tightened on Use of
+Wiretaps
+1978 Anti-Terrorist Bill
+1977 Wiretapping Limits
+1976 Domestic Wiretapping
+1967 CIA Secret Financing of Private
+Groups Disclosed
+Intelligence Spending, Operations and
+Oversight
+Terrorism: Domestic
+Terrorism: Foreign
+Provisions of the Anti-Terrorism Law
+An article from CQ Almanac 2001
+The following are the main provisions of the new anti-terrorism law (PL 107 –
+56), signed Oct. 26.
+Surveillance
+Wiretap predicates. Terrorism and computer fraud and abuse were added to
+the list of crimes that are “predicates” for obtaining a wiretap, which means a
+court can give government agents permission to tap telephones when they
+are investigating such crimes. (Provision expires Dec. 31, 2005.)
+Information sharing. Information received during grand jury proceedings can
+be disclosed to law enforcement, intelligence, protective, immigration or
+national defense or national security personnel. Any foreign intelligence
+information obtained by law enforcement officials during wiretaps, electronic
+surveillance or a criminal investigation can be made available as well.
+“Intelligence information” is defined as any information that would help the
+United States protect against attacks, sabotage and clandestine intelligence
+activities or that concerns foreign powers and relates to national defense or
+foreign affairs.
+A federal court must be notified after any grand jury information is disclosed.
+The attorney general must develop standards for release of this information
+when the subject is a “U.S. person,” generally a citizen, a legal permanent
+resident or a U.S. company. Grand jury information also may be disclosed at
+the request of defendants when they argue that it includes information that
+may be grounds for dismissal of the indictment against them.
+Individuals who receive information under this authorization may use it only in
+the official performance of their duties.
+The authority for law enforcement to share foreign intelligence information
+obtained through wiretaps or electronic surveillance expires Dec. 31, 2005.
+Intelligence information collection. The law clarifies that authorities using
+wiretaps and other kinds of electronic surveillance to collect information for a
+foreign intelligence investigation are not bound by the procedures and
+restrictions that apply to authorities conducting the same kinds of surveillance
+for a criminal investigation.
+Hiring translators. The FBI is authorized to hire additional translators. The
+administration must report to Congress on the number of translators working
+for the FBI and for the Justice Department overall.
+“Roving” wiretaps. Investigators working under the authority of the Federal
+Intelligence Surveillance Act (FISA) may use “roving” wiretaps when a court
+finds that the actions of a suspect may thwart traditional wiretaps. In those
+cases, investigators can obtain a court order allowing them to tap whatever
+telephones a suspect may use, rather than getting a court order for each
+telephone. (Provision expires Dec. 31, 2005.) FISA (PL 95–511 ) is the law
+authorizing wiretaps of suspected foreign criminals or spies. (1978 Almanac,
+p. 186)
+Intelligence investigations. Court orders for FISA investigations against
+people considered to be agents of a foreign power and who are not U.S.
+persons are good for 120 days, rather than the 90 days allowed previously.
+After that period, a court can extend the order anywhere from 90 days to a
+year. Search warrants in such cases are good for 90 days, rather than the 45
+days allowed previously. (Provision expires Dec. 31, 2005.)
+FISA judges increase. The law authorizes an increase in the number of
+district court judges who approve FISA requests from seven to 11 and
+ 
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 2 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+district court judges who approve FISA requests from seven to 11 and
+requires that three of them live within 20 miles of the District of Columbia.
+Voice mail seizure. The government is allowed to seize voice mail messages with a warrant. Investigators may get one
+warrant that is good nationwide, rather than having to obtain a separate warrant for each jurisdiction. (Provision expires
+Dec. 31, 2005.)
+Credit card information. Investigators can get subpoenas to obtain subscriber credit card or bank account numbers
+and other payment information from electronic communication providers, such as cable companies or Internet services.
+Cable companies and the Internet. The government can conduct surveillance on Internet users without notice, even if
+they obtain their Internet access through a cable company rather than over telephone lines. Previously, to protect the
+privacy of consumers, if the government sought information about a cable customer, the company had to notify the client
+of the request. Revealing subscribers' cable viewing habits is expressly forbidden.
+Emergency information disclosure. Internet service providers can show the government a subscriber's electronic
+communications when they believe there is a risk of immediate danger, death or serious bodily injury. With a court order
+or search warrant, law enforcement agents also can force the providers to disclose such information. (Provision expires
+Dec. 31, 2005.)
+“Sneak and peek” searches. Investigators can search suspects' property without notifying them immediately if the
+government thinks prior notice of the search would have an “adverse result” on the investigation. The warrant could not
+be used to seize any property or electronic information, unless the court finds reasonable necessity for the seizure. The
+individual must be notified within a “reasonable period” after the search has taken place, although the law does not
+define “reasonable.” A court can allow investigators to keep the search secret longer if “good cause” is shown.
+FISA wiretaps. The law broadens the authority of the government to get court orders under FISA for using pen
+registers and trap-and-trace devices, which can be used to track telephone calls and Internet communications. Instead
+of showing that the person under surveillance is the “agent of a foreign power,” investigators must show the information
+is “relevant” to an ongoing investigation aimed at protecting against international terrorism or clandestine intelligence
+activities. The government may not use this enhanced surveillance power against U.S. citizens if the investigation was
+triggered solely by activities protected by the First Amendment. For example, citizens cannot be investigated simply
+based on what groups they associate with or things they have said. (Provision expires Dec. 31, 2005.)
+Business records. A court may issue a FISA order allowing investigators to obtain business records, but only in
+international terrorism or clandestine intelligence investigations. Investigations of U.S. citizens may not be based solely
+on activities protected by the First Amendment. The type of business records that may be obtained with the FISA court
+order is broadened to include any books, records, documents or items. Twice a year, the attorney general must report to
+Congress how many times such a court order has been requested and the outcome of each request. (Provision expires
+Dec. 31, 2005.)
+Internet communications tracking. Pen registers and trap-and-trace devices, which track incoming and outgoing
+telephone calls, may be used to track Internet communications. Investigators can get one federal court order good
+throughout the country allowing them to use such devices, but they may not record the content of the communications.
+Internet service providers are protected from liability in such cases. If investigators install their own pen registers and
+trap-and-trace devices on a packet-switched data network, they must note who installed the device and anyone who
+had access to it, the date and time of installation and removal, the duration of any access to the information, what data
+was collected, and how the device was configured, including any modifications. This record must be provided to the
+court in secret within 30 days after the device is removed.
+Computer hacking interception. Law enforcement agents can intercept electronic communication if the owners of a
+computer system or network believe someone is attacking their system from the outside. The agents' actions must be
+part of an ongoing investigation and involve only communications to or from the suspects. (The provision expires Dec.
+31, 2005.) Intelligence agents working under the authority of FISA also may intercept such communications.
+Broadening intelligence authority. The law allows FISA investigations in those cases where obtaining foreign
+intelligence information is a “significant” purpose of the investigation. Such surveillance previously was permitted only
+when obtaining foreign intelligence information was “the purpose” of the investigation. (Provision expires Dec. 31, 2005.)
+Nationwide search warrant. The law authorizes nationwide federal search warrants good in any U.S. jurisdiction for
+terrorism investigations, instead of requiring a separate warrant in each jurisdiction.
+Nationwide electronic search warrant. Courts with jurisdiction over the crime under investigation may issue a
+nationwide federal search warrant, good anywhere in the country, for e-mail and other electronic information. (Provision
+expires Dec. 31, 2005.)
+Exports to Taliban. The president may unilaterally restrict exports of agricultural products, food and medicine or
+medical devices to the Taliban or any part of Afghanistan controlled by the Taliban.
+Internet service provider protection. The law states that it does not impose any new technical obligation on Internet
+service providers in order to comply with its provisions. Compensation is authorized for Internet service providers or
+anyone else who helps set up pen registers and trap-and-trace devices on computer networks.
+Civil suits for disclosure of information. If anyone unlawfully discloses information obtained through the law's wiretap
+authority, the United States can be sued in civil court. If the court finds the disclosure to have been unlawful, there is a
+minimum fine of $10,000 plus litigation costs. No jury trials are permitted for these cases. If the court finds a government
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 3 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+minimum fine of $10,000 plus litigation costs. No jury trials are permitted for these cases. If the court finds a government
+employee is guilty of unlawfully disclosing the information, the government must investigate whether administrative
+action against the employee is also warranted. (Provision expires Dec. 31, 2005.)
+Liability protection. Providers of wire or electronic communication services, a landlord, custodian or anyone else who
+assists with investigations cannot be sued for providing information to law enforcement under this law.
+Continuing investigations. Investigations into offenses committed before the law's various surveillance provisions
+expire will be allowed to continue past the expiration date of Dec. 31, 2005.
+Money Laundering
+Special measure for risky institutions. The law authorizes the Treasury secretary to impose new “special measures”
+against foreign jurisdictions, foreign banks, transactions involving such jurisdictions or institutions, or one or more types
+of accounts that the secretary, after consulting with the secretary of State and the attorney general, determines are
+being used for money-laundering.
+The special measures are: (1) requiring additional record-keeping or reporting for particular transactions; (2) requiring
+the identification of the real owners of the money in certain accounts at U.S. banks; (3) requiring the identification of
+customers of a foreign bank who write checks out of the bank's U.S. bank accounts; (4) requiring the identification of
+customers of a foreign bank who use one of its U.S. bank accounts for currency exchanges and other purposes; and (5)
+after consulting with the secretary of State, the attorney general and the chairman of the Federal Reserve Board,
+restricting or prohibiting the the ability of certain foreign banks to open or maintain U.S. bank accounts. The first four
+measures may not be imposed for longer than 120 days without writing new regulations. Measure five may be imposed
+only by regulation.
+Due diligence requirements. Foreign financial institutions that establish, maintain, administer or manage private bank
+accounts in the United States for non-U.S. citizens must ensure that the accounts are not being used for money-
+laundering. U.S. financial institutions doing business with foreign banks at risk of being used for money-laundering also
+must watch for such transactions. The law sets out minimum standards that institutions must meet in ensuring that
+transactions are legal.
+Prohibition on foreign “shell banks.” Depository institutions, credit unions and branches or agencies of foreign banks
+are prohibited from establishing, maintaining, administering or managing bank accounts in the United States for foreign
+banks that have no physical property.
+Information sharing. Regulators may help banks meet the law's new standards for oversight by giving them information
+about people engaged in or suspected of terrorist acts or money-laundering. Banks may cooperate with each other in
+identifying and reporting people and counties suspected of terrorism or money-laundering.
+Money-laundering predicates. The list of offenses covered by money-laundering laws is expanded to include foreign
+corruption offenses, such as export control violations, some customs and firearms offenses, and felony violations of the
+Foreign Agents Registration Act of 1938, which requires agents of foreign governments to register with the Department
+of Justice.
+Property confiscation rights. Owners of property confiscated under money-laundering laws are permitted to present
+an “affirmative defense”—meaning they can go on the offensive against the government, rather than simply defending
+themselves. They can argue, for example, that there were mitigating circumstances that should exempt their property
+from confiscation.
+Federal jurisdiction. The law gives U. S. district courts jurisdiction over foreigners engaged in money-laundering in the
+United States, over foreign banks opening U.S. bank accounts, and over foreigners who use, sell, or otherwise transfer
+assets that have been forfeited by order of a U.S. court. Federal courts may issue a pretrial restraining order or take
+other action to keep forfeited property in the United States. Federal courts also are authorized to appoint a receiver to
+collect and take custody of assets forfeited because of criminal or civil money-laundering or forfeiture judgments.
+Money-laundering crime. The law makes it a crime to use foreign banks for money-laundering.
+“Payable-through” accounts. Amounts deposited by foreign banks in an interbank “payable-through” account, a type
+of account they can hold at a U.S. bank, will be treated as having been deposited in the United States for purposes of
+forfeiture rules. The attorney general may, in the interest of justice and in keeping with the U.S. national interest,
+suspend a forfeiture proceeding.
+Information response time. U.S. banks must reply within 120 hours to a request for information from a U.S. regulator
+who is checking on their compliance with money-laundering laws.
+Foreign bank records. Foreign banks that maintain their own accounts at U.S. banks must appoint agents to receive
+legal documents within the United States. The attorney general and the Treasury secretary may issue a summons or
+subpoena to any foreign bank for records, wherever located, from “correspondent accounts,” another kind of account
+that foreign banks can maintain in the United States. U.S. banks must sever correspondent arrangements with foreign
+banks that do not answer or comply with such summons or subpoenas.
+Foreign forfeiture. The government may seek a restraining order to keep people from moving or disposing of property
+outside the United States that has been ordered forfeited or confiscated. U.S. courts may force a convicted criminal to
+return forfeited property located abroad. Courts can order such property returned even if the owners have challenged
+the government's right to take it from them and are waiting for a ruling on their case.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 4 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Broadened definition of financial institution. Credit unions, futures commission merchants, commodity trading
+advisors and commodity pool operators are added to the definition of financial institution for purposes of the Bank
+Secrecy Act, a 1970 law that established transaction reporting requirements for financial institutions. The law also
+clarifies that the term “federal functional regulator” includes the Commodity Futures Trading Commission for purposes of
+the Bank Secrecy Act.
+Corporate fugitive. Corporations cannot challenge forfeiture orders against them if their majority shareholder is a
+fugitive. No fugitive may challenge a forfeiture claim on behalf of a corporation.
+Anonymous funds transfers. The Treasury secretary is authorized to issue regulations concerning the maintenance of
+concentrated assets in accounts at U.S. depository institutions in order to prevent an institution's customers from
+anonymously directing funds into or through concentration accounts, a type of bank account that commingles funds from
+various sources.
+Customer identification. The Treasury secretary must establish minimum standards that financial institutions must
+meet in verifying the identities of customers. Financial institutions must keep verification records and check the names
+of customers against lists of known or suspected terrorists.
+Foreign customer identification. By April 2002, the Treasury secretary must report to Congress on the most effective
+way to verify the identities of foreigners opening accounts in U.S. financial institutions and assign them identification
+numbers that work like the tax identification number now given to U.S. citizens.
+Money laundering record. In ruling on bank mergers or similar applications, the Federal Reserve Board and the
+Federal Deposit Insurance Corporation must look at how effectively banks or bank holding companies have combatted
+money-laundering in the United States and in overseas branches. This provision applies only to applications submitted
+after Dec. 31, 2001.
+Wire transfer origination. The law requires the Treasury secretary to take all reasonable steps to encourage foreign
+governments to require that wire transfers sent to the United States include the name of the person requesting the
+transfer. The secretary must report annually to the House Committee on Financial Services and the Senate Committee
+on Banking, Housing and Urban Affairs on the progress toward that goal.
+Anonymous funds transfers. The law increases civil and criminal penalties for people or institutions who try to move
+money anonymously in and out of bank accounts in violation of the new monitoring standards.
+Anti-money-laundering programs. The law requires financial institutions to establish anti-money-laundering programs.
+The Treasury secretary may set minimum standards for such programs. This section takes effect April  26, 2002.
+Safe harbor. When checking employment references, banks can share information with each other about employees
+who may have taken part in illegal activities. Banks cannot be sued for releasing such information as long as they do not
+do it with malicious intent.
+Suspicious activity reports. The Treasury secretary is required to publish proposed regulations requiring broker-
+dealers to report suspicious transactions. The secretary must publish final regulations by July 1, 2002. The secretary
+also may require futures commission merchants, commodity trading advisers and certain commodity pool operators to
+report suspicious transactions.
+IRS and bank secrecy. By April 2002, the Treasury secretary must report to Congress whether the responsibility for
+certain regulatory functions under the Bank Secrecy Act should be taken from the IRS and given to another agency.
+Information sharing. The government may use banking and financial information in intelligence activities aimed at
+fighting international terrorism.
+Underground banking systems. The law clarifies that the Bank Secrecy Act treats certain underground banking
+systems as financial institutions, and that record-keeping rules apply to them. The Treasury secretary must report to
+Congress by Oct. 26, 2002, on the need for additional legislation or regulatory controls addressing underground banking
+systems.
+Loans and fighting terrorism. The Treasury secretary may instruct the U.S. executive director of the World Bank and
+other international financial institutions to support loans and other assistance for nations that the president determines
+are contributing to the fight against terrorism. The Treasury secretary can require audits of those financial institutions to
+ensure that the money is not paid to people engaged in terrorism or supporting it.
+Financial crimes enforcement. The law makes the Financial Crimes Enforcement Network (FinCEN) a bureau within
+the Treasury Department and describes the duties of the FinCEN's director. The Treasury secretary is required to
+establish operating procedures for the governmentwide data access service and communications center that FinCEN
+maintains. The secretary must report by April 2002, and annually thereafter, on ways to improve the system for
+monitoring foreign bank and brokerage accounts owned by U.S. citizens. By July 2002, the secretary is required to work
+with FinCEN to establish a security network for financial institutions to file reports on suspicious transactions and
+provide them with information about transactions that deserve special scrutiny.
+Increased penalties. The law increases from $100,000 to $1 million the maximum civil and criminal penalties for a
+violation of the new investigation and special measures requirements.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 5 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Law enforcement. Certain Federal Reserve personnel may act as law enforcement officers and carry firearms to protect
+and safeguard Federal Reserve employees and premises.
+Reporting large transactions. Any person who receives more than $10,000 in one transaction or two or more related
+transactions in the course of his trade or business must file a report with FinCEN. People who do not report large
+transactions to FinCEN may have their money confiscated.
+Companies offering wire transfers must be licensed under state law or registered under federal law. Funds transmitted
+illegally may be seized.
+Reporting exemptions. The Treasury secretary must report to Congress before Oct. 26, 2002, on the results of a study
+of the possible expansion of the system for exempting transactions from the currency transaction reporting
+requirements, and on ways to improve the use of the exemption system by financial institutions to reduce the volume of
+unneeded currency transaction reports.
+New smuggling crime. Smuggling more than $10,000 into or out of the United States is a violation of the Bank Secrecy
+Act.
+Counterfeiting sentences increased. The law increases the maximum sentences for various counterfeiting offenses
+and expands the definition of counterfeiting to include making or acquiring an analog, digital or electronic image of any
+“obligation or other security of the United States,” such as U.S. currency. It also increases the maximum sentences for
+various counterfeiting offenses involving foreign money and expands the definition of counterfeiting to include making or
+acquiring an analog, digital, or electronic image of the currency of a foreign government.
+Material support for terrorism. The law expands the legal definition of money-laundering the proceeds of terrorism to
+include providing material support or resources to terrorist organizations.
+Reporting large transactions. The law applies the financial crimes prohibitions to conduct committed abroad in cases
+where the tools or proceeds of the offense pass through or are in the United States.
+Sunset provisions. The money-laundering provisions are to be terminated Oct. 1, 2005, if Congress enacts a joint
+resolution saying these provisions no longer have the force of law. Any joint resolution to this effect will receive
+expedited congressional consideration.
+Border Control
+INS employees. The law waives caps on the number of full-time employees at the Immigration and Naturalization
+Service (INS). It also lifts the cap in PL 106–553 on the amount of overtime the INS can pay its employees.
+Northern border personnel. The law authorizes money to triple the number of Border Patrol agents, INS inspectors
+and Customs Service personnel along the border with Canada.
+Sharing of criminal background information. To help the INS and the State Department determine whether people
+applying for admission to the United States have criminal records, the FBI and the attorney general must provide
+information from the National Crime Information Center's Interstate Identification Index, the Wanted Persons File and
+other sources. By Oct. 26, 2003, the State Department and the attorney general must report to Congress on how this
+system has been implemented.
+Identification technology. The attorney general, working with the secretary of State and others, must develop a
+reliable technology standard for checking the identities of those seeking visas or trying to enter the United States. A
+report is due to Congress on April 26, 2003, and every two years thereafter, on how work on this standard is
+progressing.
+Automated fingerprint system. The law authorizes $2 million for the attorney general, the FBI and the INS to study
+whether the FBI's Integrated Automated Fingerprint Identification System could be used at U.S. ports of entry and at
+overseas consular posts.
+Terrorist activity. The law broadens the definition of “terrorist activity” for individuals seeking to enter the United States.
+It bars from the United States anyone who is a representative of a political or social group that publicly endorses terrorist
+activity in the United States, and anyone who uses a position of prominence within a country to endorse terrorist
+activities or encourage others to do so. The law also bars the spouses or children of anyone engaging in terrorist
+activities, unless they could not reasonably have known of the activities.
+Authorized exclusions. The attorney general or the secretary of State can forbid entry to anyone they consider to be
+associated with a terrorist organization and who they determine will engage in activities that could endanger the welfare,
+safety or security of the United States.
+Terrorist activities. The law adds the use of explosives, firearms and other dangerous devices to the definition of
+“terrorist activities.” It broadens the definition of “a terrorist engaging in terrorist activity” to include those who have
+provided support to a group that they knew or should have known was engaged in terrorism, regardless of whether the
+support provided was for a terrorist purpose. These are offenses that would keep someone out of the United States or
+lead to deportation.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 6 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Terrorist organization. The law creates a new definition of “terrorist organization” for use when determining whether to
+admit foreigners to the United States or deport those already here. The term is defined as a group of two or more
+individuals that the secretary of State determines is involved with terrorist activities. These provisions are retroactive for
+any group that the secretary of State had previously listed as a terrorist organization.
+Mandatory detention. The attorney general or the deputy attorney general can certify a foreigner as a terrorist if they
+have reasonable grounds to believe that the person is a terrorist or has committed a terrorist activity. Those certified as
+terrorists must be jailed.
+The INS may detain suspected terrorists for seven days before bringing immigration or criminal charges against them.
+Foreigners not charged within seven days must be released.
+The law allows detainees to challenge the government's case against them, something called “habeas review.” All
+habeas decisions are to be based on the legal principles articulated by the U.S. Court of Appeals for the District of
+Columbia and the Supreme Court. All appeals of habeas decisions will be heard by the U.S. Court of Appeals for the
+District of Columbia. Aliens who were ordered deported but remain in U.S. detention are entitled to have their cases
+reviewed by the attorney general every six months. Continued detention is allowed only upon a showing that “the
+release of the alien will endanger the national security of the United States or the safety of the community or any
+person.”
+The attorney general must submit a report to Congress on the use of this section every six months.
+Visa information sharing. The secretary of State may give foreign governments information in the State Department's
+computer database and other records on people seeking to enter the United States if that disclosure would help
+prevent, investigate or punish acts of terrorism or trafficking in drugs, weapons or people.
+Entry-exit system. The law authorizes “such sums as may be necessary” to implement an automated entry-exit data
+system for the United States. The law includes a “sense of Congress” resolution saying the attorney general should fully
+implement the entry-exit system as quickly as practicable, focusing in particular on the use of “biometric technology,”
+such as fingerprint scanning devices, and the development of tamper-resistant documents.
+Foreign students. The attorney general must implement a system to track foreign students in the United States. The
+law makes $36.8 million available through Jan. 1, 2003, for the creation and implementation of the system.
+Machine-readable passports. All countries that want to participate in the Visa Waiver Program must issue machine-
+readable passports by Oct. 1, 2003. The deadline had been 2007. The secretary of State may extend this deadline for a
+country that is making progress. The Visa Waiver Program allows citizens from a select group of mostly industrial
+countries to come into the United States for short visits for either business or pleasure without having to get a visa. The
+secretary of State must perform annual audits of those countries allowed to participate in the program.
+Benefits for Aliens
+Permanent residency status. The law grants permanent residency status to aliens whose sponsors died in the Sept.
+11 attacks. Aliens who were disabled or lost their jobs as a direct result of the attacks also can be declared permanent
+legal residents. Their children and spouses can become permanent legal residents if they come to the United States no
+later than Sept. 11, 2003. The spouse or fiancé of a U.S. citizen killed in the Sept. 11 attacks also is eligible for
+permanent resident status.
+Disability extension. Aliens who are legally in the country and were disabled in the Sept. 11 attacks may remain in the
+United States, along with their spouses and children, and get legal authorization to work for one year after the point
+when they were disabled. Spouses and children of aliens who died in the terrorist attacks can get the same extension;
+they must be admitted to the United States, even if they may require government assistance.
+Extensions of deadlines. The law generally provides a grace period for aliens who missed any filing deadlines
+because of the Sept. 11 attacks. For example, it gives an extra 60 days to aliens prevented from filing for an extension
+of their stay, including those who were abroad at the time. Aliens who overstayed their time in the country because the
+attacks prevented them from leaving are considered to have left legally if they departed before Nov. 11, 2001.
+Waiver for some would-be immigrants. For aliens who were married to a citizen killed in the attacks, the law waives
+the requirement that they be married for two years before they are eligible for immigrant status. If a permanent resident
+killed in the attacks had filed papers to allow his or her spouse, child, or unmarried adult son or daughter to become a
+legal permanent resident, those aliens are eligible for the residency. In addition, if an alien spouse, child, or unmarried
+adult son or daughter of a permanent resident who died in the attacks was present in the United States on Sept. 11 but
+had not yet applied for permanent residence, the alien can petition for permanent residence.
+Broadens definition of child. The law lengthens the amount of time that aliens will be considered children for the
+purposes of immigration law if they filed petitions on or before Sept. 11. It is easier for children to qualify for citizenship
+than adults.
+Humanitarian relief. For aliens not covered by the relief in this law, the attorney general may provide temporary
+administrative relief for humanitarian purposes or to keep families together.
+Prohibition for terrorists. None of this relief will be provided to anyone culpable for the terrorist attacks on Sept. 11 or
+to any family member of such an individual.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 7 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Investigating Terrorism
+Increased rewards. There is no limit on the size of the rewards that the attorney general can offer to combat terrorism.
+Rewards of $250,000 or more require the personal approval of the attorney general or president, as well as notice to
+Congress. Rewards for help in investigating crimes other than terrorism are subject to budgetary caps. The secretary of
+State can pay rewards for identifying and locating a terrorist organization. The maximum size of such rewards is
+increased to $10 million. The secretary of State may raise that limit to $25 million if he or she believes it is in the
+national interest. The law includes a sense of Congress that there should be a $25 million reward for information on
+Osama bin Laden and other leaders of the Sept. 11 attacks.
+DNA database. Those convicted of terrorism must provide DNA for inclusion in the federal DNA database of convicted
+offenders.
+Intelligence information sharing. Federal agents conducting foreign intelligence wiretaps may consult with law
+enforcement officials to coordinate efforts to investigate or protect against international terrorism, clandestine intelligence
+activities, or other hostile acts of a foreign power or an agent of a foreign power.
+Financial information. The FBI director or a designee no lower than deputy assistant director may request telephone,
+financial or credit records if he or she certifies that the information is relevant to an ongoing foreign counterintelligence
+investigation and that there are “specific, articulable” facts showing that the person targeted is the agent of a foreign
+power. An investigation of a U.S. citizen may not be based solely on activities protected by the First Amendment.
+Secret Service jurisdiction. The Secret Service has concurrent jurisdiction with the Justice Department to investigate
+offenses involving computer fraud and related activity. The law also gives the Secret Service the authority to investigate
+fraud at financial institutions.
+Education records. A court may release student education records if the attorney general or the Education secretary
+determines that the records would reasonably assist in investigating or preventing an act of terrorism. The provision also
+applies to information obtained by the National Center for Educational Statistics.
+Victims Compensation
+Paperwork eased. The law streamlines the Public Safety Officers Benefits Program application process for family
+members of law enforcement officers, firefighters and emergency personnel who were killed or suffered serious injury in
+the terrorist attacks. The law raises the total payment allowed under the Public Safety Officers Benefits Program to
+$250,000, effective for any death or disability occurring on or after Jan. 1, 2001.
+Victims of Crime fund. The Office for Victims of Crime is authorized to replenish the anti-terrorism emergency reserve
+with as much as $50 million. The law establishes a mechanism for replenishing the fund in future years and replaces the
+annual cap on the fund with a self-regulating system intended to keep the fund healthy. Private gifts to the fund are now
+allowed, and the law increases the portion of the fund available for discretionary grants and assistance to victims of
+federal crimes.
+State programs. The law increases the minimum amount authorized for the annual grant to state compensation
+programs. It clarifies that compensation paid to a victim shall not be used in means tests for federal benefit programs.
+The law removes the requirement that state crime victim compensation programs include victims of terrorism occurring
+outside the United States. States may give victims compensation funds to U.S. attorneys offices in jurisdictions where
+the U.S. attorney is the local prosecutor.
+Non-discrimination for victims. Victim assistance programs may not discriminate against victims who disagree with
+the way the state is prosecuting the case. The law authorizes grants to eligible victim assistance programs for program
+evaluation and compliance efforts, and it allows money to be used for fellowships, clinical internships and training
+programs.
+Governmental cooperation. The Department of Justice Regional Information Sharing Systems Program is expanded to
+facilitate information sharing among federal, state and local law enforcement agencies to investigate and prosecute
+terrorist conspiracies and activities. The law doubles the program's authorized funding for fiscal 2002–2003, authorizing
+$50 million in fiscal 2002 and $100 million in fiscal 2003.
+Changes in Criminal Law
+Mass transit. The law makes it a federal crime to attack a mass transit system, punishable by a fine and as much as 20
+years in prison. If the vehicle was carrying a passenger at the time of the attack, or if the attack killed someone, the
+maximum sentence increases to life.
+Domestic terrorism. The law defines “domestic terrorism” as activities that involve acts dangerous to human life that
+are a violation of federal or state laws and that appear intended to intimidate or coerce a civilian population, change
+government policy or affect the conduct of government by mass destruction, assassination or kidnaping, and that occur
+primarily within the United States.
+Harboring terrorists. The law makes it a federal crime for individuals to harbor a person who they know or should have
+known was engaged in or would engage in terrorist activities.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 8 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+U.S. criminal jurisdiction. The law extends U.S. jurisdiction to offenses committed by or against a U.S. national, U.S.
+diplomatic, consular and military missions, and residences used by U.S. personnel assigned to such missions.
+Material support for terrorism. Three terrorism-related offenses are added to the list of those considered as providing
+material support to a terrorist. These violations may be prosecuted in any federal judicial district in which the offense
+was committed. The law explicitly prohibits providing terrorists with “expert advice or assistance,” such as flight training,
+knowing or intending that it will be used to prepare for or carry out an act of terrorism.
+U.S. forfeiture authority. U.S. forfeiture authority is extended to “all assets, foreign or domestic” that are owned or
+controlled by any person or group planning or carrying out an act of terrorism against the United States, its citizens or
+residents or their property.
+Material support for terrorists. The law clarifies that the provisions of the Trade Sanctions Reform and Export
+Enhancement Act of 2000 (PL 106–387, Title IX) do not limit or otherwise affect the criminal prohibitions against
+providing material support to terrorists or designated terrorist organizations.
+Crime of terrorism defined. The law adds the following as a list of offenses under the definition of “federal crime of
+terrorism”: destruction of aircraft or aircraft facilities; violence at international airports; arson within special maritime and
+territorial jurisdiction; offenses involving biological or chemical weapons; kidnapping or assassination of members of
+Congress, the Cabinet or the Supreme Court; offenses involving nuclear materials or plastic explosives; arson and
+bombing of government property risking or causing death; arson and bombing of property used in interstate commerce;
+killing or attempted killing during an attack on a federal facility with a dangerous weapon; conspiracy to murder, kidnap,
+or maim persons abroad; offenses against the protection of computers; killing or attempted killing of officers and
+employees of the United States; murder or manslaughter of foreign officials, official guests, or internationally protected
+persons; hostage taking; destruction of communication lines, stations, or systems; injury to buildings or property within
+special maritime and territorial jurisdiction of the United States; destruction of an energy facility; presidential and
+presidential staff assassination and kidnapping; wrecking trains; terrorist attacks and other acts of violence against mass
+transportation systems; destruction of national defense materials, premises, or utilities; violence against maritime
+navigation; violence against maritime fixed platforms; certain homicides and other violence against United States
+nationals occurring outside the United States; use of weapons of mass destruction; acts of terrorism transcending
+national boundaries; harboring terrorists; providing material support to terrorists or terrorist organizations; torture;
+sabotage of nuclear facilities or fuel; aircraft piracy; assault on a flight crew with a dangerous weapon, explosive or
+incendiary devices or endangerment of human life by means of weapons on aircraft.
+No statute of limitations. The law eliminates the statute of limitations for certain terrorism-related offenses if they result
+in or create a foreseeable risk of death or serious bodily injury to another person.
+Increased prison terms. The law raises the maximum prison terms to 15 to 20 years—or, if death results, life—for the
+following crimes: arson within the special maritime and territorial jurisdiction of the United States, destruction of an
+energy facility, destruction of national-defense materials, provision of material support to terrorists and terrorist
+organizations, sabotage of nuclear facilities or fuel, killings on aircraft, destruction of interstate gas or hazardous liquid
+pipeline facility.
+Conspiracy penalties. The law adds conspiracy provisions to the following criminal statutes: arson within special
+maritime and territorial jurisdiction of the United States; killings in federal facilities; destruction of communications lines,
+stations or systems; destruction of property within special maritime and territorial jurisdiction of the United States;
+wrecking trains; material support to terrorists; torture; sabotage of nuclear facilities or fuel; interference with flight crews;
+carrying weapons or explosives on aircraft; and destruction of interstate gas or hazardous liquid pipeline facilities.
+Supervised release. The law authorizes an extended period of supervised release for persons who have served their
+prison sentence for certain terrorism-related offenses that resulted in, or created a foreseeable risk of, death or serious
+bodily injury to another person.
+Terrorism as racketeering. Certain terrorism-related offenses are included within the definition of “racketeering
+activity.” This allows multiple acts of terrorism to be charged as a pattern of racketeering for purposes of the Racketeer
+Influenced and Corrupt Organizations (RICO) statute, which can triple the damages imposed. The law expands the
+ability of prosecutors to prosecute members of established, ongoing terrorist organizations.
+Computer hacking. The criminal statute prohibiting computer hacking includes computers located outside the United
+States when used in a manner that affects the interstate commerce or communications of the United States. The law
+updates the definition of “loss” to ensure that the full costs to victims of hacking offenses are counted.
+Forensic laboratories. The attorney general must establish regional computer forensic laboratories and support
+existing computer forensic laboratories to help combat computer crime.
+U.S. criminal jurisdiction. The biological weapons statute's definition of “for use as a weapon” is expanded to include
+all situations in which it can be proven that the defendant had any purpose not prophylactic, protective, or peaceful.
+Certain persons, including non-resident foreign nationals of countries that support international terrorism, are forbidden
+to possess a listed biological agent or toxin.
+Intelligence Changes
+Foreign intelligence management. The law clarifies the role of the CIA director in managing the collection, analysis
+and dissemination of foreign intelligence gathered under FISA. The CIA director must assist the attorney general in
+ensuring that FISA investigations follow constitutional guidelines.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 9 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Revised definitions. The definitions section of the National Security Act of 1947 (PL 253) is revised to include
+international terrorism as a subset of “foreign intelligence,” clarifying the CIA director's responsibility for collecting foreign
+intelligence related to international terrorism.
+Informant recruitment. The law expresses the sense of Congress that the CIA should make efforts to recruit
+informants to fight terrorism.
+Reports deferred. The secretary of Defense, the attorney general and the CIA director may defer submitting certain
+reports on intelligence activities to Congress until  Feb. 1, 2002.
+Information sharing. Law enforcement agencies must notify intelligence agencies when a criminal investigation reveals
+information of intelligence value. Constitutional and statutory prohibitions against certain types of information sharing still
+apply.
+Intelligence training. The attorney general, in consultation with the CIA director, must establish a program to train
+federal, state and local officials in the recognition and appropriate handling of intelligence information discovered in the
+normal course of their duties.
+Miscellaneous
+Civil rights oversight. The Justice Department's inspector general must designate one official to review information
+and receive complaints alleging abuses of civil rights and civil liberties by employees and officials of the Department of
+Justice.
+Condemnation of discrimination. The law condemns discrimination and acts of violence against Sikh Americans, as
+well as Arab and Muslim Americans.
+Denial of admission for money laundering. Any alien who a consular officer or the attorney general knows, or has
+reason to believe, is involved in a federal money-laundering offense is barred from the United States.
+Biometric identifier. The attorney general must report to Congress on the feasibility of using a “biometric identifier”
+system, with access to the FBI fingerprint database, at consular offices abroad and at points of entry into the United
+States. Such devices scan fingerprints or other physical characteristics to check an individual's identity.
+Suspect lists to airlines. The FBI must report to Congress on the feasibility of providing airlines with computer access
+to the names of suspected terrorists.
+Military installation security. The Defense Department has temporary authority to enter contracts with a state or local
+government for the performance of security functions at any military installation or facility in the United States.
+Charity telemarketing. Any telemarketer soliciting for charity must disclose to people they call that they are telephoning
+to solicit charitable contributions, and make other disclosures that the Federal Trade Commission considers appropriate.
+Hazardous materials background check. The Department of Transportation may check the background of any
+individual applying for a license to transport hazardous materials in interstate commerce.
+State and local bio-terrorism preparedness. The law expresses the sense of the Senate that the United States
+should make a substantial new investment this year toward improving state and local preparedness to respond to
+potential bio-terrorism attacks.
+Terrorism grants. The law authorizes a Justice Department program to provide grants to states to prepare for and
+respond to terrorist acts including, but not limited to, acts involving weapons of mass destruction and biological, nuclear,
+radiological, incendiary, chemical and explosive devices.
+The law revises this grant program to provide additional flexibility to purchase needed equipment; training and technical
+assistance to state and local first responders; and a more equitable allocation of funds among the states. It also clarifies
+that grants under the Crime Identification Technology Act can be used for anti-terrorism, and authorizes grants under
+that act at $250 million a year through fiscal 2007. The law authorizes another $25 million annually from fiscal 2003
+through fiscal 2007 for grants to state and local authorities to respond to and prevent acts of terrorism.
+Infrastructure protection. The law establishes a National Infrastructure Simulation and Analysis Center to address
+critical infrastructure protection and continuity through support for activities related to counterterrorism, threat
+assessment and risk mitigation.
+Severability. Any portion of this law found to be invalid or unenforceable shall be severable from the rest of the law.
+Counterterrorism fund. The law creates a separate fund to reimburse the Justice Department and any other federal
+agency for the costs of rebuilding facilities destroyed by terrorism or conducting counterterrorism investigations.
+Technical support funding. The law authorizes $200 million in each of fiscal years 2002, 2003 and 2004 for the FBI's
+Technical Support Center.
+7/9/09 4:01 PMCQ Almanac Online Edition
+Page 10 of 10http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal01-106-6376-328240&type=hitlist&num=19
+Domestic military aid. The attorney general may call for military help in situations involving chemical weapons.
+Electronic crimes task forces. The Secret Service may create a national network of electronic crimes task forces,
+designed to prevent, detect and investigate electronic crimes, including possible terrorist attacks on the United States.
+Property confiscation. The president may confiscate and vest properties of an enemy, defined as a country, person or
+organization, when the United States is engaged in hostilities or has been the subject of an attack by that enemy.
+Classified information may be used to defend this determination to a judge and may be kept secret from the property
+owner.
+Document Citation
+"Provisions of the Anti-Terrorism Law." CQ Press Electronic Library, CQ Almanac Online Edition, cqal01-106-6376-328240.
+Originally published in CQ Almanac 2001 (Washington: Congressional Quarterly, 2002).
+http://library.cqpress.com/cqalmanac/cqal01-106-6376-328240 (accessed July 9, 2009).
+Document ID: cqal01-106-6376-328240
+Document URL: http://library.cqpress.com/cqalmanac/cqal01-106-6376-328240
+© 2002, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

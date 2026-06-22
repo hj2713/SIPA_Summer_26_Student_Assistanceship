@@ -53,7 +53,7 @@ def test_retry_single_document(client, auth_headers):
         filename="retry-me.txt",
         content=b"retried file content",
         content_type="text/plain",
-        workspace_id="TEST",
+        workspace_id="QA",
     )
 
 
@@ -92,5 +92,5 @@ def test_retry_batch_documents(client, auth_headers):
         filename="retry-me.txt",
         content=b"batch retried file content",
         content_type="text/plain",
-        workspace_id="TEST",
+        workspace_id="QA",
     )

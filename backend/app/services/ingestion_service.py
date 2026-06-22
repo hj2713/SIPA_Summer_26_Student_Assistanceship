@@ -326,7 +326,7 @@ class IngestionService:
         filename: str,
         content: bytes,
         content_type: str,
-        workspace_id: str = "TEST",
+        workspace_id: str = "PRODUCTION",
     ) -> None:
         """Submit document ingestion task to the parallel execution thread pool."""
         self.ingestion_executor.submit(
@@ -347,7 +347,7 @@ class IngestionService:
         filename: str,
         content: bytes,
         content_type: str,
-        workspace_id: str = "TEST",
+        workspace_id: str = "PRODUCTION",
     ) -> None:
         """Asynchronously process a document: extract text, extract metadata, chunk it, embed, and store in DB."""
         set_current_user_id(user_id)
@@ -426,7 +426,7 @@ def enqueue_document_ingestion(
     filename: str,
     content: bytes,
     content_type: str,
-    workspace_id: str = "TEST",
+    workspace_id: str = "PRODUCTION",
 ) -> None:
     ingestion_service.enqueue_document_ingestion(
         doc_id, user_id, filename, content, content_type, workspace_id
@@ -439,7 +439,7 @@ def process_document_background(
     filename: str,
     content: bytes,
     content_type: str,
-    workspace_id: str = "TEST",
+    workspace_id: str = "PRODUCTION",
 ) -> None:
     ingestion_service.process_document_background(
         doc_id, user_id, filename, content, content_type, workspace_id

@@ -1,0 +1,403 @@
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 1 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+Document Outline
+Need for Legislation
+Provisions
+House Committee Action
+House Floor Action
+Senate Committee Action
+Senate Floor Action
+Conference Report
+Final Action
+Features
+Ford Signs Bill to Regulate Commodity Futures
+An article from CQ Almanac 1974
+President Ford Oct. 23 signed into law HR 13113 (PL 93 - 463 ), to strengthen and expand federal regulation
+of commodity futures trading through a new five-member commission.
+The independent Commodity Futures Trading Commission created by the bill would have broad authority to regulate
+the booming commodity exchanges, including the power to seek injunctions against trading abuses and to intervene
+directly to protect traders against market manipulations or other emergencies.
+In a statement issued Oct. 24, President Ford said he had signed the bill “because of the need for better regulation
+of commodity futures trading,” despite “strong objections” to three provisions he said would “erode necessary
+executive control.” The first two directed the commission to submit its budget and legislative requests to the
+executive branch and Congress simultaneously, and the third required Senate confirmation of the commission's
+director.
+Ford said the provisions on budget and legislative submissions would hamper him in formulating “a single
+coordinated budget” and “a coherent coordinated legislative program” to present to Congress. Senate confirmation of
+the executive director would violate the constitutional principle of separation of powers, he argued. Ford said he
+would promptly submit legislation to correct these provisions and urged their passage before the session's end.
+Congress took no action on the requests.
+Need for Legislation
+The bill was a response to appeals of farmers and others for better federal policing of the industry. As food
+shortages and increased consumer demand sent commodity prices soaring in the early 1970s, speculation in futures
+increased. Over $500-billion in futures contracts changed hands in 1973—nearly twice the volume traded that year
+in stocks.
+It was generally agreed by this time that the Agriculture Department's 38-year-old Commodity Exchange Authority
+(CEA) lacked the staff and legal clout to protect investors, consumers and farmers who traded in futures as a form
+of insurance. The giant 1972 grain sale to the Soviet Union dramatized the possibility that large grain companies and
+even foreign countries could—without proper surveillance—manipulate commodities markets with disastrous
+consequences for the United States. (Soviet grain sale, this chapter)
+The new five-member commission would replace the CEA and assume jurisdiction over all commodities traded on
+the nation's exchanges. Existing law left a number of futures markets unregulated, and trading was growing fastest
+in that area. About one-third of contracts traded in 1973 involved unregulated commodities.
+Provisions
+As signed into law, HR 13113 included the following major provisions:
+Created an independent, five-member Commodity Futures Trading Commission to regulate all trading in commodity
+futures; the commission was to absorb the staff and functions of the Agriculture Department's Commodity Exchange
+Authority; the commission's members would be appointed by the president and confirmed by the Senate for staggered
+five-year terms, with no more than three of the five members permitted to come from the same political party; the
+commission would appoint an executive director, who also would be subject to Senate confirmation.
+ 
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 2 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+Directed the secretary of agriculture to appoint a liaison officer to maintain an office within the commission, with authority
+to attend but not participate in commission deliberations and proceedings; the commission would be required to set up
+its own liaison office within the Agriculture Department.
+Directed the commission, whenever it submitted a budget request to the president or the Office of Management and
+Budget (OMB), to submit the request simultaneously to the House and Senate Appropriations and Agriculture
+Committees.
+Directed the commission, whenever it submitted legislative requests, testimony or comments on legislation to the
+president or OMB, to submit the materials simultaneously to the House and Senate Agriculture Committees.
+Authorized the commission to seek court injunctions against violations or potential violations of commodity trading laws
+or regulations, or attempts to restrain commodity trading; as an alternative, the commission could request the attorney
+general to bring legal action; if it acted independently, the commission would be required to inform the attorney general
+and keep him advised of developments in the case.
+Authorized the commission to intervene in contract markets to restore orderly trading under an emergency situation—
+defined as 1) a threatened or actual market manipulation or corner, and 2) any act of the United States or a foreign
+government affecting a commodity or any other major market disturbance which prevented the market from accurately
+reflecting the forces of supply and demand.
+Authorized the commission to assess fines of up to $100,000 in both administrative and criminal proceedings for
+violations of the act.
+Established a reparations procedure for the commission to follow in handling complaints of illegal trading practices, with
+decisions subject to judicial review; the procedure would take effect one year after enactment.
+Directed the commission to require contract markets to submit daily trading reports if they were found to be necessary
+for effective regulation of futures trading; granted the commission authority to determine the content as well as frequency
+of trading reports to be submitted by the markets.
+Directed the commission to decide, within six months of the effective date of the act, whether floor brokers and futures
+commission merchants should be allowed to trade at the same time for themselves and for clients; if dual trading were
+allowed, the commission would be required to set regulations governing the practice.
+Directed the contracts markets to submit their trading regulations to the commission for approval.
+Directed the commission, in issuing orders and regulations, to take into consideration the public interest to be protected
+by the antitrust laws, and to attempt to achieve its goals using “the least anticompetitive means.”
+Authorized the commission to establish additional points for the delivery of a commodity in order to prevent or reduce
+price manipulation, market congestion or the abnormal movement of the commodity in interstate commerce.
+Directed the commission to establish regulations governing options trading in commodities where the practice was not
+already banned.
+Authorized the commission to define “bona fide” hedging practices, and directed it to allow hedging by the users of
+products of traded commodities as well as users of the commodities.
+Authorized the commission to allow commodity traders to form voluntary associations to regulate the practices of their
+members.
+Authorized the commission to conduct regular investigations of markets for commodities that were the subject of futures
+trading, and to report its findings to the public.
+Directed the commission to study the feasibility of trading by computer, and to report to Congress by June 30, 1976, on
+the need for legislation providing insurance against losses caused by the financial collapse of futures commission
+merchants.
+Provided that the bill would take effect 180 days from enactment, with the commission to be established as of the
+enactment date.
+House Committee Action
+The House Agriculture Committee April 4 reported HR 13113 (H Kept 93 –975). As reported, the bill would have
+set up a semi-independent commission to replace the CEA which was established under the 1936 Commodity
+Exchange Act.
+“CEA has failed to move with the times,” the committee's report said. It described the unit as understaffed and
+lacking the independence and legal authority to deal with the increasingly serious problems of price manipulation
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 3 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+lacking the independence and legal authority to deal with the increasingly serious problems of price manipulation
+and inflation of commodity prices.
+Along with broad new powers to prescribe and enforce regulations for the industry, the proposed commission would
+for the first time assume federal authority over all commodities traded in futures markets. “While trading in regulated
+commodity futures has nearly doubled since the Committee last considered amendments to the Commodity
+Exchange Act (1969), trading in non-regulated contracts has approached four times its 1969 figure,” the committee
+reported.
+The bill would represent “the first complete overhaul of the Commodity Exchange Act since its inception,” the
+committee said, “and proposes a comprehensive regulatory structure to oversee the volatile and esoteric futures
+trading complex.”
+Background
+Most citizens had at best a vague idea of what went on inside the nation's commodities exchanges, although the
+trading of commodities contracts, or futures, had a significant impact on their grocery bills. Recognizing the
+“esoteric” and complex nature of the industry, the Agriculture Committee included in its report a detailed account of
+its history and intricacies.
+Organized commodity markets sprang up in the United States in the late 1700s, the report said. Since they were
+held at a fixed time and place, they attracted a glut of products, leaving shortages in the intervening months. To
+remedy that, farmers began contracting with merchants to deliver goods at specified future dates—“forward
+contracting.”
+In a further refinement of the system, designed to insure prospective sellers against the hazards of storing and
+transporting their goods, traders agreed upon a price as they made their forward contracts. This was the beginning
+of futures trading, which the report defined as “purchases and sales of contracts for delivery at some future date of
+certain quantities of specific commodities at fixed prices.”
+Futures trading evolved to the point where only about three per cent of the contracts actually resulted in delivery of
+the product being traded, the report said. Instead, as the contracts approached the delivery month, holders
+liquidated them by making an equal but opposite transaction. Most traders were either speculators or “hedgers”—
+farmers or others who bought and sold the commodities themselves on the cash market, but who traded in futures
+as insurance against damaging price fluctuations.
+Independence Issue
+The Agriculture Committee's proposed regulatory commission would consist of four public members appointed by
+the president and confirmed by the Senate, plus the Secretary of Agriculture or his designee. The commission would
+absorb the employees of the Commodity Exchange Authority and have access to the facilities and services of the
+Agriculture Department.
+The arrangement was too independent for some and not enough for others. “While we support the Commission
+concept, we believe it should be an agency within the Department of Agriculture,” a spokesman from that
+department testified Jan. 23. He said there was no need for the commission to have its own legal staff and general
+counsel, as the committee's bill stipulated.
+Comptroller General Elmer B. Staats, in a Feb. 13 letter explaining the General Accounting Office's views, argued for
+a completely independent regulatory commission similar to the Securities and Exchange Commission, which
+regulated the stock market. This would protect the Secretary of Agriculture from possible conflicts of interest, he
+said. Staats also pointed out that many of the commodities traded as futures (metals, forest products, foreign
+currency) were not agricultural products and thus did not belong within that department's purview.
+The House Select Small Business Committee took the same position in a report on commodities futures trading (H
+Kept 93 –963) issued April 1. “Despite the existence of any circumstances which previously justified a laissez
+faire attitude toward commodities futures, today's market clearly demands that regulation be by a full-time regulatory
+agency,” the committee said.
+In reply, the Agriculture Committee contended that a totally independent commission would be likely to “advocate a
+regulatory pattern controlled by speculative interests, at cost to legitimate hedging interests, with resulting harsh
+effects on the marketing system of agricultural commodities.” The committee's bill “seeks to build a bridge between
+the philosophy of regulatory independence and the reality of maintaining the expertise of the Department of
+Agriculture,” the report concluded.
+Hearings, Committee Vote
+The Agriculture Committee held preliminary hearings on commodities trading in the fall of 1973, and then appointed
+an ad hoc subcommittee headed by Frank A. Stubblefield (D Ky.) to draft legislation to improve federal regulation of
+the industry. In early 1974 the committee held a second round of hearings on the Stubble-field panel's bill (HR
+11955). The full committee made a number of relatively minor changes in the bill during mark-up sessions in
+February. They emerged with a clean bill (HR 13113), which was ordered reported March 6 by a vote of 24–8.
+“The only significant opposition to regulation of all futures trading was voiced by the exchanges which trade in world
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 4 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+“The only significant opposition to regulation of all futures trading was voiced by the exchanges which trade in world
+commodities such as coffee, cocoa, sugar, silver and copper,” the report said. Those witnesses contended that
+added costs of complying with new rules would cause foreign traders to desert U.S. exchanges in favor of foreign
+exchanges.
+Minority Views
+A broader attack on the bill came from four Republican committee members, who disowned it entirely in minority
+views included in the report. The measure “represents a total lack of faith in our market-oriented free enterprise
+system…(and) could destroy the futures industry in this country,” they warned. The objection was signed by LaMar
+Baker (Tenn.), Robert Price (Texas), Steven D. Symms (Idaho) and Edward L. Young (S.C.).
+Baker and another Republican, George A. Goodling (Pa.), also opposed the bill because they said it would “add a
+thousand or more federal employees to a bureaucracy already bloated beyond decent dimensions.”
+Highlights of Bill
+The Commodity Futures Trading Commission Act of 1974 would amend the 1936 Commodity Exchange Act by
+setting up a five-member regulatory commission made up of four public members, appointed by the president and
+confirmed by the Senate for staggered five-year terms, and the secretary of agriculture or his designee. The new
+commission would absorb the staff of the Agriculture Department's Commodity Exchange Authority and be allowed
+to use the department's office space and other facilities. But it would have its own general counsel and legal staff.
+It would be a felony for commissioners, employees or agents of the commission to participate in any form in
+commodities trading.
+The bill would grant the commission broad new regulatory powers, including:
+Authority to regulate all traded commodities.
+Authority to seek injunctions to stop anyone from violating the act or the commission's regulations, and to impose
+penalties of up to $100,000 in both administrative and criminal proceedings against violators.
+Authority to operate customer reparation proceedings, with formal hearings for complaints involving over $2,500.
+Special emergency authority to intervene in markets and direct their activities in “market emergency” cases such as war,
+price controls, export embargoes or significant intervention of a foreign government in the futures market.
+Authority to oversee the establishment of voluntary futures associations to regulate the practices of their members.
+The commission would be charged with writing and enforcing new regulations on several controversial issues,
+including:
+Floor brokers and futures commission merchants trading for themselves and for customers at the same time. The
+commission would have to decide within six months of enactment whether this practice should be allowed and, if so, to
+prescribe rules governing it.
+Multiple delivery points. The commission would be authorized to require markets to allow delivery of commodities at a
+number of locations, instead of just one designated spot, if it found this practice economically beneficial.
+Hedging. The commission would have authority to define legitimate hedging.
+Options trading (trading in options to buy or sell a commodity contract at its current price within a specified time period).
+Although it was prohibited for the commodities already under federal regulation, the commission would have authority to
+set rules for such trading in the commodities that would come under regulation for the first time under the bill.
+House Floor Action
+The House April 11 passed HR 13113 by a 281–43 vote. (Vote 111, p. 38-H)
+No major changes were made in the bill on the floor.
+The bill's supporters, led by Agriculture Committee Chairman W.R. Poage (D Texas), defended the proposed
+commission and its extended powers as necessary for effective regulation of a rapidly growing industry that had
+outstripped the stock exchange in total dollar volume traded.
+Allegations that the market was manipulated to the detriment of U.S. consumers after the large sales of wheat to the
+Soviet Union in 1972 came up repeatedly during the debate. “Major grain exporting companies speculated freely on
+the commodities exchanges, and it appears their manipulation of the trading allowed them to buy wheat cheap and
+keep it secret from other traders. Later they sold it at higher prices to the Russians,” said Brock Adams (D Wash.).
+“Without new controls there is nothing to prevent foreign nations from manipulating commodity futures,” he added.
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 5 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+Another supporter of the bill, George E. Brown Jr. (D Calif.), cited stories of “unsophisticated investors” who lost their
+life savings trading on unregulated exchanges. “Such events can only occur because of the inadequacy of regulatory
+activity over a market now twice the size, in dollar volume of trading, of the securities market, which is regulated by
+a much larger and more effective regulatory body, the Securities and Exchange Commission (SEC).”
+“It is just one more instance where the government is attempting to get its long arm around the necks of more
+people,” countered George A. Goodling (R Pa.), one of five Republicans on the Agriculture Committee to file
+dissenting views in the report.
+Steven D. Symms (R Idaho), another of the five committee members and one of the bill's most energetic opponents,
+unsuccessfully moved to recommit the measure to committee with instructions to report out a greatly weakened
+substitute. He warned that by approving the bill, the House would be “taking another step down the road toward
+allowing the government and the bureaucrats to make the market decisions which should be made in the
+marketplace by individuals.”
+A third committee dissenter, Robert Price (R Texas), insisted that “the commodity exchange and the businessmen
+who stand behind this have done a fantastic job in regulating their own businesses, benefiting the American
+producers in this country.”
+Action on Amendments
+Those who thought the proposed commission should be strengthened by having greater autonomy than the
+Agriculture Committee provided came close to succeeding in adopting an amendment offered by one of the
+committee's senior Democrats, B.F. Sisk (Calif.), and opposed by Poage. The Sisk amendment, defeated on a 158–
+179 vote, would have required that the commission's four public members devote full time to its work, to the
+exclusion of other jobs. In addition, it would have prohibited the fifth member, the secretary of agriculture, from being
+appointed chairman. (Vote 110, p. 38-H)
+Poage said the committee had already worked out “a very fine arrangement…which recognizes the agricultural
+orientation of this legislation and which also recognizes that there should be an input from other sections of the
+country.” Paul Findley (R Ill.) added that “people who are most knowledgeable in the field of commodity markets
+probably have incomes in six figures” and could not be lured to the $36,000-a-year commission job if they had to
+give up all other pursuits.
+Another strengthening amendment, offered by Charles A. Vanik (D Ohio) and rejected by voice vote, would have
+given the new commission express power to regulate the determination of margins—customer fees payed to ensure
+exchanges against loss due to unfulfilled contracts. “If you want to stop the frantic gambling in futures, by people
+who have no interest in the commodity traded, then it is essential that the commission have the power to supervise
+margin setting,” Vanik said.
+The House also defeated by voice vote an amendment to weaken the commission's authority. Offered by Edward L.
+Young (R S.C.), who opposed the bill in committee, the amendment would have eliminated the commission's special
+authority to intervene in case of a “market emergency” such as a war, price controls or “significant intervention of
+foreign governments in the futures market.”
+Young contended that such authority would “jeopardize the price of farm commodities we grow by the restrictions of
+this commission on world trade.” Poage replied that the amendment would prevent the commission from protecting
+the nation “in the case of another Russian grain deal, from the Russians themselves going into the market and
+using the exchanges as a means of making a double profit on a deal with the United States.”
+The only successful amendment, adopted by voice vote without opposition, was a proposal by James T. Broyhill (R
+N.C.) to authorize appropriations for the new commission only through fiscal 1978, instead of on an open-ended
+basis.
+Senate Committee Action
+The Senate Agriculture and Forestry Committee reported a strengthened version of HR 13113 Aug. 29.
+“In recent years, the consumer has become increasingly aware that futures markets have a direct effect on such
+matters as his grocery bill and the cost of his home,” said the Senate committee's Aug. 29 report (S Rept 93 –
+1131) on the bill. “In order to assure that futures markets operate properly and that the prices consumers pay are
+not artificially high, careful and efficient supervision of the markets is essential.”
+“If individual speculators or groups operating in concert obtain control of the futures market, price manipulation,
+corners and squeezes can occur, with adverse effects on producers and consumers alike,” the report warned.
+A central factor in the growth of futures trading and its attendant risks, the report explained, was “a major shift to a
+market-oriented economy” caused by the decrease in government stockpiling of commodities. Without such
+surpluses to put on the market at strategic times, prices began to fluctuate and futures speculation increased.
+Independence Issue
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 6 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+Under the House-passed bill, the new commission would consist of four public members, appointed by the president
+and confirmed by the Senate, and the secretary of agriculture or his designee. It would absorb the CEA staff and
+use Agriculture Department facilities and services. The commission would be required to meet at least once a
+month.
+The Senate committee amended the bill to set up instead an independent commission along the lines of the
+Securities and Exchange Commission (SEC), made up of five public members appointed by the president and
+confirmed by the Senate. The president would be required to choose a balanced panel which included members
+expert in the fields of commodities trading, farming, food marketing and consumer affairs.
+During the committee's May hearings on futures regulation bills, “the overwhelming weight of testimony was in favor
+of the full-time, independent commission,” with only the Agriculture Department strongly opposing it, the report said.
+Some committee members thought that tying the commission to the Agriculture Department could lead to conflicts of
+interest since the department was legally charged with protecting farmers' prices and incomes. “The agency which
+regulates futures trading must have a neutral role on commodity prices,” the report said.
+House members who argued against the Sisk amendment to make the commission full-time contended that
+commodity trading experts had very high incomes and could not be persuaded to serve if it meant giving up other
+more lucrative pursuits. But the Senate committee countered that “a full-time prestigious commission…would induce
+the best and most knowledgeable people to serve.”
+Expansion of Regulation
+Another reason for having a commission independent of the Agriculture Department, the committee argued, was
+that under HR 13113 for the first time trading in nonagricultural commodities would come under federal regulation.
+Under existing law, about half the commodities traded—including coffee, sugar, lumber, plywood, silver and other
+metals—remained unregulated. Both the House and Senate bills would give the new commission authority to
+regulate all traded commodities.
+“There are indications that futures markets will be further expanded to cover additional goods and services,” the
+report said. “Discussions are already underway concerning futures markets in such things as home mortgages and
+ocean freight.” Trading in petroleum and gold futures also was under consideration.
+Daily Trading Report
+One Senate provision not included in the House bill was a Dick Clark (D Iowa) proposal to require commodity
+exchanges to keep and provide the commission with detailed daily trading reports. These would have to list the
+time, subject, amount, price, delivery month and traders for each transaction. The commission would have the
+authority to call for additional information, and to make the information public in the interests of futures trading
+regulation.
+In addition, the exchanges would have to publish daily reports on the volume of trading on each type of contract and
+on any other information the commission requested.
+Information gathered from the daily trading reports would give federal regulators their first clear picture of the effect
+on the market of floor brokers who traded for themselves and for clients. There had been charges from time to time
+that floor traders manipulated the market for their own advantage, but existing reporting practices were too vague to
+verify them.
+The reporting provision “could cause a major upheaval on the trading floors of the nation's major exchanges,
+including the largest, the Chicago Board of Trade,” the Washington Star-News reported Sept. 8. The Star quoted
+Fred Uhlmann, chairman of that exchange, as saying the requirement would “seriously impede floor traders and slow
+down the trading process.”
+Injunctive Power
+Under the Senate version of the bill, the proposed commission could go directly to court to seek an injunction
+against violators of its regulations, without working through the attorney general as required by the House bill. The
+need for an injunction might be too urgent for such delay, the report said, and “the committee felt that the
+commission's attorneys would likely be more knowledgeable in futures trading than the attorneys in the Department
+of Justice.”
+Emergency Powers
+Although the Senate bill called for tighter regulations in most areas where the two versions differed, it did put
+restrictions on the House bill's provisions relating to the commission's powers to intervene in futures markets when
+orderly trading was threatened.
+“The committee felt that the term ‘emergency’ was defined too loosely in the House bill,” the report said. Under the
+Senate bill, the commission could use its extraordinary intervention authority only in specified emergency cases and
+only when it decided that the emergency would do more damage to the market than would the intervention.
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 7 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+Senate Floor Action
+After adopting two technical amendments, the Senate Sept. 9 passed HR 13113 by voice vote.
+Herman E. Talmadge (D Ga.), chairman of the Senate Agriculture and Forestry Committee, said the measure was a
+response to a “wide-felt concern that market abuse and manipulation of prices was occurring.”
+Carl T. Curtis (Neb.), ranking Republican on the committee, added that he hoped “we are not creating a new
+bureaucracy that will become an ‘over-regulatory’ agency in order to justify its continual expansion.”
+Clark said he was convinced of the need for better regulation of futures trading after reading a newspaper series
+about a man who was tricked out of large sums of money by a firm he traded for—and also by “the results of the
+Soviet grain deal in 1972.” His concern was shared by “thousands of farmers in Iowa and across the country,” who
+“strongly suspect that manipulation of the commodities exchanges has resulted in higher grain prices, higher beef
+prices and shortages,” Clark said.
+Conference Report
+The conference report on HR 13113 was filed in the House Sept. 27 (H Rept 93 –1383) and in the Senate
+Sept. 30 (S Rept 93 –1194). The final version followed the outlines of the Senate bill in most cases, but with a
+number of compromises.
+Commission Make-Up
+The House-passed bill would have established a parttime commission made up of four public members and the
+agriculture secretary or his designee. The conferees adopted instead the Senate bill's provisions for a commission of
+five full-time public members.
+In recognition of the Agriculture Department's experience and expertise in regulating futures trading, conferees
+added a provision requiring the department and the futures commission to set up separate liaison offices to
+exchange information. The department's liaison officer to the commission could attend its meetings but could not
+vote or participate in any other way.
+Injunctions
+Conferees adopted the Senate provision authorizing the commission's attorneys to seek court injunctions against
+illegal trading practices without prior Justice Department approval, as required in the House bill. Conferees added
+provisions allowing'the commission to ask the attorney general to seek an injunction for it, and requiring the
+commission to keep him informed of all legal actions it brought independently.
+Daily Trading Reports
+Conferees compromised on a controversial Senate provision, not in the House bill, requiring commodity exchanges
+to provide the commission with daily reports on the time, subject, amount, price, delivery month and traders for each
+transaction. The conference agreement left it up to the commission to specify the frequency and contents of trading
+reports.
+Proponents of the mandatory daily trading reports argued that with data on traders' names and the time of each
+transaction, federal officials could get a clear picture of the effect on the market of floor brokers who traded for
+themselves and for clients. There had been charges that such traders manipulated the market for their own
+advantage, but existing reporting practices were too vague to prove them. The major exchanges protested the
+inclusion of the provision on grounds that they did not have the technological capacity to provide the information.
+Final Action
+The House adopted the conference report Oct. 9 on a 374–4 vote. (Vote 434, p. 134-H)
+A motion to recommit the report to the conference committee for amendment, offered by LaMar Baker (R Tenn.),
+was rejected by voice vote. Baker wanted the conferees to drop the provisions granting the commission authority to
+go to court independently and directing it to submit its budget requests to the appropriate congressional committees
+at the same time they went to the Office of Management and Budget.
+The Senate adopted the rporte by voice vote Oct. 10, without objection, completing congressional action.
+Features
+Daily Crop Export Reports
+A Sept. 8 report that the Agriculture Department had abandoned plans to step up its monitoring of export sales of
+7/2/09 3:15 PMCQ Almanac Online Edition
+Page 8 of 8http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal74-1224365&type=hitlist&num=8
+A Sept. 8 report that the Agriculture Department had abandoned plans to step up its monitoring of export sales of
+U.S. crops drew a quick reaction from farm state senators concerned about food shortages at home.
+Prompted by the huge sales of grain to the Soviet Union in 1972 and the resulting domestic shortages and price
+spiral, Congress added a provision to the 1973 farm bill (PL 93-86) requiring private crop traders to report foreign
+sales on a weekly basis. The department was required to publish a weekly compilation of the information gathered.
+After new crop shortages were reported in August, department officials and Senate farm leaders discussed a plan to
+require daily reporting of large export sales. The increased surveillance was to be aimed at preventing overselling of
+key crops in short supply—especially corn and soybeans.
+During Senate consideration of the commodity futures commission bill Sept. 9, Dick Clark (D Iowa) expressed
+concern about the news item, which said the department had abandoned the daily reporting plan because it would
+be too easy for traders to evade its requirements.
+Herman E. Talmadge (D Ga.), chairman of the Agriculture and Forestry Committee, responded that Agriculture
+Secretary Earl L. Butz had told the committee in August he was already requiring the daily export reports. When he
+learned of the news report to the contrary, Talmadge said, he called Butz immediately and “received assurances
+from him…that the secretary is going to reinstitute the daily surveillance of exports.”
+Document Citation
+"Ford Signs Bill  to Regulate Commodity Futures." CQ Press Electronic Library, CQ Almanac Online Edition, cqal74-1224365.
+Originally published in CQ Almanac 1974 (Washington: Congressional Quarterly, 1975).
+http://library.cqpress.com/cqalmanac/cqal74-1224365 (accessed July 2, 2009).
+Document ID: cqal74-1224365
+Document URL: http://library.cqpress.com/cqalmanac/cqal74-1224365
+© 1975, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

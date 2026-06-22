@@ -53,6 +53,9 @@ def get_db_session() -> BaseUnitOfWork:
         pool = get_postgres_pool()
         conn = pool.getconn()
         conn.autocommit = False
+        if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+            from app.tests.base import SafeTestConnection
+            conn = SafeTestConnection(conn)
         return PostgresUnitOfWork(conn, on_close_callback=lambda c: pool.putconn(c))
     else:
         # SQLite

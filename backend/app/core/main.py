@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routes import auth, chat, health, threads, documents, dashboards, usage
+from app.routes import auth, chat, health, threads, documents, dashboards, usage, workflows
 
 import sys
 import os
@@ -101,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router)
     app.include_router(dashboards.router)
     app.include_router(usage.router)
+    app.include_router(workflows.router)
 
     return app
 

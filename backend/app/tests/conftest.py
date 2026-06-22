@@ -1,4 +1,9 @@
+import os
 import sys
+
+# Activate test mode connection wrapper and query firewall.
+os.environ["TEST_MODE"] = "1"
+
 from unittest.mock import MagicMock
 
 # Mock docling package dynamically if not installed to prevent import errors in tests
@@ -13,7 +18,6 @@ except ImportError:
     sys.modules["docling.datamodel.pipeline_options"] = MagicMock()
     sys.modules["docling.datamodel.base_models"] = MagicMock()
 
-import os
 import time
 
 # Load settings from env/.env — no hardcoded values here ever.
@@ -65,6 +69,33 @@ def cleanup_test_db():
     os.environ.pop("TEST_MODE", None)
 
 
+@pytest.fixture(autouse=True)
+def db_safety_shield():
+    """Global shield to intercept and prevent any deletion of the production SQLite database file during any test."""
+    original_remove = os.remove
+    original_unlink = os.unlink
+
+    def safe_remove(path, *args, **kwargs):
+        path_str = str(path)
+        if "local_rag.db" in path_str and "test_local_rag.db" not in path_str:
+            raise RuntimeError(
+                f"CRITICAL SAFETY SHIELD: Deleting production database file '{path}' is strictly forbidden!"
+            )
+        return original_remove(path, *args, **kwargs)
+
+    def safe_unlink(path, *args, **kwargs):
+        path_str = str(path)
+        if "local_rag.db" in path_str and "test_local_rag.db" not in path_str:
+            raise RuntimeError(
+                f"CRITICAL SAFETY SHIELD: Deleting production database file '{path}' is strictly forbidden!"
+            )
+        return original_unlink(path, *args, **kwargs)
+
+    from unittest.mock import patch
+    with patch("os.remove", side_effect=safe_remove), patch("os.unlink", side_effect=safe_unlink):
+        yield
+
+
 @pytest.fixture()
 def client():
     """Test client — uses whatever DB_PROVIDER and JWT_SECRET are set in the environment."""
@@ -75,44 +106,77 @@ def client():
 @pytest.fixture(autouse=True)
 def run_init_db():
     """Ensure a clean, initialized database exists for each test run.
-
-    Works transparently with both SQLite (local) and Postgres/Supabase.
-    The active backend is determined entirely by DB_PROVIDER in the environment.
+    
+    Safe to use with SQLite and Postgres/Supabase. Only cleans test records.
     """
     from app.core.database import init_db
     init_db()
-
-    if settings.DB_PROVIDER == "postgres":
-        # Postgres/Supabase path — use psycopg directly
-        import psycopg
-        with psycopg.connect(settings.DATABASE_URL) as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM document_chunks;")
-                cur.execute("DELETE FROM documents;")
-                cur.execute("DELETE FROM messages;")
-                cur.execute("DELETE FROM threads;")
-                cur.execute("DELETE FROM users WHERE email = %s;", ("test@test.com",))
-                cur.execute(
-                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) "
-                    "VALUES (%s, %s, %s, 1, 1, 1) ON CONFLICT (id) DO UPDATE "
-                    "SET password_hash = EXCLUDED.password_hash;",
+    
+    from app.tests.base import get_current_permissions
+    
+    # We temporarily grant deletion/insert permission for database cleanup
+    perms = get_current_permissions()
+    old_perms = perms.copy()
+    perms["allow_insert"] = True
+    perms["allow_delete"] = True
+    
+    try:
+        if settings.DB_PROVIDER == "postgres":
+            # Obtain psycopg connection directly to run deletions safely
+            import psycopg
+            # prepare_threshold=None is needed for Supabase Transaction mode
+            with psycopg.connect(settings.DATABASE_URL, prepare_threshold=None) as conn:
+                from app.tests.base import SafeTestConnection
+                # Wrap with SafeTestConnection so cleanup itself is validated
+                safe_conn = SafeTestConnection(conn)
+                with safe_conn.cursor() as cur:
+                    # Cascade deletes via deleting test user documents and test workspace dashboards
+                    cur.execute("DELETE FROM document_chunks WHERE user_id = %s;", (TEST_USER_ID,))
+                    cur.execute("DELETE FROM documents WHERE user_id = %s;", (TEST_USER_ID,))
+                    cur.execute("DELETE FROM messages WHERE user_id = %s;", (TEST_USER_ID,))
+                    cur.execute("DELETE FROM threads WHERE user_id = %s;", (TEST_USER_ID,))
+                    cur.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
+                    cur.execute("DELETE FROM users WHERE id = %s OR email = %s;", (TEST_USER_ID, "test@test.com"))
+                    cur.execute(
+                        "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
+                        (TEST_USER_ID, "test@test.com", "mock_hash")
+                    )
+                safe_conn.commit()
+        else:
+            from app.core.database import get_db_conn
+            with get_db_conn() as conn:
+                # Direct SQL deletes of test-specific records
+                conn.execute("DELETE FROM document_chunks WHERE user_id = ?;", (TEST_USER_ID,))
+                conn.execute("DELETE FROM documents WHERE user_id = ?;", (TEST_USER_ID,))
+                conn.execute("DELETE FROM messages WHERE user_id = ?;", (TEST_USER_ID,))
+                conn.execute("DELETE FROM threads WHERE user_id = ?;", (TEST_USER_ID,))
+                conn.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
+                conn.execute("DELETE FROM users WHERE id = ? OR email = ?;", (TEST_USER_ID, "test@test.com"))
+                conn.execute(
+                    "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
                     (TEST_USER_ID, "test@test.com", "mock_hash")
                 )
-            conn.commit()
-    else:
-        # SQLite path
-        from app.core.database import get_db_conn
-        with get_db_conn() as conn:
-            conn.execute("DELETE FROM document_chunks;")
-            conn.execute("DELETE FROM documents;")
-            conn.execute("DELETE FROM messages;")
-            conn.execute("DELETE FROM threads;")
-            conn.execute("DELETE FROM users;")
-            conn.execute(
-                "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
-                (TEST_USER_ID, "test@test.com", "mock_hash")
-            )
-            conn.commit()
+                conn.commit()
+    finally:
+        perms.update(old_perms)
+
+
+@pytest.fixture(autouse=True)
+def grant_test_db_permissions():
+    """Automatically grant scoped write/delete permissions for tests.
+    
+    Operations are still strictly validated by the SafeTestCursor firewall (registry of allowed IDs).
+    """
+    from app.tests.base import get_current_permissions
+    perms = get_current_permissions()
+    old_perms = perms.copy()
+    perms["allow_insert"] = True
+    perms["allow_update"] = True
+    perms["allow_delete"] = True
+    yield
+    perms.update(old_perms)
+
+
 
 
 @pytest.fixture()

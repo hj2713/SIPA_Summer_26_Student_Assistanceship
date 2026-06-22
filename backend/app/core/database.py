@@ -19,17 +19,34 @@ def get_db_path() -> str:
 
 @contextmanager
 def get_db_conn():
-    """Context manager for thread-safe SQLite connections."""
-    db_path = get_db_path()
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    conn = sqlite3.connect(db_path, timeout=30.0)
-    # Enable foreign keys
-    conn.execute("PRAGMA foreign_keys = ON;")
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
+    """Context manager for thread-safe database connections, supporting SQLite and Postgres."""
+    if settings.DB_PROVIDER == "postgres":
+        import psycopg
+        from psycopg.rows import dict_row
+        conn = psycopg.connect(settings.DATABASE_URL, row_factory=dict_row, prepare_threshold=None)
+        try:
+            if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+                from app.tests.base import SafeTestConnection
+                yield SafeTestConnection(conn)
+            else:
+                yield conn
+        finally:
+            conn.close()
+    else:
+        db_path = get_db_path()
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        conn = sqlite3.connect(db_path, timeout=30.0)
+        # Enable foreign keys
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.row_factory = sqlite3.Row
+        try:
+            if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+                from app.tests.base import SafeTestConnection
+                yield SafeTestConnection(conn)
+            else:
+                yield conn
+        finally:
+            conn.close()
 
 def init_db():
     """Initialize the database based on the selected DB_PROVIDER."""
@@ -95,6 +112,36 @@ def init_postgres_db():
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS coding_workflows (
+                    id VARCHAR(255) PRIMARY KEY,
+                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
+                    draft_definition TEXT NOT NULL,
+                    revision INTEGER NOT NULL DEFAULT 1,
+                    latest_version INTEGER NOT NULL DEFAULT 0,
+                    created_by VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS coding_workflow_versions (
+                    id VARCHAR(255) PRIMARY KEY,
+                    workflow_id VARCHAR(255) NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
+                    version INTEGER NOT NULL,
+                    definition_json TEXT NOT NULL,
+                    definition_hash VARCHAR(255) NOT NULL,
+                    changelog TEXT NOT NULL DEFAULT '',
+                    created_by VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(workflow_id, version)
+                );
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS threads (
                     id VARCHAR(255) PRIMARY KEY,
                     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -126,7 +173,7 @@ def init_postgres_db():
                 CREATE TABLE IF NOT EXISTS documents (
                     id VARCHAR(255) PRIMARY KEY,
                     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    workspace_id VARCHAR(255) DEFAULT 'TEST' REFERENCES workspaces(id) ON DELETE CASCADE,
+                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE CASCADE,
                     filename VARCHAR(255) NOT NULL,
                     file_path TEXT NOT NULL,
                     file_size INTEGER NOT NULL,
@@ -146,7 +193,7 @@ def init_postgres_db():
                     id VARCHAR(255) PRIMARY KEY,
                     document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
                     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    workspace_id VARCHAR(255) DEFAULT 'TEST' REFERENCES workspaces(id) ON DELETE CASCADE,
+                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE CASCADE,
                     content TEXT NOT NULL,
                     embedding vector,
                     metadata TEXT NOT NULL DEFAULT '{}',
@@ -194,10 +241,9 @@ def init_postgres_db():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
 
-            # Seed defaults
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
-            
             # Seed test@gmail.com
             cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@gmail.com",))
             admin_row = cursor.fetchone()
@@ -302,7 +348,7 @@ def init_sqlite_db():
             CREATE TABLE IF NOT EXISTS documents (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                workspace_id TEXT DEFAULT 'TEST',
+                workspace_id TEXT,
                 filename TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 file_size INTEGER NOT NULL,
@@ -325,7 +371,7 @@ def init_sqlite_db():
                 id TEXT PRIMARY KEY,
                 document_id TEXT NOT NULL,
                 user_id TEXT NOT NULL,
-                workspace_id TEXT DEFAULT 'TEST',
+                workspace_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT, -- JSON array of floats
                 metadata TEXT NOT NULL DEFAULT '{}',
@@ -346,6 +392,36 @@ def init_sqlite_db():
                 prompt TEXT NOT NULL,
                 schema TEXT NOT NULL DEFAULT '[]',
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+            );
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS coding_workflows (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
+                draft_definition TEXT NOT NULL,
+                revision INTEGER NOT NULL DEFAULT 1,
+                latest_version INTEGER NOT NULL DEFAULT 0,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+            );
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS coding_workflow_versions (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
+                version INTEGER NOT NULL,
+                definition_json TEXT NOT NULL,
+                definition_hash TEXT NOT NULL,
+                changelog TEXT NOT NULL DEFAULT '',
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                UNIQUE(workflow_id, version)
             );
         """)
 
@@ -437,12 +513,11 @@ def init_sqlite_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
 
         # --- SEED DEFAULTS ---
-        # 1. TEST Workspace
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
-
-        # 2. Default Admin User: test@gmail.com / test@gmail.com
+        # 1. Default Admin User: test@gmail.com / test@gmail.com
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM users WHERE email = ?;", ("test@gmail.com",))
         admin_row = cursor.fetchone()
@@ -475,10 +550,6 @@ def init_sqlite_db():
                 "UPDATE users SET password_hash = ?, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = ?;",
                 (test_pwd_hash, "test@test.com")
             )
-
-        # 3. Migrate any legacy NULL workspace rows to the 'TEST' workspace
-        conn.execute("UPDATE documents SET workspace_id = 'TEST' WHERE workspace_id IS NULL;")
-        conn.execute("UPDATE document_chunks SET workspace_id = 'TEST' WHERE workspace_id IS NULL;")
 
         conn.commit()
 

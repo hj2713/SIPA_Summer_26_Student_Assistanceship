@@ -1,0 +1,196 @@
+7/2/09 2:17 PMCQ Almanac Online Edition
+Page 1 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal70-1294351&type=hitlist&num=9
+Document Outline
+House Hearings
+Conference Report
+Fair Credit Reporting
+An article from CQ Almanac 1970
+Congress Oct. 13 cleared for the President a conglomerate bill (HR 15073—PL 91 - 508 ) including provisions
+regulating credit information reporting and use.
+The provisions were added by the Senate Sept. 18 as a nongermane amendment (“rider”) to HR 15073, a bill to
+curb violations of U.S. laws and avoidance of taxes through use of secret foreign bank accounts. (Story on foreign
+bank account bill, p. 884)
+The Senate originally had passed the fair credit provisions (S 823) in November 1969. (1969 Almanac p. 577)
+Although the House Banking and Currency Committee held hearings on the bill in March and April, it did not report
+HR 15073.
+Final action on the bill came Oct. 13 when the House adopted the conference report on HR 15073, including the fair
+credit reporting provisions. The Senate had adopted the report Oct. 9.
+Provisions. As cleared by Congress, the provisions of HR 15073 pertaining to fair credit reporting:
+Authorized the furnishing of credit information by reporting agencies only: (1) in connection with credit, insurance,
+employment or a Government license, for any of which a person had applied; (2) for a business transaction in which the
+subject of the information was involved; (3) by written consent of the subject, or (4) in compliance with a court order.
+Prohibited reporting of adverse information more than seven years old regarding suits, arrests and other matters except
+bankruptcies, for which information could be made available for 14 years.
+Prohibited reporting of adverse information from investigative reports more than three months old unless the information
+was reverified.
+Required reporting agencies to follow reasonable procedures to assure maximum accuracy of information contained in
+reports.
+Limited information which could be furnished to Government agencies without a court order.
+Required a reporting agency, on request, to disclose to a consumer all information about him in the agency's files, other
+than medical, and its sources.
+Required a person or business ordering an investigative report to notify the consumer that an investigation was being
+made.
+Required an agency to disclose to a consumer the names of persons and businesses furnished credit information about
+him in the preceding six months (two years for employment purposes).
+Required agencies to reinvestigate disputed information, delete unsubstantiated information and include in their reports
+any statements on disputed matters furnished by the consumers involved.
+Required a person or business rejecting a consumer for credit, insurance or employment on the basis of a credit report
+to advise the consumer and identify the reporting agency.
+Permitted civil actions in Federal courts to recover damages resulting from willful and negligent noncompliance.
+Made obtaining information under false pretenses for credit reporting and willfully giving out credit information to
+unauthorized persons punishable by a fine of up to $5,000 and imprisonment for up to one year.
+Gave the Federal Trade Commission enforcement power over reporting agencies and unregulated users; required
+Federal regulatory agencies to enforce compliance by regulated businesses.
+ 
+7/2/09 2:17 PMCQ Almanac Online Edition
+Page 2 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal70-1294351&type=hitlist&num=9
+Federal regulatory agencies to enforce compliance by regulated businesses.
+Background. American consumers in 1969 owed $116 billion in outstanding credit. Because of the trend to credit
+buying, a vast organization of credit bureaus had developed to supply credit information. More than 2,000 bureaus
+maintained files on more than 110 million individuals and in 1967 issued more than 97 million credit reports to
+400,000 creditors in 36,000 communities. These agencies had no public supervision. With the trend toward use of
+computers, there was fear that a gigantic national data bank including extremely personal information on nearly all
+consumers would be created with no public safeguards to protect the American buyer.
+House Hearings
+The House Banking and Currency Subcommittee on Consumer Affairs held hearings in March and April on a
+number of bills allowing persons to look into and to challenge or correct their credit dossiers on file with private
+credit bureaus.
+Two of the bills studied by the Subcommittee were the Fair Credit Reporting Act (HR 16340) and the Senate-
+passed measure (S 823).
+Testimony March 17:
+Cornelius E. Gallagher (D N.J.):
+While the individual needs credit, insurance and employment, we cannot allow such necessities to be purchased at
+the price of privacy. The individual must be able to make sure his credit records are correct. Legal responsibility
+must fall on those who can damage a man's chance for deserved credit, insurance or employment and credit
+information must be used solely for the purpose for which it was given.
+All information yielded should be subjected to due process of law. There should be no privilege against any future
+legal action in the giving of credit information because the damage to the individual may often have been done
+before he knew what erroneous information had been disseminated.
+Only identifying information should be given in response to a subpoena. If a Federal agency wants anything else in
+a credit repository, the individual concerned must be informed and be able to contest the action.
+We are past the time when information can be regarded as the sole property of those who manage the system. The
+individual must be able to restrict unwelcome access to information he has provided for the necessities of modern
+life.
+A great public utility, dealing solely in data on individually identifiable Americans, is looming on the horizon and it is
+up to the Congress to assure that such a data-rich society does not become privacy-poor.
+March 19
+Harry C. Jordan, TRW Information Services Inc., and Credit Data Corporation:
+The Credit Data Corporation supports S 823. It does not support HR 16340 because it is unduly burdensome and
+restrictive.
+With the use of computers, the storage of information which is old and outdated simply cannot be permitted
+because of storage costs. It is possible to review all of the data in a computer file within a few hours and remove
+that which is outdated.
+There should not be administrative regulation of credit agencies. Also, agencies should not be held liable for simple
+negligence if a mistake appears in an individual's file.
+A computerized file will be meaningless to an individual should he be permitted to see it.
+Legislation is needed to prohibit non-credit granting Governmental agencies from obtaining information from credit
+files except in cases involving national security.
+March 20
+Lawrence Speiser, American Civil Liberties Union (ACLU):
+The ACLU believes the individual should have a right to demand and inspect his credit file; should have the right to
+contest the accuracy of the information, to have errors recorded in the files and reported to prior recipients of the
+original information and should have the right to place explanatory information in the file.
+HR 16340 appears to go the furthest to protect the consumer. But, Government agencies which do not grant credit
+should not be allowed to obtain even identifying information from private agencies without subpoena.
+Arthur R. Miller, University of Michigan:
+7/2/09 2:17 PMCQ Almanac Online Edition
+Page 3 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal70-1294351&type=hitlist&num=9
+The Senate bill, S 823, does not offer citizens effective relief from improper credit bureau activities. The House bill
+HR 16340 cures the inadequacies of the S 823.
+Every consumer should be allowed to find out what the credit bureaus know about him, be able to correct any
+inaccurate or misleading information and find out who has looked in his file.
+Retail credit bureaus often engage in surveillance activities and record derogatory information based on off-the-cuff
+opinions from sources whose reliability is never tested. Thus, a substantial mass of dangerous and often inaccurate
+material has been gathered and its dissemination probably is causing considerable damage to many individuals.
+Computerization will allow credit data networks to obtain even more detailed and sensitive information about
+individuals.
+The existing legal structure does not take account of the massive shifts of data technology and the increased
+danger of information in a computer-based society.
+Mr. and Mrs. Paul R. Prietsch, Hale-Prietsch Services, Inc.:
+Accurate disclosure to an individual of information in his credit file is more fitting than allowing him to have access to
+the file. Credit bureaus should have immunity from legal action as a condition for an individual's access to his file.
+Information should be held for seven years, not three. Notice of arrests or indictments where no convictions resulted
+should be permissible, along with divorce actions, alimony payments, child support and repossessions.
+If HR 16340 is enacted, agencies would be forced to cease filing public information and records and the cost of
+credit to the consumer would be greatly increased.
+March 24
+William F. Willier, National Consumer Law Center:
+Studies by the Center have shown that many of the consumer problems with credit agencies can be solved cheaply
+if the agencies put their ingenuity to work. They do not seem to want to be held to the standard of ordinary care to
+which other business enterprises are held. There is no justification in logic why a consumer reporting agency which
+is a commercial, profit-making enterprise, should enjoy a conditional privilege.
+S 823 offers solutions for a number of problems, but HR 16340 offers solutions to even more and provides realistic
+civil remedies to the consumer.
+Royal E. Jackson, Division of Bankruptcy, administrative Office of the United States Courts:
+The Division approves in principle HR 16340 but suggests two changes. First, bankruptcies should not be reported
+longer than seven years from the date of adjudication of the most recent bankruptcy. Secondly, the bill does not
+deal with the possible conflict of interest where a credit reporting bureau is operated as an integral part of a debt
+collection agency.
+April 7
+Charles N. Walker, American Life Convention and Life Insurance Association of America:
+It is important that insurance underwriters have available all possible information on individuals bearing a risk
+classification. A mistake in underwriting will benefit one policy-holder to the detriment of all others in his class. The
+Fair Credit Reporting Act, in this respect, should be modified.
+April 8
+Alfred S. Roberts, credit manager, B. Altman and Co., New York:
+Any legislation which seriously interferes with the free flow of both positive and negative information, which unduly
+increases the cost of that information or which impairs the confidence of credit granters by arbitrarily imposing
+information gaps does a grave disservice to the consumer whose credit records are unquestionable. The result of
+restricted credit information is restricted credit granting.
+The Senate bill, S 823, is a practical piece of legislation, as opposed to the grave concerns which HR 16340 raises.
+Edward Herbert, Robert Morris Associates (National Association of Bank Loan and Credit Officers):
+The application of HR 16340 to commercial loan transactions would do the most damage to those business loan
+applicants who can least afford it—the young, growing privately owned businesses. It is the smaller company who
+could suffer the most if the banker has insufficient information available to justify the extension of credit to it.
+Another possible victim of credit regulations could be the minority businessman. If the flow of information is impeded
+by fear of its disclosure, the loan applicant will suffer because the lending officer will have an insufficient basis upon
+which to support a favorable decision.
+The definitions in HR 16340 specifically exempt from regulation any credit information obtained for the purpose of
+7/2/09 2:17 PMCQ Almanac Online Edition
+Page 4 of 4http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal70-1294351&type=hitlist&num=9
+The definitions in HR 16340 specifically exempt from regulation any credit information obtained for the purpose of
+establishing eligibility for commercial credit or for any extension of credit in an amount over $5,000 not secured by
+real estate or by tangible personal property.
+Allen P. Stults, American Bankers Association (ABA):
+The ABA believes that both S 823 and HR 16340 present problems. However, S 823 is more effective in achieving
+the goals of fair credit legislation than HR 16340 which defeats the basic purposes of the bill. The Senate bill
+provides for a more self-enforcing law.
+The banking industry's existence depends on getting accurate and complete credit information. The extent of the
+credit check and the time and costs involved must be a management decision. This cannot be practicably spelled
+out in legislation.
+Virginia H. Knauer, Special Assistant to the President for consumer affairs:
+Industry guidelines do not go far enough, and enforcement under a voluntary code is extremely difficult. I support
+the general objectives of HR 16340 with some exceptions. Punitive damages should be limited to $100 of civil
+liability. Two years seems ample time within which consumers can bring suits.
+A consumer reporting agency should not be permitted to require an individual to grant immunity from legal action as
+a condition for obtaining access to his file. And, the opportunity to correct inaccurate or misleading information is
+essential.
+The requirement on creditors to automatically report the disposition of their past due accounts could serve to dry up
+the sources of credit information for agencies. This could be solved by requiring that information be updated
+whenever a request for a report is received by the agency. I favor advance notification and written permission from
+the individual prior to making an investigation.
+Conference Report
+House and Senate conferees Oct. 8 filed a conference report on HR 15073 (H Rept 91–1587).
+The Senate had added the provisions of its fair credit reporting bill (S 823) to HR 15073 Sept. 18, along with the
+provisions of another bill (S 721) restricting the issuance of unsolicited credit cards. (p. 621)
+Conferees agreed on a number of changes in the provisions of S 823, the Fair Credit Reporting Act.
+The conference version required all agencies reporting credit information—not just investigative agencies, as in the
+Senate bill—to follow reasonable procedures to assure accuracy of their information. The conference agreement
+required any user of a report who rejected a consumer for credit, insurance or employment to inform the consumer
+of the source of the report. The Senate version required the consumer to request identification of the source in
+writing.
+Consumers were granted the statutory right, through court proceedings, to obtain identification of sources of
+information about them in credit reports. The Senate-passed bill required agencies to disclose the sources of certain
+information.
+Final Action. The Senate Oct. 9 and the House Oct. 13, by voice votes, agreed to the conference report on HR
+15073, completing Congressional action.
+President Nixon signed the bill Oct. 26.
+Document Citation
+"Fair Credit Reporting." CQ Press Electronic Library, CQ Almanac Online Edition, cqal70-1294351. Originally published in CQ
+Almanac 1970 (Washington: Congressional Quarterly, 1971). http://library.cqpress.com/cqalmanac/cqal70-1294351 (accessed
+July 2, 2009).
+Document ID: cqal70-1294351
+Document URL: http://library.cqpress.com/cqalmanac/cqal70-1294351
+© 1971, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

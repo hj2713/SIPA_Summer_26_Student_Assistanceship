@@ -96,3 +96,29 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[CurrentUser, Depends(get_current_user)]
+
+
+def get_workspace_id(workspace_id: str = None) -> str:
+    """Dependency to retrieve/update the active workspace ID dynamically.
+    
+    If workspace_id query/form param is passed, we update the active workspace in RAM.
+    Otherwise, we retrieve it from RAM.
+    """
+    from app.core.workspace import get_active_workspace, set_active_workspace
+    if workspace_id:
+        set_active_workspace(workspace_id)
+        resolved = workspace_id
+    else:
+        resolved = get_active_workspace()
+
+    # Dynamically ensure the workspace exists in the database on access
+    from app.repositories import get_db_session
+    try:
+        with get_db_session() as session:
+            if not session.workspaces.get_by_id(resolved):
+                session.workspaces.create(workspace_id=resolved, name=resolved)
+    except Exception:
+        pass
+        
+    return resolved
+

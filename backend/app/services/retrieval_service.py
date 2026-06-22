@@ -168,7 +168,7 @@ class RetrievalService:
             if document_id not in document_ids:
                 document_ids.append(document_id)
 
-        workspace_id = getattr(client, "workspace_id", "TEST")
+        workspace_id = getattr(client, "workspace_id", "PRODUCTION")
         if not workspace_id:
             logger.warning("retrieve_context called with empty workspace_id in client")
             return []

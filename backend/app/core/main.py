@@ -51,20 +51,22 @@ async def lifespan(app: FastAPI):
             if stale_docs:
                 doc_ids = [d["id"] for d in stale_docs]
                 logger.info("Found %d stale pending/processing documents. Marking as failed due to server restart.", len(doc_ids))
+                placeholder = "%s" if settings.DB_PROVIDER == "postgres" else "?"
                 conn.execute(
-                    "UPDATE documents SET status = 'failed', error_message = ? WHERE status IN ('pending', 'processing');",
+                    f"UPDATE documents SET status = 'failed', error_message = {placeholder} WHERE status IN ('pending', 'processing');",
                     ("Ingestion was interrupted due to server restart or reload.",)
                 )
-            
+
             # Clean up stale dashboard document coding statuses
             cursor.execute("SELECT dashboard_id, document_id FROM dashboard_documents WHERE status IN ('pending', 'processing');")
             stale_dash_docs = cursor.fetchall()
             if stale_dash_docs:
                 logger.info("Found %d stale pending/processing dashboard document coding jobs. Marking as failed.", len(stale_dash_docs))
+                placeholder = "%s" if settings.DB_PROVIDER == "postgres" else "?"
                 conn.execute(
-                    """
-                    UPDATE dashboard_documents 
-                    SET status = 'failed', error_message = ?, error_type = 'API_FAILURE' 
+                    f"""
+                    UPDATE dashboard_documents
+                    SET status = 'failed', error_message = {placeholder}, error_type = 'API_FAILURE'
                     WHERE status IN ('pending', 'processing');
                     """,
                     ("Coding was interrupted due to server restart or reload.",)

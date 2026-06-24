@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 15:26:12  
-> Total memories: **14**  
-> Breakdown: decision: 14
+> Generated: 2026-06-24 15:44:54  
+> Total memories: **15**  
+> Breakdown: decision: 15
 
 ---
 
@@ -79,6 +79,12 @@ Refactored run_uploaded_files and run_existing_documents in workflow_dashboard_s
 This allows frontend link/upload modals to close immediately (within ~100ms) and display linked files as pending/processing on the campaign dashboard in real-time
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T18:47:35*
+
+### Removed the 'relative' CSS position class override...
+
+Removed the 'relative' CSS position class override from the Workflow Trace modal DialogContent, allowing it to inherit the default 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' center-alignment from the UI dialog system.
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T19:44:51*
 
 ### Redesigned Compare with Benchmark spreadsheet mism...
 

@@ -2795,7 +2795,7 @@ export function DashboardDetailPage() {
         {/* Modal: Workflow Trace */}
         <Dialog open={!!workflowTraceDoc} onOpenChange={(open) => { if (!open) setWorkflowTraceDoc(null); }}>
           <DialogContent 
-            className="w-[94vw] sm:max-w-none lg:max-w-none max-h-none overflow-hidden flex flex-col p-0 relative"
+            className="w-[94vw] sm:max-w-none lg:max-w-none max-h-none overflow-hidden flex flex-col p-0"
             style={{ width: `${traceModalWidth}px`, height: `min(${traceModalHeight}px, 90vh)`, maxWidth: '98vw', maxHeight: '96vh' }}
           >
             {/* Resize Handles */}

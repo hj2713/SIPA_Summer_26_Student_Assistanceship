@@ -682,6 +682,16 @@ class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
         with self.conn.cursor() as cursor:
             cursor.execute("DELETE FROM dashboard_documents WHERE document_id = %s;", (str(document_id),))
 
+    def delete_relations(self, dashboard_id: str, document_ids: List[str]) -> None:
+        if not document_ids:
+            return
+        placeholders = ",".join("%s" for _ in document_ids)
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                f"DELETE FROM dashboard_documents WHERE dashboard_id = %s AND document_id IN ({placeholders});",
+                [str(dashboard_id)] + [str(d_id) for d_id in document_ids]
+            )
+
 class PostgresWorkflowRepository(BaseWorkflowRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn

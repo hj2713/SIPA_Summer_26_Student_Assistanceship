@@ -568,6 +568,15 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
     def delete_by_document(self, document_id: str) -> None:
         self.conn.execute("DELETE FROM dashboard_documents WHERE document_id = ?;", (str(document_id),))
 
+    def delete_relations(self, dashboard_id: str, document_ids: List[str]) -> None:
+        if not document_ids:
+            return
+        placeholders = ",".join("?" for _ in document_ids)
+        self.conn.execute(
+            f"DELETE FROM dashboard_documents WHERE dashboard_id = ? AND document_id IN ({placeholders});",
+            [str(dashboard_id)] + [str(d_id) for d_id in document_ids]
+        )
+
 class SQLiteWorkflowRepository(BaseWorkflowRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn

@@ -213,6 +213,11 @@ class CampaignService:
             session.dashboards.delete(id)
             return True
 
+    def delete_dashboard_documents(self, dashboard_id: str, document_ids: List[str]) -> None:
+        """Remove links/relations between a dashboard and documents (does not delete documents or chunks)."""
+        with self.db_session_factory() as session:
+            session.dashboard_documents.delete_relations(dashboard_id, document_ids)
+
     def update_campaign(self, id: str, payload: DashboardUpdate) -> DashboardRow:
         """Update campaign name, description, prompt, or variable schema."""
         import datetime

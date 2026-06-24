@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 01:24:29  
-> Total memories: **2**  
-> Breakdown: decision: 2
+> Generated: 2026-06-24 01:54:47  
+> Total memories: **4**  
+> Breakdown: decision: 4
 
 ---
 
@@ -32,11 +32,23 @@ Optimized campaign document lists page loading speed by omitting workflow_trace 
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:24:12*
 
+### Restructured AI analysis configure node into a 3-s...
+
+Restructured AI analysis configure node into a 3-step inputs-instructions-outputs flow and added validation rules listing display in workflow side panel
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T05:54:44*
+
 ### Implemented workflow reasoning mapping to campaign...
 
 Implemented workflow reasoning mapping to campaign columns and initialized version 1 history arrays when a workflow completes
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:24:06*
+
+### Implemented multi-select and inline document unlin...
+
+Implemented multi-select and inline document unlinking from a campaign dashboard without deleting the original files or chunks from storage/DB
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T05:43:28*
 
 ---
 

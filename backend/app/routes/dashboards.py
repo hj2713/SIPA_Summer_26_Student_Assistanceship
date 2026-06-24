@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+from pydantic import BaseModel
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends, Query
 
@@ -125,6 +126,24 @@ def get_campaign_status_summary(id: str, current_user: CurrentUserDep):
     """Return lightweight aggregate job counts for polling without loading document rows."""
     return campaign_service.get_campaign_status_summary(id)
 
+
+class BulkDeleteDocumentsRequest(BaseModel):
+    document_ids: List[str]
+
+@router.post("/{id}/documents/bulk-delete", status_code=status.HTTP_204_NO_CONTENT)
+def bulk_delete_campaign_documents(
+    id: str,
+    payload: BulkDeleteDocumentsRequest,
+    current_user: CurrentUserDep
+):
+    """Remove multiple documents from this campaign dashboard (unlinks the association)."""
+    if not current_user.can_delete and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete documents from this campaign."
+        )
+    campaign_service.delete_dashboard_documents(id, payload.document_ids)
+    return
 
 @router.post("/{id}/documents/link", status_code=status.HTTP_200_OK)
 def link_campaign_documents(

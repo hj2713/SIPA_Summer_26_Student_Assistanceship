@@ -11,7 +11,7 @@ import { API_BASE_URL } from "@/constants";
 import { 
   ArrowLeft, RefreshCw, Download, MessageSquare, 
   Eye, Send, Square, AlertCircle, X, AlertTriangle,
-  CheckCircle, Loader2, Sparkles, Plus, BookOpen, Layers, Edit, Info, GitBranch
+  CheckCircle, Loader2, Sparkles, Plus, BookOpen, Layers, Edit, Info, GitBranch, Trash2
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -140,6 +140,68 @@ export function DashboardDetailPage() {
   const [polling, setPolling] = useState(false);
   const [statusSummary, setStatusSummary] = useState<CampaignStatusSummary>({ total: 0, pending: 0, processing: 0, completed: 0, failed: 0 });
   const lastPageRefreshRef = useRef(0);
+
+  // Selection states
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [deletingDocs, setDeletingDocs] = useState(false);
+
+  // Clear selection on page/docs change
+  useEffect(() => {
+    setSelectedDocIds([]);
+  }, [docs, documentPage]);
+
+  // Bulk unlink documents from campaign
+  const handleDeleteSelectedDocs = async () => {
+    if (selectedDocIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to remove the ${selectedDocIds.length} selected document(s) from this campaign dashboard? This does not delete the original files from storage.`)) {
+      return;
+    }
+    setDeletingDocs(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/bulk-delete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ document_ids: selectedDocIds }),
+      });
+      if (!res.ok) throw new Error("Failed to delete documents");
+      toast.success(`Removed ${selectedDocIds.length} document(s) from the dashboard`);
+      setSelectedDocIds([]);
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to remove selected documents");
+    } finally {
+      setDeletingDocs(false);
+    }
+  };
+
+  // Inline single document unlink
+  const handleDeleteIndividualDoc = async (docId: string, filename: string) => {
+    const displayFilename = filename.split("/").pop() || "document";
+    if (!window.confirm(`Are you sure you want to remove "${displayFilename}" from this campaign dashboard? This does not delete the original file from storage.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/bulk-delete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ document_ids: [docId] }),
+      });
+      if (!res.ok) throw new Error("Failed to delete document");
+      toast.success(`Removed "${displayFilename}" from the dashboard`);
+      setSelectedDocIds(prev => prev.filter(id => id !== docId));
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to remove "${displayFilename}"`);
+    }
+  };
 
   // UI Panels
   const [rightPanel, setRightPanel] = useState<"none" | "preview" | "chat">("none");
@@ -1508,6 +1570,22 @@ export function DashboardDetailPage() {
                     </>
                   )}
                 </Button>
+                {selectedDocIds.length > 0 && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleDeleteSelectedDocs} 
+                    disabled={deletingDocs}
+                    className="gap-1.5 text-xs animate-in fade-in zoom-in-95 duration-100"
+                  >
+                    {deletingDocs ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                    Remove Selected ({selectedDocIds.length})
+                  </Button>
+                )}
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -1606,6 +1684,7 @@ export function DashboardDetailPage() {
                   <div className="overflow-auto flex-1">
                     <table className="w-full text-left border-collapse table-fixed">
                       <colgroup>
+                        <col style={{ width: 40 }} />
                         <col style={{ width: colWidths.filename }} />
                         <col style={{ width: colWidths.status }} />
                         {orderedColumns.map((col) => (
@@ -1614,6 +1693,20 @@ export function DashboardDetailPage() {
                       </colgroup>
                       <thead className="bg-muted/60 text-xs font-bold uppercase tracking-wider text-muted-foreground sticky top-0 border-b z-10">
                         <tr>
+                          <th className="p-3 border-r bg-muted/70 text-center" style={{ width: 40 }}>
+                            <input 
+                              type="checkbox" 
+                              checked={docs.length > 0 && selectedDocIds.length === docs.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedDocIds(docs.map(d => d.document_id));
+                                } else {
+                                  setSelectedDocIds([]);
+                                }
+                              }}
+                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                            />
+                          </th>
                           <th className="p-3 border-r bg-muted/70 relative group/filename" style={{ width: colWidths.filename }}>
                             <span className="truncate">Filename</span>
                             <div 
@@ -1752,6 +1845,20 @@ export function DashboardDetailPage() {
                       <tbody className="divide-y text-xs">
                         {docs.map((doc) => (
                           <tr key={doc.document_id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-3 border-r text-center" style={{ width: 40 }}>
+                              <input 
+                                type="checkbox" 
+                                checked={selectedDocIds.includes(doc.document_id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedDocIds(prev => [...prev, doc.document_id]);
+                                  } else {
+                                    setSelectedDocIds(prev => prev.filter(id => id !== doc.document_id));
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                              />
+                            </td>
                             {/* File info cell */}
                              <td className="p-3 border-r font-medium truncate flex items-center justify-between gap-2">
                               <span 
@@ -1809,6 +1916,15 @@ export function DashboardDetailPage() {
                                      )}
                                    </Button>
                                  )}
+                                 <Button 
+                                   variant="ghost" 
+                                   size="icon" 
+                                   className="h-5 w-5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" 
+                                   onClick={() => handleDeleteIndividualDoc(doc.document_id, doc.filename)}
+                                   title="Remove document from campaign"
+                                 >
+                                   <Trash2 size={11} />
+                                 </Button>
                                 {(doc.status === "completed" || doc.status === "failed") && (
                                   <Button 
                                     variant="ghost" 

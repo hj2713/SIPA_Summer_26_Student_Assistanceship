@@ -18,6 +18,46 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea {...props} className={`w-full rounded-md border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30 ${props.className || ""}`} />;
 }
 
+function formatExpression(expr: any): string {
+  if (!expr) return "";
+  const getOperandString = (opObj: any) => {
+    if (!opObj) return "";
+    if (opObj.field) return opObj.field;
+    if (opObj.literal !== undefined) {
+      if (typeof opObj.literal === "string") return `"${opObj.literal}"`;
+      return String(opObj.literal);
+    }
+    return JSON.stringify(opObj);
+  };
+
+  if (expr.op === "and" || expr.op === "or") {
+    const args = expr.args || [];
+    const formattedArgs = args.map((arg: any) => {
+      const isNestedLogical = arg.op === "and" || arg.op === "or";
+      return isNestedLogical ? `(${formatExpression(arg)})` : formatExpression(arg);
+    });
+    return formattedArgs.join(` ${expr.op.toUpperCase()} `);
+  }
+
+  const left = getOperandString(expr.left);
+  const right = getOperandString(expr.right);
+  const opStr = {
+    eq: "==",
+    neq: "!=",
+    gt: ">",
+    gte: ">=",
+    lt: "<",
+    lte: "<=",
+    present: "is present"
+  }[expr.op as string] || expr.op || "";
+
+  if (expr.op === "present") {
+    return `${left} ${opStr}`;
+  }
+
+  return `${left} ${opStr} ${right}`;
+}
+
 export function WorkflowInspector({ node, availableFields, onChange, onDelete, onClose }: WorkflowInspectorProps) {
   if (!node) {
     return (
@@ -63,28 +103,111 @@ export function WorkflowInspector({ node, availableFields, onChange, onDelete, o
 
         {node.kind === "llm" && (
           <>
+            {/* Step 1: Inputs & Context */}
             <section className="space-y-3 border-t pt-4">
-              <div><label className="text-[10px] font-bold uppercase text-muted-foreground">Instructions / rubric</label><TextArea rows={7} value={String(node.config.instructions || "")} onChange={(event) => patchConfig({ instructions: event.target.value })} className="mt-1" /></div>
-              <div><label className="text-[10px] font-bold uppercase text-muted-foreground">Document context</label><select value={String(node.config.document_context || "source_text")} onChange={(event) => patchConfig({ document_context: event.target.value })} className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs"><option value="source_text">Include source text</option><option value="evidence_only">Evidence only</option><option value="none">Prior outputs only</option></select></div>
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">1</span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Input Data & Upstream Context</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-normal">Configure what information is sent to the LLM for analysis.</p>
+              
               <div>
-                <label className="text-[10px] font-bold uppercase text-muted-foreground">Prior outputs included</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground/80">Document Context</label>
+                <select value={String(node.config.document_context || "source_text")} onChange={(event) => patchConfig({ document_context: event.target.value })} className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs">
+                  <option value="source_text">Include full source text of file</option>
+                  <option value="evidence_only">Include highlighted evidence snippets only</option>
+                  <option value="none">Prior outputs only (no file text)</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground/80">Prior Upstream Outputs (Inject context)</label>
                 <div className="mt-1 max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
-                  {availableFields.length === 0 ? <p className="p-2 text-[10px] text-muted-foreground">No upstream output fields are available yet.</p> : availableFields.map((field) => {
-                    const selected = ((node.config.input_fields as string[] | undefined) || []).includes(field);
-                    return <label key={field} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[10px] hover:bg-muted"><input type="checkbox" checked={selected} onChange={() => { const current = (node.config.input_fields as string[] | undefined) || []; patchConfig({ input_fields: selected ? current.filter((item) => item !== field) : [...current, field] }); }} /><span className="truncate font-mono">{field}</span></label>;
-                  })}
+                  {availableFields.length === 0 ? (
+                    <p className="p-2 text-[10px] text-muted-foreground italic">No upstream fields from earlier steps are available yet.</p>
+                  ) : (
+                    availableFields.map((field) => {
+                      const selected = ((node.config.input_fields as string[] | undefined) || []).includes(field);
+                      return (
+                        <label key={field} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[10px] hover:bg-muted">
+                          <input type="checkbox" checked={selected} onChange={() => { const current = (node.config.input_fields as string[] | undefined) || []; patchConfig({ input_fields: selected ? current.filter((item) => item !== field) : [...current, field] }); }} />
+                          <span className="truncate font-mono text-muted-foreground">{field}</span>
+                        </label>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </section>
-            <section className="space-y-2 border-t pt-4">
-              <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase text-muted-foreground">Typed outputs</p><p className="text-[10px] text-muted-foreground">One AI step may create several dashboard fields.</p></div><Button size="xs" variant="outline" onClick={() => patchConfig({ outputs: [...outputs, { key: `new_field_${outputs.length + 1}`, label: "New field", type: "string", required: false }] })}><Plus size={11} /> Field</Button></div>
-              {outputs.map((output, index) => (
-                <div key={`${index}-${output.key}`} className="space-y-2 rounded-lg border bg-muted/20 p-2.5">
-                  <div className="flex gap-2"><Input value={output.key} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, key: event.target.value } : item) })} placeholder="field_key" className="font-mono text-[10px]" /><Button variant="ghost" size="icon-sm" onClick={() => patchConfig({ outputs: outputs.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 className="text-destructive" size={12} /></Button></div>
-                  <div className="grid grid-cols-2 gap-2"><Input value={output.label || ""} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} placeholder="Human label" className="text-[10px]" /><select value={output.type} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, type: event.target.value } : item) })} className="rounded-md border bg-background px-2 text-[10px]"><option value="boolean">Boolean</option><option value="integer">Integer</option><option value="decimal">Decimal</option><option value="string">String</option><option value="enum">Enum</option><option value="object">Object / details</option><option value="list[string]">List of strings</option><option value="evidence[]">Evidence list</option></select></div>
-                  <label className="flex items-center gap-2 text-[10px] text-muted-foreground"><input type="checkbox" checked={Boolean(output.required)} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, required: event.target.checked } : item) })} />Required output</label>
+
+            {/* Step 2: Prompt Instructions */}
+            <section className="space-y-3 border-t pt-4">
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">2</span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AI Instructions & Rubric</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-normal">Tell the AI how to evaluate the documents and outputs from Step 1.</p>
+              <div>
+                <TextArea rows={8} value={String(node.config.instructions || "")} onChange={(event) => patchConfig({ instructions: event.target.value })} className="mt-1 font-sans placeholder:text-muted-foreground/50" placeholder="e.g. Analyze if this statute grants discretionary rulemaking authority to a federal agency..." />
+              </div>
+            </section>
+
+            {/* Step 3: Typed Outputs */}
+            <section className="space-y-3 border-t pt-4">
+              <div className="flex items-center gap-1.5 justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">3</span>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Generated Fields (Outputs)</p>
                 </div>
-              ))}
+                <Button size="xs" variant="outline" onClick={() => patchConfig({ outputs: [...outputs, { key: `new_field_${outputs.length + 1}`, label: "New field", type: "string", required: false }] })}>
+                  <Plus size={11} /> Add Field
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-normal">Specify the exact structured values the LLM must generate.</p>
+              
+              <div className="space-y-2.5 mt-2">
+                {outputs.map((output, index) => (
+                  <div key={`${index}-${output.key}`} className="space-y-2.5 rounded-lg border bg-muted/25 p-3">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-[8px] font-bold uppercase text-muted-foreground block mb-0.5">Field Key (JSON/code-safe)</label>
+                        <Input value={output.key} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, key: event.target.value } : item) })} placeholder="field_key" className="font-mono text-[10px]" />
+                      </div>
+                      <div className="self-end pb-0.5">
+                        <Button variant="ghost" size="icon-sm" onClick={() => patchConfig({ outputs: outputs.filter((_, itemIndex) => itemIndex !== index) })}>
+                          <Trash2 className="text-destructive" size={12} />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[8px] font-bold uppercase text-muted-foreground block mb-0.5">Display Label</label>
+                        <Input value={output.label || ""} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} placeholder="Human label" className="text-[10px]" />
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-bold uppercase text-muted-foreground block mb-0.5">Value Type</label>
+                        <select value={output.type} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, type: event.target.value } : item) })} className="w-full rounded-md border bg-background px-2 py-1.5 text-[10px]">
+                          <option value="boolean">Boolean (True/False)</option>
+                          <option value="integer">Integer (Number)</option>
+                          <option value="decimal">Decimal (Float)</option>
+                          <option value="string">String (Text)</option>
+                          <option value="enum">Enum (Multiple Choice)</option>
+                          <option value="object">Object (JSON / Details)</option>
+                          <option value="list[string]">List of strings</option>
+                          <option value="evidence[]">Evidence list</option>
+                        </select>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer">
+                      <input type="checkbox" checked={Boolean(output.required)} onChange={(event) => patchConfig({ outputs: outputs.map((item, itemIndex) => itemIndex === index ? { ...item, required: event.target.checked } : item) })} />
+                      <span>Required output field</span>
+                    </label>
+                  </div>
+                ))}
+                {outputs.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground italic text-center py-4 border border-dashed rounded-lg bg-card/50">Click "Add Field" to define output variables.</p>
+                )}
+              </div>
             </section>
           </>
         )}
@@ -104,7 +227,37 @@ export function WorkflowInspector({ node, availableFields, onChange, onDelete, o
           </section>
         )}
 
-        {node.kind === "validation" && <section className="border-t pt-4 text-[10px] leading-relaxed text-muted-foreground">Validation rule editing will expand after the core branching workflow is tested. Existing template consistency rules are preserved.</section>}
+        {node.kind === "validation" && (
+          <section className="space-y-3 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Validation Rules / Guardrails</p>
+                <p className="text-[10px] text-muted-foreground">Logical rules enforced before outputs are written to the database.</p>
+              </div>
+            </div>
+            <div className="space-y-3 mt-2">
+              {((node.config.rules as any[]) || []).map((rule, idx) => (
+                <div key={idx} className="rounded-lg border bg-muted/10 p-3 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-foreground">{rule.name}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${rule.severity === "error" ? "bg-destructive/15 text-destructive border border-destructive/20" : "bg-amber-500/15 text-amber-600 border border-amber-500/20"}`}>
+                      {rule.severity}
+                    </span>
+                  </div>
+                  <div className="font-mono text-[9px] bg-muted/40 p-2 rounded border border-border/30 text-muted-foreground whitespace-pre-wrap break-all leading-normal">
+                    {formatExpression(rule.expression)}
+                  </div>
+                </div>
+              ))}
+              {((node.config.rules as any[]) || []).length === 0 && (
+                <p className="text-[10px] text-muted-foreground italic">No validation rules configured for this node.</p>
+              )}
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground/60 border-t pt-2 mt-2">
+              Validation rule editing will expand after the core branching workflow is tested. Existing template consistency rules are preserved.
+            </p>
+          </section>
+        )}
         {node.kind === "output" && <section className="space-y-2 border-t pt-4"><p className="text-[10px] font-bold uppercase text-muted-foreground">Fields exposed to campaigns</p><p className="text-[10px] leading-relaxed text-muted-foreground">Select only final research variables. Internal details can remain available in traces without becoming dashboard columns.</p><div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">{availableFields.length === 0 ? <p className="p-2 text-[10px] text-muted-foreground">Connect producing nodes before this output node.</p> : availableFields.map((field) => { const selected = exposedFields.some((item) => typeof item === "string" ? item === field : item.source === field); return <label key={field} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[10px] hover:bg-muted"><input type="checkbox" checked={selected} onChange={() => { const nextFields = selected ? exposedFields.filter((item) => typeof item === "string" ? item !== field : item.source !== field) : [...exposedFields, { source: field, key: field.split(".").pop() || field }]; patchConfig({ fields: nextFields }); }} /><span className="truncate font-mono">{field}</span></label>; })}</div>{exposedFields.length > 0 && <div className="space-y-1 rounded-md bg-muted/30 p-2"><p className="text-[9px] font-bold uppercase text-muted-foreground">Final output mapping</p>{exposedFields.map((item, index) => { const source = typeof item === "string" ? item : item.source; const key = typeof item === "string" ? item : item.key || item.source; return <div key={`${source}-${index}`} className="flex items-center gap-1 text-[9px]"><span className="truncate font-mono text-muted-foreground">{source}</span><span>→</span><span className="font-mono font-semibold">{key}</span></div>; })}</div>}<p className="rounded-md bg-amber-500/10 p-2 text-[9px] leading-relaxed text-amber-700">Campaign integration remains intentionally disabled in this release.</p></section>}
       </div>
 

@@ -699,3 +699,48 @@ def test_campaign_add_column_triggers_background_evaluation(client, auth_headers
         assert coded["new_column_reasoning"] == "Because text says so."
         assert len(coded["new_column_history"]) == 1
         assert coded["new_column_history"][0]["version"] == 1
+
+def test_bulk_delete_campaign_documents(client, auth_headers, clean_db):
+    db_id = "test-db-bulk-delete"
+    doc_id_1 = "test-doc-1"
+    doc_id_2 = "test-doc-2"
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Campaign', 'Desc', 'Prompt', '[]');",
+            (db_id,)
+        )
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_size, content_type, file_path, status) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'doc1.txt', 10, 'text/plain', 'path1', 'completed');",
+            (doc_id_1,)
+        )
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_size, content_type, file_path, status) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'doc2.txt', 10, 'text/plain', 'path2', 'completed');",
+            (doc_id_2,)
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, status) VALUES (?, ?, 'completed');",
+            (db_id, doc_id_1)
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, status) VALUES (?, ?, 'completed');",
+            (db_id, doc_id_2)
+        )
+        conn.commit()
+
+    # Bulk delete (unlink) documents from campaign
+    response = client.post(
+        f"/api/dashboards/{db_id}/documents/bulk-delete",
+        json={"document_ids": [doc_id_1, doc_id_2]},
+        headers=auth_headers
+    )
+    assert response.status_code == 204
+
+    # Verify links are deleted from dashboard_documents
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM dashboard_documents WHERE dashboard_id = ?;", (db_id,))
+        assert cursor.fetchall() == []
+        
+        # Verify actual documents are NOT deleted (as requested by user comment!)
+        cursor.execute("SELECT id FROM documents WHERE id IN (?, ?);", (doc_id_1, doc_id_2))
+        assert len(cursor.fetchall()) == 2

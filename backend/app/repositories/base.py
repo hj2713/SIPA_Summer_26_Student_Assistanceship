@@ -187,6 +187,10 @@ class BaseDashboardDocumentRepository(ABC):
     def delete_by_document(self, document_id: str) -> None:
         pass
 
+    @abstractmethod
+    def delete_relations(self, dashboard_id: str, document_ids: List[str]) -> None:
+        pass
+
 class BaseWorkflowRepository(ABC):
     @abstractmethod
     def get_by_id(self, workflow_id: str) -> Optional[Dict[str, Any]]:

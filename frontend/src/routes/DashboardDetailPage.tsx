@@ -2122,40 +2122,77 @@ export function DashboardDetailPage() {
 
         {/* Modal: Workflow Trace */}
         <Dialog open={!!workflowTraceDoc} onOpenChange={(open) => { if (!open) setWorkflowTraceDoc(null); }}>
-          <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogContent className="w-[94vw] max-w-6xl max-h-[88vh] overflow-hidden flex flex-col p-0">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-2 border-b pb-2">
-                <GitBranch size={18} className="text-primary" />
-                Workflow Trace · {workflowTraceDoc?.filename.split("/").pop()}
-              </DialogTitle>
+              <div className="border-b px-6 py-4">
+                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                  <span className="rounded-lg bg-primary/10 p-2 text-primary">
+                    <GitBranch size={18} />
+                  </span>
+                  Workflow Trace
+                </DialogTitle>
+                <p className="mt-2 break-all font-mono text-xs text-muted-foreground">
+                  {workflowTraceDoc?.filename.split("/").pop()}
+                </p>
+              </div>
             </DialogHeader>
-            <div className="grid gap-4 md:grid-cols-[220px_1fr] min-h-0">
-              <div className="rounded-lg border bg-muted/30 p-3 text-xs">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Final outputs</p>
-                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[10px]">{JSON.stringify(workflowTraceDoc?.coded_values || {}, null, 2)}</pre>
+            <div className="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-[320px_1fr]">
+              <aside className="min-h-0 overflow-y-auto border-r bg-muted/20 p-5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Final outputs</p>
+                <div className="mt-3 space-y-2">
+                  {Object.entries(workflowTraceDoc?.coded_values || {}).map(([key, value]) => (
+                    <div key={key} className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{key}</p>
+                      <p className="mt-1 break-words font-mono text-sm font-semibold">
+                        {typeof value === "boolean" ? (value ? "True" : "False") : String(value)}
+                      </p>
+                    </div>
+                  ))}
+                  {Object.keys(workflowTraceDoc?.coded_values || {}).length === 0 && (
+                    <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground">No final outputs saved.</div>
+                  )}
+                </div>
                 {workflowTraceDoc?.error_message && (
-                  <div className="mt-3 rounded border border-destructive/30 bg-destructive/5 p-2 text-destructive">
+                  <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                    <p className="mb-1 font-bold uppercase">Error</p>
                     {workflowTraceDoc.error_message}
                   </div>
                 )}
-              </div>
-              <div className="max-h-[62vh] min-h-0 space-y-3 overflow-y-auto pr-1">
+              </aside>
+
+              <section className="min-h-0 overflow-y-auto p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Execution trace</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Node-by-node outputs, hidden audit details, validation, and skipped branches.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase text-muted-foreground">
+                    {workflowTraceDoc?.workflow_trace?.length || 0} nodes
+                  </span>
+                </div>
                 {(!workflowTraceDoc?.workflow_trace || workflowTraceDoc.workflow_trace.length === 0) ? (
-                  <div className="py-16 text-center text-xs text-muted-foreground">No workflow trace was stored for this row yet.</div>
+                  <div className="rounded-xl border border-dashed py-16 text-center text-xs text-muted-foreground">No workflow trace was stored for this row yet.</div>
                 ) : workflowTraceDoc.workflow_trace.map((item: any, index: number) => (
-                  <div key={`${item.node_id}-${index}`} className={`rounded-lg border p-3 ${item.status === "skipped" ? "opacity-65" : "bg-card"}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-primary">{String(item.kind || "").replace("_", " ")}</span>
-                        <p className="text-sm font-semibold">{item.name}</p>
+                  <div key={`${item.node_id}-${index}`} className={`mb-3 rounded-xl border bg-card p-4 shadow-sm ${item.status === "skipped" ? "opacity-65" : ""}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded bg-primary/10 px-2 py-1 text-[9px] font-bold uppercase text-primary">
+                            {String(item.kind || "").replace("_", " ")}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted-foreground">{item.node_id}</span>
+                        </div>
+                        <p className="mt-2 break-words text-sm font-bold">{item.name}</p>
                       </div>
-                      <span className={`rounded px-2 py-1 text-[9px] font-bold uppercase ${item.status === "completed" ? "bg-emerald-500/10 text-emerald-600" : item.status === "skipped" ? "bg-muted text-muted-foreground" : "bg-destructive/10 text-destructive"}`}>{item.status}</span>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase ${item.status === "completed" ? "bg-emerald-500/10 text-emerald-600" : item.status === "skipped" ? "bg-muted text-muted-foreground" : "bg-destructive/10 text-destructive"}`}>{item.status}</span>
                     </div>
                     {item.message && <p className="mt-2 text-[10px] text-muted-foreground">{item.message}</p>}
-                    <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded bg-muted/60 p-2 text-[10px]">{JSON.stringify(item.outputs || {}, null, 2)}</pre>
+                    <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/60 p-3 text-[11px] leading-relaxed">{JSON.stringify(item.outputs || {}, null, 2)}</pre>
                   </div>
                 ))}
-              </div>
+              </section>
             </div>
           </DialogContent>
         </Dialog>

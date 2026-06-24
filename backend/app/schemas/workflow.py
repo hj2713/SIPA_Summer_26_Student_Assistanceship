@@ -41,6 +41,29 @@ class WorkflowTestResult(BaseModel):
     context: Dict[str, Any]
 
 
+class WorkflowDashboardRequest(BaseModel):
+    source: Literal["draft", "published"] = "draft"
+    version: Optional[int] = None
+
+
+class WorkflowRunTextRequest(WorkflowDashboardRequest):
+    name: str = Field(min_length=1, max_length=255)
+    source_text: str = Field(min_length=1, max_length=500000)
+    rerun: bool = False
+
+
+class WorkflowRunDocumentsRequest(WorkflowDashboardRequest):
+    document_ids: List[str] = Field(default_factory=list)
+    rerun_document_ids: List[str] = Field(default_factory=list)
+
+
+class WorkflowRunResult(BaseModel):
+    dashboard: Dict[str, Any]
+    row: Dict[str, Any] | None = None
+    rows: List[Dict[str, Any]] = Field(default_factory=list)
+    skipped: List[str] = Field(default_factory=list)
+
+
 class WorkflowRow(BaseModel):
     id: str
     workspace_id: str

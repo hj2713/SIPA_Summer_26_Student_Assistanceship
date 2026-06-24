@@ -8,8 +8,12 @@ from app.core.constants import ALLOWED_EXTENSIONS, MAX_FILE_SIZE_BYTES
 from app.core.deps import CurrentUserDep, get_workspace_id
 from app.schemas.workflow import (
     WorkflowCreate,
+    WorkflowDashboardRequest,
     WorkflowPublish,
     WorkflowRow,
+    WorkflowRunDocumentsRequest,
+    WorkflowRunTextRequest,
+    WorkflowRunResult,
     WorkflowUpdate,
     WorkflowTestRequest,
     WorkflowTestResult,
@@ -21,6 +25,7 @@ from app.schemas.workflow import (
     WorkflowVersionRow,
 )
 from app.services.workflow_service import workflow_service
+from app.services.workflow_dashboard_service import workflow_dashboard_service
 from app.services.ingestion_service import extract_text
 from app.workflows.templates import WORKFLOW_TEMPLATES
 from app.workflows.executor import WorkflowExecutionError, workflow_executor
@@ -79,6 +84,66 @@ def delete_workflow(workflow_id: str, current_user: CurrentUserDep, workspace_id
 @router.post("/{workflow_id}/validate", response_model=WorkflowValidationResult)
 def validate_workflow(workflow_id: str, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
     return workflow_service.validate(workflow_id, workspace_id)
+
+
+@router.post("/{workflow_id}/results-dashboard")
+def get_or_create_results_dashboard(workflow_id: str, payload: WorkflowDashboardRequest, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
+    _require_editor(current_user)
+    return workflow_dashboard_service.get_or_create_dashboard(workflow_id, workspace_id, current_user.id, payload.source, payload.version)
+
+
+@router.post("/{workflow_id}/results-dashboard/run-text", response_model=WorkflowRunResult)
+async def run_text_to_results_dashboard(workflow_id: str, payload: WorkflowRunTextRequest, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
+    _require_editor(current_user)
+    dashboard, row = await workflow_dashboard_service.run_text(
+        workflow_id,
+        workspace_id,
+        current_user.id,
+        payload.name,
+        payload.source_text,
+        payload.source,
+        payload.version,
+        payload.rerun,
+    )
+    return {"dashboard": dashboard.model_dump(by_alias=True), "row": row.model_dump(), "rows": [row.model_dump()], "skipped": []}
+
+
+@router.post("/{workflow_id}/results-dashboard/run-files", response_model=WorkflowRunResult)
+async def run_files_to_results_dashboard(
+    workflow_id: str,
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
+    source: str = "draft",
+    version: int | None = None,
+    rerun_filenames: str = "",
+    files: List[UploadFile] = File(...),
+):
+    _require_editor(current_user)
+    dashboard, rows, skipped = await workflow_dashboard_service.run_uploaded_files(
+        workflow_id,
+        workspace_id,
+        current_user.id,
+        files,
+        source="published" if source == "published" else "draft",
+        version=version,
+        rerun_filenames={item.strip() for item in rerun_filenames.split(",") if item.strip()},
+    )
+    return {"dashboard": dashboard.model_dump(by_alias=True), "row": rows[0].model_dump() if rows else None, "rows": [row.model_dump() for row in rows], "skipped": skipped}
+
+
+@router.post("/{workflow_id}/results-dashboard/run-documents", response_model=WorkflowRunResult)
+async def run_documents_to_results_dashboard(workflow_id: str, payload: WorkflowRunDocumentsRequest, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
+    _require_editor(current_user)
+    dashboard, rows, skipped = await workflow_dashboard_service.run_existing_documents(
+        workflow_id,
+        workspace_id,
+        current_user.id,
+        payload.document_ids,
+        payload.source,
+        payload.version,
+        set(payload.rerun_document_ids),
+    )
+    return {"dashboard": dashboard.model_dump(by_alias=True), "row": rows[0].model_dump() if rows else None, "rows": [row.model_dump() for row in rows], "skipped": skipped}
 
 
 @router.post("/{workflow_id}/test", response_model=WorkflowTestResult)
@@ -202,3 +267,4 @@ def import_workflow_template(payload: WorkflowTemplateImport, current_user: Curr
 @template_router.get("/{template_id}/export", response_model=WorkflowTemplateRow)
 def export_workflow_template(template_id: str, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
     return workflow_service.get_template(template_id, workspace_id)
+    WorkflowRunDocumentsRequest,

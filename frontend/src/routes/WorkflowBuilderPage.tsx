@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuthContext } from "@/context/AuthContext";
 import { WorkflowInspector } from "@/features/workflows/WorkflowInspector";
 import { WorkflowNodeCard, type WorkflowCanvasNodeData } from "@/features/workflows/WorkflowNodeCard";
-import { workflowApi } from "@/lib/workflowApi";
+import { workflowApi, type WorkflowTestResult } from "@/lib/workflowApi";
 import type { CodingWorkflow, WorkflowDefinition, WorkflowEdgeDefinition, WorkflowNodeDefinition, WorkflowNodeKind, WorkflowValidationResult } from "@/types/workflow";
 
 type CanvasNode = Node<WorkflowCanvasNodeData>;
@@ -50,6 +50,7 @@ function WorkflowBuilderInner() {
   const [changelog, setChangelog] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [showTest, setShowTest] = useState(false);
+  const [testName, setTestName] = useState("");
   const [testSource, setTestSource] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<Awaited<ReturnType<typeof workflowApi.test>> | null>(null);
@@ -98,11 +99,31 @@ function WorkflowBuilderInner() {
 
   const runTest = async () => {
     if (!testSource.trim()) return;
+    if (!testName.trim()) { toast.error("Give this pasted-text run a name first."); return; }
     if (dirty && !(await save())) return;
     setTesting(true);
     setTestResult(null);
-    try { setTestResult(await workflowApi.test(id, testSource.trim(), jwt, workspaceId)); }
-    catch (error) { toast.error(error instanceof Error ? error.message : "Workflow test failed"); }
+    try {
+      const result = await workflowApi.runTextToDashboard(id, { name: testName.trim(), source_text: testSource.trim() }, jwt, workspaceId);
+      toast.success("Saved workflow result to dashboard");
+      const row = result.row as { workflow_trace?: WorkflowTestResult["trace"]; coded_values?: Record<string, unknown>; workflow_context?: Record<string, unknown> } | null;
+      setTestResult({ trace: row?.workflow_trace || [], outputs: row?.coded_values || {}, context: row?.workflow_context || {} });
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : "Workflow test failed";
+      if (message.toLowerCase().includes("already exists") && window.confirm(`${message}\n\nRe-run and overwrite this dashboard row?`)) {
+        try {
+          const result = await workflowApi.runTextToDashboard(id, { name: testName.trim(), source_text: testSource.trim(), rerun: true }, jwt, workspaceId);
+          const row = result.row as { workflow_trace?: WorkflowTestResult["trace"]; coded_values?: Record<string, unknown>; workflow_context?: Record<string, unknown> } | null;
+          setTestResult({ trace: row?.workflow_trace || [], outputs: row?.coded_values || {}, context: row?.workflow_context || {} });
+          toast.success("Re-ran workflow result");
+        } catch (rerunError) {
+          toast.error(rerunError instanceof Error ? rerunError.message : "Workflow rerun failed");
+        }
+      } else {
+        toast.error(message);
+      }
+    }
     finally { setTesting(false); }
   };
 
@@ -111,9 +132,25 @@ function WorkflowBuilderInner() {
     if (dirty && !(await save())) return;
     setTesting(true);
     setTestResult(null);
-    try { setTestResult(await workflowApi.testFile(id, file, jwt, workspaceId)); toast.success(`Tested ${file.name}`); }
+    try {
+      const result = await workflowApi.runFilesToDashboard(id, [file], jwt, workspaceId);
+      const row = result.rows[0] as { workflow_trace?: WorkflowTestResult["trace"]; coded_values?: Record<string, unknown>; workflow_context?: Record<string, unknown> } | undefined;
+      setTestResult({ trace: row?.workflow_trace || [], outputs: row?.coded_values || {}, context: row?.workflow_context || {} });
+      if (result.skipped.includes(file.name)) toast.info(`${file.name} already exists in the results dashboard. Open the dashboard to rerun duplicates.`);
+      else toast.success(`Saved ${file.name} to workflow dashboard`);
+    }
     catch (error) { toast.error(error instanceof Error ? error.message : "Workflow file test failed"); }
     finally { setTesting(false); }
+  };
+
+  const openResultsDashboard = async () => {
+    if (dirty && !(await save())) return;
+    try {
+      const dashboard = await workflowApi.resultsDashboard(id, jwt, workspaceId, { source: "draft" });
+      navigate(`/campaigns/${dashboard.id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open results dashboard");
+    }
   };
 
   const addNode = (kind: WorkflowNodeKind) => {
@@ -155,7 +192,7 @@ function WorkflowBuilderInner() {
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4">
         <div className="flex min-w-0 items-center gap-3"><Button variant="ghost" size="icon-sm" onClick={() => navigate("/workflows")}><ArrowLeft size={16} /></Button><div className="min-w-0"><div className="flex items-center gap-2"><input value={workflow.name} onChange={(event) => { setWorkflow({ ...workflow, name: event.target.value }); setDirty(true); }} className="min-w-0 max-w-lg bg-transparent text-sm font-bold outline-none" /><span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${workflow.status === "published" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{workflow.status}{workflow.latest_version ? ` · v${workflow.latest_version}` : ""}</span></div><p className="truncate text-[10px] text-muted-foreground">Reusable research method · campaigns are not connected yet</p></div></div>
-        <div className="flex items-center gap-2"><span className="mr-1 text-[10px] text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><Button variant="outline" onClick={() => setShowTest(true)}><FlaskConical size={14} /> Test</Button><Button variant="outline" onClick={() => void validate()}><Check size={14} /> Validate</Button><Button variant="outline" disabled={saving || !dirty} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Save draft</Button><Button onClick={() => setShowPublish(true)}><Send size={14} /> Publish</Button></div>
+        <div className="flex items-center gap-2"><span className="mr-1 text-[10px] text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><Button variant="outline" onClick={() => void openResultsDashboard()}><TableProperties size={14} /> Results Dashboard</Button><Button variant="outline" onClick={() => setShowTest(true)}><FlaskConical size={14} /> Test</Button><Button variant="outline" onClick={() => void validate()}><Check size={14} /> Validate</Button><Button variant="outline" disabled={saving || !dirty} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Save draft</Button><Button onClick={() => setShowPublish(true)}><Send size={14} /> Publish</Button></div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -170,7 +207,7 @@ function WorkflowBuilderInner() {
 
       <Dialog open={showPublish} onOpenChange={setShowPublish}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Publish immutable workflow version</DialogTitle></DialogHeader><p className="text-xs leading-relaxed text-muted-foreground">Publishing creates version {workflow.latest_version + 1}. Future campaigns will be able to pin this exact definition; later edits will create another draft.</p><textarea value={changelog} onChange={(event) => setChangelog(event.target.value)} rows={4} placeholder="What changed in this version?" className="w-full rounded-md border bg-background p-3 text-xs outline-none focus:ring-2 focus:ring-primary/30" /><div className="flex justify-end gap-2 border-t pt-4"><Button variant="outline" onClick={() => setShowPublish(false)}>Cancel</Button><Button disabled={publishing} onClick={() => void publish()}>{publishing ? <Loader2 className="animate-spin" /> : <Send />} Validate and publish</Button></div></DialogContent></Dialog>
 
-      <Dialog open={showTest} onOpenChange={setShowTest}><DialogContent className="w-[94vw] sm:max-w-4xl max-h-[90vh] overflow-hidden"><DialogHeader><DialogTitle className="flex items-center gap-2"><FlaskConical className="text-primary" /> Test workflow draft</DialogTitle></DialogHeader><div className="grid min-h-0 gap-4 md:grid-cols-2"><div className="space-y-3"><p className="text-xs leading-relaxed text-muted-foreground">Paste law text or upload a law file. This executes the saved draft and may make real LLM calls for AI Analysis nodes; deterministic and skipped branches do not call the model.</p><label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-3 text-xs font-semibold hover:bg-muted/40"><Upload size={14} /> Upload law file for test<input type="file" accept=".txt,.md,.html,.pdf,.docx,text/plain,text/markdown,text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={testing} onChange={(event) => { const file = event.target.files?.[0]; void runFileTest(file); event.currentTarget.value = ""; }} /></label><div className="flex items-center gap-2 text-[10px] uppercase text-muted-foreground"><span className="h-px flex-1 bg-border" /> or paste text <span className="h-px flex-1 bg-border" /></div><textarea value={testSource} onChange={(event) => setTestSource(event.target.value)} rows={15} placeholder="Paste a law file, CQ summary, or short test document…" className="w-full resize-none rounded-lg border bg-background p-3 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-primary/30" /><Button className="w-full" disabled={testing || !testSource.trim()} onClick={() => void runTest()}>{testing ? <Loader2 className="animate-spin" /> : <Play />} Run pasted-text test</Button></div><div className="min-h-0 rounded-lg border bg-muted/20"><div className="border-b px-3 py-2"><p className="text-xs font-semibold">Execution trace</p></div><div className="max-h-[58vh] space-y-2 overflow-y-auto p-3">{!testResult ? <div className="py-16 text-center text-xs text-muted-foreground">The path, node outputs, hidden audit details, skipped branches, and final values will appear here.</div> : testResult.trace.map((item, index) => <div key={`${item.node_id}-${index}`} className={`rounded-lg border p-3 ${item.status === "skipped" ? "opacity-60" : "bg-card"}`}><div className="flex items-center justify-between gap-2"><div><span className="text-[9px] font-bold uppercase text-primary">{item.kind.replace("_", " ")}</span><p className="text-xs font-semibold">{item.name}</p></div><span className={`rounded px-2 py-1 text-[9px] font-bold uppercase ${item.status === "completed" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{item.status}</span></div>{item.message && <p className="mt-2 text-[10px] text-muted-foreground">{item.message}</p>}<pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-muted/60 p-2 text-[9px]">{JSON.stringify(item.outputs, null, 2)}</pre></div>)}</div>{testResult && <div className="border-t bg-card p-3"><p className="text-[10px] font-bold uppercase text-muted-foreground">Final outputs</p><pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap text-[9px]">{JSON.stringify(testResult.outputs, null, 2)}</pre></div>}</div></div></DialogContent></Dialog>
+      <Dialog open={showTest} onOpenChange={setShowTest}><DialogContent className="w-[94vw] sm:max-w-4xl max-h-[90vh] overflow-hidden"><DialogHeader><DialogTitle className="flex items-center gap-2"><FlaskConical className="text-primary" /> Test workflow draft</DialogTitle></DialogHeader><div className="grid min-h-0 gap-4 md:grid-cols-2"><div className="space-y-3"><p className="text-xs leading-relaxed text-muted-foreground">Runs are saved to this workflow's Results Dashboard. Paste text requires a row name; uploaded files use the filename.</p><label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-3 text-xs font-semibold hover:bg-muted/40"><Upload size={14} /> Upload law file for test<input type="file" accept=".txt,.md,.html,.pdf,.docx,text/plain,text/markdown,text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={testing} onChange={(event) => { const file = event.target.files?.[0]; void runFileTest(file); event.currentTarget.value = ""; }} /></label><div className="flex items-center gap-2 text-[10px] uppercase text-muted-foreground"><span className="h-px flex-1 bg-border" /> or paste text <span className="h-px flex-1 bg-border" /></div><input value={testName} onChange={(event) => setTestName(event.target.value)} placeholder="Required row name, e.g. PL92-221 Credit Unions" className="w-full rounded-lg border bg-background p-3 text-xs outline-none focus:ring-2 focus:ring-primary/30" /><textarea value={testSource} onChange={(event) => setTestSource(event.target.value)} rows={13} placeholder="Paste a law file, CQ summary, or short test document…" className="w-full resize-none rounded-lg border bg-background p-3 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-primary/30" /><Button className="w-full" disabled={testing || !testSource.trim() || !testName.trim()} onClick={() => void runTest()}>{testing ? <Loader2 className="animate-spin" /> : <Play />} Run and save pasted-text test</Button></div><div className="min-h-0 rounded-lg border bg-muted/20"><div className="border-b px-3 py-2"><p className="text-xs font-semibold">Execution trace</p></div><div className="max-h-[58vh] space-y-2 overflow-y-auto p-3">{!testResult ? <div className="py-16 text-center text-xs text-muted-foreground">The saved row trace and final values will appear here.</div> : testResult.trace.map((item, index) => <div key={`${item.node_id}-${index}`} className={`rounded-lg border p-3 ${item.status === "skipped" ? "opacity-60" : "bg-card"}`}><div className="flex items-center justify-between gap-2"><div><span className="text-[9px] font-bold uppercase text-primary">{item.kind.replace("_", " ")}</span><p className="text-xs font-semibold">{item.name}</p></div><span className={`rounded px-2 py-1 text-[9px] font-bold uppercase ${item.status === "completed" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{item.status}</span></div>{item.message && <p className="mt-2 text-[10px] text-muted-foreground">{item.message}</p>}<pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-muted/60 p-2 text-[9px]">{JSON.stringify(item.outputs, null, 2)}</pre></div>)}</div>{testResult && <div className="border-t bg-card p-3"><p className="text-[10px] font-bold uppercase text-muted-foreground">Final outputs</p><pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap text-[9px]">{JSON.stringify(testResult.outputs, null, 2)}</pre></div>}</div></div></DialogContent></Dialog>
     </div>
   );
 }

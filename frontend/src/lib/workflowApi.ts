@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "@/constants";
 import type { CodingWorkflow, WorkflowDefinition, WorkflowTemplate, WorkflowValidationResult } from "@/types/workflow";
 
-type WorkflowTestResult = {
+export type WorkflowTestResult = {
   trace: Array<{ node_id: string; name: string; kind: string; status: string; outputs: Record<string, unknown>; message: string }>;
   outputs: Record<string, unknown>;
   context: Record<string, unknown>;
@@ -110,6 +110,45 @@ export const workflowApi = {
       method: "POST",
       body: JSON.stringify({ source_text: sourceText }),
     });
+  },
+  resultsDashboard(id: string, jwt: string, workspaceId: string, payload: { source?: "draft" | "published"; version?: number } = {}) {
+    return request<{ id: string }>(`/api/workflows/${id}/results-dashboard?${workspaceQuery(workspaceId)}`, jwt, {
+      method: "POST",
+      body: JSON.stringify({ source: payload.source || "draft", version: payload.version }),
+    });
+  },
+  runTextToDashboard(id: string, payload: { name: string; source_text: string; rerun?: boolean; source?: "draft" | "published"; version?: number }, jwt: string, workspaceId: string) {
+    return request<{ dashboard: { id: string }; row: unknown; rows: unknown[]; skipped: string[] }>(`/api/workflows/${id}/results-dashboard/run-text?${workspaceQuery(workspaceId)}`, jwt, {
+      method: "POST",
+      body: JSON.stringify({ source: payload.source || "draft", name: payload.name, source_text: payload.source_text, rerun: payload.rerun || false, version: payload.version }),
+    });
+  },
+  async runFilesToDashboard(id: string, files: File[], jwt: string, workspaceId: string, rerunFilenames: string[] = []) {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/workflows/${id}/results-dashboard/run-files?${workspaceQuery(workspaceId)}&source=draft&rerun_filenames=${encodeURIComponent(rerunFilenames.join(","))}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${jwt}` },
+        body: formData,
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not reach the API at ${API_BASE_URL}. The backend may be restarting, down, or returning a non-CORS server error. ${error instanceof Error ? error.message : ""}`.trim(),
+      );
+    }
+    if (!response.ok) {
+      let detail = "Workflow file dashboard run failed";
+      try {
+        const body = await response.json();
+        detail = typeof body.detail === "string" ? body.detail : body.detail?.message || detail;
+      } catch {
+        // Keep fallback.
+      }
+      throw new Error(detail);
+    }
+    return response.json() as Promise<{ dashboard: { id: string }; row: unknown; rows: unknown[]; skipped: string[] }>;
   },
   async testFile(id: string, file: File, jwt: string, workspaceId: string) {
     const formData = new FormData();

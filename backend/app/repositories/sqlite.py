@@ -416,6 +416,31 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
             (coded_values, status, str(dashboard_id), str(document_id))
         )
 
+    def update_workflow_result(self, dashboard_id: str, document_id: str, coded_values: str, workflow_trace: str, workflow_context: str, status: str = "completed", error_message: Optional[str] = None, error_type: Optional[str] = None) -> None:
+        self.conn.execute(
+            """
+            UPDATE dashboard_documents
+            SET coded_values = ?, workflow_trace = ?, workflow_context = ?, status = ?,
+                error_message = ?, error_type = ?, current_step = total_steps
+            WHERE dashboard_id = ? AND document_id = ?;
+            """,
+            (coded_values, workflow_trace, workflow_context, status, error_message, error_type, str(dashboard_id), str(document_id)),
+        )
+
+    def get_workflow_result(self, dashboard_id: str, document_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            """
+            SELECT d.id as document_id, d.filename, d.file_size,
+                   dd.status, dd.coded_values, dd.error_message, dd.error_type,
+                   dd.current_step, dd.total_steps, dd.workflow_trace, dd.workflow_context
+            FROM dashboard_documents dd
+            JOIN documents d ON dd.document_id = d.id
+            WHERE dd.dashboard_id = ? AND dd.document_id = ?;
+            """,
+            (str(dashboard_id), str(document_id)),
+        ).fetchone()
+        return dict(row) if row else None
+
     def list_by_dashboard(self, dashboard_id: str) -> List[Dict[str, Any]]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM dashboard_documents WHERE dashboard_id = ?;", (str(dashboard_id),))
@@ -427,7 +452,7 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
             """
             SELECT d.id as document_id, d.filename, d.file_size, d.metadata as doc_metadata,
                    dd.status, dd.coded_values, dd.error_message, dd.error_type,
-                   dd.current_step, dd.total_steps
+                   dd.current_step, dd.total_steps, dd.workflow_trace, dd.workflow_context
             FROM dashboard_documents dd
             JOIN documents d ON dd.document_id = d.id
             WHERE dd.dashboard_id = ?
@@ -448,7 +473,7 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
             """
             SELECT d.id as document_id, d.filename, d.file_size, d.metadata as doc_metadata,
                    dd.status, dd.coded_values, dd.error_message, dd.error_type,
-                   dd.current_step, dd.total_steps
+                   dd.current_step, dd.total_steps, dd.workflow_trace, dd.workflow_context
             FROM dashboard_documents dd
             JOIN documents d ON dd.document_id = d.id
             WHERE dd.dashboard_id = ?

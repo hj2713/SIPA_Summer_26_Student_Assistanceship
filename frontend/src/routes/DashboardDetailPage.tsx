@@ -11,7 +11,7 @@ import { API_BASE_URL } from "@/constants";
 import { 
   ArrowLeft, RefreshCw, Download, MessageSquare, 
   Eye, Send, Square, AlertCircle, X, AlertTriangle,
-  CheckCircle, Loader2, Sparkles, Plus, BookOpen, Layers, Edit, Info
+  CheckCircle, Loader2, Sparkles, Plus, BookOpen, Layers, Edit, Info, GitBranch
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -20,11 +20,17 @@ import { ColumnDependencySelector } from "@/components/dashboard/ColumnDependenc
 
 interface Campaign {
   id: string;
+  workspace_id: string;
   name: string;
   description: string;
   prompt: string;
   schema: { name: string; type: string; description?: string; options?: string[]; prompt?: string; depends_on?: string[]; prompt_version?: number; prompt_history?: any[] }[];
   model?: string;
+  dashboard_type?: "campaign" | "workflow";
+  workflow_id?: string;
+  workflow_source?: string;
+  workflow_version?: number;
+  workflow_revision?: number;
 }
 
 interface CampaignDocument {
@@ -38,6 +44,8 @@ interface CampaignDocument {
   tags: string[];
   current_step?: number;
   total_steps?: number;
+  workflow_trace?: any[];
+  workflow_context?: Record<string, any>;
 }
 
 interface CampaignStatusSummary {
@@ -117,12 +125,15 @@ export function DashboardDetailPage() {
   const [reevalLoading, setReevalLoading] = useState(false);
 
   const [selectedCellView, setSelectedCellView] = useState<{ filename: string; columnName: string; value: string; reasoning?: string } | null>(null);
+  const [workflowTraceDoc, setWorkflowTraceDoc] = useState<CampaignDocument | null>(null);
 
   // Chat State
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [pinnedDocIds, setPinnedDocIds] = useState<string[]>([]);
   const { messages, streaming, draftContent, sendMessage, stopGeneration } = useChat(chatThreadId);
+  const isWorkflowDashboard = campaign?.dashboard_type === "workflow";
+  const dashboardWorkspaceId = campaign?.workspace_id || "TEST";
 
   // Drag and Drop Upload State
   const [uploadingFiles, setUploadingFiles] = useState(false);
@@ -640,7 +651,16 @@ export function DashboardDetailPage() {
   const handleLinkDocuments = async () => {
     if (selectedGlobalDocIds.length === 0) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/link`, {
+      const res = isWorkflowDashboard && campaign?.workflow_id
+        ? await fetch(`${API_BASE_URL}/api/workflows/${campaign.workflow_id}/results-dashboard/run-documents?workspace_id=${encodeURIComponent(dashboardWorkspaceId)}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify({ source: "draft", document_ids: selectedGlobalDocIds }),
+          })
+        : await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/link`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -650,7 +670,7 @@ export function DashboardDetailPage() {
       });
 
       if (!res.ok) throw new Error("Failed to link files");
-      toast.success("Documents linked and enqueued for LLM coding!");
+      toast.success(isWorkflowDashboard ? "Documents linked and run through workflow." : "Documents linked and enqueued for LLM coding!");
       setShowLinkModal(false);
       setSelectedGlobalDocIds([]);
       void fetchDocuments();
@@ -711,10 +731,20 @@ export function DashboardDetailPage() {
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("workspace_id", "TEST");
+      formData.append("workspace_id", dashboardWorkspaceId);
 
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/upload`, {
+        const res = isWorkflowDashboard && campaign?.workflow_id
+          ? await (() => {
+              const workflowData = new FormData();
+              workflowData.append("files", file);
+              return fetch(`${API_BASE_URL}/api/workflows/${campaign.workflow_id}/results-dashboard/run-files?workspace_id=${encodeURIComponent(dashboardWorkspaceId)}&source=draft&rerun_filenames=${encodeURIComponent(Array.from(recomputeSet).join(","))}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${jwt}` },
+                body: workflowData,
+              });
+            })()
+          : await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${jwt}` },
           body: formData,
@@ -741,7 +771,7 @@ export function DashboardDetailPage() {
     }
 
     if (uploadedDocs.length > 0) {
-      toast.success(`Uploaded ${uploadedDocs.length} file${uploadedDocs.length > 1 ? "s" : ""}. LLM sequential processing enqueued!`);
+      toast.success(`${isWorkflowDashboard ? "Ran workflow for" : "Uploaded"} ${uploadedDocs.length} file${uploadedDocs.length > 1 ? "s" : ""}.`);
       void fetchDocuments();
     }
 
@@ -756,7 +786,14 @@ export function DashboardDetailPage() {
   // Batch Retry Failed
   const handleRetryFailed = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/retry`, {
+      const failedDocIds = docs.filter((doc) => doc.status === "failed").map((doc) => doc.document_id);
+      const res = isWorkflowDashboard && campaign?.workflow_id
+        ? await fetch(`${API_BASE_URL}/api/workflows/${campaign.workflow_id}/results-dashboard/run-documents?workspace_id=${encodeURIComponent(dashboardWorkspaceId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+            body: JSON.stringify({ source: "draft", document_ids: failedDocIds, rerun_document_ids: failedDocIds }),
+          })
+        : await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/retry`, {
         method: "POST",
         headers: { Authorization: `Bearer ${jwt}` },
       });
@@ -773,7 +810,16 @@ export function DashboardDetailPage() {
   // Retry individual file
   const handleRetryDoc = async (docId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/retry`, {
+      const res = isWorkflowDashboard && campaign?.workflow_id
+        ? await fetch(`${API_BASE_URL}/api/workflows/${campaign.workflow_id}/results-dashboard/run-documents?workspace_id=${encodeURIComponent(dashboardWorkspaceId)}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify({ source: "draft", document_ids: [docId], rerun_document_ids: [docId] }),
+          })
+        : await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/retry`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1579,6 +1625,17 @@ export function DashboardDetailPage() {
                                 >
                                   <Eye size={12} />
                                 </Button>
+                                {isWorkflowDashboard && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 rounded hover:bg-primary/10 text-primary"
+                                    onClick={() => setWorkflowTraceDoc(doc)}
+                                    title="View workflow trace"
+                                  >
+                                    <GitBranch size={11} />
+                                  </Button>
+                                )}
                                 {(doc.status === "completed" || doc.status === "failed") && (
                                   <Button 
                                     variant="ghost" 
@@ -2059,6 +2116,46 @@ export function DashboardDetailPage() {
             </div>
             <div className="flex justify-end pt-3 mt-2 border-t">
               <Button onClick={() => setShowPromptModal(false)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal: Workflow Trace */}
+        <Dialog open={!!workflowTraceDoc} onOpenChange={(open) => { if (!open) setWorkflowTraceDoc(null); }}>
+          <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2 border-b pb-2">
+                <GitBranch size={18} className="text-primary" />
+                Workflow Trace · {workflowTraceDoc?.filename.split("/").pop()}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 md:grid-cols-[220px_1fr] min-h-0">
+              <div className="rounded-lg border bg-muted/30 p-3 text-xs">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Final outputs</p>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[10px]">{JSON.stringify(workflowTraceDoc?.coded_values || {}, null, 2)}</pre>
+                {workflowTraceDoc?.error_message && (
+                  <div className="mt-3 rounded border border-destructive/30 bg-destructive/5 p-2 text-destructive">
+                    {workflowTraceDoc.error_message}
+                  </div>
+                )}
+              </div>
+              <div className="max-h-[62vh] min-h-0 space-y-3 overflow-y-auto pr-1">
+                {(!workflowTraceDoc?.workflow_trace || workflowTraceDoc.workflow_trace.length === 0) ? (
+                  <div className="py-16 text-center text-xs text-muted-foreground">No workflow trace was stored for this row yet.</div>
+                ) : workflowTraceDoc.workflow_trace.map((item: any, index: number) => (
+                  <div key={`${item.node_id}-${index}`} className={`rounded-lg border p-3 ${item.status === "skipped" ? "opacity-65" : "bg-card"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[9px] font-bold uppercase text-primary">{String(item.kind || "").replace("_", " ")}</span>
+                        <p className="text-sm font-semibold">{item.name}</p>
+                      </div>
+                      <span className={`rounded px-2 py-1 text-[9px] font-bold uppercase ${item.status === "completed" ? "bg-emerald-500/10 text-emerald-600" : item.status === "skipped" ? "bg-muted text-muted-foreground" : "bg-destructive/10 text-destructive"}`}>{item.status}</span>
+                    </div>
+                    {item.message && <p className="mt-2 text-[10px] text-muted-foreground">{item.message}</p>}
+                    <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded bg-muted/60 p-2 text-[10px]">{JSON.stringify(item.outputs || {}, null, 2)}</pre>
+                  </div>
+                ))}
+              </div>
             </div>
           </DialogContent>
         </Dialog>

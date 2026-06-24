@@ -39,6 +39,11 @@ class DashboardRow(BaseModel):
     prompt: str
     schema_fields: List[Dict[str, Any]] = Field(..., alias="schema")
     model: Optional[str] = None
+    dashboard_type: str = "campaign"
+    workflow_id: Optional[str] = None
+    workflow_source: Optional[str] = None
+    workflow_version: Optional[int] = None
+    workflow_revision: Optional[int] = None
     created_at: datetime
 
     model_config = ConfigDict(populate_by_name=True)
@@ -54,6 +59,8 @@ class DashboardDocumentRow(BaseModel):
     tags: List[str] = []
     current_step: Optional[int] = 0
     total_steps: Optional[int] = 7
+    workflow_trace: Optional[List[Dict[str, Any]]] = None
+    workflow_context: Optional[Dict[str, Any]] = None
 
 
 class DashboardDocumentPage(BaseModel):

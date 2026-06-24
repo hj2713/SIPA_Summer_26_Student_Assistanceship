@@ -92,6 +92,59 @@ class CampaignService:
         from app.repositories import get_db_session
         return get_db_session
 
+    def _dashboard_row(self, row: Dict[str, Any], schema_list: list[dict[str, Any]] | None = None) -> DashboardRow:
+        try:
+            parsed_schema = schema_list if schema_list is not None else json.loads(row["schema"]) if isinstance(row["schema"], str) else (row["schema"] or [])
+        except Exception:
+            parsed_schema = []
+        return DashboardRow(
+            id=row["id"],
+            workspace_id=row["workspace_id"],
+            name=row["name"],
+            description=row["description"],
+            prompt=row["prompt"],
+            schema=parsed_schema,
+            model=row.get("model"),
+            dashboard_type=row.get("dashboard_type") or "campaign",
+            workflow_id=row.get("workflow_id"),
+            workflow_source=row.get("workflow_source"),
+            workflow_version=row.get("workflow_version"),
+            workflow_revision=row.get("workflow_revision"),
+            created_at=row["created_at"],
+        )
+
+    def _parse_workflow_json(self, raw: Any, fallback: Any) -> Any:
+        if raw is None:
+            return fallback
+        if not isinstance(raw, str):
+            return raw
+        try:
+            return json.loads(raw)
+        except Exception:
+            return fallback
+
+    def _dashboard_document_row(self, row: Dict[str, Any]) -> DashboardDocumentRow:
+        coded = self._parse_workflow_json(row.get("coded_values"), {})
+        try:
+            doc_meta = json.loads(row.get("doc_metadata") or "{}") if isinstance(row.get("doc_metadata"), str) else (row.get("doc_metadata") or {})
+            tags = doc_meta.get("tags", [])
+        except Exception:
+            tags = []
+        return DashboardDocumentRow(
+            document_id=row["document_id"],
+            filename=row["filename"],
+            file_size=row["file_size"],
+            status=row["status"],
+            coded_values=coded,
+            error_message=row.get("error_message"),
+            error_type=row.get("error_type"),
+            tags=tags,
+            current_step=row.get("current_step") or 0,
+            total_steps=row.get("total_steps") or 7,
+            workflow_trace=self._parse_workflow_json(row.get("workflow_trace"), None),
+            workflow_context=self._parse_workflow_json(row.get("workflow_context"), None),
+        )
+
     async def create_campaign(
         self,
         payload: DashboardCreate,
@@ -127,16 +180,7 @@ class CampaignService:
                 model=chosen_model
             )
 
-        return DashboardRow(
-            id=dashboard_id,
-            workspace_id=workspace_id,
-            name=payload.name,
-            description=desc,
-            prompt=payload.prompt,
-            schema=schema_fields,
-            model=chosen_model,
-            created_at=row.get("created_at", "")
-        )
+        return self._dashboard_row(row, schema_fields)
 
     def list_campaigns(self, workspace_id: str) -> List[DashboardRow]:
         """List all research campaign dashboards in the workspace."""
@@ -145,20 +189,7 @@ class CampaignService:
             
             results = []
             for r in rows:
-                try:
-                    schema_list = json.loads(r["schema"]) if isinstance(r["schema"], str) else (r["schema"] or [])
-                except Exception:
-                    schema_list = []
-                results.append(DashboardRow(
-                    id=r["id"],
-                    workspace_id=r["workspace_id"],
-                    name=r["name"],
-                    description=r["description"],
-                    prompt=r["prompt"],
-                    schema=schema_list,
-                    model=r.get("model"),
-                    created_at=r["created_at"]
-                ))
+                results.append(self._dashboard_row(r))
             return results
 
     def get_campaign(self, id: str) -> DashboardRow:
@@ -171,20 +202,7 @@ class CampaignService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Campaign dashboard not found."
                 )
-            try:
-                schema_list = json.loads(r["schema"]) if isinstance(r["schema"], str) else (r["schema"] or [])
-            except Exception:
-                schema_list = []
-            return DashboardRow(
-                id=r["id"],
-                workspace_id=r["workspace_id"],
-                name=r["name"],
-                description=r["description"],
-                prompt=r["prompt"],
-                schema=schema_list,
-                model=r.get("model"),
-                created_at=r["created_at"]
-            )
+            return self._dashboard_row(r)
 
     def delete_campaign(self, id: str) -> bool:
         """Delete a research campaign dashboard."""
@@ -308,30 +326,7 @@ class CampaignService:
             
             results = []
             for r in rows:
-                try:
-                    coded = json.loads(r["coded_values"]) if isinstance(r["coded_values"], str) else (r["coded_values"] or {})
-                except Exception:
-                    coded = {}
-                    
-                tags = []
-                try:
-                    doc_meta = json.loads(r["doc_metadata"]) if isinstance(r["doc_metadata"], str) else (r["doc_metadata"] or {})
-                    tags = doc_meta.get("tags", [])
-                except Exception:
-                    pass
-                    
-                results.append(DashboardDocumentRow(
-                    document_id=r["document_id"],
-                    filename=r["filename"],
-                    file_size=r["file_size"],
-                    status=r["status"],
-                    coded_values=coded,
-                    error_message=r["error_message"],
-                    error_type=r["error_type"],
-                    tags=tags,
-                    current_step=r["current_step"] or 0,
-                    total_steps=r["total_steps"] or 7
-                ))
+                results.append(self._dashboard_document_row(r))
             return results
 
     def list_campaign_documents_page(self, id: str, page: int, page_size: int) -> tuple[List[DashboardDocumentRow], int]:
@@ -343,21 +338,7 @@ class CampaignService:
 
             results = []
             for r in rows:
-                try:
-                    coded = json.loads(r["coded_values"]) if isinstance(r["coded_values"], str) else (r["coded_values"] or {})
-                except Exception:
-                    coded = {}
-                try:
-                    doc_meta = json.loads(r["doc_metadata"]) if isinstance(r["doc_metadata"], str) else (r["doc_metadata"] or {})
-                    tags = doc_meta.get("tags", [])
-                except Exception:
-                    tags = []
-                results.append(DashboardDocumentRow(
-                    document_id=r["document_id"], filename=r["filename"], file_size=r["file_size"],
-                    status=r["status"], coded_values=coded, error_message=r["error_message"],
-                    error_type=r["error_type"], tags=tags, current_step=r["current_step"] or 0,
-                    total_steps=r["total_steps"] or 7,
-                ))
+                results.append(self._dashboard_document_row(r))
             return results, total
 
     def get_document_campaign_mapping(self, workspace_id: str, document_ids: List[str]) -> List[Dict[str, Any]]:

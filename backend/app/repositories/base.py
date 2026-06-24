@@ -136,6 +136,14 @@ class BaseDashboardDocumentRepository(ABC):
         pass
 
     @abstractmethod
+    def update_workflow_result(self, dashboard_id: str, document_id: str, coded_values: str, workflow_trace: str, workflow_context: str, status: str = "completed", error_message: Optional[str] = None, error_type: Optional[str] = None) -> None:
+        pass
+
+    @abstractmethod
+    def get_workflow_result(self, dashboard_id: str, document_id: str) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
     def list_by_dashboard(self, dashboard_id: str) -> List[Dict[str, Any]]:
         pass
 

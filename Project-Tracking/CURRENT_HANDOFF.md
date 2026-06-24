@@ -174,16 +174,68 @@ npm run build
 
 Result: passed.
 
+## Latest Feature — Workflow Results Dashboard Prototype
+
+Implemented the first workflow-backed dashboard prototype while keeping n8n deferred.
+
+Behavior now:
+
+- A workflow can open/create a reusable Results Dashboard from the Workflow Builder.
+- The Results Dashboard reuses the existing campaign dashboard route/table.
+- Workflow-backed dashboards are marked with `dashboard_type = "workflow"`.
+- Final dashboard columns come from workflow final outputs, currently usually:
+  - `delegate_law`
+  - `discretion_rank`
+- Pasted-text workflow tests require a user-provided row name and auto-save into the results dashboard.
+- Uploaded workflow test files auto-save into the results dashboard using the filename.
+- Existing dashboard upload/link/retry flows branch to workflow execution when the dashboard is workflow-backed.
+- Workflow row results store:
+  - clean final `coded_values`;
+  - `workflow_trace`;
+  - `workflow_context`;
+  - status/error fields.
+- Dashboard rows show a trace button that opens a drawer/modal with final outputs and node-by-node trace.
+- Backend supports draft and published source metadata, though the current UI defaults to saved draft.
+- Batch execution is sequential.
+
+Important implementation notes:
+
+- Added nullable workflow metadata columns to `dashboards`.
+- Added nullable `workflow_trace` and `workflow_context` columns to `dashboard_documents`.
+- Existing campaign dashboards should continue working unchanged.
+- Duplicate uploaded files reuse the existing duplicate modal. Pasted-text duplicates currently use a simple confirm in the Workflow Builder test modal.
+
+Verification:
+
+```bash
+cd backend
+env DB_PROVIDER=sqlite venv/bin/python -m pytest -q app/tests/routes/test_workflows.py app/tests/services/test_workflow_engine.py app/tests/routes/test_dashboards.py
+```
+
+Result:
+
+```text
+30 passed
+```
+
+Frontend build:
+
+```bash
+cd frontend
+npm run build
+```
+
+Result: passed.
+
 ## What We Should Do Next
 
 Recommended next phase:
 
-1. Continue native prototype for the two-variable Law Delegation + Discretion Rank use case.
-2. Add campaign/batch execution for workflow results:
-   - select workflow/template/provider;
-   - run against many uploaded text files;
-   - persist final values and trace/audit JSON;
-   - show two main columns with expandable details.
+1. Manually test deployed workflow dashboard creation, pasted text run, file upload run, duplicate flow, and trace drawer.
+2. Improve workflow dashboard polish:
+   - clearer draft/published selector;
+   - better pasted-text duplicate modal;
+   - more explicit workflow-dashboard header copy.
 3. Add a DB/template JSON editor or import workflow so research changes do not require deployment.
 4. Avoid more hardcoded project-template changes unless they are only seed/fallback updates.
 5. If the native workflow builder becomes too broad, revisit an `external_workflow_provider` layer:
@@ -241,4 +293,4 @@ npm run build
 - The latest DB seed upgrade only updates untouched system seed templates, not user-edited templates.
 - The native workflow builder is useful but can become a time sink if we keep trying to clone n8n.
 - Campaign/dashboard execution is still not fully connected to workflows.
-- Batch workflow testing over 50+ files is still a future step.
+- Batch workflow testing over 50+ files now has a first sequential prototype path, but needs real deployment testing and UX polish.

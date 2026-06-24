@@ -107,6 +107,12 @@ def init_postgres_db():
                     prompt TEXT NOT NULL,
                     schema TEXT NOT NULL DEFAULT '[]',
                     model VARCHAR(255),
+                    dashboard_type VARCHAR(50) NOT NULL DEFAULT 'campaign',
+                    workflow_id VARCHAR(255) REFERENCES coding_workflows(id) ON DELETE SET NULL,
+                    workflow_source VARCHAR(50),
+                    workflow_version INTEGER,
+                    workflow_revision INTEGER,
+                    workflow_definition_json TEXT,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
@@ -229,6 +235,8 @@ def init_postgres_db():
                     error_type VARCHAR(50) CHECK(error_type IN ('API_FAILURE', 'COMPREHENSION_FAILURE', 'EXTRACTION_FAILURE')),
                     current_step INTEGER DEFAULT 0,
                     total_steps INTEGER DEFAULT 7,
+                    workflow_trace TEXT,
+                    workflow_context TEXT,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (dashboard_id, document_id)
                 );
@@ -248,6 +256,19 @@ def init_postgres_db():
                     calculated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0
                 );
             """)
+
+            for ddl in [
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS model VARCHAR(255);",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS dashboard_type VARCHAR(50) NOT NULL DEFAULT 'campaign';",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_id VARCHAR(255) REFERENCES coding_workflows(id) ON DELETE SET NULL;",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_source VARCHAR(50);",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_version INTEGER;",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_revision INTEGER;",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_definition_json TEXT;",
+                "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_trace TEXT;",
+                "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_context TEXT;",
+            ]:
+                cursor.execute(ddl)
 
             # Create indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_threads_user_updated ON threads (user_id, updated_at DESC);")
@@ -410,6 +431,13 @@ def init_sqlite_db():
                 description TEXT NOT NULL,
                 prompt TEXT NOT NULL,
                 schema TEXT NOT NULL DEFAULT '[]',
+                model TEXT,
+                dashboard_type TEXT NOT NULL DEFAULT 'campaign',
+                workflow_id TEXT REFERENCES coding_workflows(id) ON DELETE SET NULL,
+                workflow_source TEXT,
+                workflow_version INTEGER,
+                workflow_revision INTEGER,
+                workflow_definition_json TEXT,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
             );
         """)
@@ -473,13 +501,15 @@ def init_sqlite_db():
                 error_type TEXT CHECK(error_type IN ('API_FAILURE', 'COMPREHENSION_FAILURE', 'EXTRACTION_FAILURE')),
                 current_step INTEGER DEFAULT 0,
                 total_steps INTEGER DEFAULT 7,
+                workflow_trace TEXT,
+                workflow_context TEXT,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 PRIMARY KEY (dashboard_id, document_id)
             );
         """)
 
         # --- DB Migrations for existing databases ---
-        # Add model column to threads and dashboards tables defensively
+        # Add model/workflow columns to threads and dashboards tables defensively
         try:
             conn.execute("ALTER TABLE threads ADD COLUMN model TEXT;")
         except sqlite3.OperationalError:
@@ -494,6 +524,19 @@ def init_sqlite_db():
             conn.execute("ALTER TABLE dashboards ADD COLUMN model TEXT;")
         except sqlite3.OperationalError:
             pass
+
+        for col_def in [
+            "dashboard_type TEXT NOT NULL DEFAULT 'campaign'",
+            "workflow_id TEXT REFERENCES coding_workflows(id) ON DELETE SET NULL",
+            "workflow_source TEXT",
+            "workflow_version INTEGER",
+            "workflow_revision INTEGER",
+            "workflow_definition_json TEXT",
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE dashboards ADD COLUMN {col_def};")
+            except sqlite3.OperationalError:
+                pass
 
         # Create llm_usage_logs table
         conn.execute("""
@@ -517,6 +560,12 @@ def init_sqlite_db():
         for col, default_val in [("current_step", 0), ("total_steps", 7)]:
             try:
                 conn.execute(f"ALTER TABLE dashboard_documents ADD COLUMN {col} INTEGER DEFAULT {default_val};")
+            except sqlite3.OperationalError:
+                pass
+
+        for col_def in ["workflow_trace TEXT", "workflow_context TEXT"]:
+            try:
+                conn.execute(f"ALTER TABLE dashboard_documents ADD COLUMN {col_def};")
             except sqlite3.OperationalError:
                 pass
 

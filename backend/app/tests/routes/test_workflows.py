@@ -240,6 +240,62 @@ def test_workflow_test_returns_json_provider_error(client, auth_headers, monkeyp
     assert "simulated provider failure" in response.json()["detail"]
 
 
+def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_headers, monkeypatch):
+    class FakeLlm:
+        async def parse_structured(self, messages, schema, log_context=None):
+            return schema(
+                delegate_law=False,
+                delegation_rationale="No new authority.",
+                administrative_actors=[],
+                delegated_authorities=[],
+                constraints_summary="No delegated authority.",
+                constraint_strength="none",
+                delegation_breadth="none",
+                delegation_centrality="none",
+            )
+
+    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
+    workflow = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={"name": "Workflow dashboard test", "template": "law_delegation_discretion_rank"},
+    ).json()
+
+    dashboard_response = client.post(
+        f"/api/workflows/{workflow['id']}/results-dashboard?workspace_id=QA",
+        headers=auth_headers,
+        json={"source": "draft"},
+    )
+    assert dashboard_response.status_code == 200
+    dashboard = dashboard_response.json()
+    assert dashboard["dashboard_type"] == "workflow"
+    assert [field["name"] for field in dashboard["schema"]] == ["delegate_law", "discretion_rank"]
+
+    run_response = client.post(
+        f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=QA",
+        headers=auth_headers,
+        json={"source": "draft", "name": "test law", "source_text": "No new agency authority."},
+    )
+    assert run_response.status_code == 200
+    row = run_response.json()["row"]
+    assert row["coded_values"] == {"delegate_law": False, "discretion_rank": 0}
+    assert row["workflow_trace"]
+
+    duplicate_response = client.post(
+        f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=QA",
+        headers=auth_headers,
+        json={"source": "draft", "name": "test law", "source_text": "No new agency authority."},
+    )
+    assert duplicate_response.status_code == 409
+
+    page_response = client.get(
+        f"/api/dashboards/{dashboard['id']}/documents/page?page=1&page_size=50",
+        headers=auth_headers,
+    )
+    assert page_response.status_code == 200
+    assert page_response.json()["items"][0]["workflow_trace"]
+
+
 def test_workflow_update_rejects_stale_revision(client, auth_headers):
     workflow = client.post(
         "/api/workflows?workspace_id=QA",

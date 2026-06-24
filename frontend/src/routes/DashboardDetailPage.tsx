@@ -127,6 +127,80 @@ export function DashboardDetailPage() {
   const [selectedCellView, setSelectedCellView] = useState<{ filename: string; columnName: string; value: string; reasoning?: string } | null>(null);
   const [workflowTraceDoc, setWorkflowTraceDoc] = useState<CampaignDocument | null>(null);
 
+  // Workflow Trace Resizable Modal States
+  const [traceModalWidth, setTraceModalWidth] = useState<number>(1152); // default: 1152px (max-w-6xl)
+  const [traceModalHeight, setTraceModalHeight] = useState<number>(800); // default: 800px (~88vh)
+
+  const handleModalResizeWidth = (e: React.MouseEvent, fromLeft = false) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = traceModalWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const multiplier = fromLeft ? -2 : 2;
+      const newWidth = Math.max(500, Math.min(window.innerWidth * 0.98, startWidth + deltaX * multiplier));
+      setTraceModalWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleModalResizeHeight = (e: React.MouseEvent, fromTop = false) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startHeight = traceModalHeight;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const multiplier = fromTop ? -2 : 2;
+      const newHeight = Math.max(300, Math.min(window.innerHeight * 0.95, startHeight + deltaY * multiplier));
+      setTraceModalHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleModalResizeCorner = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = traceModalWidth;
+    const startHeight = traceModalHeight;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      const newWidth = Math.max(500, Math.min(window.innerWidth * 0.98, startWidth + deltaX * 2));
+      const newHeight = Math.max(300, Math.min(window.innerHeight * 0.95, startHeight + deltaY * 2));
+      setTraceModalWidth(newWidth);
+      setTraceModalHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
   // Chat State
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
@@ -650,6 +724,9 @@ export function DashboardDetailPage() {
   // Link existing global files to campaign
   const handleLinkDocuments = async () => {
     if (selectedGlobalDocIds.length === 0) return;
+    const docIds = [...selectedGlobalDocIds];
+    setShowLinkModal(false);
+    setSelectedGlobalDocIds([]);
     try {
       const res = isWorkflowDashboard && campaign?.workflow_id
         ? await fetch(`${API_BASE_URL}/api/workflows/${campaign.workflow_id}/results-dashboard/run-documents?workspace_id=${encodeURIComponent(dashboardWorkspaceId)}`, {
@@ -658,7 +735,7 @@ export function DashboardDetailPage() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${jwt}`,
             },
-            body: JSON.stringify({ source: "draft", document_ids: selectedGlobalDocIds }),
+            body: JSON.stringify({ source: "draft", document_ids: docIds }),
           })
         : await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/link`, {
         method: "POST",
@@ -666,13 +743,11 @@ export function DashboardDetailPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${jwt}`,
         },
-        body: JSON.stringify(selectedGlobalDocIds),
+        body: JSON.stringify(docIds),
       });
 
       if (!res.ok) throw new Error("Failed to link files");
       toast.success(isWorkflowDashboard ? "Documents linked and run through workflow." : "Documents linked and enqueued for LLM coding!");
-      setShowLinkModal(false);
-      setSelectedGlobalDocIds([]);
       void fetchDocuments();
     } catch (err) {
       console.error(err);
@@ -2104,7 +2179,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: View Prompt Codebook */}
         <Dialog open={showPromptModal} onOpenChange={setShowPromptModal}>
-          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogContent className="w-[96vw] sm:max-w-2xl max-h-[80vh] flex flex-col">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold flex items-center gap-2 border-b pb-2">
                 <BookOpen size={18} className="text-primary" />
@@ -2122,7 +2197,32 @@ export function DashboardDetailPage() {
 
         {/* Modal: Workflow Trace */}
         <Dialog open={!!workflowTraceDoc} onOpenChange={(open) => { if (!open) setWorkflowTraceDoc(null); }}>
-          <DialogContent className="w-[94vw] max-w-6xl max-h-[88vh] overflow-hidden flex flex-col p-0">
+          <DialogContent 
+            className="w-[94vw] sm:max-w-none lg:max-w-none max-h-none overflow-hidden flex flex-col p-0 relative"
+            style={{ width: `${traceModalWidth}px`, height: `${traceModalHeight}px`, maxWidth: '98vw', maxHeight: '96vh' }}
+          >
+            {/* Resize Handles */}
+            <div 
+              className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-primary/10 active:bg-primary/25 transition-colors z-50"
+              onMouseDown={(e) => handleModalResizeWidth(e, false)}
+            />
+            <div 
+              className="absolute top-0 left-0 w-1.5 h-full cursor-ew-resize hover:bg-primary/10 active:bg-primary/25 transition-colors z-50"
+              onMouseDown={(e) => handleModalResizeWidth(e, true)}
+            />
+            <div 
+              className="absolute bottom-0 left-0 w-full h-1.5 cursor-ns-resize hover:bg-primary/10 active:bg-primary/25 transition-colors z-50"
+              onMouseDown={(e) => handleModalResizeHeight(e, false)}
+            />
+            <div 
+              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize hover:bg-primary/20 active:bg-primary/30 z-50 flex items-center justify-center"
+              onMouseDown={handleModalResizeCorner}
+            >
+              <svg width="8" height="8" viewBox="0 0 10 10" className="text-muted-foreground opacity-60">
+                <path d="M10,0 L0,10 M10,4 L4,10 M10,8 L8,10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+
             <DialogHeader>
               <div className="border-b px-6 py-4">
                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
@@ -2199,7 +2299,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: Duplicate File Detection */}
         <Dialog open={showDuplicateModal} onOpenChange={(open) => { if (!open) setShowDuplicateModal(false); }}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-[96vw] sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold flex items-center gap-2">
                 <AlertCircle size={18} className="text-amber-500" />
@@ -2315,7 +2415,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: Link Workspace Documents */}
         <Dialog open={showLinkModal} onOpenChange={setShowLinkModal}>
-          <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
+          <DialogContent className="w-[96vw] sm:max-w-xl max-h-[85vh] flex flex-col">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold flex items-center gap-2 border-b pb-2">
                 <Layers size={18} className="text-primary" />
@@ -2616,7 +2716,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: View Column Information */}
         <Dialog open={!!selectedColumnInfo} onOpenChange={(open) => !open && setSelectedColumnInfo(null)}>
-          <DialogContent className="max-w-md bg-card border border-border shadow-2xl rounded-lg text-foreground">
+          <DialogContent className="w-[96vw] sm:max-w-md bg-card border border-border shadow-2xl rounded-lg text-foreground">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold flex items-center gap-2 border-b pb-2">
                 <Info size={20} className="text-primary" />
@@ -2661,7 +2761,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: View Coding Failure Details */}
         <Dialog open={!!errorDoc} onOpenChange={(open) => !open && setErrorDoc(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[96vw] sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2 text-destructive border-b pb-2">
                 <AlertCircle size={18} />
@@ -2708,7 +2808,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: View Coded Cell Text Details */}
         <Dialog open={!!selectedCellView} onOpenChange={(open) => !open && setSelectedCellView(null)}>
-          <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogContent className="w-[96vw] sm:max-w-lg max-h-[80vh] flex flex-col">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2 border-b pb-2">
                 <Eye size={18} className="text-primary" />
@@ -3179,7 +3279,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: Column feedback re-evaluation */}
         <Dialog open={showColFeedbackModal} onOpenChange={setShowColFeedbackModal}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-[96vw] sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2 border-b pb-2">
                 <Sparkles size={18} className="text-primary animate-pulse" />
@@ -3242,7 +3342,7 @@ export function DashboardDetailPage() {
 
         {/* Modal: Row feedback re-evaluation */}
         <Dialog open={showRowFeedbackModal} onOpenChange={setShowRowFeedbackModal}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-[96vw] sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2 border-b pb-2">
                 <Sparkles size={18} className="text-primary animate-pulse" />

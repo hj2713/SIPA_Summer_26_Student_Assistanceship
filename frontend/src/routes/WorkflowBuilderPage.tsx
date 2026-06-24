@@ -69,6 +69,7 @@ function WorkflowBuilderInner() {
     edges: edges.map((edge): WorkflowEdgeDefinition => ({ id: edge.id, source: edge.source, target: edge.target, source_handle: edge.sourceHandle || undefined, target_handle: edge.targetHandle || undefined, label: typeof edge.label === "string" ? edge.label : undefined })),
     outputs: workflow?.definition.outputs || [],
     viewport: workflow?.definition.viewport || { x: 0, y: 0, zoom: 1 },
+    metadata: workflow?.definition.metadata || {},
   });
 
   const save = async () => {

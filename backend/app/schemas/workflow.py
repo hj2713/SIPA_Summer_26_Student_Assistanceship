@@ -10,6 +10,7 @@ class WorkflowDefinition(BaseModel):
     edges: List[Dict[str, Any]] = Field(default_factory=list)
     outputs: List[Dict[str, Any]] = Field(default_factory=list)
     viewport: Dict[str, Any] = Field(default_factory=lambda: {"x": 0, "y": 0, "zoom": 1})
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowCreate(BaseModel):

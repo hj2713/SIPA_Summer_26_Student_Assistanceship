@@ -16,6 +16,28 @@ def test_law_delegation_rank_workflow_is_valid_and_emits_two_outputs():
     issues = validate_workflow_definition(definition)
 
     assert [issue for issue in issues if issue.severity == "error"] == []
+    law_delegation = next(node for node in definition["nodes"] if node["id"] == "law_delegation")
+    assert [output["key"] for output in law_delegation["config"]["outputs"]] == [
+        "delegate_law",
+        "delegation_rationale",
+        "administrative_actors",
+        "delegated_authorities",
+        "constraints_summary",
+        "constraint_strength",
+        "delegation_breadth",
+        "delegation_centrality",
+    ]
+    discretion_rank = next(node for node in definition["nodes"] if node["id"] == "discretion_rank")
+    assert discretion_rank["config"]["input_fields"] == [
+        "law_delegation.delegate_law",
+        "law_delegation.delegation_rationale",
+        "law_delegation.administrative_actors",
+        "law_delegation.delegated_authorities",
+        "law_delegation.constraints_summary",
+        "law_delegation.constraint_strength",
+        "law_delegation.delegation_breadth",
+        "law_delegation.delegation_centrality",
+    ]
     assert definition["outputs"] == [
         {"key": "delegate_law", "source": "law_delegation.delegate_law", "group": "Final"},
         {"key": "discretion_rank", "source": "discretion_rank", "group": "Final"},
@@ -81,10 +103,13 @@ async def test_project_workflow_keeps_delegation_details_internal_when_false(mon
             calls.append(log_context["workflow_node_id"])
             return schema(
                 delegate_law=False,
-                law_delegation_details={
-                    "rationale": "Agency is mentioned but no new authority is granted.",
-                    "administrative_actors": [],
-                },
+                delegation_rationale="Agency is mentioned but no new authority is granted.",
+                administrative_actors=[],
+                delegated_authorities=[],
+                constraints_summary="No delegated authority, so constraints are not applicable.",
+                constraint_strength="none",
+                delegation_breadth="none",
+                delegation_centrality="none",
             )
 
     monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
@@ -95,8 +120,8 @@ async def test_project_workflow_keeps_delegation_details_internal_when_false(mon
 
     assert calls == ["law_delegation"]
     assert result["outputs"] == {"delegate_law": False, "discretion_rank": 0}
-    assert "law_delegation_details" not in result["outputs"]
-    assert result["trace"][1]["outputs"]["law_delegation_details"]["rationale"]
+    assert "delegation_rationale" not in result["outputs"]
+    assert result["trace"][1]["outputs"]["delegation_rationale"]
     by_id = {item["node_id"]: item for item in result["trace"]}
     assert by_id["discretion_rank"]["status"] == "skipped"
 
@@ -112,15 +137,18 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
             if node_id == "law_delegation":
                 return schema(
                     delegate_law=True,
-                    law_delegation_details={
-                        "rationale": "The SEC receives new rulemaking authority.",
-                        "administrative_actors": ["SEC"],
-                        "delegated_authorities": ["rulemaking"],
-                    },
+                    delegation_rationale="The SEC receives new rulemaking authority.",
+                    administrative_actors=["SEC"],
+                    delegated_authorities=["rulemaking"],
+                    constraints_summary="The authority is bounded by statutory deadlines and disclosure scope.",
+                    constraint_strength="moderate",
+                    delegation_breadth="moderate",
+                    delegation_centrality="central",
                 )
             return schema(
                 discretion_rank=3,
-                discretion_rank_details={"rationale": "Meaningful rulemaking authority with constraints."},
+                discretion_rationale="Meaningful rulemaking authority with constraints.",
+                rank_evidence=["The SEC must issue disclosure rules."],
             )
 
     monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
@@ -131,4 +159,4 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
 
     assert calls == ["law_delegation", "discretion_rank"]
     assert result["outputs"] == {"delegate_law": True, "discretion_rank": 3}
-    assert "law_delegation_details" not in result["outputs"]
+    assert "delegation_rationale" not in result["outputs"]

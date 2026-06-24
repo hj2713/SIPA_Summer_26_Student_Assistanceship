@@ -28,6 +28,11 @@ class WorkflowService:
     def __init__(self, db_session_factory=get_db_session):
         self.db_session_factory = db_session_factory
 
+    SEED_TEMPLATE_VERSIONS = {
+        "blank": 1,
+        "law_delegation_discretion_rank": 2,
+    }
+
     def _parse_definition(self, raw) -> WorkflowDefinition:
         data = json.loads(raw) if isinstance(raw, str) else (raw or {})
         return WorkflowDefinition.model_validate(data)
@@ -106,19 +111,36 @@ class WorkflowService:
                 "name": "Blank Workflow",
                 "description": "Start with document input and dashboard output.",
                 "category": "System",
+                "seed_version": self.SEED_TEMPLATE_VERSIONS["blank"],
                 "definition": WORKFLOW_TEMPLATES["blank"](),
             },
             {
                 "slug": "law_delegation_discretion_rank",
                 "name": "Law Delegation + Discretion Rank",
-                "description": "Project workflow with two final outputs and nested Law Delegation audit details.",
+                "description": "Project workflow with explicit Law Delegation audit fields and two clean final outputs.",
                 "category": "Project",
+                "seed_version": self.SEED_TEMPLATE_VERSIONS["law_delegation_discretion_rank"],
                 "definition": WORKFLOW_TEMPLATES["law_delegation_discretion_rank"](),
             },
         ]
         with self.db_session_factory() as session:
             for seed in seeds:
-                if session.workflow_templates.get_by_slug(workspace_id, seed["slug"]):
+                existing = session.workflow_templates.get_by_slug(workspace_id, seed["slug"])
+                seed_definition = seed["definition"]
+                seed_definition.setdefault("metadata", {})["seed_version"] = seed["seed_version"]
+                if existing:
+                    existing_definition = self._parse_definition(existing["definition_json"]).model_dump()
+                    metadata = existing_definition.get("metadata") or {}
+                    seed_is_outdated = metadata.get("seed_version", 1) < seed["seed_version"]
+                    system_seed_is_untouched = existing["created_by"] == "system" and existing["revision"] <= 1
+                    if system_seed_is_untouched and seed_is_outdated:
+                        session.workflow_templates.update(existing["id"], {
+                            "name": seed["name"],
+                            "description": seed["description"],
+                            "category": seed["category"],
+                            "definition_json": json.dumps(seed_definition),
+                            "revision": existing["revision"] + 1,
+                        })
                     continue
                 session.workflow_templates.create(
                     str(uuid.uuid4()),
@@ -127,7 +149,7 @@ class WorkflowService:
                     seed["name"],
                     seed["description"],
                     seed["category"],
-                    json.dumps(seed["definition"]),
+                    json.dumps(seed_definition),
                     "system",
                 )
 

@@ -14,7 +14,13 @@ Evaluate the supporting details at the same time as the final decision. These de
 
 Return:
 - delegate_law: boolean. Map Prompt v8 DelegateLaw Y to true and N to false.
-- law_delegation_details: object containing concise keys for rationale, financial_regulation_scope, administrative_actors, delegated_authorities, evidence, constraints_summary, constraint_strength, delegation_breadth, delegation_centrality, positive_signals, negative_signals, and ambiguity_notes.
+- delegation_rationale: concise explanation of why DelegateLaw is true or false.
+- administrative_actors: list of federal executive or administrative actors that receive authority.
+- delegated_authorities: list of meaningful authorities granted or materially expanded.
+- constraints_summary: concise summary of statutory limits, standards, oversight, deadlines, consultation, appeals, exemptions, or other constraints.
+- constraint_strength: one of none, weak, moderate, strong.
+- delegation_breadth: one of none, narrow, moderate, broad.
+- delegation_centrality: one of none, minor, supporting, central.
 """
 
 
@@ -31,7 +37,7 @@ Scale:
 
 Consider breadth of affected actors/markets/institutions/transactions/activities, degree of agency policy choice, strength of statutory constraints, and centrality of agency implementation to the law.
 
-Do not assign rank 4 merely because authority is delegated. Use the prior law_delegation_details and the source text. Return discretion_rank from 1 to 4 plus an internal discretion_rank_details object with a concise rationale and evidence.
+Do not assign rank 4 merely because authority is delegated. Use the explicit prior Law Delegation outputs and the source text. Return discretion_rank from 1 to 4, discretion_rationale, and rank_evidence.
 """
 
 
@@ -225,7 +231,7 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                 "id": "law_delegation",
                 "kind": "llm",
                 "name": "Law Delegation feature",
-                "description": "Decide DelegateLaw and keep all supporting reasoning as nested audit details.",
+                "description": "Decide DelegateLaw and emit explicit supporting audit fields.",
                 "position": {"x": 360, "y": 260},
                 "config": {
                     "document_context": "source_text",
@@ -233,7 +239,13 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                     "input_fields": [],
                     "outputs": [
                         {"key": "delegate_law", "label": "Delegate law", "type": "boolean", "required": True},
-                        {"key": "law_delegation_details", "label": "Law delegation details", "type": "object", "required": True},
+                        {"key": "delegation_rationale", "label": "Delegation rationale", "type": "string", "required": True},
+                        {"key": "administrative_actors", "label": "Administrative actors", "type": "list[string]", "required": False},
+                        {"key": "delegated_authorities", "label": "Delegated authorities", "type": "list[string]", "required": False},
+                        {"key": "constraints_summary", "label": "Constraints summary", "type": "string", "required": False},
+                        {"key": "constraint_strength", "label": "Constraint strength", "type": "enum", "options": ["none", "weak", "moderate", "strong"], "required": True},
+                        {"key": "delegation_breadth", "label": "Delegation breadth", "type": "enum", "options": ["none", "narrow", "moderate", "broad"], "required": True},
+                        {"key": "delegation_centrality", "label": "Delegation centrality", "type": "enum", "options": ["none", "minor", "supporting", "central"], "required": True},
                     ],
                 },
             },
@@ -263,12 +275,14 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                     "assignments": [
                         {"field": "discretion_rank", "type": "integer", "value": 0},
                         {
-                            "field": "discretion_rank_details",
-                            "type": "object",
-                            "value": {
-                                "rationale": "No meaningful delegation was identified, so the discretion rank is 0.",
-                                "source": "deterministic_rule",
-                            },
+                            "field": "discretion_rationale",
+                            "type": "string",
+                            "value": "No meaningful delegation was identified, so the discretion rank is 0.",
+                        },
+                        {
+                            "field": "rank_evidence",
+                            "type": "list[string]",
+                            "value": [],
                         },
                     ]
                 },
@@ -284,11 +298,18 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                     "instructions": DISCRETION_RANK_INSTRUCTIONS,
                     "input_fields": [
                         "law_delegation.delegate_law",
-                        "law_delegation.law_delegation_details",
+                        "law_delegation.delegation_rationale",
+                        "law_delegation.administrative_actors",
+                        "law_delegation.delegated_authorities",
+                        "law_delegation.constraints_summary",
+                        "law_delegation.constraint_strength",
+                        "law_delegation.delegation_breadth",
+                        "law_delegation.delegation_centrality",
                     ],
                     "outputs": [
                         {"key": "discretion_rank", "label": "Discretion rank", "type": "integer", "minimum": 1, "maximum": 4, "required": True},
-                        {"key": "discretion_rank_details", "label": "Discretion rank details", "type": "object", "required": True},
+                        {"key": "discretion_rationale", "label": "Discretion rationale", "type": "string", "required": True},
+                        {"key": "rank_evidence", "label": "Rank evidence", "type": "evidence[]", "required": False},
                     ],
                 },
             },

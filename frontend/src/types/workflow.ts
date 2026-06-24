@@ -40,6 +40,7 @@ export interface WorkflowDefinition {
   edges: WorkflowEdgeDefinition[];
   outputs: Array<Record<string, unknown>>;
   viewport: { x: number; y: number; zoom: number };
+  metadata?: Record<string, unknown>;
 }
 
 export interface CodingWorkflow {

@@ -59,6 +59,17 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
     assert templates.status_code == 200
     project_template = next(item for item in templates.json() if item["slug"] == "law_delegation_discretion_rank")
+    law_delegation_node = next(node for node in project_template["definition"]["nodes"] if node["id"] == "law_delegation")
+    assert [output["key"] for output in law_delegation_node["config"]["outputs"]] == [
+        "delegate_law",
+        "delegation_rationale",
+        "administrative_actors",
+        "delegated_authorities",
+        "constraints_summary",
+        "constraint_strength",
+        "delegation_breadth",
+        "delegation_centrality",
+    ]
 
     created = client.post(
         "/api/workflows?workspace_id=QA",
@@ -178,7 +189,13 @@ def test_workflow_file_test_runs_without_persisting_document(client, auth_header
         async def parse_structured(self, messages, schema, log_context=None):
             return schema(
                 delegate_law=False,
-                law_delegation_details={"rationale": "No new authority."},
+                delegation_rationale="No new authority.",
+                administrative_actors=[],
+                delegated_authorities=[],
+                constraints_summary="No delegated authority, so constraints are not applicable.",
+                constraint_strength="none",
+                delegation_breadth="none",
+                delegation_centrality="none",
             )
 
     monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
@@ -197,7 +214,8 @@ def test_workflow_file_test_runs_without_persisting_document(client, auth_header
     assert response.status_code == 200
     body = response.json()
     assert body["outputs"] == {"delegate_law": False, "discretion_rank": 0}
-    assert "law_delegation_details" in body["trace"][1]["outputs"]
+    assert "delegation_rationale" in body["trace"][1]["outputs"]
+    assert "delegation_rationale" not in body["outputs"]
 
 
 def test_workflow_update_rejects_stale_revision(client, auth_headers):

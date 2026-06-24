@@ -407,6 +407,10 @@ export function DashboardDetailPage() {
   const [loadingProfessorBenchmark, setLoadingProfessorBenchmark] = useState(false);
   const benchmarkInputRef = useRef<HTMLInputElement>(null);
 
+  // Intentional Hover Tooltip States
+  const [hoveredCell, setHoveredCell] = useState<{ docId: string; colName: string } | null>(null);
+  const hoverTimeoutRef = useRef<any>(null);
+
 
   // Duplicate file detection modal
   const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([]);
@@ -1983,7 +1987,16 @@ export function DashboardDetailPage() {
                 ) : (
                   <>
                   {/* Full table with rows — single overflow-x-auto keeps header+body in sync */}
-                  <div className="overflow-auto flex-1">
+                  <div 
+                    className="overflow-auto flex-1"
+                    onScroll={() => {
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current);
+                        hoverTimeoutRef.current = null;
+                      }
+                      setHoveredCell(null);
+                    }}
+                  >
                     <table className="w-full text-left border-collapse table-fixed">
                       <colgroup>
                         <col style={{ width: 40 }} />
@@ -2321,6 +2334,21 @@ export function DashboardDetailPage() {
                                       ? "h-auto py-1.5 bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900" 
                                       : "h-10"
                                   )}
+                                  onMouseEnter={() => {
+                                    if (hoverTimeoutRef.current) {
+                                      clearTimeout(hoverTimeoutRef.current);
+                                    }
+                                    hoverTimeoutRef.current = setTimeout(() => {
+                                      setHoveredCell({ docId: doc.document_id, colName: col.name });
+                                    }, 900);
+                                  }}
+                                  onMouseLeave={() => {
+                                    if (hoverTimeoutRef.current) {
+                                      clearTimeout(hoverTimeoutRef.current);
+                                      hoverTimeoutRef.current = null;
+                                    }
+                                    setHoveredCell(null);
+                                  }}
                                   onDoubleClick={() => {
                                     if (doc.status !== "completed" && doc.status !== "failed") return;
                                     const history = doc.coded_values[`${col.name}_history`] || [];
@@ -2449,8 +2477,8 @@ export function DashboardDetailPage() {
                                   )}
                                   
                                   {/* Premium reasoning tooltip */}
-                                  {hasReasoning && (
-                                    <div className="absolute left-1/2 bottom-full mb-2.5 hidden group-hover/cell:block z-50 w-80 bg-slate-900 text-slate-100 border border-slate-700/80 rounded-lg p-3 text-xs shadow-2xl animate-in fade-in slide-in-from-bottom-1 duration-150 leading-relaxed -translate-x-1/2 normal-case font-normal select-text pointer-events-auto">
+                                  {hasReasoning && hoveredCell?.docId === doc.document_id && hoveredCell?.colName === col.name && (
+                                    <div className="absolute left-1/2 bottom-full mb-2.5 z-50 w-80 bg-slate-900 text-slate-100 border border-slate-700/80 rounded-lg p-3 text-xs shadow-2xl animate-in fade-in slide-in-from-bottom-1 duration-150 leading-relaxed -translate-x-1/2 normal-case font-normal select-text pointer-events-auto">
                                       <div className="font-bold text-[9px] text-primary uppercase tracking-wider mb-1">
                                         AI Reasoning & Evidence
                                       </div>

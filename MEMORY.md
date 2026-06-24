@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 15:22:54  
-> Total memories: **13**  
-> Breakdown: decision: 13
+> Generated: 2026-06-24 15:26:12  
+> Total memories: **14**  
+> Breakdown: decision: 14
 
 ---
 
@@ -31,6 +31,12 @@
 Added upload and link click-locking states and button spinners to prevent duplicate submits in campaign dashboard
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T18:36:44*
+
+### Implemented a 900ms intentional hover delay and sc...
+
+Implemented a 900ms intentional hover delay and scroll-hiding logic for spreadsheet cell AI reasoning tooltips to prevent tooltips from flickering or opening during rapid scroll/mouse movement.
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T19:26:09*
 
 ### Optimized campaign document lists page loading spe...
 

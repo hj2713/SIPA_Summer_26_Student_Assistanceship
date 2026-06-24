@@ -194,8 +194,8 @@ export function DashboardDetailPage() {
   const [loadingTraceDocId, setLoadingTraceDocId] = useState<string | null>(null);
 
   // Workflow Trace Resizable Modal States
-  const [traceModalWidth, setTraceModalWidth] = useState<number>(1152); // default: 1152px (max-w-6xl)
-  const [traceModalHeight, setTraceModalHeight] = useState<number>(800); // default: 800px (~88vh)
+  const [traceModalWidth, setTraceModalWidth] = useState<number>(() => typeof window !== "undefined" ? Math.min(1152, window.innerWidth * 0.94) : 1152);
+  const [traceModalHeight, setTraceModalHeight] = useState<number>(() => typeof window !== "undefined" ? Math.min(800, window.innerHeight * 0.85) : 800);
 
   const handleModalResizeWidth = (e: React.MouseEvent, fromLeft = false) => {
     e.preventDefault();
@@ -345,6 +345,16 @@ export function DashboardDetailPage() {
       setCampaignPromptText(campaign.prompt || "");
     }
   }, [campaign]);
+
+  // Adjust trace modal size to window height/width dynamically on open
+  useEffect(() => {
+    if (workflowTraceDoc && typeof window !== "undefined") {
+      const clampWidth = Math.min(1152, window.innerWidth * 0.94);
+      const clampHeight = Math.min(800, window.innerHeight * 0.85);
+      setTraceModalWidth(clampWidth);
+      setTraceModalHeight(clampHeight);
+    }
+  }, [workflowTraceDoc]);
 
   // Fetch documents linked to campaign
   const fetchDocuments = async (silent = false) => {

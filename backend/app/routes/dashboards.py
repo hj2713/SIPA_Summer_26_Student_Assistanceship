@@ -318,3 +318,14 @@ async def regenerate_campaign_schema(
             detail="You do not have permission to modify campaigns."
         )
     return await campaign_service.regenerate_campaign_schema(id)
+
+
+@router.get("/{id}/documents/{doc_id}/trace", response_model=DashboardDocumentRow)
+def get_campaign_document_trace(
+    id: str,
+    doc_id: str,
+    current_user: CurrentUserDep
+):
+    """Retrieve execution trace and context details for a specific campaign document."""
+    from app.services.workflow_dashboard_service import workflow_dashboard_service
+    return workflow_dashboard_service.get_trace(id, doc_id)

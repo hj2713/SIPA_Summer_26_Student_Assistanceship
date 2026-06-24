@@ -208,11 +208,92 @@ class WorkflowDashboardService:
             with self.db_session_factory() as session:
                 session.dashboard_documents.update_progress(dashboard_id, document_id, 2, 3)
             result = await workflow_executor.execute(definition, source_text)
+
+            # Retrieve dashboard schema to map variables to their LLM reasonings
+            with self.db_session_factory() as session:
+                dash_row = session.dashboards.get_by_id(dashboard_id)
+                schema_json = dash_row.get("schema") if dash_row else "[]"
+                schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
+
+            coded_values = dict(result["outputs"])
+            context = result.get("context", {})
+            import datetime
+
+            for col in schema_fields:
+                col_name = col.get("name")
+                if not col_name:
+                    continue
+                workflow_source = col.get("workflow_source")
+                
+                # 1. Match intermediate LLM node outputs representing reasoning
+                reasoning = None
+                if workflow_source:
+                    parts = str(workflow_source).split(".")
+                    node_id = parts[0]
+                    field_name = parts[1] if len(parts) > 1 else node_id
+                    
+                    # Direct name matching candidates
+                    candidates = [
+                        f"{node_id}.{field_name}_reasoning",
+                        f"{node_id}.{field_name}_rationale",
+                        f"{node_id}.{field_name}_explanation",
+                        f"{node_id}.{col_name}_reasoning",
+                        f"{node_id}.{col_name}_rationale",
+                        f"{node_id}.{col_name}_explanation",
+                        f"{node_id}.reasoning",
+                        f"{node_id}.rationale",
+                        f"{node_id}.explanation",
+                        f"{field_name}_reasoning",
+                        f"{field_name}_rationale",
+                        f"{col_name}_reasoning",
+                        f"{col_name}_rationale",
+                    ]
+                    for candidate in candidates:
+                        if candidate in context and context[candidate]:
+                            reasoning = str(context[candidate])
+                            break
+                    
+                    if not reasoning:
+                        # Scan all keys belonging to this node containing reason/rationale/explain
+                        node_prefix = f"{node_id}."
+                        node_keys = [k for k in context.keys() if k.startswith(node_prefix)]
+                        reasoning_keys = []
+                        for k in node_keys:
+                            suffix = k[len(node_prefix):].lower()
+                            if "reason" in suffix or "rationale" in suffix or "explain" in suffix:
+                                reasoning_keys.append(k)
+                        if len(reasoning_keys) == 1:
+                            reasoning = str(context[reasoning_keys[0]])
+                        elif len(reasoning_keys) > 1:
+                            for k in reasoning_keys:
+                                suffix = k[len(node_prefix):].lower()
+                                if field_name.lower() in suffix or col_name.lower() in suffix:
+                                    reasoning = str(context[k])
+                                    break
+                            if not reasoning:
+                                reasoning = str(context[reasoning_keys[0]])
+                
+                if reasoning is not None:
+                    coded_values[f"{col_name}_reasoning"] = reasoning
+                
+                # 2. Initialize history for audit logs
+                val = coded_values.get(col_name)
+                coded_values[f"{col_name}_history"] = [
+                    {
+                        "version": 1,
+                        "value": val,
+                        "reasoning": reasoning,
+                        "feedback_prompt": None,
+                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                        "source": "ai"
+                    }
+                ]
+
             with self.db_session_factory() as session:
                 session.dashboard_documents.update_workflow_result(
                     dashboard_id,
                     document_id,
-                    json.dumps(result["outputs"]),
+                    json.dumps(coded_values),
                     json.dumps(result["trace"]),
                     json.dumps(result["context"]),
                     status="completed",

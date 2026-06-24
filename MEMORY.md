@@ -1,0 +1,123 @@
+# Memory — SIPA_SA
+
+> Generated: 2026-06-24 01:24:29  
+> Total memories: **2**  
+> Breakdown: decision: 2
+
+---
+
+## Instructions
+
+*Standing rules, constraints, and guidelines to always follow.*
+
+*No memories of this type.*
+
+---
+
+## Facts
+
+*Verified information, project status, and established truths.*
+
+*No memories of this type.*
+
+---
+
+## Decisions
+
+*Architectural choices, approach selections, and their rationale.*
+
+### Optimized campaign document lists page loading spe...
+
+Optimized campaign document lists page loading speed by omitting workflow_trace and workflow_context columns, loading them lazily from a new backend trace endpoint instead
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T05:24:12*
+
+### Implemented workflow reasoning mapping to campaign...
+
+Implemented workflow reasoning mapping to campaign columns and initialized version 1 history arrays when a workflow completes
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T05:24:06*
+
+---
+
+## Goals
+
+*Objectives, targets, and milestones to track progress.*
+
+*No memories of this type.*
+
+---
+
+## Commitments
+
+*Promises, obligations, and TODOs that need follow-through.*
+
+*No memories of this type.*
+
+---
+
+## Preferences
+
+*User and entity preferences for personalization.*
+
+*No memories of this type.*
+
+---
+
+## Relationships
+
+*Entity connections, team context, and collaboration patterns.*
+
+*No memories of this type.*
+
+---
+
+## Context
+
+*Session summaries, status updates, and conversation state.*
+
+*No memories of this type.*
+
+---
+
+## Events
+
+*Important conversations, milestones, and temporal occurrences.*
+
+*No memories of this type.*
+
+---
+
+## Learnings
+
+*Knowledge acquired from experience, corrections, and insights.*
+
+*No memories of this type.*
+
+---
+
+## Observations
+
+*Patterns noticed, behavioral notes, and recurring themes.*
+
+*No memories of this type.*
+
+---
+
+## Artifacts
+
+*Tool outputs, files, reports, and external references.*
+
+*No memories of this type.*
+
+---
+
+## Errors
+
+*Failure records, bugs, and lessons learned from mistakes.*
+
+*No memories of this type.*
+
+---
+
+*End of memory export.*

@@ -278,7 +278,10 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
     )
     assert run_response.status_code == 200
     row = run_response.json()["row"]
-    assert row["coded_values"] == {"delegate_law": False, "discretion_rank": 0}
+    assert row["coded_values"]["delegate_law"] is False
+    assert row["coded_values"]["discretion_rank"] == 0
+    assert row["coded_values"]["delegate_law_reasoning"] == "No new authority."
+    assert "delegate_law_history" in row["coded_values"]
     assert row["workflow_trace"]
 
     duplicate_response = client.post(
@@ -293,7 +296,16 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
         headers=auth_headers,
     )
     assert page_response.status_code == 200
-    assert page_response.json()["items"][0]["workflow_trace"]
+    # workflow_trace should be excluded in pagination
+    assert page_response.json()["items"][0].get("workflow_trace") is None
+
+    # Retrieve workflow_trace lazily from the dynamic trace endpoint
+    trace_response = client.get(
+        f"/api/dashboards/{dashboard['id']}/documents/{row['document_id']}/trace",
+        headers=auth_headers,
+    )
+    assert trace_response.status_code == 200
+    assert trace_response.json()["workflow_trace"]
 
 
 def test_workflow_update_rejects_stale_revision(client, auth_headers):

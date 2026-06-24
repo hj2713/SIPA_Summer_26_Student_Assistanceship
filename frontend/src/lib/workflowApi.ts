@@ -1,5 +1,11 @@
 import { API_BASE_URL } from "@/constants";
-import type { CodingWorkflow, WorkflowDefinition, WorkflowValidationResult } from "@/types/workflow";
+import type { CodingWorkflow, WorkflowDefinition, WorkflowTemplate, WorkflowValidationResult } from "@/types/workflow";
+
+type WorkflowTestResult = {
+  trace: Array<{ node_id: string; name: string; kind: string; status: string; outputs: Record<string, unknown>; message: string }>;
+  outputs: Record<string, unknown>;
+  context: Record<string, unknown>;
+};
 
 function workspaceQuery(workspaceId: string) {
   return `workspace_id=${encodeURIComponent(workspaceId)}`;
@@ -35,11 +41,44 @@ export const workflowApi = {
   get(id: string, jwt: string, workspaceId: string) {
     return request<CodingWorkflow>(`/api/workflows/${id}?${workspaceQuery(workspaceId)}`, jwt);
   },
-  create(payload: { name: string; description: string; template: string }, jwt: string, workspaceId: string) {
+  create(payload: { name: string; description: string; template_id?: string; template?: string }, jwt: string, workspaceId: string) {
     return request<CodingWorkflow>(`/api/workflows?${workspaceQuery(workspaceId)}`, jwt, {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+  listTemplates(jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate[]>(`/api/workflow-templates?${workspaceQuery(workspaceId)}`, jwt);
+  },
+  getTemplate(id: string, jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate>(`/api/workflow-templates/${id}?${workspaceQuery(workspaceId)}`, jwt);
+  },
+  createTemplate(payload: { name: string; description: string; category: string; definition: WorkflowDefinition }, jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate>(`/api/workflow-templates?${workspaceQuery(workspaceId)}`, jwt, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateTemplate(id: string, payload: { name?: string; description?: string; category?: string; status?: string; definition?: WorkflowDefinition; revision: number }, jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate>(`/api/workflow-templates/${id}?${workspaceQuery(workspaceId)}`, jwt, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  removeTemplate(id: string, jwt: string, workspaceId: string) {
+    return request<void>(`/api/workflow-templates/${id}?${workspaceQuery(workspaceId)}`, jwt, { method: "DELETE" });
+  },
+  duplicateTemplate(id: string, jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate>(`/api/workflow-templates/${id}/duplicate?${workspaceQuery(workspaceId)}`, jwt, { method: "POST" });
+  },
+  importTemplate(payload: { name: string; description: string; category: string; definition: WorkflowDefinition }, jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate>(`/api/workflow-templates/import?${workspaceQuery(workspaceId)}`, jwt, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  exportTemplate(id: string, jwt: string, workspaceId: string) {
+    return request<WorkflowTemplate>(`/api/workflow-templates/${id}/export?${workspaceQuery(workspaceId)}`, jwt);
   },
   update(id: string, payload: { name: string; description: string; definition: WorkflowDefinition; revision: number }, jwt: string, workspaceId: string) {
     return request<CodingWorkflow>(`/api/workflows/${id}?${workspaceQuery(workspaceId)}`, jwt, {
@@ -60,9 +99,29 @@ export const workflowApi = {
     });
   },
   test(id: string, sourceText: string, jwt: string, workspaceId: string) {
-    return request<{ trace: Array<{ node_id: string; name: string; kind: string; status: string; outputs: Record<string, unknown>; message: string }>; outputs: Record<string, unknown> }>(`/api/workflows/${id}/test?${workspaceQuery(workspaceId)}`, jwt, {
+    return request<WorkflowTestResult>(`/api/workflows/${id}/test?${workspaceQuery(workspaceId)}`, jwt, {
       method: "POST",
       body: JSON.stringify({ source_text: sourceText }),
     });
+  },
+  async testFile(id: string, file: File, jwt: string, workspaceId: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(`${API_BASE_URL}/api/workflows/${id}/test-file?${workspaceQuery(workspaceId)}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${jwt}` },
+      body: formData,
+    });
+    if (!response.ok) {
+      let detail = "Workflow file test failed";
+      try {
+        const body = await response.json();
+        detail = typeof body.detail === "string" ? body.detail : body.detail?.message || detail;
+      } catch {
+        // Keep fallback.
+      }
+      throw new Error(detail);
+    }
+    return response.json() as Promise<WorkflowTestResult>;
   },
 };

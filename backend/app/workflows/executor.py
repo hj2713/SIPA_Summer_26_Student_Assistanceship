@@ -16,6 +16,7 @@ FIELD_TYPES = {
     "enum": str,
     "list[string]": List[str],
     "evidence[]": List[str],
+    "object": Dict[str, Any],
 }
 
 
@@ -58,6 +59,16 @@ class WorkflowExecutor:
             else:
                 fields[key] = (python_type | None, Field(default=None, description=output.get("label") or key))
         return create_model(f"WorkflowNode_{node['id']}", **fields)
+
+    def _context_value(self, context: Dict[str, Any], source: str) -> Any:
+        if source in context:
+            return context[source]
+        current: Any = context
+        for part in str(source).split("."):
+            if not isinstance(current, dict) or part not in current:
+                return None
+            current = current[part]
+        return current
 
     async def execute(self, definition: Dict[str, Any], source_text: str) -> Dict[str, Any]:
         issues = validate_workflow_definition(definition)
@@ -127,7 +138,15 @@ class WorkflowExecutor:
                     rule_results.append({"name": rule.get("name", "Validation rule"), "passed": passed, "severity": rule.get("severity", "error")})
                 outputs = {"rules": rule_results, "valid": all(item["passed"] for item in rule_results)}
             elif node_kind == "output":
-                outputs = {field: context.get(field) for field in config.get("fields") or []}
+                for field in config.get("fields") or []:
+                    if isinstance(field, dict):
+                        source = str(field.get("source") or field.get("field") or "")
+                        key = str(field.get("key") or source)
+                    else:
+                        source = str(field)
+                        key = source
+                    if source:
+                        outputs[key] = self._context_value(context, source)
 
             for key, value in outputs.items():
                 context[f"{node_id}.{key}"] = value
@@ -144,4 +163,3 @@ class WorkflowExecutor:
 
 
 workflow_executor = WorkflowExecutor()
-

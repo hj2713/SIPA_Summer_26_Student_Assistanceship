@@ -200,6 +200,31 @@ class BaseWorkflowRepository(ABC):
     def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
         pass
 
+class BaseWorkflowTemplateRepository(ABC):
+    @abstractmethod
+    def get_by_id(self, template_id: str) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def get_by_slug(self, workspace_id: str, slug: str) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def create(self, template_id: str, workspace_id: str, slug: str, name: str, description: str, category: str, definition_json: str, created_by: str, status: str = "active") -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def update(self, template_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def delete(self, template_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
+        pass
+
 class BaseWorkflowVersionRepository(ABC):
     @abstractmethod
     def create(self, version_id: str, workflow_id: str, version: int, definition_json: str, definition_hash: str, changelog: str, created_by: str) -> Dict[str, Any]:
@@ -295,6 +320,11 @@ class BaseUnitOfWork(ABC):
     @property
     @abstractmethod
     def workflow_versions(self) -> BaseWorkflowVersionRepository:
+        pass
+
+    @property
+    @abstractmethod
+    def workflow_templates(self) -> BaseWorkflowTemplateRepository:
         pass
 
     @property

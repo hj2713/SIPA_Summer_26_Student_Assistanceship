@@ -12,6 +12,7 @@ from app.repositories.base import (
     BaseDashboardRepository,
     BaseDashboardDocumentRepository,
     BaseWorkflowRepository,
+    BaseWorkflowTemplateRepository,
     BaseWorkflowVersionRepository,
     BaseThreadRepository,
     BaseMessageRepository,
@@ -583,6 +584,54 @@ class SQLiteWorkflowRepository(BaseWorkflowRepository):
         return [dict(row) for row in rows]
 
 
+class SQLiteWorkflowTemplateRepository(BaseWorkflowTemplateRepository):
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+
+    def get_by_id(self, template_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute("SELECT * FROM coding_workflow_templates WHERE id = ?;", (template_id,)).fetchone()
+        return dict(row) if row else None
+
+    def get_by_slug(self, workspace_id: str, slug: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT * FROM coding_workflow_templates WHERE workspace_id = ? AND slug = ?;",
+            (workspace_id, slug),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def create(self, template_id: str, workspace_id: str, slug: str, name: str, description: str, category: str, definition_json: str, created_by: str, status: str = "active") -> Dict[str, Any]:
+        self.conn.execute(
+            """
+            INSERT INTO coding_workflow_templates
+                (id, workspace_id, slug, name, description, category, status, definition_json, revision, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?);
+            """,
+            (template_id, workspace_id, slug, name, description, category, status, definition_json, created_by),
+        )
+        return self.get_by_id(template_id)
+
+    def update(self, template_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        if updates:
+            keys = list(updates.keys())
+            assignments = ", ".join(f"{key} = ?" for key in keys)
+            values = [updates[key] for key in keys] + [template_id]
+            self.conn.execute(
+                f"UPDATE coding_workflow_templates SET {assignments}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?;",
+                values,
+            )
+        return self.get_by_id(template_id)
+
+    def delete(self, template_id: str) -> None:
+        self.conn.execute("DELETE FROM coding_workflow_templates WHERE id = ?;", (template_id,))
+
+    def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM coding_workflow_templates WHERE workspace_id = ? ORDER BY updated_at DESC;",
+            (workspace_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 class SQLiteWorkflowVersionRepository(BaseWorkflowVersionRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
@@ -799,6 +848,7 @@ class SQLiteUnitOfWork(BaseUnitOfWork):
         self._dashboards = SQLiteDashboardRepository(self.conn)
         self._dashboard_documents = SQLiteDashboardDocumentRepository(self.conn)
         self._workflows = SQLiteWorkflowRepository(self.conn)
+        self._workflow_templates = SQLiteWorkflowTemplateRepository(self.conn)
         self._workflow_versions = SQLiteWorkflowVersionRepository(self.conn)
         self._threads = SQLiteThreadRepository(self.conn)
         self._messages = SQLiteMessageRepository(self.conn)
@@ -835,6 +885,10 @@ class SQLiteUnitOfWork(BaseUnitOfWork):
     @property
     def workflow_versions(self) -> BaseWorkflowVersionRepository:
         return self._workflow_versions
+
+    @property
+    def workflow_templates(self) -> BaseWorkflowTemplateRepository:
+        return self._workflow_templates
 
     @property
     def threads(self) -> BaseThreadRepository:

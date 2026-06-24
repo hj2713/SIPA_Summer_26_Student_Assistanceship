@@ -56,6 +56,21 @@ export interface CodingWorkflow {
   updated_at: string;
 }
 
+export interface WorkflowTemplate {
+  id: string;
+  workspace_id: string;
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  status: "active" | "archived";
+  definition: WorkflowDefinition;
+  revision: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WorkflowValidationIssue {
   severity: "error" | "warning";
   code: string;
@@ -69,4 +84,3 @@ export interface WorkflowValidationResult {
   warnings: number;
   issues: WorkflowValidationIssue[];
 }
-

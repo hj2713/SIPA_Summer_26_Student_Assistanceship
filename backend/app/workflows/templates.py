@@ -1,6 +1,40 @@
 from typing import Any, Dict
 
 
+LAW_DELEGATION_INSTRUCTIONS = """Classify whether the supplied law text contains a meaningful delegation of authority to a U.S. federal executive or administrative actor.
+
+Use the Prompt Version 8 benchmark-aligned rules, adapted for full law-file testing:
+- Code delegate_law = true only when Congress grants new, renewed-with-substantive-change, or materially expanded authority or responsibility to an executive or administrative actor.
+- Code delegate_law = false when the text does not show meaningful new or materially expanded administrative authority.
+- Do not count a mere agency mention, private-party filing/reporting by itself, technical/conforming/procedural amendment, reduction/removal of regulation, existing authority, legislative history, or unrelated non-financial omnibus content as delegation by itself.
+- When evidence is ambiguous, choose false unless the law text clearly grants meaningful new or materially expanded administrative authority.
+- For financial-regulation research, focus on securities, banking, credit, commodities, disclosure, investor protection, financial institutions/markets/stability, deposit insurance, supervision, consumer finance, payment systems, and federal financial regulators acting in regulatory/supervisory/enforcement/administrative capacity.
+
+Evaluate the supporting details at the same time as the final decision. These details are internal audit material and decision ingredients, not dashboard columns.
+
+Return:
+- delegate_law: boolean. Map Prompt v8 DelegateLaw Y to true and N to false.
+- law_delegation_details: object containing concise keys for rationale, financial_regulation_scope, administrative_actors, delegated_authorities, evidence, constraints_summary, constraint_strength, delegation_breadth, delegation_centrality, positive_signals, negative_signals, and ambiguity_notes.
+"""
+
+
+DISCRETION_RANK_INSTRUCTIONS = """Based on the delegated authority and constraints identified in the Law Delegation feature, classify the law as a whole by the level of discretionary authority it grants to administrative actors.
+
+This is a law-level Rough Guide classification, not a precise provision-level discretion measure.
+
+Scale:
+0 = No Discretion: no delegation exists. This workflow assigns 0 deterministically before this LLM node.
+1 = Minimal Discretion: narrow, mechanical, procedural, ministerial, or tightly constrained authority.
+2 = Limited Discretion: real implementation, supervisory, regulatory, or enforcement authority exists, but significant rules, standards, reporting, consultation, appeals, exemptions, oversight, deadlines, or other constraints bound the authority.
+3 = Substantial Discretion: meaningful authority to interpret, implement, enforce, supervise, regulate, approve, waive, exempt, or set standards; constraints exist but still leave significant room for judgment.
+4 = High Discretion: broad policymaking, rulemaking, standard-setting, waiver, exemption, enforcement, supervisory, or interpretive authority across many provisions or central parts of the law, with few meaningful constraints.
+
+Consider breadth of affected actors/markets/institutions/transactions/activities, degree of agency policy choice, strength of statutory constraints, and centrality of agency implementation to the law.
+
+Do not assign rank 4 merely because authority is delegated. Use the prior law_delegation_details and the source text. Return discretion_rank from 1 to 4 plus an internal discretion_rank_details object with a concise rationale and evidence.
+"""
+
+
 def blank_workflow_definition() -> Dict[str, Any]:
     return {
         "schema_version": 1,
@@ -175,8 +209,161 @@ def delegation_discretion_definition() -> Dict[str, Any]:
     }
 
 
+def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "nodes": [
+            {
+                "id": "document_input",
+                "kind": "document_input",
+                "name": "Law file input",
+                "description": "The law file text being coded by this research workflow.",
+                "position": {"x": 40, "y": 260},
+                "config": {"source_policy": "full_text"},
+            },
+            {
+                "id": "law_delegation",
+                "kind": "llm",
+                "name": "Law Delegation feature",
+                "description": "Decide DelegateLaw and keep all supporting reasoning as nested audit details.",
+                "position": {"x": 360, "y": 260},
+                "config": {
+                    "document_context": "source_text",
+                    "instructions": LAW_DELEGATION_INSTRUCTIONS,
+                    "input_fields": [],
+                    "outputs": [
+                        {"key": "delegate_law", "label": "Delegate law", "type": "boolean", "required": True},
+                        {"key": "law_delegation_details", "label": "Law delegation details", "type": "object", "required": True},
+                    ],
+                },
+            },
+            {
+                "id": "delegation_gate",
+                "kind": "condition",
+                "name": "delegate_law = false?",
+                "description": "Skip discretion-rank LLM when there is no meaningful delegation.",
+                "position": {"x": 700, "y": 260},
+                "config": {
+                    "expression": {
+                        "op": "eq",
+                        "left": {"field": "law_delegation.delegate_law"},
+                        "right": {"literal": False},
+                    },
+                    "true_label": "No delegation",
+                    "false_label": "Delegation found",
+                },
+            },
+            {
+                "id": "rank_zero",
+                "kind": "set_value",
+                "name": "Set discretion_rank = 0",
+                "description": "Deterministic result: no delegation means no discretion.",
+                "position": {"x": 1020, "y": 100},
+                "config": {
+                    "assignments": [
+                        {"field": "discretion_rank", "type": "integer", "value": 0},
+                        {
+                            "field": "discretion_rank_details",
+                            "type": "object",
+                            "value": {
+                                "rationale": "No meaningful delegation was identified, so the discretion rank is 0.",
+                                "source": "deterministic_rule",
+                            },
+                        },
+                    ]
+                },
+            },
+            {
+                "id": "discretion_rank",
+                "kind": "llm",
+                "name": "Discretion Rank feature",
+                "description": "Rank agency discretion using the Law Delegation decision trace.",
+                "position": {"x": 1020, "y": 430},
+                "config": {
+                    "document_context": "source_text",
+                    "instructions": DISCRETION_RANK_INSTRUCTIONS,
+                    "input_fields": [
+                        "law_delegation.delegate_law",
+                        "law_delegation.law_delegation_details",
+                    ],
+                    "outputs": [
+                        {"key": "discretion_rank", "label": "Discretion rank", "type": "integer", "minimum": 1, "maximum": 4, "required": True},
+                        {"key": "discretion_rank_details", "label": "Discretion rank details", "type": "object", "required": True},
+                    ],
+                },
+            },
+            {
+                "id": "consistency_check",
+                "kind": "validation",
+                "name": "Consistency check",
+                "description": "Ensure the final rank follows the DelegateLaw relationship.",
+                "position": {"x": 1350, "y": 260},
+                "config": {
+                    "rules": [
+                        {
+                            "name": "No delegation implies rank zero",
+                            "expression": {
+                                "op": "or",
+                                "args": [
+                                    {"op": "neq", "left": {"field": "law_delegation.delegate_law"}, "right": {"literal": False}},
+                                    {"op": "eq", "left": {"field": "discretion_rank"}, "right": {"literal": 0}},
+                                ],
+                            },
+                            "severity": "error",
+                        },
+                        {
+                            "name": "Delegation true implies rank one through four",
+                            "expression": {
+                                "op": "or",
+                                "args": [
+                                    {"op": "neq", "left": {"field": "law_delegation.delegate_law"}, "right": {"literal": True}},
+                                    {
+                                        "op": "and",
+                                        "args": [
+                                            {"op": "gte", "left": {"field": "discretion_rank"}, "right": {"literal": 1}},
+                                            {"op": "lte", "left": {"field": "discretion_rank"}, "right": {"literal": 4}},
+                                        ],
+                                    },
+                                ],
+                            },
+                            "severity": "error",
+                        },
+                    ]
+                },
+            },
+            {
+                "id": "dashboard_output",
+                "kind": "output",
+                "name": "Final dashboard outputs",
+                "description": "Only final research variables are emitted as dashboard columns.",
+                "position": {"x": 1660, "y": 260},
+                "config": {
+                    "fields": [
+                        {"source": "law_delegation.delegate_law", "key": "delegate_law", "label": "Delegate Law"},
+                        {"source": "discretion_rank", "key": "discretion_rank", "label": "Discretion Rank"},
+                    ]
+                },
+            },
+        ],
+        "edges": [
+            {"id": "e-input-delegation", "source": "document_input", "target": "law_delegation"},
+            {"id": "e-delegation-gate", "source": "law_delegation", "target": "delegation_gate"},
+            {"id": "e-gate-zero", "source": "delegation_gate", "target": "rank_zero", "source_handle": "true", "label": "No delegation"},
+            {"id": "e-gate-rank", "source": "delegation_gate", "target": "discretion_rank", "source_handle": "false", "label": "Delegation found"},
+            {"id": "e-zero-validate", "source": "rank_zero", "target": "consistency_check"},
+            {"id": "e-rank-validate", "source": "discretion_rank", "target": "consistency_check"},
+            {"id": "e-validate-output", "source": "consistency_check", "target": "dashboard_output"},
+        ],
+        "outputs": [
+            {"key": "delegate_law", "source": "law_delegation.delegate_law", "group": "Final"},
+            {"key": "discretion_rank", "source": "discretion_rank", "group": "Final"},
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 0.72},
+    }
+
+
 WORKFLOW_TEMPLATES = {
     "blank": blank_workflow_definition,
     "delegation_discretion": delegation_discretion_definition,
+    "law_delegation_discretion_rank": law_delegation_discretion_rank_definition,
 }
-

@@ -11,6 +11,7 @@ from app.repositories.base import (
     BaseDashboardRepository,
     BaseDashboardDocumentRepository,
     BaseWorkflowRepository,
+    BaseWorkflowTemplateRepository,
     BaseWorkflowVersionRepository,
     BaseThreadRepository,
     BaseMessageRepository,
@@ -699,6 +700,60 @@ class PostgresWorkflowRepository(BaseWorkflowRepository):
             return list(cursor.fetchall())
 
 
+class PostgresWorkflowTemplateRepository(BaseWorkflowTemplateRepository):
+    def __init__(self, conn: psycopg.Connection):
+        self.conn = conn
+
+    def get_by_id(self, template_id: str) -> Optional[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM coding_workflow_templates WHERE id = %s;", (template_id,))
+            return cursor.fetchone()
+
+    def get_by_slug(self, workspace_id: str, slug: str) -> Optional[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM coding_workflow_templates WHERE workspace_id = %s AND slug = %s;",
+                (workspace_id, slug),
+            )
+            return cursor.fetchone()
+
+    def create(self, template_id: str, workspace_id: str, slug: str, name: str, description: str, category: str, definition_json: str, created_by: str, status: str = "active") -> Dict[str, Any]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO coding_workflow_templates
+                    (id, workspace_id, slug, name, description, category, status, definition_json, revision, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s);
+                """,
+                (template_id, workspace_id, slug, name, description, category, status, definition_json, created_by),
+            )
+        return self.get_by_id(template_id)
+
+    def update(self, template_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        if updates:
+            keys = list(updates.keys())
+            assignments = ", ".join(f"{key} = %s" for key in keys)
+            values = [updates[key] for key in keys] + [template_id]
+            with self.conn.cursor() as cursor:
+                cursor.execute(
+                    f"UPDATE coding_workflow_templates SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                    values,
+                )
+        return self.get_by_id(template_id)
+
+    def delete(self, template_id: str) -> None:
+        with self.conn.cursor() as cursor:
+            cursor.execute("DELETE FROM coding_workflow_templates WHERE id = %s;", (template_id,))
+
+    def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM coding_workflow_templates WHERE workspace_id = %s ORDER BY updated_at DESC;",
+                (workspace_id,),
+            )
+            return list(cursor.fetchall())
+
+
 class PostgresWorkflowVersionRepository(BaseWorkflowVersionRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
@@ -930,6 +985,7 @@ class PostgresUnitOfWork(BaseUnitOfWork):
         self._dashboards = PostgresDashboardRepository(self.conn)
         self._dashboard_documents = PostgresDashboardDocumentRepository(self.conn)
         self._workflows = PostgresWorkflowRepository(self.conn)
+        self._workflow_templates = PostgresWorkflowTemplateRepository(self.conn)
         self._workflow_versions = PostgresWorkflowVersionRepository(self.conn)
         self._threads = PostgresThreadRepository(self.conn)
         self._messages = PostgresMessageRepository(self.conn)
@@ -966,6 +1022,10 @@ class PostgresUnitOfWork(BaseUnitOfWork):
     @property
     def workflow_versions(self) -> BaseWorkflowVersionRepository:
         return self._workflow_versions
+
+    @property
+    def workflow_templates(self) -> BaseWorkflowTemplateRepository:
+        return self._workflow_templates
 
     @property
     def threads(self) -> BaseThreadRepository:

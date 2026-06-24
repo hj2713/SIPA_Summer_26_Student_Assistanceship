@@ -15,7 +15,8 @@ class WorkflowDefinition(BaseModel):
 class WorkflowCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=1000)
-    template: Literal["blank", "delegation_discretion"] = "blank"
+    template_id: Optional[str] = None
+    template: Optional[Literal["blank", "delegation_discretion", "law_delegation_discretion_rank"]] = None
 
 
 class WorkflowUpdate(BaseModel):
@@ -62,6 +63,44 @@ class WorkflowVersionRow(BaseModel):
     changelog: str
     created_by: str
     created_at: datetime
+
+
+class WorkflowTemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    category: str = Field(default="General", max_length=120)
+    definition: WorkflowDefinition
+
+
+class WorkflowTemplateUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    category: Optional[str] = Field(default=None, max_length=120)
+    status: Optional[Literal["active", "archived"]] = None
+    definition: Optional[WorkflowDefinition] = None
+    revision: int = Field(ge=1)
+
+
+class WorkflowTemplateImport(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    category: str = Field(default="Imported", max_length=120)
+    definition: WorkflowDefinition
+
+
+class WorkflowTemplateRow(BaseModel):
+    id: str
+    workspace_id: str
+    slug: str
+    name: str
+    description: str
+    category: str
+    status: Literal["active", "archived"]
+    definition: WorkflowDefinition
+    revision: int
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class WorkflowValidationIssue(BaseModel):

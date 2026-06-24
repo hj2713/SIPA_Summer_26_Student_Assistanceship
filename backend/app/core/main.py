@@ -120,6 +120,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboards.router)
     app.include_router(usage.router)
     app.include_router(workflows.router)
+    app.include_router(workflows.template_router)
 
     return app
 

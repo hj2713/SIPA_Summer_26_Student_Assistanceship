@@ -128,6 +128,24 @@ def init_postgres_db():
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS coding_workflow_templates (
+                    id VARCHAR(255) PRIMARY KEY,
+                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                    slug VARCHAR(255) NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    category VARCHAR(255) NOT NULL DEFAULT 'General',
+                    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
+                    definition_json TEXT NOT NULL,
+                    revision INTEGER NOT NULL DEFAULT 1,
+                    created_by VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(workspace_id, slug)
+                );
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS coding_workflow_versions (
                     id VARCHAR(255) PRIMARY KEY,
                     workflow_id VARCHAR(255) NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
@@ -242,6 +260,7 @@ def init_postgres_db():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
 
             # Seed test@gmail.com
@@ -412,6 +431,24 @@ def init_sqlite_db():
         """)
 
         conn.execute("""
+            CREATE TABLE IF NOT EXISTS coding_workflow_templates (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                slug TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                category TEXT NOT NULL DEFAULT 'General',
+                status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
+                definition_json TEXT NOT NULL,
+                revision INTEGER NOT NULL DEFAULT 1,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                UNIQUE(workspace_id, slug)
+            );
+        """)
+
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS coding_workflow_versions (
                 id TEXT PRIMARY KEY,
                 workflow_id TEXT NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
@@ -514,6 +551,7 @@ def init_sqlite_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
 
         # --- SEED DEFAULTS ---

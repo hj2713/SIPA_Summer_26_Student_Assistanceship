@@ -91,4 +91,4 @@ Why It Matters:
 The delegation and discretion work is a staged quantitative coding methodology. It must be reusable, benchmarkable, inspectable, cost-aware, and pinned to immutable versions for research reproducibility.
 
 Next Action:
-Visually review the standalone Workflow Library and Builder, then approve Phase 3 campaign adoption. Do not modify current campaign execution until that approval.
+Visually review the standalone Workflow Library, Builder, and `Law Delegation + Discretion Rank` template, then approve Phase 3 campaign adoption. Do not modify current campaign execution until that approval.

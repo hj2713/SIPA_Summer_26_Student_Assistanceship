@@ -174,7 +174,10 @@ def test_professor_benchmark_comparison_reports_rank_metrics(client, auth_header
     assert data["mean_absolute_error"] == 1
     assert data["confusion_matrix"]["0"]["0"] == 1
     assert data["confusion_matrix"]["1"]["3"] == 1
+    assert set(data["split_metrics"]) == {"calibration", "holdout"}
+    assert sum(split["matched_rows"] for split in data["split_metrics"].values()) == 2
     assert data["mismatches"][0]["likely_mismatch_reason"] == "model_over_ranking"
+    assert data["mismatches"][0]["split"] in {"calibration", "holdout"}
     assert "CQ summaries" in data["source_warning"]
 
 def test_link_campaign_documents_and_override_cell(client, auth_headers, clean_db):

@@ -397,7 +397,12 @@ export function DashboardDetailPage() {
   const [benchmarkDocuments, setBenchmarkDocuments] = useState<CampaignDocument[]>([]);
   const [benchmarkCoverage, setBenchmarkCoverage] = useState<{ matched: number; missing: number } | null>(null);
   const [showBenchmarkComparison, setShowBenchmarkComparison] = useState(false);
-  const [benchmarkAccuracy, setBenchmarkAccuracy] = useState<{ total: number; matches: number; percent: number } | null>(null);
+  const [benchmarkAccuracy, setBenchmarkAccuracy] = useState<{
+    total: number;
+    matches: number;
+    percent: number;
+    columns?: Record<string, { matches: number; total: number; percent: number }>;
+  } | null>(null);
   const [professorBenchmark, setProfessorBenchmark] = useState<ProfessorBenchmarkSummary | null>(null);
   const [loadingProfessorBenchmark, setLoadingProfessorBenchmark] = useState(false);
   const benchmarkInputRef = useRef<HTMLInputElement>(null);
@@ -1375,6 +1380,11 @@ export function DashboardDetailPage() {
 
     let totalComparisons = 0;
     let matchCount = 0;
+    const columnStats: Record<string, { matches: number; total: number; percent: number }> = {};
+
+    orderedColumns.forEach(col => {
+      columnStats[col.name] = { matches: 0, total: 0, percent: 0 };
+    });
 
     let matchedDocuments = 0;
     comparisonDocuments.forEach(doc => {
@@ -1387,22 +1397,34 @@ export function DashboardDetailPage() {
         if (benchVal !== undefined && benchVal !== "") {
           documentMatched = true;
           totalComparisons++;
+          columnStats[col.name].total++;
+
           const normDoc = normalizeValueForComparison(docVal, col.type);
           const normBench = normalizeValueForComparison(benchVal, col.type);
           if (normDoc === normBench) {
             matchCount++;
+            columnStats[col.name].matches++;
           }
         }
       });
       if (documentMatched) matchedDocuments++;
     });
+
+    orderedColumns.forEach(col => {
+      const stats = columnStats[col.name];
+      if (stats.total > 0) {
+        stats.percent = Math.round((stats.matches / stats.total) * 100);
+      }
+    });
+
     setBenchmarkCoverage({ matched: matchedDocuments, missing: Math.max(0, parsedBenchmark.rows.length - matchedDocuments) });
 
     if (totalComparisons > 0) {
       setBenchmarkAccuracy({
         total: totalComparisons,
         matches: matchCount,
-        percent: Math.round((matchCount / totalComparisons) * 100)
+        percent: Math.round((matchCount / totalComparisons) * 100),
+        columns: columnStats,
       });
     } else {
       setBenchmarkAccuracy(null);
@@ -1630,6 +1652,20 @@ export function DashboardDetailPage() {
               <Sparkles size={14} className="text-amber-500 fill-amber-500" />
               <span>Benchmark Mode Active: <strong>{benchmarkAccuracy.matches} / {benchmarkAccuracy.total}</strong> cells match (<strong>{benchmarkAccuracy.percent}% accuracy</strong>).</span>
               {benchmarkCoverage && <span className="opacity-80">Matched {benchmarkCoverage.matched} campaign files; {benchmarkCoverage.missing} benchmark rows are not in this campaign.</span>}
+              {benchmarkAccuracy.columns && (
+                <div className="flex items-center gap-2.5 ml-2 border-l pl-2 border-rose-500/25 flex-wrap">
+                  <span className="opacity-80 font-medium">Column-wise:</span>
+                  {orderedColumns.map(col => {
+                    const stats = benchmarkAccuracy.columns?.[col.name];
+                    if (!stats || stats.total === 0) return null;
+                    return (
+                      <span key={col.name} className="bg-rose-500/20 dark:bg-rose-500/30 px-2 py-0.5 rounded text-[11px] font-semibold text-rose-800 dark:text-rose-300">
+                        {col.name}: <strong>{stats.percent}%</strong> ({stats.matches}/{stats.total})
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <button
               onClick={() => {
@@ -2037,6 +2073,15 @@ export function DashboardDetailPage() {
                                       return (
                                         <span className="text-[10px] text-muted-foreground/60 font-mono font-medium shrink-0 ml-0.5">
                                           ({filledCount}/{totalCount})
+                                        </span>
+                                      );
+                                    })()}
+                                    {showBenchmarkComparison && benchmarkAccuracy?.columns?.[col.name] && (() => {
+                                      const stats = benchmarkAccuracy.columns[col.name];
+                                      if (stats.total === 0) return null;
+                                      return (
+                                        <span className="text-[10px] text-rose-600 dark:text-rose-400 font-mono font-bold bg-rose-500/10 dark:bg-rose-500/20 px-1.5 py-0.5 rounded ml-1 shrink-0">
+                                          {stats.percent}% acc
                                         </span>
                                       );
                                     })()}

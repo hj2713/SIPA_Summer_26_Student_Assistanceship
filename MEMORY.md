@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 14:57:45  
-> Total memories: **11**  
-> Breakdown: decision: 11
+> Generated: 2026-06-24 15:22:54  
+> Total memories: **13**  
+> Breakdown: decision: 13
 
 ---
 
@@ -86,11 +86,23 @@ Disabled and locked the 'Retry Failed' button on click and while failed document
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T18:57:43*
 
+### Deleted the 'TEST' workspace from the production d...
+
+Deleted the 'TEST' workspace from the production database and confirmed that documents in the 'QA' workspace are already owned by test@gmail.com, requiring no further migration.
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T19:20:51*
+
 ### Implemented multi-select and inline document unlin...
 
 Implemented multi-select and inline document unlinking from a campaign dashboard without deleting the original files or chunks from storage/DB
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:43:28*
+
+### Redesigned the benchmark accuracy display to show ...
+
+Redesigned the benchmark accuracy display to show column-wise accuracy statistics inside the Benchmark Accuracy Banner and each spreadsheet column header when benchmark mode is active.
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T19:22:52*
 
 ---
 

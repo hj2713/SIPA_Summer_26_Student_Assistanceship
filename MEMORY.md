@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 01:54:47  
-> Total memories: **4**  
-> Breakdown: decision: 4
+> Generated: 2026-06-24 14:24:45  
+> Total memories: **6**  
+> Breakdown: decision: 6
 
 ---
 
@@ -38,11 +38,23 @@ Restructured AI analysis configure node into a 3-step inputs-instructions-output
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:54:44*
 
+### Capped Workflow Trace modal height to min(height, ...
+
+Capped Workflow Trace modal height to min(height, 90vh) to prevent viewport bottom border clipping and ensure internal scrollbars work properly
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:24:44*
+
 ### Implemented workflow reasoning mapping to campaign...
 
 Implemented workflow reasoning mapping to campaign columns and initialized version 1 history arrays when a workflow completes
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:24:06*
+
+### Redesigned Compare with Benchmark spreadsheet mism...
+
+Redesigned Compare with Benchmark spreadsheet mismatch rendering to display both LLM and CSV values inline stacked together, avoiding tooltip hover requirement
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:24:44*
 
 ### Implemented multi-select and inline document unlin...
 

@@ -2022,8 +2022,10 @@ export function DashboardDetailPage() {
                                 <td 
                                   key={col.name} 
                                   className={cn(
-                                    "p-2 border-r relative group/cell cursor-pointer h-10 select-none",
-                                    isMismatch && "bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900"
+                                    "p-2 border-r relative group/cell cursor-pointer select-none",
+                                    isMismatch 
+                                      ? "h-auto py-1.5 bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900" 
+                                      : "h-10"
                                   )}
                                   onDoubleClick={() => {
                                     if (doc.status !== "completed" && doc.status !== "failed") return;
@@ -2043,56 +2045,115 @@ export function DashboardDetailPage() {
                                     setShowEditCellModal(true);
                                   }}
                                 >
-                                  <div className="flex items-center justify-between w-full h-full">
-                                    {isMismatch && (
-                                      <span 
-                                        className="mr-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-black h-4.5 w-4.5 flex items-center justify-center cursor-help shrink-0 shadow-sm"
-                                        title={`Benchmark value: ${benchVal}\nLLM value: ${val}`}
-                                      >
-                                        !
-                                      </span>
-                                    )}
-                                    <span className={cn(
-                                      "truncate block flex-1 leading-normal font-mono",
-                                      hasReasoning && "underline decoration-dotted decoration-muted-foreground/50 underline-offset-4"
-                                    )}>
-                                      {val === undefined || val === null ? (
-                                        <span className="text-muted-foreground/30 italic font-sans">double-click</span>
-                                      ) : typeof val === "boolean" ? (
-                                        val ? (
-                                          <span className="bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold">True</span>
-                                        ) : (
-                                          <span className="bg-rose-500/10 text-rose-600 px-1.5 py-0.5 rounded font-bold">False</span>
-                                        )
-                                      ) : (
-                                        String(val)
-                                      )}
-                                    </span>
-                                    
-                                    <div className="flex items-center gap-0.5">
-                                      {(val !== undefined && val !== null) && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedCellView({
-                                              filename: doc.filename.split("/").pop() || "",
-                                              columnName: col.name,
-                                              value: String(val),
-                                              reasoning: reasoning || undefined
-                                            });
-                                          }}
-                                          className="hidden group-hover/cell:flex items-center justify-center p-0.5 rounded bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary"
-                                          title="Click to inspect value and reasoning"
-                                        >
-                                          <Eye size={10} />
-                                        </button>
-                                      )}
-                                      {(doc.status === "completed" || doc.status === "failed") && (
-                                        <Edit size={10} className="text-muted-foreground/0 group-hover/cell:text-muted-foreground/60 transition-colors" />
-                                      )}
-                                    </div>
-                                  </div>
+                                  {isMismatch ? (
+                                    <div className="flex flex-col justify-center w-full py-0.5">
+                                      <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center min-w-0">
+                                          <span 
+                                            className="mr-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center cursor-help shrink-0 shadow-sm"
+                                            title={`Benchmark value: ${benchVal}\nLLM value: ${val}`}
+                                          >
+                                            !
+                                          </span>
+                                          <span className={cn(
+                                            "truncate font-mono text-xs",
+                                            hasReasoning && "underline decoration-dotted decoration-muted-foreground/50 underline-offset-4"
+                                          )}>
+                                            <span className="text-[10px] text-muted-foreground font-sans mr-1 select-none">LLM:</span>
+                                            {val === undefined || val === null ? (
+                                              <span className="text-muted-foreground/30 italic font-sans">double-click</span>
+                                            ) : typeof val === "boolean" ? (
+                                              val ? (
+                                                <span className="bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold">True</span>
+                                              ) : (
+                                                <span className="bg-rose-500/10 text-rose-600 px-1.5 py-0.5 rounded font-bold">False</span>
+                                              )
+                                            ) : (
+                                              String(val)
+                                            )}
+                                          </span>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                                          {(val !== undefined && val !== null) && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedCellView({
+                                                  filename: doc.filename.split("/").pop() || "",
+                                                  columnName: col.name,
+                                                  value: String(val),
+                                                  reasoning: reasoning || undefined
+                                                });
+                                              }}
+                                              className="hidden group-hover/cell:flex items-center justify-center p-0.5 rounded bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                                              title="Click to inspect value and reasoning"
+                                            >
+                                              <Eye size={10} />
+                                            </button>
+                                          )}
+                                          {(doc.status === "completed" || doc.status === "failed") && (
+                                            <Edit size={10} className="text-muted-foreground/0 group-hover/cell:text-muted-foreground/60 transition-colors" />
+                                          )}
+                                        </div>
+                                      </div>
 
+                                      {/* Benchmark CSV Value */}
+                                      <div className="text-[10px] text-rose-600 dark:text-rose-400 font-sans mt-1 pt-0.5 border-t border-rose-200/50 dark:border-rose-900/30 flex items-center min-w-0">
+                                        <span className="font-semibold mr-1 select-none">CSV:</span>
+                                        <span className="font-mono truncate bg-rose-500/5 px-1 py-0.2 rounded">
+                                          {benchVal === undefined || benchVal === null || benchVal === "" ? (
+                                            <span className="italic text-muted-foreground/50">empty</span>
+                                          ) : (
+                                            String(benchVal)
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between w-full h-full">
+                                      <span className={cn(
+                                        "truncate block flex-1 leading-normal font-mono",
+                                        hasReasoning && "underline decoration-dotted decoration-muted-foreground/50 underline-offset-4"
+                                      )}>
+                                        {val === undefined || val === null ? (
+                                          <span className="text-muted-foreground/30 italic font-sans">double-click</span>
+                                        ) : typeof val === "boolean" ? (
+                                          val ? (
+                                            <span className="bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold">True</span>
+                                          ) : (
+                                            <span className="bg-rose-500/10 text-rose-600 px-1.5 py-0.5 rounded font-bold">False</span>
+                                          )
+                                        ) : (
+                                          String(val)
+                                        )}
+                                      </span>
+                                      
+                                      <div className="flex items-center gap-0.5">
+                                        {(val !== undefined && val !== null) && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedCellView({
+                                                filename: doc.filename.split("/").pop() || "",
+                                                columnName: col.name,
+                                                value: String(val),
+                                                reasoning: reasoning || undefined
+                                              });
+                                            }}
+                                            className="hidden group-hover/cell:flex items-center justify-center p-0.5 rounded bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                                            title="Click to inspect value and reasoning"
+                                          >
+                                            <Eye size={10} />
+                                          </button>
+                                        )}
+                                        {(doc.status === "completed" || doc.status === "failed") && (
+                                          <Edit size={10} className="text-muted-foreground/0 group-hover/cell:text-muted-foreground/60 transition-colors" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
                                   {/* Premium reasoning tooltip */}
                                   {hasReasoning && (
                                     <div className="absolute left-1/2 bottom-full mb-2.5 hidden group-hover/cell:block z-50 w-80 bg-slate-900 text-slate-100 border border-slate-700/80 rounded-lg p-3 text-xs shadow-2xl animate-in fade-in slide-in-from-bottom-1 duration-150 leading-relaxed -translate-x-1/2 normal-case font-normal select-text pointer-events-auto">
@@ -2413,7 +2474,7 @@ export function DashboardDetailPage() {
         <Dialog open={!!workflowTraceDoc} onOpenChange={(open) => { if (!open) setWorkflowTraceDoc(null); }}>
           <DialogContent 
             className="w-[94vw] sm:max-w-none lg:max-w-none max-h-none overflow-hidden flex flex-col p-0 relative"
-            style={{ width: `${traceModalWidth}px`, height: `${traceModalHeight}px`, maxWidth: '98vw', maxHeight: '96vh' }}
+            style={{ width: `${traceModalWidth}px`, height: `min(${traceModalHeight}px, 90vh)`, maxWidth: '98vw', maxHeight: '96vh' }}
           >
             {/* Resize Handles */}
             <div 

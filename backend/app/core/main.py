@@ -112,6 +112,14 @@ def create_app() -> FastAPI:
             headers={"Retry-After": "2"},
         )
 
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request, exc):
+        logger.exception("Unhandled request error: %s", exc)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error. Check backend logs for the full traceback."},
+        )
+
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(threads.router)

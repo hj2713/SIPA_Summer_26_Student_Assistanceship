@@ -12,14 +12,21 @@ function workspaceQuery(workspaceId: string) {
 }
 
 async function request<T>(url: string, jwt: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${url}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${jwt}`,
-      ...options?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${url}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${jwt}`,
+        ...options?.headers,
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      `Could not reach the API at ${API_BASE_URL}. The backend may be restarting, down, or returning a non-CORS server error. ${error instanceof Error ? error.message : ""}`.trim(),
+    );
+  }
   if (!response.ok) {
     let detail = "Request failed";
     try {
@@ -107,11 +114,18 @@ export const workflowApi = {
   async testFile(id: string, file: File, jwt: string, workspaceId: string) {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch(`${API_BASE_URL}/api/workflows/${id}/test-file?${workspaceQuery(workspaceId)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${jwt}` },
-      body: formData,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/workflows/${id}/test-file?${workspaceQuery(workspaceId)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${jwt}` },
+        body: formData,
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not reach the API at ${API_BASE_URL}. The backend may be restarting, down, or returning a non-CORS server error. ${error instanceof Error ? error.message : ""}`.trim(),
+      );
+    }
     if (!response.ok) {
       let detail = "Workflow file test failed";
       try {

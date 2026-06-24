@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 from typing import List
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends
@@ -26,6 +27,7 @@ from app.workflows.executor import WorkflowExecutionError, workflow_executor
 
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
+logger = logging.getLogger(__name__)
 
 
 def _require_editor(current_user: CurrentUserDep) -> None:
@@ -87,6 +89,16 @@ async def test_workflow(workflow_id: str, payload: WorkflowTestRequest, current_
         return await workflow_executor.execute(workflow.definition.model_dump(), payload.source_text)
     except WorkflowExecutionError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Workflow pasted-text test failed for workflow_id=%s", workflow_id)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "Workflow test failed while running an AI step. "
+                "Check your LLM key/model in Settings or deployment environment. "
+                f"Provider error: {exc}"
+            ),
+        ) from exc
 
 
 @router.post("/{workflow_id}/test-file", response_model=WorkflowTestResult)
@@ -116,6 +128,16 @@ async def test_workflow_file(
         return await workflow_executor.execute(workflow.definition.model_dump(), source_text)
     except WorkflowExecutionError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Workflow file test failed for workflow_id=%s filename=%s", workflow_id, filename)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "Workflow file test failed while running an AI step. "
+                "Check your LLM key/model in Settings or deployment environment. "
+                f"Provider error: {exc}"
+            ),
+        ) from exc
 
 
 @router.post("/{workflow_id}/publish", response_model=WorkflowVersionRow, status_code=status.HTTP_201_CREATED)

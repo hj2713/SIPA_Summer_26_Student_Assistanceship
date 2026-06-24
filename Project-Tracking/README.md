@@ -7,10 +7,11 @@ Use it for active tasks, unresolved research issues, benchmark incidents, implem
 ## Files
 
 1. `ACTIVE_WORK.md`: open issues, current tasks, questions, and next actions.
-2. `DECISIONS.md`: decisions that explain why the project is moving in a certain direction.
-3. `COMPLETED_WORK.md`: resolved items and completed milestones.
-4. `BENCHMARK_LOG.md`: benchmark cases, expected labels, latest results, and resolution status.
-5. `METHODOLOGY_STRATEGY.md`: evolving research and system-design strategy for improving coding accuracy beyond prompt wording.
+2. `CURRENT_HANDOFF.md`: read-this-first context for switching agents.
+3. `DECISIONS.md`: decisions that explain why the project is moving in a certain direction.
+4. `COMPLETED_WORK.md`: resolved items and completed milestones.
+5. `BENCHMARK_LOG.md`: benchmark cases, expected labels, latest results, and resolution status.
+6. `METHODOLOGY_STRATEGY.md`: evolving research and system-design strategy for improving coding accuracy beyond prompt wording.
 
 ## Tracking Rule
 

@@ -101,6 +101,7 @@ async def test_project_workflow_keeps_delegation_details_internal_when_false(mon
     class FakeLlm:
         async def parse_structured(self, messages, schema, log_context=None):
             calls.append(log_context["workflow_node_id"])
+            assert any(message.role == "user" for message in messages)
             return schema(
                 delegate_law=False,
                 delegation_rationale="Agency is mentioned but no new authority is granted.",

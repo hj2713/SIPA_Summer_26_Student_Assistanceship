@@ -218,6 +218,28 @@ def test_workflow_file_test_runs_without_persisting_document(client, auth_header
     assert "delegation_rationale" not in body["outputs"]
 
 
+def test_workflow_test_returns_json_provider_error(client, auth_headers, monkeypatch):
+    class FailingLlm:
+        async def parse_structured(self, messages, schema, log_context=None):
+            raise ValueError("simulated provider failure")
+
+    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FailingLlm())
+    workflow = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={"name": "Provider failure test", "template": "law_delegation_discretion_rank"},
+    ).json()
+
+    response = client.post(
+        f"/api/workflows/{workflow['id']}/test?workspace_id=QA",
+        headers=auth_headers,
+        json={"source_text": "The law directs an agency to issue rules."},
+    )
+
+    assert response.status_code == 502
+    assert "simulated provider failure" in response.json()["detail"]
+
+
 def test_workflow_update_rejects_stale_revision(client, auth_headers):
     workflow = client.post(
         "/api/workflows?workspace_id=QA",

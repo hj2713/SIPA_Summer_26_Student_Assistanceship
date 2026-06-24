@@ -108,7 +108,6 @@ class WorkflowExecutor:
                 selected_inputs = {field: context.get(field) for field in config.get("input_fields") or []}
                 document_context = config.get("document_context", "source_text")
                 prompt_parts = [
-                    "You are executing one stage of a versioned research coding workflow.",
                     f"=== STAGE ===\n{node['name']}",
                     f"=== INSTRUCTIONS ===\n{config.get('instructions', '')}",
                     f"=== DECLARED PRIOR OUTPUTS ===\n{selected_inputs or 'None'}",
@@ -116,7 +115,13 @@ class WorkflowExecutor:
                 if document_context != "none":
                     prompt_parts.append(f"=== SOURCE TEXT ===\n{source_text}")
                 parsed = await get_llm().parse_structured(
-                    [LLMMessage(role="system", content="\n\n".join(prompt_parts))],
+                    [
+                        LLMMessage(
+                            role="system",
+                            content="You are executing one stage of a versioned research coding workflow. Return only the requested structured fields.",
+                        ),
+                        LLMMessage(role="user", content="\n\n".join(prompt_parts)),
+                    ],
                     schema=self._llm_schema(node),
                     log_context={"service": "workflow_test", "workflow_node_id": node_id},
                 )

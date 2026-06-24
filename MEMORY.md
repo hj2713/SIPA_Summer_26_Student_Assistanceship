@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 14:36:45  
-> Total memories: **8**  
-> Breakdown: decision: 8
+> Generated: 2026-06-24 14:57:45  
+> Total memories: **11**  
+> Breakdown: decision: 11
 
 ---
 
@@ -62,11 +62,29 @@ Implemented workflow reasoning mapping to campaign columns and initialized versi
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:24:06*
 
+### Refactored run_uploaded_files and run_existing_doc...
+
+Refactored run_uploaded_files and run_existing_documents in workflow_dashboard_service.py to run asynchronously, scheduling workflow document execution on the background coding thread loop
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:47:34*
+
+### This allows frontend link/upload modals to close i...
+
+This allows frontend link/upload modals to close immediately (within ~100ms) and display linked files as pending/processing on the campaign dashboard in real-time
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:47:35*
+
 ### Redesigned Compare with Benchmark spreadsheet mism...
 
 Redesigned Compare with Benchmark spreadsheet mismatch rendering to display both LLM and CSV values inline stacked together, avoiding tooltip hover requirement
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T18:24:44*
+
+### Disabled and locked the 'Retry Failed' button on c...
+
+Disabled and locked the 'Retry Failed' button on click and while failed documents are being enqueued, pending, or processing on the campaign dashboard to prevent duplicate submits.
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:57:43*
 
 ### Implemented multi-select and inline document unlin...
 

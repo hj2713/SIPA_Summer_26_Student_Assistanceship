@@ -359,6 +359,8 @@ class WorkflowDashboardService:
         with self.db_session_factory() as session:
             dash_row = session.dashboards.get_by_id(dashboard.id)
             definition = json.loads(dash_row["workflow_definition_json"])
+        
+        pending_doc_ids = []
         for file in files:
             filename = file.filename or "workflow-upload.txt"
             ext = Path(filename).suffix.lower().lstrip(".")
@@ -377,7 +379,23 @@ class WorkflowDashboardService:
                     skipped.append(filename)
                     continue
                 session.dashboard_documents.create_or_update(dashboard.id, doc_id, "{}", "pending", current_step=0, total_steps=3)
-            rows.append(await self._execute_document(dashboard.id, doc_id, definition))
+                pending_doc_ids.append(doc_id)
+                
+                row = session.dashboard_documents.get_workflow_result(dashboard.id, doc_id)
+                if row:
+                    rows.append(campaign_service._dashboard_document_row(row))
+
+        if pending_doc_ids:
+            async def _exec_task():
+                for doc_id in pending_doc_ids:
+                    try:
+                        await self._execute_document(dashboard.id, doc_id, definition)
+                    except Exception:
+                        logger.exception("Background execution failed for uploaded file document %s", doc_id)
+
+            from app.services.coding_service import coding_service
+            coding_service.schedule_coroutine(_exec_task())
+
         return dashboard, rows, skipped
 
     async def run_existing_documents(
@@ -397,6 +415,8 @@ class WorkflowDashboardService:
         with self.db_session_factory() as session:
             dash_row = session.dashboards.get_by_id(dashboard.id)
             definition = json.loads(dash_row["workflow_definition_json"])
+        
+        pending_doc_ids = []
         for doc_id in document_ids:
             doc = document_service.get_document(None, doc_id)
             if not doc:
@@ -408,7 +428,23 @@ class WorkflowDashboardService:
                     skipped.append(doc.filename)
                     continue
                 session.dashboard_documents.create_or_update(dashboard.id, doc_id, "{}", "pending", current_step=0, total_steps=3)
-            rows.append(await self._execute_document(dashboard.id, doc_id, definition))
+                pending_doc_ids.append(doc_id)
+                
+                row = session.dashboard_documents.get_workflow_result(dashboard.id, doc_id)
+                if row:
+                    rows.append(campaign_service._dashboard_document_row(row))
+
+        if pending_doc_ids:
+            async def _exec_task():
+                for doc_id in pending_doc_ids:
+                    try:
+                        await self._execute_document(dashboard.id, doc_id, definition)
+                    except Exception:
+                        logger.exception("Background execution failed for existing document %s", doc_id)
+
+            from app.services.coding_service import coding_service
+            coding_service.schedule_coroutine(_exec_task())
+
         return dashboard, rows, skipped
 
     def get_trace(self, dashboard_id: str, document_id: str) -> DashboardDocumentRow:

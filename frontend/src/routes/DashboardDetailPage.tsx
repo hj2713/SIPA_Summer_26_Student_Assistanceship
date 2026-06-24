@@ -389,6 +389,7 @@ export function DashboardDetailPage() {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [linkingDocs, setLinkingDocs] = useState(false);
   const [regeneratingSchema, setRegeneratingSchema] = useState(false);
+  const [retryingFailed, setRetryingFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Benchmark Comparison States
@@ -1060,6 +1061,8 @@ export function DashboardDetailPage() {
 
   // Batch Retry Failed
   const handleRetryFailed = async () => {
+    if (retryingFailed) return;
+    setRetryingFailed(true);
     try {
       const failedDocIds = docs.filter((doc) => doc.status === "failed").map((doc) => doc.document_id);
       const res = isWorkflowDashboard && campaign?.workflow_id
@@ -1079,6 +1082,8 @@ export function DashboardDetailPage() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to enqueue retry");
+    } finally {
+      setRetryingFailed(false);
     }
   };
 
@@ -1594,8 +1599,19 @@ export function DashboardDetailPage() {
 
             <div className="flex items-center gap-2">
               {failed > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleRetryFailed} className="h-7 px-2.5 text-xs gap-1 shadow-sm">
-                  <RefreshCw size={11} /> Retry {failed} Failed
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleRetryFailed} 
+                  disabled={retryingFailed || pending > 0 || processing > 0} 
+                  className="h-7 px-2.5 text-xs gap-1 shadow-sm"
+                >
+                  {retryingFailed || pending > 0 || processing > 0 ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={11} />
+                  )}
+                  {retryingFailed || pending > 0 || processing > 0 ? "Retrying..." : `Retry ${failed} Failed`}
                 </Button>
               )}
               {polling && (

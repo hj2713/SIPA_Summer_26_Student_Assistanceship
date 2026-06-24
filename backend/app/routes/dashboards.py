@@ -5,8 +5,9 @@ from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends, Query
 
 from app.core.deps import CurrentUserDep, get_workspace_id
-from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, DashboardDocumentPage, DocumentCampaignMappingRequest, DocumentCampaignMappingRow, CampaignStatusSummary, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload
+from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, DashboardDocumentPage, DocumentCampaignMappingRequest, DocumentCampaignMappingRow, CampaignStatusSummary, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload, BenchmarkComparisonSummary
 from app.services import campaign_service
+from app.services.benchmark_evaluation_service import benchmark_evaluation_service
 from app.services.coding_service import generate_schema_and_description, enqueue_sequential_coding
 from app.core.client import get_user_client
 from app.core.constants import MAX_FILE_SIZE_BYTES
@@ -125,6 +126,12 @@ def list_campaign_documents_page(
 def get_campaign_status_summary(id: str, current_user: CurrentUserDep):
     """Return lightweight aggregate job counts for polling without loading document rows."""
     return campaign_service.get_campaign_status_summary(id)
+
+
+@router.get("/{id}/benchmark/professor", response_model=BenchmarkComparisonSummary)
+def compare_professor_benchmark(id: str, current_user: CurrentUserDep):
+    """Compare dashboard outputs against the project professor benchmark CSV."""
+    return benchmark_evaluation_service.compare_professor_benchmark(id)
 
 
 class BulkDeleteDocumentsRequest(BaseModel):

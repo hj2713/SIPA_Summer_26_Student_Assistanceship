@@ -1,8 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-06-24 14:24:45  
-> Total memories: **6**  
-> Breakdown: decision: 6
+> Generated: 2026-06-24 14:36:45  
+> Total memories: **8**  
+> Breakdown: decision: 8
 
 ---
 
@@ -26,6 +26,12 @@
 
 *Architectural choices, approach selections, and their rationale.*
 
+### Added upload and link click-locking states and but...
+
+Added upload and link click-locking states and button spinners to prevent duplicate submits in campaign dashboard
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:36:44*
+
 ### Optimized campaign document lists page loading spe...
 
 Optimized campaign document lists page loading speed by omitting workflow_trace and workflow_context columns, loading them lazily from a new backend trace endpoint instead
@@ -37,6 +43,12 @@ Optimized campaign document lists page loading speed by omitting workflow_trace 
 Restructured AI analysis configure node into a 3-step inputs-instructions-outputs flow and added validation rules listing display in workflow side panel
 
 *Confidence: 1.0 | Status: active | Created: 2026-06-24T05:54:44*
+
+### Optimized campaign dashboard polling frequency to ...
+
+Optimized campaign dashboard polling frequency to 5 seconds and progressive row loading inside doUploadFiles to update document processing state in real time
+
+*Confidence: 1.0 | Status: active | Created: 2026-06-24T18:36:44*
 
 ### Capped Workflow Trace modal height to min(height, ...
 

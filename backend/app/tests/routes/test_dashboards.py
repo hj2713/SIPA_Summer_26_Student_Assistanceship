@@ -126,6 +126,57 @@ def test_paginated_documents_and_joined_campaign_mapping(client, auth_headers, c
     assert {row["document_id"] for row in response.json()} == set(document_ids[:2])
     assert all(row["campaign_id"] == dashboard_id for row in response.json())
 
+
+def test_professor_benchmark_comparison_reports_rank_metrics(client, auth_headers, clean_db):
+    dashboard_id = "benchmark-dashboard"
+    rows = [
+        (
+            "benchmark-doc-1",
+            "PL83-577_1954_SEC.txt",
+            {"delegate_law": False, "discretion_rank": 0},
+        ),
+        (
+            "benchmark-doc-2",
+            "PL90-321_1968_ConsumerCreditProtectionAct.txt",
+            {"delegate_law": True, "discretion_rank": 3, "discretion_rationale": "Model saw broad authority."},
+        ),
+    ]
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, dashboard_type) VALUES (?, 'QA', 'Benchmark', '', '', '[]', 'workflow');",
+            (dashboard_id,),
+        )
+        for doc_id, filename, coded_values in rows:
+            conn.execute(
+                """
+                INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
+                VALUES (?, ?, 'QA', ?, ?, 10, 'text/plain', 'completed', '{}');
+                """,
+                (doc_id, TEST_USER_ID, filename, f"/tmp/{filename}"),
+            )
+            conn.execute(
+                """
+                INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values, workflow_context)
+                VALUES (?, ?, 'completed', ?, '{}');
+                """,
+                (dashboard_id, doc_id, json.dumps(coded_values)),
+            )
+        conn.commit()
+
+    response = client.get(f"/api/dashboards/{dashboard_id}/benchmark/professor", headers=auth_headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["matched_rows"] == 2
+    assert data["rank_total"] == 2
+    assert data["exact_rank_matches"] == 1
+    assert data["within_one_rank_matches"] == 1
+    assert data["mean_absolute_error"] == 1
+    assert data["confusion_matrix"]["0"]["0"] == 1
+    assert data["confusion_matrix"]["1"]["3"] == 1
+    assert data["mismatches"][0]["likely_mismatch_reason"] == "model_over_ranking"
+    assert "CQ summaries" in data["source_warning"]
+
 def test_link_campaign_documents_and_override_cell(client, auth_headers, clean_db):
     # 1. Create campaign and document records
     db_id = "test-db-override"

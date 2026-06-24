@@ -46,3 +46,13 @@ Moved workflow starters toward an n8n-style model where reusable templates are D
 
 Follow-Up:
 Add a dedicated template editor screen if researchers need to edit templates directly rather than editing copied workflow drafts.
+
+## 2026-06-24 - Professor Benchmark Calibration Panel
+
+Status: Completed
+
+Summary:
+Added a first benchmark-calibration layer for workflow/campaign result dashboards. The backend now compares dashboard rows against the professor-provided CQ-summary benchmark CSV by filename and reports DelegateLaw accuracy, exact Discretion Rank accuracy, within-1 rank accuracy, mean absolute error, a 0-4 confusion matrix, and mismatch rows with likely failure reasons. Workflow dashboards now have a “Professor Benchmark” button that shows metrics, source-set warnings, and a mismatch table linked to each row’s workflow trace.
+
+Follow-Up:
+Use summary/major-provisions inputs for benchmark runs. Full statutory text runs should be labeled exploratory and should not be treated as direct failures against this benchmark.

@@ -91,6 +91,54 @@ class CampaignStatusSummary(BaseModel):
     completed: int = 0
     failed: int = 0
 
+
+class BenchmarkMismatchRow(BaseModel):
+    document_id: str
+    filename: str
+    split: str
+    expected_delegate_law: Optional[bool] = None
+    predicted_delegate_law: Optional[bool] = None
+    expected_discretion_rank: Optional[int] = None
+    predicted_discretion_rank: Optional[int] = None
+    rank_difference: Optional[int] = None
+    exact_rank_match: bool = False
+    within_one_rank: bool = False
+    model_rationale: Optional[str] = None
+    likely_mismatch_reason: str
+
+
+class BenchmarkSplitMetrics(BaseModel):
+    matched_rows: int = 0
+    rank_total: int = 0
+    exact_rank_matches: int = 0
+    exact_rank_accuracy: Optional[float] = None
+    within_one_rank_matches: int = 0
+    within_one_rank_accuracy: Optional[float] = None
+    mean_absolute_error: Optional[float] = None
+
+
+class BenchmarkComparisonSummary(BaseModel):
+    benchmark_name: str
+    benchmark_rows: int
+    dashboard_rows: int
+    matched_rows: int
+    missing_dashboard_rows: int
+    source_set: str
+    source_alignment: str
+    source_warning: str
+    delegate_total: int
+    delegate_matches: int
+    delegate_accuracy: Optional[float] = None
+    rank_total: int
+    exact_rank_matches: int
+    exact_rank_accuracy: Optional[float] = None
+    within_one_rank_matches: int
+    within_one_rank_accuracy: Optional[float] = None
+    mean_absolute_error: Optional[float] = None
+    split_metrics: Dict[str, BenchmarkSplitMetrics] = Field(default_factory=dict)
+    confusion_matrix: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+    mismatches: List[BenchmarkMismatchRow] = Field(default_factory=list)
+
 class DashboardUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None

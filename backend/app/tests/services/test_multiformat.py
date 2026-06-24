@@ -3,11 +3,13 @@
 import json
 from unittest.mock import MagicMock, patch
 import pytest
+from app.core.config import settings
 from app.services.ingestion_service import extract_text, process_document_background
 
 
 @patch("docling.document_converter.DocumentConverter")
-def test_extract_text_pdf(mock_converter_cls):
+def test_extract_text_pdf_with_docling_enabled(mock_converter_cls, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_DOCLING_EXTRACTION", True)
     mock_converter = MagicMock()
     mock_result = MagicMock()
     mock_result.document.export_to_markdown.return_value = "This is a PDF mock content."
@@ -21,7 +23,8 @@ def test_extract_text_pdf(mock_converter_cls):
 
 
 @patch("docling.document_converter.DocumentConverter")
-def test_extract_text_docx(mock_converter_cls):
+def test_extract_text_docx_with_docling_enabled(mock_converter_cls, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_DOCLING_EXTRACTION", True)
     mock_converter = MagicMock()
     mock_result = MagicMock()
     mock_result.document.export_to_markdown.return_value = "This is a DOCX mock content."
@@ -44,12 +47,13 @@ def test_extract_text_markdown(mock_converter_cls):
     
     content = b"Markdown bytes"
     result = extract_text(content, "text/markdown", "test.md")
-    assert result == "This is a Markdown mock content."
-    mock_converter.convert.assert_called_once()
+    assert result == "Markdown bytes"
+    mock_converter.convert.assert_not_called()
 
 
 @patch("docling.document_converter.DocumentConverter")
-def test_extract_text_empty_fails(mock_converter_cls):
+def test_extract_text_empty_fails_with_docling_enabled(mock_converter_cls, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_DOCLING_EXTRACTION", True)
     mock_converter = MagicMock()
     mock_result = MagicMock()
     mock_result.document.export_to_markdown.return_value = ""
@@ -60,6 +64,12 @@ def test_extract_text_empty_fails(mock_converter_cls):
     with pytest.raises(ValueError) as excinfo:
         extract_text(content, "application/pdf", "test.pdf")
     assert "Docling extracted no text" in str(excinfo.value)
+
+
+def test_extract_text_pdf_disabled_fails_without_importing_docling():
+    with pytest.raises(ValueError) as excinfo:
+        extract_text(b"PDF bytes", "application/pdf", "test.pdf")
+    assert "ENABLE_DOCLING_EXTRACTION=true" in str(excinfo.value)
 
 
 def test_cascade_delete_chunks():

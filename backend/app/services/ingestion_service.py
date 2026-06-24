@@ -16,6 +16,7 @@ from app.services.document_service import document_service as default_document_s
 from app.services.embedding import get_embedding_service, EmbeddingService
 from app.core.database import get_db_conn
 from app.core.constants import MIME_TO_EXT
+from app.core.config import settings
 from app.core.prompts import METADATA_EXTRACTION_SYSTEM_PROMPT
 from app.core.request_context import set_current_user_id
 from app.core.vectors import serialize_embedding
@@ -141,28 +142,41 @@ class IngestionService:
         """Compute SHA-256 hex checksum of raw content bytes."""
         return hashlib.sha256(content).hexdigest()
 
+    def _decode_text_content(self, content: bytes, filename: str) -> str:
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            text = content.decode("latin-1", errors="replace")
+
+        if not text or not text.strip():
+            raise ValueError(f"Extracted plain text from '{filename}' is empty.")
+        return text
+
     def extract_text(self, content: bytes, content_type: str, filename: str = "document") -> str:
-        """Extract plain text from document bytes using docling."""
+        """Extract text from document bytes.
+
+        Lightweight text-like formats intentionally bypass Docling so low-memory
+        deployments can run without the optional Docling dependency installed.
+        Set ENABLE_DOCLING_EXTRACTION=true to re-enable PDF/DOCX extraction.
+        """
+        ext = (MIME_TO_EXT.get(content_type) or Path(filename).suffix or ".txt").lower()
+
+        if ext in {".txt", ".md", ".markdown", ".html", ".htm"}:
+            logger.info("Extracting text via lightweight decoder for content_type=%s filename=%s", content_type, filename)
+            return self._decode_text_content(content, filename)
+
+        if not settings.ENABLE_DOCLING_EXTRACTION:
+            raise ValueError(
+                f"Extraction for '{ext}' files is disabled on this deployment. "
+                "Upload .txt, .md, or .html files, or set ENABLE_DOCLING_EXTRACTION=true to enable PDF/DOCX extraction."
+            )
+
         from docling.document_converter import DocumentConverter, PdfFormatOption  # type: ignore
         from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions  # type: ignore
         from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore
         from docling.datamodel.base_models import InputFormat  # type: ignore
 
         logger.info("Extracting text via docling for content_type=%s filename=%s", content_type, filename)
-
-        # Determine extension
-        ext = (MIME_TO_EXT.get(content_type) or Path(filename).suffix or ".txt").lower()
-
-        # Plain text optimization
-        if ext == ".txt":
-            try:
-                text = content.decode("utf-8")
-            except UnicodeDecodeError:
-                text = content.decode("latin-1", errors="replace")
-            
-            if not text or not text.strip():
-                raise ValueError(f"Extracted plain text from '{filename}' is empty.")
-            return text
 
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             tmp.write(content)

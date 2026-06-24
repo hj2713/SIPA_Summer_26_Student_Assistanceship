@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     RERANK_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     RERANK_TOP_N: int = 5
 
+    # Document extraction
+    # Keep false on low-memory/free-tier deployments. Plain text, Markdown, and
+    # HTML are decoded without Docling; PDF/DOCX require this to be enabled.
+    ENABLE_DOCLING_EXTRACTION: bool = False
+
     @property
     def cors_origins_list(self) -> list[str]:
         origins = []
@@ -125,6 +130,11 @@ class Settings(BaseSettings):
                 "Reranking enabled. Model: %s, Top-N: %d. "
                 "Ensure sentence-transformers is installed.",
                 self.RERANK_MODEL, self.RERANK_TOP_N,
+            )
+        if not self.ENABLE_DOCLING_EXTRACTION:
+            logger.info(
+                "Docling extraction is disabled. Text/Markdown/HTML uploads are supported; "
+                "PDF/DOCX extraction requires ENABLE_DOCLING_EXTRACTION=true."
             )
 
 

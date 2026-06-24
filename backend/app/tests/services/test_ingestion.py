@@ -43,7 +43,7 @@ def test_extract_text_markdown(mock_converter_cls):
     result = extract_text(content, "text/markdown")
     assert "# Header" in result
     assert "Some **bold** markdown content." in result
-    mock_converter.convert.assert_called_once()
+    mock_converter.convert.assert_not_called()
 
 
 @patch("docling.document_converter.DocumentConverter")
@@ -58,7 +58,7 @@ def test_extract_text_html(mock_converter_cls):
     result = extract_text(content, "text/html")
     assert "Hello World" in result
     assert "Welcome to RAG." in result
-    mock_converter.convert.assert_called_once()
+    mock_converter.convert.assert_not_called()
 
 
 @patch("docling.document_converter.DocumentConverter")
@@ -72,7 +72,7 @@ def test_extract_text_unsupported(mock_converter_cls):
     content = b"\xff\xfe\xfd\xfc"
     with pytest.raises(ValueError) as excinfo:
         extract_text(content, "application/pdf")
-    assert "Docling extracted no text" in str(excinfo.value)
+    assert "ENABLE_DOCLING_EXTRACTION=true" in str(excinfo.value)
 
 
 def test_chunk_text_empty():

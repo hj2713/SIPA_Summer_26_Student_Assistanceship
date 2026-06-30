@@ -577,6 +577,7 @@ class CampaignService:
             if not campaign_row:
                 raise HTTPException(status_code=404, detail="Campaign not found.")
             campaign_prompt = campaign_row["prompt"]
+            model_name = campaign_row.get("model")
             try:
                 schema = json.loads(campaign_row["schema"]) if isinstance(campaign_row["schema"], str) else (campaign_row["schema"] or [])
             except Exception:
@@ -655,7 +656,8 @@ class CampaignService:
         )
 
         # 6. Execute LLM Call
-        llm = get_llm()
+        from app.llm import get_llm_for_model
+        llm = get_llm_for_model(model_name)
         try:
             parsed = await llm.parse_structured(
                 [
@@ -728,6 +730,7 @@ class CampaignService:
             if not campaign_row:
                 raise HTTPException(status_code=404, detail="Campaign not found.")
             campaign_prompt = campaign_row["prompt"]
+            model_name = campaign_row.get("model")
             try:
                 schema = json.loads(campaign_row["schema"]) if isinstance(campaign_row["schema"], str) else (campaign_row["schema"] or [])
             except Exception:
@@ -791,7 +794,8 @@ class CampaignService:
             feedback_prompt=feedback_prompt,
             campaign_prompt=campaign_prompt,
             col_def=col_def,
-            doc_rows=doc_rows
+            doc_rows=doc_rows,
+            model_name=model_name
         )
 
         return self.get_campaign(id)
@@ -803,12 +807,13 @@ class CampaignService:
         feedback_prompt: str,
         campaign_prompt: str,
         col_def: dict,
-        doc_rows: list
+        doc_rows: list,
+        model_name: Optional[str] = None
     ) -> None:
         import datetime
         from pydantic import create_model, Field
         from typing import Optional
-        from app.llm.registry import get_llm
+        from app.llm import get_llm_for_model
         from app.llm.types import LLMMessage
 
         # Process each document sequentially in background
@@ -891,7 +896,7 @@ class CampaignService:
                         total_steps=7
                     )
 
-                llm = get_llm()
+                llm = get_llm_for_model(model_name)
                 parsed = await llm.parse_structured(
                     [
                         LLMMessage(role="system", content=system_instruction),
@@ -1171,6 +1176,7 @@ class CampaignService:
             if not campaign_row:
                 raise HTTPException(status_code=404, detail="Campaign not found.")
             campaign_prompt = campaign_row["prompt"]
+            model_name = campaign_row.get("model")
             try:
                 schema = json.loads(campaign_row["schema"]) if isinstance(campaign_row["schema"], str) else (campaign_row["schema"] or [])
             except Exception:
@@ -1242,7 +1248,8 @@ class CampaignService:
             f"=== DOCUMENT CONTENT ===\n{doc_text}"
         )
 
-        llm = get_llm()
+        from app.llm import get_llm_for_model
+        llm = get_llm_for_model(model_name)
         try:
             parsed = await llm.parse_structured(
                 [
@@ -1311,7 +1318,7 @@ class CampaignService:
     async def regenerate_campaign_schema(self, id: str) -> DashboardRow:
         """Regenerate campaign schema by running the LLM prompt extraction again."""
         campaign = self.get_campaign(id)
-        generated = await self._coding_service.generate_schema_and_description(campaign.prompt)
+        generated = await self._coding_service.generate_schema_and_description(campaign.prompt, model_name=campaign.model)
         schema_fields = generated.get("schema", [])
         desc = generated.get("description", campaign.description)
 

@@ -12,13 +12,14 @@ from app.core.config import settings
 from app.core.database import get_db_conn
 
 
-SUPPORTED_LLM_PROVIDERS = {"openai", "openrouter", "gemini"}
+SUPPORTED_LLM_PROVIDERS = {"openai", "openrouter", "gemini", "anthropic"}
 
 
 DEFAULT_MODEL_BY_PROVIDER = {
     "openai": settings.OPENAI_MODEL,
     "openrouter": settings.OPEN_ROUTER_MODEL_NAME,
     "gemini": settings.GEMINI_MODEL,
+    "anthropic": settings.ANTHROPIC_MODEL,
 }
 
 

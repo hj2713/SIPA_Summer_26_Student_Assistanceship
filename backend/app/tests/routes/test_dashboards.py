@@ -55,6 +55,31 @@ def test_create_campaign_happy_path(client, auth_headers, clean_db):
         assert row["name"] == "Discretion Coding"
         assert "userdefinedcol" in row["schema"]
 
+def test_create_campaign_with_model(client, auth_headers, clean_db):
+    mock_schema = {
+        "description": "An agency discretion coding campaign.",
+        "schema": [
+            {"name": "discretion_score", "type": "number", "description": "Discretion score"}
+        ]
+    }
+    
+    with patch("app.routes.dashboards.generate_schema_and_description", return_value=mock_schema) as mock_gen:
+        response = client.post(
+            "/api/dashboards",
+            json={
+                "name": "Discretion Coding with Model",
+                "prompt": "Test system prompt for coding discretion.",
+                "model": "gpt-4o"
+            },
+            headers=auth_headers
+        )
+        
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "Discretion Coding with Model"
+    assert data["model"] == "gpt-4o"
+    mock_gen.assert_called_once_with("Test system prompt for coding discretion.", None, "gpt-4o")
+
 def test_list_and_get_campaigns(client, auth_headers, clean_db):
     # Insert a dashboard manually
     db_id = "test-dashboard-123"

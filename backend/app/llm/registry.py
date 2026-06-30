@@ -185,6 +185,13 @@ def get_llm_for_model(model_name: str | None = None) -> LLMService:
             model=model_name,
         )
         return LLMService(provider)
+    elif model_lower.startswith("claude-"):
+        from app.llm.providers.anthropic_provider import AnthropicProvider
+        provider = AnthropicProvider(
+            api_key=settings.ANTHROPIC_API_KEY,
+            model=model_name,
+        )
+        return LLMService(provider)
     elif "/" in model_name or (settings.OPEN_ROUTER_API_KEY and not settings.OPENAI_API_KEY):
         from app.llm.providers.openai_provider import OpenAIProvider
         provider = OpenAIProvider(
@@ -277,9 +284,17 @@ def _build_user_llm(
         )
         return LLMService(provider)
 
+    if provider_name == "anthropic":
+        from app.llm.providers.anthropic_provider import AnthropicProvider
+        provider = AnthropicProvider(
+            api_key=credentials.api_key,
+            model=model,
+        )
+        return LLMService(provider)
+
     raise ValueError(
         f"Unknown user LLM provider={provider_name!r}. "
-        "Supported: 'openai', 'openrouter', 'gemini'."
+        "Supported: 'openai', 'openrouter', 'gemini', 'anthropic'."
     )
 
 
@@ -318,10 +333,17 @@ def _build_llm() -> LLMService:
             name="openai",
         )
         logger.info("LLMService initialized: openai (model=%s)", provider.model)
+    elif provider_name in ("auto", "anthropic") and settings.ANTHROPIC_API_KEY:
+        from app.llm.providers.anthropic_provider import AnthropicProvider
+        provider = AnthropicProvider(
+            api_key=settings.ANTHROPIC_API_KEY,
+            model=settings.ANTHROPIC_MODEL,
+        )
+        logger.info("LLMService initialized: anthropic (model=%s)", provider.model)
     else:
         raise ValueError(
             f"Unknown LLM_PROVIDER={provider_name!r}. "
-            "Supported: 'auto', 'openai', 'openrouter', 'gemini'."
+            "Supported: 'auto', 'openai', 'openrouter', 'gemini', 'anthropic'."
         )
 
     return LLMService(provider)

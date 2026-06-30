@@ -332,9 +332,10 @@ class CodingService:
             coded_values.update(parsed.model_dump())
         return coded_values
 
-    async def generate_schema_and_description(self, prompt_text: str, user_columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def generate_schema_and_description(self, prompt_text: str, user_columns: Optional[List[str]] = None, model_name: Optional[str] = None) -> Dict[str, Any]:
         """Analyze the campaign prompt using the LLM to generate description and schema."""
-        llm = get_llm()
+        from app.llm import get_llm_for_model
+        llm = get_llm_for_model(model_name)
         logger.info("Generating campaign schema using provider=%s model=%s", llm.provider_name, llm.model)
 
         try:
@@ -751,8 +752,8 @@ def get_document_text(doc_id: str) -> str:
     return coding_service.get_document_text(doc_id)
 
 
-async def generate_schema_and_description(prompt_text: str, user_columns: Optional[List[str]] = None) -> Dict[str, Any]:
-    return await coding_service.generate_schema_and_description(prompt_text, user_columns)
+async def generate_schema_and_description(prompt_text: str, user_columns: Optional[List[str]] = None, model_name: Optional[str] = None) -> Dict[str, Any]:
+    return await coding_service.generate_schema_and_description(prompt_text, user_columns, model_name)
 
 
 def enqueue_sequential_coding(dashboard_id: str, document_ids: List[str], user_id: str) -> None:

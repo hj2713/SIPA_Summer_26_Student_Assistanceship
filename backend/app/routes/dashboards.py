@@ -33,7 +33,7 @@ async def create_campaign(
         )
 
     # Calling the imported functional delegate allows pytest patches to intercept it
-    generated = await generate_schema_and_description(payload.prompt, payload.user_columns)
+    generated = await generate_schema_and_description(payload.prompt, payload.user_columns, payload.model)
     return campaign_service.create_campaign_with_schema(payload, generated, workspace_id)
 
 

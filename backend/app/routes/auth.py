@@ -174,6 +174,146 @@ def save_llm_credentials(payload: LLMCredentialsUpdate, current_user: CurrentUse
             detail=str(exc),
         ) from exc
 
+
+class VerifyLLMCredentialsPayload(BaseModel):
+    provider: str
+    api_key: str
+    base_url: str | None = None
+
+
+class VerifyLLMCredentialsResponse(BaseModel):
+    success: bool
+    models: list[str]
+    error: str | None = None
+
+
+@router.post("/llm-credentials/verify", response_model=VerifyLLMCredentialsResponse)
+async def verify_llm_credentials(
+    payload: VerifyLLMCredentialsPayload,
+    current_user: CurrentUserDep
+):
+    """Verify LLM provider credentials by attempting a basic API call, then returning models."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    provider = payload.provider.strip().lower()
+    api_key = payload.api_key.strip()
+    base_url = (payload.base_url or "").strip() or None
+
+    if not api_key:
+        return VerifyLLMCredentialsResponse(success=False, models=[], error="API key cannot be empty")
+
+    models = []
+    try:
+        if provider == "google":
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=api_key)
+            # Test call
+            await client.aio.models.generate_content(
+                model="gemini-1.5-flash",
+                contents="Hello",
+                config=types.GenerateContentConfig(max_output_tokens=1)
+            )
+            # List models
+            try:
+                res = client.models.list()
+                models = [m.name.replace("models/", "") for m in res if "gemini" in m.name]
+            except Exception:
+                models = [
+                    "gemini-2.5-flash",
+                    "gemini-2.5-pro",
+                    "gemini-1.5-flash",
+                    "gemini-1.5-pro",
+                    "gemini-3.1-flash-lite-preview"
+                ]
+
+        elif provider == "anthropic":
+            import anthropic
+            client = anthropic.AsyncAnthropic(api_key=api_key)
+            # Test call
+            await client.messages.create(
+                model="claude-3-5-haiku-latest",
+                max_tokens=1,
+                messages=[{"role": "user", "content": "Ping"}]
+            )
+            models = [
+                "claude-3-5-sonnet-latest",
+                "claude-3-5-sonnet-20241022",
+                "claude-3-5-haiku-latest",
+                "claude-3-5-haiku-20241022",
+                "claude-3-opus-latest",
+                "claude-3-opus-20240229",
+                "claude-3-sonnet-20240229",
+                "claude-3-haiku-20240307",
+            ]
+
+        elif provider == "openai":
+            import openai
+            client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+            # Test call
+            await client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=1,
+                messages=[{"role": "user", "content": "Ping"}]
+            )
+            # List models
+            try:
+                res = await client.models.list()
+                models = [m.id for m in res.data if any(x in m.id for x in ["gpt-", "o1-", "o3-"])]
+            except Exception:
+                pass
+            if not models:
+                models = ["gpt-4o", "gpt-4o-mini", "o1-preview", "o1-mini", "gpt-4-turbo"]
+
+        elif provider in ("openrouter", "deepseek", "kimi"):
+            import httpx
+            # Verify key using OpenRouter auth check
+            async with httpx.AsyncClient() as http_client:
+                auth_res = await http_client.get(
+                    "https://openrouter.ai/api/v1/auth/key",
+                    headers={"Authorization": f"Bearer {api_key}"}
+                )
+                if auth_res.status_code != 200:
+                    return VerifyLLMCredentialsResponse(
+                        success=False,
+                        models=[],
+                        error=f"OpenRouter API key verification failed: {auth_res.text}"
+                    )
+                
+                # Fetch all models
+                models_res = await http_client.get("https://openrouter.ai/api/v1/models")
+                if models_res.status_code != 200:
+                    return VerifyLLMCredentialsResponse(
+                        success=False,
+                        models=[],
+                        error="Failed to fetch models list from OpenRouter"
+                    )
+                
+                all_models = [m["id"] for m in models_res.json()["data"]]
+                
+                if provider == "deepseek":
+                    models = [m for m in all_models if "deepseek" in m.lower()]
+                elif provider == "kimi":
+                    models = [m for m in all_models if "kimi" in m.lower() or "moonshot" in m.lower()]
+                else:
+                    models = all_models
+        else:
+            return VerifyLLMCredentialsResponse(
+                success=False,
+                models=[],
+                error=f"Unsupported provider: '{provider}'"
+            )
+
+        # Deduplicate and sort models
+        models = sorted(list(set(models)))
+        return VerifyLLMCredentialsResponse(success=True, models=models)
+
+    except Exception as e:
+        logger.exception("LLM Key verification failed")
+        return VerifyLLMCredentialsResponse(success=False, models=[], error=str(e))
+
+
 @router.put("/users/{user_id}/permissions", response_model=UserResponse)
 def update_permissions(user_id: str, payload: PermissionsUpdate, current_user: CurrentUserDep):
     """Toggle a user's addition/deletion capabilities. Restricted to admins."""

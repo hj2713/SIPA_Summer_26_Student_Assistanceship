@@ -33,6 +33,7 @@ export function DashboardListPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
   const [columnsList, setColumnsList] = useState<{ name: string; type: string; description: string; options_raw?: string; prompt?: string; depends_on?: string[] }[]>([]);
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
@@ -134,6 +135,7 @@ export function DashboardListPage() {
         body: JSON.stringify({
           name: name.trim(),
           prompt: prompt.trim(),
+          model: selectedModel,
           user_columns: columnsList.length > 0 ? columnsList.map(c => ({
             name: c.name.trim(),
             type: c.type,
@@ -155,6 +157,7 @@ export function DashboardListPage() {
       setShowCreateModal(false);
       setName("");
       setPrompt("");
+      setSelectedModel("gemini-3.1-flash-lite-preview");
       setColumnsList([]);
       
       // Redirect to campaign detail page
@@ -316,6 +319,24 @@ export function DashboardListPage() {
                   onChange={(e) => setName(e.target.value)}
                   disabled={creating}
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Coding Model
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  disabled={creating}
+                  className="w-full flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="gpt-4o">GPT-4o</option>
+                </select>
               </div>
 
               <div className="space-y-1.5">

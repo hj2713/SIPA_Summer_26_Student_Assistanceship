@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     OPENAI_VECTOR_STORE_ID: str = ""  # optional — enables file_search tool
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-latest"
 
     # Tracing provider selection
     # 'auto' uses LangSmith when LANGSMITH_TRACING + LANGSMITH_API_KEY are set,

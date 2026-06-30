@@ -37,17 +37,27 @@ interface UsageStatsResponse {
 }
 
 interface LLMCredentialsSettings {
-  provider: "openai" | "openrouter" | "gemini";
+  provider: "openai" | "openrouter" | "gemini" | "anthropic";
   model: string;
   base_url: string;
   has_api_key: boolean;
 }
 
 const DEFAULT_MODEL_BY_PROVIDER: Record<LLMCredentialsSettings["provider"], string> = {
-  openai: "gpt-4.1-mini",
+  openai: "gpt-4o-mini",
   openrouter: "openai/gpt-4o-mini",
   gemini: "gemini-3.1-flash-lite-preview",
+  anthropic: "claude-3-5-sonnet-latest",
 };
+
+const UI_PROVIDER_DEFAULTS = {
+  google: { provider: "gemini", model: "gemini-3.1-flash-lite-preview", base_url: "" },
+  anthropic: { provider: "anthropic", model: "claude-3-5-sonnet-latest", base_url: "" },
+  openai: { provider: "openai", model: "gpt-4o-mini", base_url: "" },
+  openrouter: { provider: "openrouter", model: "openai/gpt-4o-mini", base_url: "https://openrouter.ai/api/v1" },
+  deepseek: { provider: "openrouter", model: "deepseek/deepseek-chat", base_url: "https://openrouter.ai/api/v1" },
+  kimi: { provider: "openrouter", model: "moonshotai/kimi-latest", base_url: "https://openrouter.ai/api/v1" },
+} as const;
 
 export function SettingsPage() {
   const { session } = useAuthContext();
@@ -65,6 +75,11 @@ export function SettingsPage() {
     has_api_key: false,
   });
   const [apiKeyInput, setApiKeyInput] = useState("");
+
+  const [uiProvider, setUiProvider] = useState<"google" | "anthropic" | "openai" | "openrouter" | "deepseek" | "kimi">("google");
+  const [verifiedModels, setVerifiedModels] = useState<string[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [useCustomModelInput, setUseCustomModelInput] = useState(false);
 
   const fetchStats = async () => {
     if (!jwt) return;
@@ -95,11 +110,84 @@ export function SettingsPage() {
       const data = await res.json();
       setCredentials(data);
       setApiKeyInput("");
+
+      // Map backend provider/model to UI option
+      if (data.provider === "gemini") {
+        setUiProvider("google");
+      } else if (data.provider === "anthropic") {
+        setUiProvider("anthropic");
+      } else if (data.provider === "openai") {
+        setUiProvider("openai");
+      } else if (data.provider === "openrouter") {
+        if (data.model.includes("deepseek")) {
+          setUiProvider("deepseek");
+        } else if (data.model.includes("kimi") || data.model.includes("moonshot")) {
+          setUiProvider("kimi");
+        } else {
+          setUiProvider("openrouter");
+        }
+      }
+      setVerifiedModels([]);
+      setUseCustomModelInput(false);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to load LLM credentials");
     } finally {
       setCredentialsLoading(false);
+    }
+  };
+
+  const handleUiProviderChange = (newUiProvider: "google" | "anthropic" | "openai" | "openrouter" | "deepseek" | "kimi") => {
+    setUiProvider(newUiProvider);
+    const defaults = UI_PROVIDER_DEFAULTS[newUiProvider];
+    setCredentials(prev => ({
+      ...prev,
+      provider: defaults.provider as any,
+      model: defaults.model,
+      base_url: defaults.base_url,
+    }));
+    setVerifiedModels([]);
+    setUseCustomModelInput(false);
+  };
+
+  const handleVerifyKey = async () => {
+    if (!jwt) return;
+    if (!apiKeyInput.trim()) {
+      toast.error("Please enter an API Key to verify.");
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          provider: uiProvider,
+          api_key: apiKeyInput.trim(),
+          base_url: uiProvider === "openai" ? (credentials.base_url || null) : null
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Key verification failed.");
+      }
+      setVerifiedModels(data.models);
+      if (data.models.length > 0) {
+        if (!data.models.includes(credentials.model)) {
+          setCredentials(prev => ({ ...prev, model: data.models[0] }));
+        }
+        toast.success(`Key verified! Loaded ${data.models.length} models.`);
+      } else {
+        toast.success("Key verified successfully!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to verify API key.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -216,52 +304,108 @@ export function SettingsPage() {
                   <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Provider
                     <select
-                      value={credentials.provider}
+                      value={uiProvider}
                       onChange={(event) => {
-                        const provider = event.target.value as LLMCredentialsSettings["provider"];
-                        setCredentials((prev) => ({
-                          ...prev,
-                          provider,
-                          model: DEFAULT_MODEL_BY_PROVIDER[provider],
-                          base_url: "",
-                        }));
+                        const val = event.target.value as any;
+                        handleUiProviderChange(val);
                       }}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 py-1 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     >
-                      <option value="gemini">Google Gemini</option>
+                      <option value="google">Google Gemini</option>
+                      <option value="anthropic">Anthropic / Claude</option>
                       <option value="openai">OpenAI</option>
-                      <option value="openrouter">OpenRouter</option>
+                      <option value="deepseek">Deepseek (via OpenRouter)</option>
+                      <option value="kimi">Kimi (via OpenRouter)</option>
+                      <option value="openrouter">OpenRouter (Custom / General)</option>
                     </select>
                   </label>
 
-                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Default Model
-                    <Input
-                      value={credentials.model}
-                      onChange={(event) => setCredentials((prev) => ({ ...prev, model: event.target.value }))}
-                      placeholder={DEFAULT_MODEL_BY_PROVIDER[credentials.provider]}
-                    />
-                  </label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block">
+                      Default Model
+                    </label>
+                    {verifiedModels.length > 0 && !useCustomModelInput ? (
+                      <div className="flex gap-2">
+                        <select
+                          value={credentials.model}
+                          onChange={(event) => setCredentials((prev) => ({ ...prev, model: event.target.value }))}
+                          className="h-8 flex-1 rounded-lg border border-input bg-background px-2.5 py-1 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                        >
+                          {verifiedModels.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setUseCustomModelInput(true)}
+                          className="text-[10px] uppercase font-bold"
+                        >
+                          Custom
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={credentials.model}
+                          onChange={(event) => setCredentials((prev) => ({ ...prev, model: event.target.value }))}
+                          placeholder={DEFAULT_MODEL_BY_PROVIDER[credentials.provider]}
+                          className="flex-1"
+                        />
+                        {verifiedModels.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setUseCustomModelInput(false)}
+                            className="text-[10px] uppercase font-bold"
+                          >
+                            List
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
-                    API Key
-                    <Input
-                      type="password"
-                      value={apiKeyInput}
-                      onChange={(event) => setApiKeyInput(event.target.value)}
-                      placeholder={credentials.has_api_key ? "Leave blank to keep existing key" : "Paste your provider API key"}
-                      autoComplete="off"
-                    />
-                  </label>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block">
+                      API Key
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={(event) => setApiKeyInput(event.target.value)}
+                        placeholder={credentials.has_api_key ? "Leave blank to keep existing key" : "Paste your provider API key"}
+                        autoComplete="off"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleVerifyKey}
+                        disabled={isVerifying || !apiKeyInput.trim()}
+                        className="gap-1.5 shrink-0"
+                      >
+                        {isVerifying && <Loader2 className="h-3 w-3 animate-spin" />}
+                        Verify & Load Models
+                      </Button>
+                    </div>
+                  </div>
 
-                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
-                    Base URL
-                    <Input
-                      value={credentials.base_url}
-                      onChange={(event) => setCredentials((prev) => ({ ...prev, base_url: event.target.value }))}
-                      placeholder={credentials.provider === "openrouter" ? "https://openrouter.ai/api/v1" : "Optional OpenAI-compatible endpoint"}
-                    />
-                  </label>
+                  {(uiProvider === "openai" || uiProvider === "openrouter") && (
+                    <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
+                      Base URL
+                      <Input
+                        value={credentials.base_url}
+                        onChange={(event) => setCredentials((prev) => ({ ...prev, base_url: event.target.value }))}
+                        placeholder={uiProvider === "openrouter" ? "https://openrouter.ai/api/v1" : "Optional OpenAI-compatible endpoint"}
+                      />
+                    </label>
+                  )}
 
                   <div className="md:col-span-2 flex justify-end">
                     <Button
@@ -271,7 +415,7 @@ export function SettingsPage() {
                       className="gap-2"
                     >
                       {credentialsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      Save
+                      Save Settings
                     </Button>
                   </div>
                 </div>

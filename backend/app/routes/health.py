@@ -12,71 +12,77 @@ async def health() -> dict:
 @router.get("/db-debug")
 async def db_debug():
     from app.core.config import settings
-    from app.core.database import get_db_conn
+    import psycopg
     
+    # Mask password in URL for display
+    masked_url = None
+    if settings.DATABASE_URL:
+        import re
+        masked_url = re.sub(r":[^:@/]+@", ":****@", settings.DATABASE_URL)
+        
     result = {
         "db_provider": settings.DB_PROVIDER,
         "database_url_configured": bool(settings.DATABASE_URL),
-        "database_url_prefix": settings.DATABASE_URL[:30] if settings.DATABASE_URL else None,
+        "database_url_masked": masked_url,
     }
     
     try:
-        with get_db_conn() as conn:
-            cursor = conn.cursor()
-            
-            # Check current user and RLS bypass
-            if settings.DB_PROVIDER == "postgres":
-                cursor.execute("SELECT current_user, session_user;")
+        if settings.DB_PROVIDER == "postgres":
+            print(f"Connecting to {masked_url} directly...")
+            conn = psycopg.connect(settings.DATABASE_URL)
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT current_user, session_user, current_database();")
                 u_info = cursor.fetchone()
-                # Handle both dict rows and tuple rows
-                if isinstance(u_info, dict):
-                    result["current_user"] = u_info["current_user"]
-                    result["session_user"] = u_info["session_user"]
-                else:
-                    result["current_user"] = u_info[0]
-                    result["session_user"] = u_info[1]
+                result["current_user"] = u_info[0]
+                result["session_user"] = u_info[1]
+                result["current_database"] = u_info[2]
                 
                 # Check RLS bypass
                 cursor.execute("SELECT rolbypassrls FROM pg_roles WHERE rolname = %s;", (result["current_user"],))
-                u_bypass = cursor.fetchone()
-                if isinstance(u_bypass, dict):
-                    result["rolbypassrls"] = u_bypass["rolbypassrls"]
-                else:
-                    result["rolbypassrls"] = u_bypass[0]
+                result["rolbypassrls"] = cursor.fetchone()[0]
                 
-                # Check policies in database
+                # Check tables and counts
+                cursor.execute("""
+                    SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, relowner::regrole::text
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'public' AND c.relkind = 'r';
+                """)
+                tables_info = cursor.fetchall()
+                tables = []
+                for t in tables_info:
+                    # Get row count
+                    cursor.execute(f"SELECT count(*) FROM public.{t[0]};")
+                    count = cursor.fetchone()[0]
+                    tables.append({
+                        "table": t[0],
+                        "rls_enabled": t[1],
+                        "force_rls": t[2],
+                        "owner": t[3],
+                        "row_count": count
+                    })
+                result["tables"] = tables
+                
+                # Check policies
                 cursor.execute("""
                     SELECT tablename, policyname, roles, cmd
                     FROM pg_policies
                     WHERE schemaname = 'public';
                 """)
-                rows = cursor.fetchall()
-                policies = []
-                for r in rows:
-                    if isinstance(r, dict):
-                        policies.append({"table": r["tablename"], "policy": r["policyname"], "roles": r["roles"], "cmd": r["cmd"]})
-                    else:
-                        policies.append({"table": r[0], "policy": r[1], "roles": r[2], "cmd": r[3]})
-                result["policies"] = policies
-            else:
-                result["sqlite_path"] = "sqlite database in use"
-                
-            # Try to fetch workspaces count
-            cursor.execute("SELECT count(*) FROM workspaces;")
-            w_count = cursor.fetchone()
-            result["workspaces_count"] = w_count["count"] if isinstance(w_count, dict) else w_count[0]
-            
-            # Try to fetch users count
-            cursor.execute("SELECT count(*) FROM users;")
-            u_count = cursor.fetchone()
-            result["users_count"] = u_count["count"] if isinstance(u_count, dict) else u_count[0]
-            
+                result["policies"] = [
+                    {"table": r[0], "policy": r[1], "roles": r[2], "cmd": r[3]}
+                    for r in cursor.fetchall()
+                ]
+            conn.close()
+        else:
+            result["sqlite_path"] = "sqlite database in use"
     except Exception as e:
         result["error"] = str(e)
         import traceback
         result["traceback"] = traceback.format_exc()
         
     return result
+
 
 
 @router.get("/")

@@ -1,88 +1,28 @@
-import json
 import logging
-import uuid
+import json
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Optional
+from fastapi import HTTPException, UploadFile
 
-from fastapi import HTTPException, UploadFile, status
-
-from app.core.constants import ALLOWED_EXTENSIONS, MAX_FILE_SIZE_BYTES
+from app.core.request_context import set_current_user_id
 from app.repositories import get_db_session
-from app.schemas.dashboard import DashboardDocumentRow, DashboardRow
-from app.schemas.document import DocumentStatus
+from app.schemas.dashboard import DashboardRow, DashboardDocumentRow, WorkflowSource
 from app.services.campaign_service import campaign_service
 from app.services.document_service import document_service
-from app.services.ingestion_service import ingestion_service, extract_text
-from app.services.workflow_service import workflow_service
-from app.workflows.executor import WorkflowExecutionError, workflow_executor
+from app.services.ingestion_service import extract_text
+from app.workflows.executor import workflow_executor, WorkflowExecutionError
 
 logger = logging.getLogger(__name__)
 
-WorkflowSource = Literal["draft", "published"]
+ALLOWED_EXTENSIONS = {"pdf", "txt", "docx", "html", "htm"}
+MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50MB
 
 
 class WorkflowDashboardService:
+    """Orchestrates document executions on published workflows."""
+
     def __init__(self, db_session_factory=get_db_session):
         self.db_session_factory = db_session_factory
-
-    def _definition_and_meta(
-        self,
-        workflow_id: str,
-        workspace_id: str,
-        source: WorkflowSource = "draft",
-        version: int | None = None,
-    ) -> tuple[dict[str, Any], dict[str, Any], str]:
-        if source == "published":
-            workflow = workflow_service.get(workflow_id, workspace_id)
-            selected_version = version or workflow.latest_version
-            if not selected_version:
-                raise HTTPException(status_code=400, detail="Publish this workflow before running a published workflow dashboard.")
-            version_row = workflow_service.get_version(workflow_id, selected_version, workspace_id)
-            return (
-                version_row.definition.model_dump(),
-                {
-                    "workflow_source": "published",
-                    "workflow_version": version_row.version,
-                    "workflow_revision": None,
-                },
-                workflow.name,
-            )
-        workflow = workflow_service.get(workflow_id, workspace_id)
-        return (
-            workflow.definition.model_dump(),
-            {
-                "workflow_source": "draft",
-                "workflow_version": None,
-                "workflow_revision": workflow.revision,
-            },
-            workflow.name,
-        )
-
-    def _schema_from_outputs(self, definition: dict[str, Any]) -> list[dict[str, Any]]:
-        fields = []
-        for output in definition.get("outputs") or []:
-            key = output.get("key") or str(output.get("source") or "").split(".")[-1]
-            if not key:
-                continue
-            fields.append({
-                "name": key,
-                "type": "string",
-                "description": f"Final workflow output from {output.get('source', key)}",
-                "workflow_source": output.get("source"),
-            })
-        if fields:
-            return fields
-        output_nodes = [node for node in definition.get("nodes") or [] if node.get("kind") == "output"]
-        for field in (output_nodes[-1].get("config", {}).get("fields") if output_nodes else []) or []:
-            if isinstance(field, dict):
-                key = field.get("key") or str(field.get("source") or "").split(".")[-1]
-                label = field.get("label") or key
-            else:
-                key = str(field).split(".")[-1]
-                label = key
-            if key:
-                fields.append({"name": key, "type": "string", "description": f"Final workflow output: {label}"})
-        return fields
 
     def get_or_create_dashboard(
         self,
@@ -92,214 +32,423 @@ class WorkflowDashboardService:
         source: WorkflowSource = "draft",
         version: int | None = None,
     ) -> DashboardRow:
-        definition, meta, workflow_name = self._definition_and_meta(workflow_id, workspace_id, source, version)
+        """Resolve a dashboard corresponding to a workflow's published version or draft."""
         with self.db_session_factory() as session:
-            for row in session.dashboards.list_by_workspace(workspace_id):
-                if (
-                    (row.get("dashboard_type") or "campaign") == "workflow"
-                    and row.get("workflow_id") == workflow_id
-                    and (row.get("workflow_source") or "draft") == meta["workflow_source"]
-                    and (row.get("workflow_version") or None) == meta["workflow_version"]
-                ):
-                    return campaign_service._dashboard_row(row)
+            if source == "published":
+                if version is None:
+                    raise HTTPException(status_code=400, detail="Version is required for published workflows.")
+                row = session.dashboards.get_for_workflow(workflow_id, "published", version)
+            else:
+                row = session.dashboards.get_for_workflow(workflow_id, "draft")
 
-            dashboard_id = str(uuid.uuid4())
-            schema = self._schema_from_outputs(definition)
-            row = session.dashboards.create(
-                dashboard_id,
-                workspace_id,
-                f"{workflow_name} Results",
-                f"Workflow results dashboard for {workflow_name}.",
-                "Workflow-backed dashboard. Final columns come from the workflow output node.",
-                json.dumps(schema),
-                model=None,
-            )
-            row = session.dashboards.update(
-                dashboard_id,
-                {
-                    "dashboard_type": "workflow",
-                    "workflow_id": workflow_id,
-                    "workflow_source": meta["workflow_source"],
-                    "workflow_version": meta["workflow_version"],
-                    "workflow_revision": meta["workflow_revision"],
-                    "workflow_definition_json": json.dumps(definition),
-                },
-            )
-        return campaign_service._dashboard_row(row, schema)
+            if row:
+                return campaign_service._dashboard_row(row)
 
-    def _create_text_document(self, name: str, source_text: str, user_id: str, workspace_id: str, replace_existing: bool = False) -> str:
-        filename = name.strip()
-        if not filename:
-            raise HTTPException(status_code=400, detail="Name is required for pasted-text workflow runs.")
-        if not Path(filename).suffix:
-            filename = f"{filename}.txt"
-        existing = document_service.get_document_by_name(None, workspace_id, filename)
-        if existing:
+            # Not found: create dashboard
+            workflow = session.coding_workflows.get(workflow_id)
+            if not workflow:
+                raise HTTPException(status_code=404, detail="Workflow not found.")
+
+            if source == "published":
+                wf_version = session.coding_workflows.get_version(workflow_id, version)
+                if not wf_version:
+                    raise HTTPException(status_code=404, detail=f"Workflow version {version} not found.")
+                definition = wf_version["definition"]
+                wf_revision = wf_version["revision"]
+                name = f"{workflow['name']} (v{version})"
+            else:
+                definition = workflow["definition"]
+                wf_revision = workflow["revision"]
+                name = f"{workflow['name']} (Draft)"
+
+            # Map workflow definition schema to dashboard fields
+            try:
+                def_dict = json.loads(definition) if isinstance(definition, str) else (definition or {})
+            except Exception:
+                def_dict = {}
+
+            nodes = def_dict.get("nodes") or []
+            schema_fields = []
+            seen = set()
+
+            # Output fields declared in variables nodes
+            for node in nodes:
+                if node.get("kind") == "output":
+                    config = node.get("config") or {}
+                    for field in config.get("outputs") or []:
+                        fname = field.get("key")
+                        if fname and fname not in seen:
+                            schema_fields.append({
+                                "name": fname,
+                                "type": field.get("type") or "string",
+                                "description": field.get("label") or f"Workflow Output: {fname}",
+                                "options": field.get("options") or None,
+                                "prompt": "",
+                                "depends_on": [],
+                                "workflow_source": f"{node['id']}.{fname}",
+                            })
+                            seen.add(fname)
+
+            # Create the dashboard row
+            dash_payload = {
+                "id": None,
+                "workspace_id": workspace_id,
+                "name": name,
+                "description": workflow["description"] or f"Dashboard running workflow {workflow['name']}",
+                "prompt": "Workflow execution",
+                "schema": json.dumps(schema_fields),
+                "model": workflow.get("model") or "gemini-3.1-flash-lite",
+                "dashboard_type": "workflow",
+                "workflow_id": workflow_id,
+                "workflow_source": source,
+                "workflow_version": version if source == "published" else None,
+                "workflow_revision": wf_revision,
+                "workflow_definition_json": json.dumps(def_dict),
+            }
+            new_id = session.dashboards.create(dash_payload)
+            new_row = session.dashboards.get_by_id(new_id)
+            return campaign_service._dashboard_row(new_row)
+
+    def _create_text_document(
+        self,
+        filename: str,
+        text: str,
+        user_id: str,
+        workspace_id: str,
+        replace_existing: bool = False,
+    ) -> str:
+        """Create doc and ingest text."""
+        with self.db_session_factory() as session:
             if replace_existing:
-                content = source_text.encode("utf-8")
-                content_hash = ingestion_service.calculate_hash(content)
-                document_service.update_document_metadata(
-                    None,
-                    str(existing.id),
-                    len(content),
-                    "text/plain",
-                    content_hash,
-                    status=DocumentStatus.completed,
-                    metadata={**(existing.metadata or {}), "source": "workflow_pasted_text"},
-                )
-                storage_path = document_service.storage_service.upload_file(user_id, str(existing.id), filename, content, "text/plain")
-                document_service.update_document_file_path(None, str(existing.id), storage_path)
-                self._replace_document_text(str(existing.id), user_id, workspace_id, source_text)
-            return str(existing.id)
-        content = source_text.encode("utf-8")
-        content_hash = ingestion_service.calculate_hash(content)
-        doc = document_service.create_document(
-            client=None,
-            user_id=user_id,
-            filename=filename,
-            file_path="",
-            file_size=len(content),
-            content_type="text/plain",
-            content_hash=content_hash,
-            metadata={"source": "workflow_pasted_text"},
-            workspace_id=workspace_id,
-        )
-        storage_path = document_service.storage_service.upload_file(user_id, str(doc.id), filename, content, "text/plain")
-        document_service.update_document_file_path(None, str(doc.id), storage_path)
-        self._replace_document_text(str(doc.id), user_id, workspace_id, source_text)
-        with self.db_session_factory() as session:
-            session.documents.update(str(doc.id), {"status": "completed"})
-        return str(doc.id)
+                existing = session.documents.get_by_filename(workspace_id, filename)
+                if existing:
+                    # Clear existing document chunks
+                    session.chunks.delete_chunks_by_document(existing["id"])
+                    # Re-ingest
+                    document_service.ingest_document_text(existing["id"], text)
+                    return existing["id"]
 
-    def _replace_document_text(self, document_id: str, user_id: str, workspace_id: str, source_text: str) -> None:
-        with self.db_session_factory() as session:
-            session.chunks.delete_by_document(document_id)
-            session.chunks.create_chunks([
-                {
-                    "id": str(uuid.uuid4()),
-                    "document_id": document_id,
-                    "user_id": user_id,
-                    "workspace_id": workspace_id,
-                    "content": source_text,
-                    "embedding": None,
-                    "metadata": json.dumps({"chunk_index": 0, "source": "workflow_dashboard"}),
-                }
-            ])
+            doc_id = document_service.create_document(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                filename=filename,
+                file_size=len(text),
+                status="completed",
+            )
+            document_service.ingest_document_text(doc_id, text)
+            return doc_id
 
     def _document_text(self, document_id: str) -> str:
-        from app.services.coding_service import coding_service
+        """Gather all document chunks into a consolidated string."""
+        with self.db_session_factory() as session:
+            chunks = session.chunks.get_chunks_by_document(document_id)
+            if chunks:
+                chunks_with_idx = []
+                for ch in chunks:
+                    meta = ch.get("metadata") or {}
+                    if isinstance(meta, str):
+                        try:
+                            meta = json.loads(meta)
+                        except Exception:
+                            meta = {}
+                    idx = meta.get("chunk_index", 0) if isinstance(meta, dict) else 0
+                    chunks_with_idx.append((idx, ch.get("content", "")))
+                chunks_with_idx.sort(key=lambda x: x[0])
+                return "\n\n".join(c[1] for c in chunks_with_idx)
 
-        text = coding_service.get_document_text(document_id)
-        if text.strip():
-            return text
-        doc = document_service.get_document(None, document_id)
-        if doc and doc.file_path:
-            try:
-                return document_service.storage_service.download_file(doc.file_path).decode("utf-8", errors="replace")
-            except Exception:
+            # Fallback to local raw text if chunks aren't written yet
+            doc = session.documents.get(document_id)
+            if doc and doc.get("status") == "completed":
+                # Check file content
+                logger.warning("No chunks found in DB for completed document_id=%s. Attempting raw text lookup.", document_id)
+                # If you have a local filepath store, read from it here.
+            else:
                 logger.exception("Could not read workflow source text for document_id=%s", document_id)
         raise HTTPException(status_code=400, detail="Document text content could not be retrieved.")
 
-    async def _execute_document(self, dashboard_id: str, document_id: str, definition: dict[str, Any]) -> DashboardDocumentRow:
+    async def _execute_document(self, dashboard_id: str, document_id: str, definition: dict[str, Any], retry_model: Optional[str] = None) -> DashboardDocumentRow:
         with self.db_session_factory() as session:
             session.dashboard_documents.create_or_update(dashboard_id, document_id, "{}", "processing", current_step=1, total_steps=3)
         try:
             source_text = self._document_text(document_id)
             with self.db_session_factory() as session:
                 session.dashboard_documents.update_progress(dashboard_id, document_id, 2, 3)
-            result = await workflow_executor.execute(definition, source_text)
 
-            # Retrieve dashboard schema to map variables to their LLM reasonings
+            # Resolve models from dashboard
             with self.db_session_factory() as session:
                 dash_row = session.dashboards.get_by_id(dashboard_id)
                 schema_json = dash_row.get("schema") if dash_row else "[]"
                 schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
+                model_name = dash_row.get("model") or "gemini-3.1-flash-lite"
+                dashboard_type = dash_row.get("dashboard_type") or "campaign"
+                token_limit = dash_row.get("token_limit") or 2500000
 
-            coded_values = dict(result["outputs"])
-            context = result.get("context", {})
-            import datetime
+            if "," in model_name or dashboard_type == "model_comparison":
+                models = [m.strip() for m in model_name.split(",") if m.strip()]
+                is_multi_model = True
+            else:
+                models = [model_name]
+                is_multi_model = False
 
-            for col in schema_fields:
-                col_name = col.get("name")
-                if not col_name:
-                    continue
-                workflow_source = col.get("workflow_source")
-                
-                # 1. Match intermediate LLM node outputs representing reasoning
-                reasoning = None
-                if workflow_source:
-                    parts = str(workflow_source).split(".")
-                    node_id = parts[0]
-                    field_name = parts[1] if len(parts) > 1 else node_id
+            if is_multi_model:
+                # Multi-model logic for Workflow runs
+                with self.db_session_factory() as session:
+                    doc_dd = session.dashboard_documents.get(dashboard_id, document_id)
+                    existing_coded_str = doc_dd.get("coded_values") if doc_dd else "{}"
+                    try:
+                        coded_values = json.loads(existing_coded_str) if existing_coded_str else {}
+                    except Exception:
+                        coded_values = {}
+
+                suspended_any = False
+                failed_any = False
+                completed_all = True
+
+                for current_model in models:
+                    model_data = coded_values.get(current_model) or {}
+                    model_status = model_data.get("status") or "pending"
+
+                    if model_status == "completed" and (not retry_model or retry_model != current_model):
+                        continue
+
+                    # Check token safety limit
+                    token_sum = 0
+                    with self.db_session_factory() as session:
+                        stats = session.usage_logs.get_usage_stats(timeframe="all", campaign_id=dashboard_id)
+                        for item in stats.get("breakdown") or []:
+                            if item.get("model") == current_model:
+                                token_sum = item.get("input_tokens", 0) + item.get("output_tokens", 0)
+
+                    if token_sum >= token_limit:
+                        logger.warning("Token safety limit %d exceeded for model %s (sum=%d)", token_limit, current_model, token_sum)
+                        coded_values[current_model] = {
+                            "values": model_data.get("values") or {},
+                            "status": "suspended_limit",
+                            "error_message": f"Token limit of {token_limit} exceeded.",
+                            "error_type": "API_FAILURE"
+                        }
+                        suspended_any = True
+                        completed_all = False
+                        continue
+
+                    try:
+                        result = await workflow_executor.execute(definition, source_text, model_name=current_model)
+                        model_coded = dict(result["outputs"])
+                        model_context = result.get("context", {})
+
+                        # Match intermediate LLM node outputs representing reasoning
+                        for col in schema_fields:
+                            col_name = col.get("name")
+                            if not col_name:
+                                continue
+                            workflow_source = col.get("workflow_source")
+                            
+                            reasoning = None
+                            if workflow_source:
+                                parts = str(workflow_source).split(".")
+                                node_id = parts[0]
+                                field_name = parts[1] if len(parts) > 1 else node_id
+                                
+                                candidates = [
+                                    f"{node_id}.{field_name}_reasoning",
+                                    f"{node_id}.{field_name}_rationale",
+                                    f"{node_id}.{field_name}_explanation",
+                                    f"{node_id}.{col_name}_reasoning",
+                                    f"{node_id}.{col_name}_rationale",
+                                    f"{node_id}.{col_name}_explanation",
+                                    f"{node_id}.reasoning",
+                                    f"{node_id}.rationale",
+                                    f"{node_id}.explanation",
+                                    f"{field_name}_reasoning",
+                                    f"{field_name}_rationale",
+                                    f"{col_name}_reasoning",
+                                    f"{col_name}_rationale",
+                                ]
+                                for candidate in candidates:
+                                    if candidate in model_context and model_context[candidate]:
+                                        reasoning = str(model_context[candidate])
+                                        break
+                                
+                                if not reasoning:
+                                    node_prefix = f"{node_id}."
+                                    node_keys = [k for k in model_context.keys() if k.startswith(node_prefix)]
+                                    reasoning_keys = []
+                                    for k in node_keys:
+                                        suffix = k[len(node_prefix):].lower()
+                                        if "reason" in suffix or "rationale" in suffix or "explain" in suffix:
+                                            reasoning_keys.append(k)
+                                    if len(reasoning_keys) == 1:
+                                        reasoning = str(model_context[reasoning_keys[0]])
+                                    elif len(reasoning_keys) > 1:
+                                        for k in reasoning_keys:
+                                            suffix = k[len(node_prefix):].lower()
+                                            if field_name.lower() in suffix or col_name.lower() in suffix:
+                                                reasoning = str(model_context[k])
+                                                break
+                                        if not reasoning:
+                                            reasoning = str(model_context[reasoning_keys[0]])
+                            
+                            if reasoning is not None:
+                                model_coded[f"{col_name}_reasoning"] = reasoning
+
+                            # Initialize history for audit logs
+                            import datetime
+                            val = model_coded.get(col_name)
+                            model_coded[f"{col_name}_history"] = [
+                                {
+                                    "version": 1,
+                                    "value": val,
+                                    "reasoning": reasoning,
+                                    "feedback_prompt": None,
+                                    "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                                    "source": "ai"
+                                }
+                            ]
+
+                        coded_values[current_model] = {
+                            "values": model_coded,
+                            "status": "completed",
+                            "error_message": None,
+                            "error_type": None,
+                            "trace": result["trace"],
+                            "context": result["context"]
+                        }
+
+                    except Exception as model_err:
+                        logger.error("Workflow failed for model %s on doc %s: %s", current_model, document_id, model_err)
+                        coded_values[current_model] = {
+                            "values": {},
+                            "status": "failed",
+                            "error_message": str(model_err),
+                            "error_type": "API_FAILURE"
+                        }
+                        failed_any = True
+                        completed_all = False
+
+                # Determine overall document status
+                if completed_all:
+                    overall_status = "completed"
+                    overall_error = None
+                    overall_err_type = None
+                elif suspended_any:
+                    overall_status = "failed"
+                    overall_error = f"Token limit exceeded for some models. Please authorize raise."
+                    overall_err_type = "API_FAILURE"
+                else:
+                    overall_status = "failed"
+                    overall_error = "One or more LLM models failed."
+                    overall_err_type = "API_FAILURE"
+
+                # Save nested coded values to DB
+                # For backward-compatibility we can save last model's trace and context at the top level
+                last_model = models[-1]
+                last_trace = coded_values.get(last_model, {}).get("trace") or []
+                last_context = coded_values.get(last_model, {}).get("context") or {}
+
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_workflow_result(
+                        dashboard_id,
+                        document_id,
+                        json.dumps(coded_values),
+                        json.dumps(last_trace),
+                        json.dumps(last_context),
+                        status=overall_status,
+                    )
+                    if overall_error:
+                        session.dashboard_documents.update_error(
+                            dashboard_id=dashboard_id,
+                            document_id=document_id,
+                            error_message=overall_error,
+                            error_type=overall_err_type
+                        )
+                with self.db_session_factory() as session:
+                    row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
+                return campaign_service._dashboard_document_row(row)
+
+            else:
+                # Single-model (standard) workflow run
+                result = await workflow_executor.execute(definition, source_text)
+                coded_values = dict(result["outputs"])
+                context = result.get("context", {})
+                import datetime
+
+                for col in schema_fields:
+                    col_name = col.get("name")
+                    if not col_name:
+                        continue
+                    workflow_source = col.get("workflow_source")
                     
-                    # Direct name matching candidates
-                    candidates = [
-                        f"{node_id}.{field_name}_reasoning",
-                        f"{node_id}.{field_name}_rationale",
-                        f"{node_id}.{field_name}_explanation",
-                        f"{node_id}.{col_name}_reasoning",
-                        f"{node_id}.{col_name}_rationale",
-                        f"{node_id}.{col_name}_explanation",
-                        f"{node_id}.reasoning",
-                        f"{node_id}.rationale",
-                        f"{node_id}.explanation",
-                        f"{field_name}_reasoning",
-                        f"{field_name}_rationale",
-                        f"{col_name}_reasoning",
-                        f"{col_name}_rationale",
-                    ]
-                    for candidate in candidates:
-                        if candidate in context and context[candidate]:
-                            reasoning = str(context[candidate])
-                            break
-                    
-                    if not reasoning:
-                        # Scan all keys belonging to this node containing reason/rationale/explain
-                        node_prefix = f"{node_id}."
-                        node_keys = [k for k in context.keys() if k.startswith(node_prefix)]
-                        reasoning_keys = []
-                        for k in node_keys:
-                            suffix = k[len(node_prefix):].lower()
-                            if "reason" in suffix or "rationale" in suffix or "explain" in suffix:
-                                reasoning_keys.append(k)
-                        if len(reasoning_keys) == 1:
-                            reasoning = str(context[reasoning_keys[0]])
-                        elif len(reasoning_keys) > 1:
-                            for k in reasoning_keys:
+                    reasoning = None
+                    if workflow_source:
+                        parts = str(workflow_source).split(".")
+                        node_id = parts[0]
+                        field_name = parts[1] if len(parts) > 1 else node_id
+                        
+                        candidates = [
+                            f"{node_id}.{field_name}_reasoning",
+                            f"{node_id}.{field_name}_rationale",
+                            f"{node_id}.{field_name}_explanation",
+                            f"{node_id}.{col_name}_reasoning",
+                            f"{node_id}.{col_name}_rationale",
+                            f"{node_id}.{col_name}_explanation",
+                            f"{node_id}.reasoning",
+                            f"{node_id}.rationale",
+                            f"{node_id}.explanation",
+                            f"{field_name}_reasoning",
+                            f"{field_name}_rationale",
+                            f"{col_name}_reasoning",
+                            f"{col_name}_rationale",
+                        ]
+                        for candidate in candidates:
+                            if candidate in context and context[candidate]:
+                                reasoning = str(context[candidate])
+                                break
+                        
+                        if not reasoning:
+                            node_prefix = f"{node_id}."
+                            node_keys = [k for k in context.keys() if k.startswith(node_prefix)]
+                            reasoning_keys = []
+                            for k in node_keys:
                                 suffix = k[len(node_prefix):].lower()
-                                if field_name.lower() in suffix or col_name.lower() in suffix:
-                                    reasoning = str(context[k])
-                                    break
-                            if not reasoning:
+                                if "reason" in suffix or "rationale" in suffix or "explain" in suffix:
+                                    reasoning_keys.append(k)
+                            if len(reasoning_keys) == 1:
                                 reasoning = str(context[reasoning_keys[0]])
-                
-                if reasoning is not None:
-                    coded_values[f"{col_name}_reasoning"] = reasoning
-                
-                # 2. Initialize history for audit logs
-                val = coded_values.get(col_name)
-                coded_values[f"{col_name}_history"] = [
-                    {
-                        "version": 1,
-                        "value": val,
-                        "reasoning": reasoning,
-                        "feedback_prompt": None,
-                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
-                        "source": "ai"
-                    }
-                ]
+                            elif len(reasoning_keys) > 1:
+                                for k in reasoning_keys:
+                                    suffix = k[len(node_prefix):].lower()
+                                    if field_name.lower() in suffix or col_name.lower() in suffix:
+                                        reasoning = str(context[k])
+                                        break
+                                if not reasoning:
+                                    reasoning = str(context[reasoning_keys[0]])
+                    
+                    if reasoning is not None:
+                        coded_values[f"{col_name}_reasoning"] = reasoning
+                    
+                    val = coded_values.get(col_name)
+                    coded_values[f"{col_name}_history"] = [
+                        {
+                            "version": 1,
+                            "value": val,
+                            "reasoning": reasoning,
+                            "feedback_prompt": None,
+                            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                            "source": "ai"
+                        }
+                    ]
 
-            with self.db_session_factory() as session:
-                session.dashboard_documents.update_workflow_result(
-                    dashboard_id,
-                    document_id,
-                    json.dumps(coded_values),
-                    json.dumps(result["trace"]),
-                    json.dumps(result["context"]),
-                    status="completed",
-                )
-                row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
-            return campaign_service._dashboard_document_row(row)
+                with self.db_session_factory() as session:
+                    session.dashboard_documents.update_workflow_result(
+                        dashboard_id,
+                        document_id,
+                        json.dumps(coded_values),
+                        json.dumps(result["trace"]),
+                        json.dumps(result["context"]),
+                        status="completed",
+                    )
+                    row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
+                return campaign_service._dashboard_document_row(row)
         except WorkflowExecutionError as exc:
             error_message = str(exc)
         except Exception as exc:
@@ -339,8 +488,9 @@ class WorkflowDashboardService:
             session.dashboard_documents.create_or_update(dashboard.id, doc_id, "{}", "pending", current_step=0, total_steps=3)
             dash_row = session.dashboards.get_by_id(dashboard.id)
             definition = json.loads(dash_row["workflow_definition_json"])
-        result_row = await self._execute_document(dashboard.id, doc_id, definition)
-        return dashboard, result_row
+
+        row = await self._execute_document(dashboard.id, doc_id, definition)
+        return dashboard, row
 
     async def run_uploaded_files(
         self,
@@ -407,6 +557,7 @@ class WorkflowDashboardService:
         source: WorkflowSource = "draft",
         version: int | None = None,
         rerun_document_ids: set[str] | None = None,
+        retry_model: str | None = None,
     ) -> tuple[DashboardRow, list[DashboardDocumentRow], list[str]]:
         dashboard = self.get_or_create_dashboard(workflow_id, workspace_id, user_id, source, version)
         rerun_document_ids = rerun_document_ids or set()
@@ -424,7 +575,7 @@ class WorkflowDashboardService:
                 continue
             with self.db_session_factory() as session:
                 existing = session.dashboard_documents.get(dashboard.id, doc_id)
-                if existing and doc_id not in rerun_document_ids:
+                if existing and doc_id not in rerun_document_ids and not retry_model:
                     skipped.append(doc.filename)
                     continue
                 session.dashboard_documents.create_or_update(dashboard.id, doc_id, "{}", "pending", current_step=0, total_steps=3)
@@ -438,7 +589,7 @@ class WorkflowDashboardService:
             async def _exec_task():
                 for doc_id in pending_doc_ids:
                     try:
-                        await self._execute_document(dashboard.id, doc_id, definition)
+                        await self._execute_document(dashboard.id, doc_id, definition, retry_model)
                     except Exception:
                         logger.exception("Background execution failed for existing document %s", doc_id)
 

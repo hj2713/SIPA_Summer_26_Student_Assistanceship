@@ -455,12 +455,12 @@ class CodingService:
                 "schema": fallback_schema
             }
 
-    def enqueue_sequential_coding(self, dashboard_id: str, document_ids: List[str], user_id: str) -> None:
+    def enqueue_sequential_coding(self, dashboard_id: str, document_ids: List[str], user_id: str, retry_model: Optional[str] = None) -> None:
         """Submit coding job to the single-threaded sequential queue."""
         # Ensure the background loop thread is running
         self._ensure_loop_running()
         future = asyncio.run_coroutine_threadsafe(
-            self.process_sequential_coding_queue(dashboard_id, document_ids, user_id),
+            self.process_sequential_coding_queue(dashboard_id, document_ids, user_id, retry_model),
             self._loop
         )
         # Log enqueue; errors surface in process_sequential_coding_queue
@@ -468,7 +468,7 @@ class CodingService:
             lambda f: logger.error("Coding job raised: %s", f.exception(), exc_info=f.exception())
             if f.exception() else None
         )
-        logger.info("Enqueued coding job for dashboard %s, document_ids: %s", dashboard_id, document_ids)
+        logger.info("Enqueued coding job for dashboard %s, document_ids: %s, retry_model: %s", dashboard_id, document_ids, retry_model)
 
     def schedule_coroutine(self, coro) -> None:
         """Schedule an arbitrary async coroutine on the coding background event loop."""
@@ -493,19 +493,19 @@ class CodingService:
         asyncio.set_event_loop(self._loop)
         self._loop.run_forever()
 
-    def run_sequential_coding_sync(self, dashboard_id: str, document_ids: List[str], user_id: str) -> None:
+    def run_sequential_coding_sync(self, dashboard_id: str, document_ids: List[str], user_id: str, retry_model: Optional[str] = None) -> None:
         """Synchronous bridge — kept for backward compatibility."""
         self._ensure_loop_running()
         future = asyncio.run_coroutine_threadsafe(
-            self.process_sequential_coding_queue(dashboard_id, document_ids, user_id),
+            self.process_sequential_coding_queue(dashboard_id, document_ids, user_id, retry_model),
             self._loop
         )
         future.result()  # block until done
 
-    async def process_sequential_coding_queue(self, dashboard_id: str, document_ids: List[str], user_id: str) -> None:
+    async def process_sequential_coding_queue(self, dashboard_id: str, document_ids: List[str], user_id: str, retry_model: Optional[str] = None) -> None:
         """Process a batch of documents sequentially, parsing and coding each one."""
         set_current_user_id(user_id)
-        logger.info("Starting sequential coding for dashboard %s", dashboard_id)
+        logger.info("Starting sequential coding for dashboard %s (retry_model=%s)", dashboard_id, retry_model)
         
         with self.db_session_factory() as session:
             campaign_row = session.dashboards.get_by_id(dashboard_id)
@@ -514,7 +514,18 @@ class CodingService:
                 return
             campaign_prompt = campaign_row["prompt"]
             schema_json = campaign_row["schema"]
-            model_name = campaign_row.get("model")
+            model_name = campaign_row.get("model") or "gemini-3.1-flash-lite"
+            dashboard_type = campaign_row.get("dashboard_type") or "campaign"
+            token_limit = campaign_row.get("token_limit") or 2500000
+
+            # Determine selected models
+            if "," in model_name or dashboard_type == "model_comparison":
+                models = [m.strip() for m in model_name.split(",") if m.strip()]
+                is_multi_model = True
+            else:
+                models = [model_name]
+                is_multi_model = False
+
             try:
                 schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
                 schema_fields = [self._normalize_schema_field(col) for col in schema_fields]
@@ -536,7 +547,7 @@ class CodingService:
                     total_steps=7
                 )
                 
-            logger.info("Coding document %s in dashboard %s", doc_id, dashboard_id)
+            logger.info("Coding document %s in dashboard %s (is_multi_model=%s)", doc_id, dashboard_id, is_multi_model)
             
             try:
                 # Retrieve document text
@@ -567,129 +578,303 @@ class CodingService:
                     )
                 doc_text = self.prepare_document_text_for_coding(doc_text)
 
-                # Prepare dynamic Pydantic schema model
-                with self.db_session_factory() as session:
-                    session.dashboard_documents.update_progress(
-                        dashboard_id=dashboard_id,
-                        document_id=doc_id,
-                        current_step=4,
-                        total_steps=7
-                    )
-                # Structured LLM call
-                with self.db_session_factory() as session:
-                    session.dashboard_documents.update_progress(
-                        dashboard_id=dashboard_id,
-                        document_id=doc_id,
-                        current_step=5,
-                        total_steps=7
-                )
-                llm = get_llm_for_model(model_name)
+                if is_multi_model:
+                    # Multi-model logic: iterate over each model and run execution
+                    # First, load existing coded_values dictionary
+                    with self.db_session_factory() as session:
+                        doc_dd = session.dashboard_documents.get(dashboard_id, doc_id)
+                        existing_coded_str = doc_dd.get("coded_values") if doc_dd else "{}"
+                        try:
+                            coded_values = json.loads(existing_coded_str) if existing_coded_str else {}
+                        except Exception:
+                            coded_values = {}
 
-                try:
-                    if self._schema_uses_staged_coding(schema_fields):
-                        coded_values = await self._code_document_staged(
-                            llm=llm,
-                            campaign_prompt=campaign_prompt,
-                            schema_fields=schema_fields,
-                            doc_text=doc_text,
+                    suspended_any = False
+                    failed_any = False
+                    completed_all = True
+
+                    for current_model in models:
+                        model_data = coded_values.get(current_model) or {}
+                        model_status = model_data.get("status") or "pending"
+
+                        # Skip if completed, unless explicitly retrying this model
+                        if model_status == "completed" and (not retry_model or retry_model != current_model):
+                            continue
+
+                        # Check token safety limit
+                        token_sum = 0
+                        with self.db_session_factory() as session:
+                            stats = session.usage_logs.get_usage_stats(timeframe="all", campaign_id=dashboard_id)
+                            for item in stats.get("breakdown") or []:
+                                if item.get("model") == current_model:
+                                    token_sum = item.get("input_tokens", 0) + item.get("output_tokens", 0)
+
+                        if token_sum >= token_limit:
+                            logger.warning("Token safety limit %d exceeded for model %s (sum=%d)", token_limit, current_model, token_sum)
+                            coded_values[current_model] = {
+                                "values": model_data.get("values") or {},
+                                "status": "suspended_limit",
+                                "error_message": f"Token limit of {token_limit} exceeded.",
+                                "error_type": "API_FAILURE"
+                            }
+                            suspended_any = True
+                            completed_all = False
+                            continue
+
+                        # Run coding for this model
+                        llm = get_llm_for_model(current_model)
+                        try:
+                            if self._schema_uses_staged_coding(schema_fields):
+                                model_values = await self._code_document_staged(
+                                    llm=llm,
+                                    campaign_prompt=campaign_prompt,
+                                    schema_fields=schema_fields,
+                                    doc_text=doc_text,
+                                    dashboard_id=dashboard_id,
+                                )
+                            else:
+                                fields = {}
+                                for col in schema_fields:
+                                    name = col["name"]
+                                    fields[name] = (
+                                        self._field_type_for_column(col),
+                                        Field(..., description=self._column_description(col))
+                                    )
+                                    if col["type"] in ["boolean", "number"] or col.get("options"):
+                                        reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
+                                        fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
+                                    
+                                CodedOutputModel = create_model("CodedOutputModel", **fields)
+                                
+                                column_instructions = []
+                                for col in schema_fields:
+                                    name = col["name"]
+                                    col_type = col["type"]
+                                    opts = col.get("options")
+                                    opts_text = f" (Allowed categories: {', '.join(opts)})" if opts else ""
+                                    column_instructions.append(f"- **{name}** ({col_type}): {col.get('description', '')}{opts_text}")
+                                
+                                column_instructions_text = "\n".join(column_instructions)
+                                coding_system_prompt = (
+                                    "You are an AI coding assistant helping a quantitative research researcher.\n"
+                                    "Analyze the provided document text and extract values for the specified output schema columns.\n\n"
+                                    "=== COLUMN DEFINITIONS AND RULES ===\n"
+                                    f"{column_instructions_text}\n\n"
+                                    f"=== SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
+                                    "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
+                                )
+                                parsed = await llm.parse_structured(
+                                    [
+                                        LLMMessage(role="system", content=coding_system_prompt),
+                                        LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
+                                    ],
+                                    schema=CodedOutputModel,
+                                    log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+                                )
+                                if parsed is None:
+                                    raise ValueError("LLM returned empty parsed result")
+                                model_values = parsed.model_dump()
+
+                            # Format history
+                            import datetime
+                            for col in schema_fields:
+                                col_name = col["name"]
+                                val = model_values.get(col_name)
+                                reasoning = model_values.get(f"{col_name}_reasoning")
+                                model_values[f"{col_name}_history"] = [
+                                    {
+                                        "version": 1,
+                                        "value": val,
+                                        "reasoning": reasoning,
+                                        "feedback_prompt": None,
+                                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                                        "source": "ai"
+                                    }
+                                ]
+
+                            coded_values[current_model] = {
+                                "values": model_values,
+                                "status": "completed",
+                                "error_message": None,
+                                "error_type": None
+                            }
+
+                        except Exception as api_err:
+                            logger.error("LLM call failed for model %s on doc %s: %s", current_model, doc_id, api_err)
+                            err_str = str(api_err)
+                            error_type = "API_FAILURE"
+                            if "parse" in err_str or "validation" in err_str or "JSON" in err_str:
+                                error_type = "COMPREHENSION_FAILURE"
+                            
+                            coded_values[current_model] = {
+                                "values": {},
+                                "status": "failed",
+                                "error_message": err_str,
+                                "error_type": error_type
+                            }
+                            failed_any = True
+                            completed_all = False
+
+                    # Determine overall document status
+                    if completed_all:
+                        overall_status = "completed"
+                        overall_error = None
+                        overall_err_type = None
+                    elif suspended_any:
+                        overall_status = "failed"
+                        overall_error = f"Token limit exceeded for some models. Please authorize raise."
+                        overall_err_type = "API_FAILURE"
+                    else:
+                        overall_status = "failed"
+                        overall_error = "One or more LLM models failed."
+                        overall_err_type = "API_FAILURE"
+
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_coded_values(
                             dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            coded_values=json.dumps(coded_values),
+                            status=overall_status
                         )
-                    else:
-                        fields = {}
-                        for col in schema_fields:
-                            name = col["name"]
-                            
-                            # Avoid Optional/nullable fields as they generate 'anyOf' schemas which are rejected by Gemini's structured output mode.
-                            fields[name] = (
-                                self._field_type_for_column(col),
-                                Field(..., description=self._column_description(col))
+                        if overall_error:
+                            session.dashboard_documents.update_error(
+                                dashboard_id=dashboard_id,
+                                document_id=doc_id,
+                                error_message=overall_error,
+                                error_type=overall_err_type
                             )
-                            
-                            # Only generate reasoning companion field for structured variables (boolean, number, or categorical string fields) to keep schema size within LLM limits.
-                            if col["type"] in ["boolean", "number"] or col.get("options"):
-                                reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
-                                fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
-                            
-                        CodedOutputModel = create_model("CodedOutputModel", **fields)
-
-                        # Generate a textual representation of the columns and their rules for the prompt
-                        column_instructions = []
-                        for col in schema_fields:
-                            name = col["name"]
-                            col_type = col["type"]
-                            opts = col.get("options")
-                            opts_text = f" (Allowed categories: {', '.join(opts)})" if opts else ""
-                            column_instructions.append(f"- **{name}** ({col_type}): {col.get('description', '')}{opts_text}")
-
-                        column_instructions_text = "\n".join(column_instructions)
-
-                        coding_system_prompt = (
-                            "You are an AI coding assistant helping a quantitative research researcher.\n"
-                            "Analyze the provided document text and extract values for the specified output schema columns.\n\n"
-                            "=== COLUMN DEFINITIONS AND RULES ===\n"
-                            f"{column_instructions_text}\n\n"
-                            f"=== SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
-                            "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
+                        session.dashboard_documents.update_progress(
+                            dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            current_step=0,
+                            total_steps=7
                         )
 
-                        parsed = await llm.parse_structured(
-                            [
-                                LLMMessage(role="system", content=coding_system_prompt),
-                                LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
-                            ],
-                            schema=CodedOutputModel,
-                            log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+                else:
+                    # Single-model logic (Standard Campaign)
+                    # Prepare dynamic Pydantic schema model
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_progress(
+                            dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            current_step=4,
+                            total_steps=7
                         )
-                        if parsed is None:
-                            raise ValueError("LLM returned empty parsed result")
-                        coded_values = parsed.model_dump()
+                    # Structured LLM call
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_progress(
+                            dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            current_step=5,
+                            total_steps=7
+                        )
+                    llm = get_llm_for_model(model_name)
 
-                except Exception as api_err:
-                    logger.error("LLM call failed for doc %s: %s", doc_id, api_err)
-                    if "parse" in str(api_err) or "validation" in str(api_err) or "JSON" in str(api_err):
-                        raise RuntimeError("COMPREHENSION_FAILURE: LLM response did not conform to the schema or failed parsing.") from api_err
-                    else:
-                        raise RuntimeError(f"API_FAILURE: OpenAI/OpenRouter connection failure: {str(api_err)}") from api_err
+                    try:
+                        if self._schema_uses_staged_coding(schema_fields):
+                            coded_values = await self._code_document_staged(
+                                llm=llm,
+                                campaign_prompt=campaign_prompt,
+                                schema_fields=schema_fields,
+                                doc_text=doc_text,
+                                dashboard_id=dashboard_id,
+                            )
+                        else:
+                            fields = {}
+                            for col in schema_fields:
+                                name = col["name"]
+                                
+                                # Avoid Optional/nullable fields as they generate 'anyOf' schemas which are rejected by Gemini's structured output mode.
+                                fields[name] = (
+                                    self._field_type_for_column(col),
+                                    Field(..., description=self._column_description(col))
+                                )
+                                
+                                # Only generate reasoning companion field for structured variables (boolean, number, or categorical string fields) to keep schema size within LLM limits.
+                                if col["type"] in ["boolean", "number"] or col.get("options"):
+                                    reasoning_desc = f"Exact reasoning, textual evidence, or quotes from the document supporting the value assigned to the '{name}' variable. If not mentioned in the text, use 'Not mentioned'."
+                                    fields[f"{name}_reasoning"] = (str, Field(..., description=reasoning_desc))
+                                
+                            CodedOutputModel = create_model("CodedOutputModel", **fields)
 
-                # Save success status and values
-                with self.db_session_factory() as session:
-                    session.dashboard_documents.update_progress(
-                        dashboard_id=dashboard_id,
-                        document_id=doc_id,
-                        current_step=6,
-                        total_steps=7
-                    )
+                            # Generate a textual representation of the columns and their rules for the prompt
+                            column_instructions = []
+                            for col in schema_fields:
+                                name = col["name"]
+                                col_type = col["type"]
+                                opts = col.get("options")
+                                opts_text = f" (Allowed categories: {', '.join(opts)})" if opts else ""
+                                column_instructions.append(f"- **{name}** ({col_type}): {col.get('description', '')}{opts_text}")
 
-                import datetime
-                for col in schema_fields:
-                    col_name = col["name"]
-                    val = coded_values.get(col_name)
-                    reasoning = coded_values.get(f"{col_name}_reasoning")
-                    coded_values[f"{col_name}_history"] = [
-                        {
-                            "version": 1,
-                            "value": val,
-                            "reasoning": reasoning,
-                            "feedback_prompt": None,
-                            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
-                            "source": "ai"
-                        }
-                    ]
+                            column_instructions_text = "\n".join(column_instructions)
 
-                with self.db_session_factory() as session:
-                    session.dashboard_documents.update_coded_values(
-                        dashboard_id=dashboard_id,
-                        document_id=doc_id,
-                        coded_values=json.dumps(coded_values),
-                        status="completed"
-                    )
-                    session.dashboard_documents.update_progress(
-                        dashboard_id=dashboard_id,
-                        document_id=doc_id,
-                        current_step=0,
-                        total_steps=7
-                    )
-                logger.info("Successfully coded document %s in dashboard %s", doc_id, dashboard_id)
+                            coding_system_prompt = (
+                                "You are an AI coding assistant helping a quantitative research researcher.\n"
+                                "Analyze the provided document text and extract values for the specified output schema columns.\n\n"
+                                "=== COLUMN DEFINITIONS AND RULES ===\n"
+                                f"{column_instructions_text}\n\n"
+                                f"=== SYSTEM PROMPT / CODEBOOK ===\n{campaign_prompt}\n\n"
+                                "You MUST follow all specific rules, definitions, and logical constraints listed above to determine the values and reasoning. Return the extracted values as a JSON object matching the requested schema."
+                            )
+
+                            parsed = await llm.parse_structured(
+                                [
+                                    LLMMessage(role="system", content=coding_system_prompt),
+                                    LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
+                                ],
+                                schema=CodedOutputModel,
+                                log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+                            )
+                            if parsed is None:
+                                raise ValueError("LLM returned empty parsed result")
+                            coded_values = parsed.model_dump()
+
+                    except Exception as api_err:
+                        logger.error("LLM call failed for doc %s: %s", doc_id, api_err)
+                        if "parse" in str(api_err) or "validation" in str(api_err) or "JSON" in str(api_err):
+                            raise RuntimeError("COMPREHENSION_FAILURE: LLM response did not conform to the schema or failed parsing.") from api_err
+                        else:
+                            raise RuntimeError(f"API_FAILURE: OpenAI/OpenRouter connection failure: {str(api_err)}") from api_err
+
+                    # Save success status and values
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_progress(
+                            dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            current_step=6,
+                            total_steps=7
+                        )
+
+                    import datetime
+                    for col in schema_fields:
+                        col_name = col["name"]
+                        val = coded_values.get(col_name)
+                        reasoning = coded_values.get(f"{col_name}_reasoning")
+                        coded_values[f"{col_name}_history"] = [
+                            {
+                                "version": 1,
+                                "value": val,
+                                "reasoning": reasoning,
+                                "feedback_prompt": None,
+                                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                                "source": "ai"
+                            }
+                        ]
+
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_coded_values(
+                            dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            coded_values=json.dumps(coded_values),
+                            status="completed"
+                        )
+                        session.dashboard_documents.update_progress(
+                            dashboard_id=dashboard_id,
+                            document_id=doc_id,
+                            current_step=0,
+                            total_steps=7
+                        )
+                    logger.info("Successfully coded document %s in dashboard %s", doc_id, dashboard_id)
 
             except Exception as err:
                 err_str = str(err)
@@ -701,14 +886,12 @@ class CodingService:
                     error_type = "COMPREHENSION_FAILURE"
                     error_msg = err_str.replace("COMPREHENSION_FAILURE: ", "")
                 else:
-                    error_msg = f"Extraction error: {err_str}"
-                    
-                logger.error("Failed to code document %s: %s (Type: %s)", doc_id, error_msg, error_type)
+                    error_msg = err_str
+                
                 with self.db_session_factory() as session:
-                    session.dashboard_documents.update_status(
+                    session.dashboard_documents.update_error(
                         dashboard_id=dashboard_id,
                         document_id=doc_id,
-                        status="failed",
                         error_message=error_msg,
                         error_type=error_type
                     )
@@ -718,6 +901,7 @@ class CodingService:
                         current_step=0,
                         total_steps=7
                     )
+                logger.error("Failed sequential coding for doc %s: %s", doc_id, err_str)
 
             # Sequential delay (rate limiting safety)
             with self.db_session_factory() as session:
@@ -756,13 +940,13 @@ async def generate_schema_and_description(prompt_text: str, user_columns: Option
     return await coding_service.generate_schema_and_description(prompt_text, user_columns, model_name)
 
 
-def enqueue_sequential_coding(dashboard_id: str, document_ids: List[str], user_id: str) -> None:
-    coding_service.enqueue_sequential_coding(dashboard_id, document_ids, user_id)
+def enqueue_sequential_coding(dashboard_id: str, document_ids: List[str], user_id: str, retry_model: Optional[str] = None) -> None:
+    coding_service.enqueue_sequential_coding(dashboard_id, document_ids, user_id, retry_model)
 
 
-def run_sequential_coding_sync(dashboard_id: str, document_ids: List[str], user_id: str) -> None:
-    coding_service.run_sequential_coding_sync(dashboard_id, document_ids, user_id)
+def run_sequential_coding_sync(dashboard_id: str, document_ids: List[str], user_id: str, retry_model: Optional[str] = None) -> None:
+    coding_service.run_sequential_coding_sync(dashboard_id, document_ids, user_id, retry_model)
 
 
-async def process_sequential_coding_queue(dashboard_id: str, document_ids: List[str], user_id: str) -> None:
-    await coding_service.process_sequential_coding_queue(dashboard_id, document_ids, user_id)
+async def process_sequential_coding_queue(dashboard_id: str, document_ids: List[str], user_id: str, retry_model: Optional[str] = None) -> None:
+    await coding_service.process_sequential_coding_queue(dashboard_id, document_ids, user_id, retry_model)

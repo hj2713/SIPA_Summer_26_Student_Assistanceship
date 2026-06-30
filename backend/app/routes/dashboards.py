@@ -243,7 +243,8 @@ async def upload_campaign_document(
 def retry_failed_documents(
     id: str,
     current_user: CurrentUserDep,
-    payload: Optional[List[str]] = None
+    payload: Optional[List[str]] = None,
+    model: Optional[str] = Query(None, description="Model to retry failed runs for specifically")
 ):
     """Retry coding execution for failed documents in a campaign dashboard."""
     if not current_user.can_add and not current_user.is_admin:
@@ -252,10 +253,35 @@ def retry_failed_documents(
             detail="You do not have permission to modify campaign documents."
         )
 
-    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload)
+    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload, retry_model=model)
     if not doc_ids:
         return {"message": "No failed documents to retry."}
     return {"message": f"Successfully queued {len(doc_ids)} documents for retry."}
+
+
+@router.post("/{id}/raise-token-limit", status_code=status.HTTP_200_OK)
+def raise_token_limit(
+    id: str,
+    current_user: CurrentUserDep
+):
+    """Increase token limit by 2.5M and retry any suspended documents."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaigns."
+        )
+
+    from app.repositories import get_db_session
+    with get_db_session() as session:
+        dashboard = session.dashboards.get_by_id(id)
+        if not dashboard:
+            raise HTTPException(status_code=404, detail="Dashboard not found")
+        current_limit = dashboard.get("token_limit") or 2500000
+        new_limit = current_limit + 2500000
+        session.dashboards.update(id, {"token_limit": new_limit})
+
+    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload=None)
+    return {"message": f"Successfully raised token limit to {new_limit} and queued suspended documents for retry.", "new_limit": new_limit}
 
 
 @router.put("/{id}/documents/{doc_id}", status_code=status.HTTP_200_OK)

@@ -279,6 +279,7 @@ def init_postgres_db():
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_version INTEGER;",
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_revision INTEGER;",
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_definition_json TEXT;",
+                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS token_limit INTEGER DEFAULT 2500000;",
                 "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_trace TEXT;",
                 "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_context TEXT;",
             ]:
@@ -559,6 +560,7 @@ def init_sqlite_db():
             "workflow_version INTEGER",
             "workflow_revision INTEGER",
             "workflow_definition_json TEXT",
+            "token_limit INTEGER DEFAULT 2500000",
         ]:
             try:
                 conn.execute(f"ALTER TABLE dashboards ADD COLUMN {col_def};")

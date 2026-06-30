@@ -111,6 +111,7 @@ class CampaignService:
             workflow_version=row.get("workflow_version"),
             workflow_revision=row.get("workflow_revision"),
             created_at=row["created_at"],
+            token_limit=row.get("token_limit"),
         )
 
     def _parse_workflow_json(self, raw: Any, fallback: Any) -> Any:
@@ -177,7 +178,9 @@ class CampaignService:
                 description=desc,
                 prompt=payload.prompt,
                 schema=json.dumps(schema_fields),
-                model=chosen_model
+                model=chosen_model,
+                dashboard_type=payload.dashboard_type,
+                token_limit=payload.token_limit
             )
 
         return self._dashboard_row(row, schema_fields)
@@ -306,7 +309,8 @@ class CampaignService:
                 prompt=prompt,
                 schema=schema_list,
                 model=model,
-                created_at=row["created_at"]
+                created_at=row["created_at"],
+                token_limit=row.get("token_limit")
             )
 
         # Schedule background evaluation AFTER the session is committed and closed
@@ -474,20 +478,44 @@ class CampaignService:
         id: str,
         user_id: str,
         document_ids: Optional[List[str]] = None,
+        retry_model: Optional[str] = None
     ) -> List[str]:
         """Retry coding execution for failed documents in a campaign dashboard."""
         with self.db_session_factory() as session:
-            if document_ids:
-                doc_ids = session.dashboard_documents.get_linked_document_ids(id, document_ids)
+            if retry_model:
+                all_docs = session.dashboard_documents.list_by_dashboard(id)
+                doc_ids = []
+                for doc in all_docs:
+                    doc_id = doc["document_id"]
+                    if document_ids and doc_id not in document_ids:
+                        continue
+                    coded_values_str = doc.get("coded_values") or "{}"
+                    try:
+                        coded_val = json.loads(coded_values_str) if isinstance(coded_values_str, str) else coded_values_str
+                    except Exception:
+                        coded_val = {}
+                    
+                    model_data = coded_val.get(retry_model) or {}
+                    model_status = model_data.get("status") or "pending"
+                    if model_status in ["failed", "suspended_limit", "pending"]:
+                        model_data["status"] = "pending"
+                        model_data["error_message"] = None
+                        coded_val[retry_model] = model_data
+                        session.dashboard_documents.update_coded_values(id, doc_id, json.dumps(coded_val), "pending")
+                        doc_ids.append(doc_id)
             else:
-                doc_ids = session.dashboard_documents.get_failed_document_ids(id)
+                if document_ids:
+                    doc_ids = session.dashboard_documents.get_linked_document_ids(id, document_ids)
+                else:
+                    doc_ids = session.dashboard_documents.get_failed_document_ids(id)
                 
+                if doc_ids:
+                    session.dashboard_documents.reset_documents_to_pending(id, doc_ids)
+
             if not doc_ids:
                 return []
-                
-            session.dashboard_documents.reset_documents_to_pending(id, doc_ids)
 
-        self._coding_service.enqueue_sequential_coding(id, doc_ids, user_id)
+        self._coding_service.enqueue_sequential_coding(id, doc_ids, user_id, retry_model=retry_model)
         return doc_ids
 
     def update_coded_cell(

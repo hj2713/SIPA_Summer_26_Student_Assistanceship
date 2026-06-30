@@ -99,7 +99,7 @@ class BaseDashboardRepository(ABC):
         pass
 
     @abstractmethod
-    def create(self, dashboard_id: str, workspace_id: str, name: str, description: str, prompt: str, schema: str, model: Optional[str]) -> Dict[str, Any]:
+    def create(self, dashboard_id: Any, workspace_id: Optional[str] = None, name: Optional[str] = None, description: Optional[str] = None, prompt: Optional[str] = None, schema: Optional[str] = None, model: Optional[str] = None, dashboard_type: Optional[str] = None, token_limit: Optional[int] = None) -> Dict[str, Any]:
         pass
 
     @abstractmethod

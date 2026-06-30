@@ -1,8 +1,8 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field, create_model
 
-from app.llm.registry import get_llm
+from app.llm.registry import get_llm, get_llm_for_model
 from app.llm.types import LLMMessage
 from app.workflows.expressions import evaluate_expression
 from app.workflows.validator import validate_workflow_definition
@@ -70,7 +70,7 @@ class WorkflowExecutor:
             current = current[part]
         return current
 
-    async def execute(self, definition: Dict[str, Any], source_text: str) -> Dict[str, Any]:
+    async def execute(self, definition: Dict[str, Any], source_text: str, model_name: Optional[str] = None) -> Dict[str, Any]:
         issues = validate_workflow_definition(definition)
         errors = [issue.to_dict() for issue in issues if issue.severity == "error"]
         if errors:
@@ -114,7 +114,9 @@ class WorkflowExecutor:
                 ]
                 if document_context != "none":
                     prompt_parts.append(f"=== SOURCE TEXT ===\n{source_text}")
-                parsed = await get_llm().parse_structured(
+                
+                llm = get_llm_for_model(model_name)
+                parsed = await llm.parse_structured(
                     [
                         LLMMessage(
                             role="system",

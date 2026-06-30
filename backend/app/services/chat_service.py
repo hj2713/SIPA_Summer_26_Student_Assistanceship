@@ -251,7 +251,14 @@ class ChatService:
             # Branch A: Small file — stream a single completion
             if is_small_file:
                 logger.info("Directly streaming completion using full pinned file context (bypassing tool calls)...")
-                async for chunk in llm.stream_chat(llm_messages, log_context={"service": "chat_rag", "thread_id": str(thread_id)}):
+                async for chunk in llm.stream_chat(
+                    llm_messages,
+                    log_context={
+                        "service": "chat_rag",
+                        "thread_id": str(thread_id),
+                        "campaign_id": str(dashboard_id) if dashboard_id else None
+                    }
+                ):
                     if chunk.response_id:
                         response_id = chunk.response_id
                     if chunk.usage is not None:
@@ -280,7 +287,11 @@ class ChatService:
                     llm_messages,
                     tools=[SEARCH_TOOL],
                     force_tool="retrieve_documents",
-                    log_context={"service": "chat_rag", "thread_id": str(thread_id)},
+                    log_context={
+                        "service": "chat_rag",
+                        "thread_id": str(thread_id),
+                        "campaign_id": str(dashboard_id) if dashboard_id else None
+                    },
                 ):
                     if chunk.response_id:
                         response_id = chunk.response_id
@@ -393,7 +404,14 @@ class ChatService:
                     final_messages = llm_messages + [assistant_turn, tool_turn]
 
                     logger.info("Requesting final text stream response from LLM using tool context...")
-                    async for chunk in llm.stream_chat(final_messages, log_context={"service": "chat_rag", "thread_id": str(thread_id)}):
+                    async for chunk in llm.stream_chat(
+                        final_messages,
+                        log_context={
+                            "service": "chat_rag",
+                            "thread_id": str(thread_id),
+                            "campaign_id": str(dashboard_id) if dashboard_id else None
+                        }
+                    ):
                         if chunk.response_id:
                             response_id = chunk.response_id
                         if chunk.usage is not None:

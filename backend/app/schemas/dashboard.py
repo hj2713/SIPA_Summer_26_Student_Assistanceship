@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union, Literal
 from datetime import datetime
+
+WorkflowSource = Literal["draft", "published"]
 
 class ColumnPromptHistoryItem(BaseModel):
     version: int
@@ -30,6 +32,8 @@ class DashboardCreate(BaseModel):
     prompt: str = Field(..., description="The system prompt or rules (codebook) for this campaign")
     user_columns: Optional[List[Union[str, UserColumnInput, Dict[str, Any]]]] = Field(default=None, description="Predefined variable columns with optional schemas/descriptions (takes priority over LLM generated schema)")
     model: Optional[str] = Field(default=None, description="Dynamic model choice for campaign coding run")
+    dashboard_type: Optional[str] = Field(default="campaign", description="The type of dashboard (e.g. campaign or model_comparison)")
+    token_limit: Optional[int] = Field(default=2500000, description="The safety limit on cumulative token usage for LLM calls")
 
 class DashboardRow(BaseModel):
     id: str
@@ -45,6 +49,7 @@ class DashboardRow(BaseModel):
     workflow_version: Optional[int] = None
     workflow_revision: Optional[int] = None
     created_at: datetime
+    token_limit: Optional[int] = 2500000
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -145,6 +150,7 @@ class DashboardUpdate(BaseModel):
     prompt: Optional[str] = None
     schema_fields: Optional[List[Dict[str, Any]]] = Field(default=None, alias="schema")
     model: Optional[str] = None
+    token_limit: Optional[int] = None
 
 class CellUpdatePayload(BaseModel):
     column_name: str

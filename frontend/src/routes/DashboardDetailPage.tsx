@@ -11,7 +11,7 @@ import { API_BASE_URL } from "@/constants";
 import { 
   ArrowLeft, RefreshCw, Download, MessageSquare, 
   Eye, Send, Square, AlertCircle, X, AlertTriangle,
-  CheckCircle, Loader2, Sparkles, Plus, BookOpen, Layers, Edit, Info, GitBranch, Trash2
+  CheckCircle, Loader2, Sparkles, Plus, BookOpen, Layers, Edit, Info, GitBranch, Trash2, Coins
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -179,6 +179,7 @@ export function DashboardDetailPage() {
 
   // Data States
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [usageStats, setUsageStats] = useState<{ total_cost: number; input_tokens: number; output_tokens: number } | null>(null);
   const [docs, setDocs] = useState<CampaignDocument[]>([]);
   const [documentPage, setDocumentPage] = useState(1);
   const [documentPageCount, setDocumentPageCount] = useState(1);
@@ -437,6 +438,22 @@ export function DashboardDetailPage() {
     }
   };
 
+  // Fetch campaign usage stats
+  const fetchCampaignUsage = async () => {
+    if (!id || !jwt) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/usage/stats?timeframe=all&campaign_id=${id}`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsageStats(data.summary);
+      }
+    } catch (err) {
+      console.error("Failed to load campaign usage stats:", err);
+    }
+  };
+
   // Fetch campaign's chat thread
   const fetchCampaignThread = async () => {
     try {
@@ -540,6 +557,7 @@ export function DashboardDetailPage() {
       void fetchStatusSummary();
       void fetchGlobalDocuments();
       void fetchCampaignThread();
+      void fetchCampaignUsage();
     }
   }, [id, jwt, documentPage]);
 
@@ -562,6 +580,7 @@ export function DashboardDetailPage() {
       if (cancelled || !summary) return;
       const active = summary.pending > 0 || summary.processing > 0;
       await fetchDocuments(true);
+      void fetchCampaignUsage();
       if (active && !cancelled) {
         timeoutId = setTimeout(poll, 5000);
       }
@@ -1548,6 +1567,19 @@ export function DashboardDetailPage() {
                   {campaign?.description}
                 </div>
               </div>
+              {usageStats && (
+                <div className="flex items-center gap-3 mt-2.5 text-[11px] text-muted-foreground flex-wrap">
+                  <span className="flex items-center gap-1 bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400 px-2 py-0.5 rounded border border-violet-500/20 font-semibold shadow-sm">
+                    <Coins size={11} /> Cost: ${usageStats.total_cost.toFixed(5)}
+                  </span>
+                  <span className="flex items-center gap-1 bg-muted/60 px-2 py-0.5 rounded border border-border shadow-sm">
+                    Prompt Tokens: {usageStats.input_tokens.toLocaleString()}
+                  </span>
+                  <span className="flex items-center gap-1 bg-muted/60 px-2 py-0.5 rounded border border-border shadow-sm">
+                    Completion Tokens: {usageStats.output_tokens.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

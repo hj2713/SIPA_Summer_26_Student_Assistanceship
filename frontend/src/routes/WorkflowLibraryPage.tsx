@@ -169,7 +169,11 @@ export function WorkflowLibraryPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {templates.map((template) => (
-                  <Card key={template.id}>
+                  <Card 
+                    key={template.id}
+                    className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
+                    onClick={() => navigate(`/workflows/${template.id}?type=template`)}
+                  >
                     <CardHeader className="border-b">
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -186,9 +190,9 @@ export function WorkflowLibraryPage() {
                       <div className="mt-4 flex items-center justify-between border-t pt-3 text-[10px] text-muted-foreground">
                         <span>{template.definition.nodes.length} nodes · rev {template.revision}</span>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon-xs" title="Export JSON" onClick={() => void exportTemplate(template)}><Download size={12} /></Button>
-                          <Button variant="ghost" size="icon-xs" title="Duplicate" onClick={() => void duplicateTemplate(template)}><Copy size={12} /></Button>
-                          <Button variant="ghost" size="icon-xs" title="Delete" onClick={() => setDeleteTemplateTarget(template)}><Trash2 className="text-destructive" size={12} /></Button>
+                          <Button variant="ghost" size="icon-xs" title="Export JSON" onClick={(e) => { e.stopPropagation(); void exportTemplate(template); }}><Download size={12} /></Button>
+                          <Button variant="ghost" size="icon-xs" title="Duplicate" onClick={(e) => { e.stopPropagation(); void duplicateTemplate(template); }}><Copy size={12} /></Button>
+                          <Button variant="ghost" size="icon-xs" title="Delete" onClick={(e) => { e.stopPropagation(); setDeleteTemplateTarget(template); }}><Trash2 className="text-destructive" size={12} /></Button>
                         </div>
                       </div>
                     </CardContent>

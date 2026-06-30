@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, MarkerType, MiniMap, ReactFlow, ReactFlowProvider, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ArrowLeft, Bot, Braces, Check, CheckCircle2, FileInput, FlaskConical, GitBranch, Loader2, Play, Save, Send, TableProperties, TriangleAlert, Upload } from "lucide-react";
@@ -34,6 +34,8 @@ function toCanvasEdges(definition: WorkflowDefinition): Edge[] {
 function WorkflowBuilderInner() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isTemplate = searchParams.get("type") === "template";
   const { session, activeWorkspace } = useAuthContext();
   const jwt = session?.access_token || "";
   const workspaceId = activeWorkspace?.id || "TEST";
@@ -57,8 +59,22 @@ function WorkflowBuilderInner() {
 
   useEffect(() => {
     if (!jwt || !id) return;
-    workflowApi.get(id, jwt, workspaceId).then((data) => { setWorkflow(data); setNodes(toCanvasNodes(data.definition)); setEdges(toCanvasEdges(data.definition)); }).catch((error) => { toast.error(error.message); navigate("/workflows"); }).finally(() => setLoading(false));
-  }, [id, jwt, workspaceId, navigate]);
+    const loadPromise = isTemplate 
+      ? workflowApi.getTemplate(id, jwt, workspaceId) 
+      : workflowApi.get(id, jwt, workspaceId);
+      
+    loadPromise
+      .then((data) => { 
+        setWorkflow(data as any); 
+        setNodes(toCanvasNodes(data.definition)); 
+        setEdges(toCanvasEdges(data.definition)); 
+      })
+      .catch((error) => { 
+        toast.error(error.message); 
+        navigate("/workflows"); 
+      })
+      .finally(() => setLoading(false));
+  }, [id, jwt, workspaceId, navigate, isTemplate]);
 
   const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => { setNodes((current) => applyNodeChanges(changes, current)); setDirty(true); }, []);
   const onEdgesChange = useCallback((changes: EdgeChange[]) => { setEdges((current) => applyEdgeChanges(changes, current)); setDirty(true); }, []);
@@ -77,10 +93,19 @@ function WorkflowBuilderInner() {
     if (!workflow) return null;
     setSaving(true);
     try {
-      const updated = await workflowApi.update(workflow.id, { name: workflow.name, description: workflow.description, definition: definitionFromCanvas(), revision: workflow.revision }, jwt, workspaceId);
-      setWorkflow(updated); setDirty(false); toast.success("Workflow draft saved"); return updated;
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to save workflow"); return null; }
-    finally { setSaving(false); }
+      const updated = isTemplate
+        ? await workflowApi.updateTemplate(workflow.id, { name: workflow.name, description: workflow.description, definition: definitionFromCanvas(), revision: workflow.revision }, jwt, workspaceId)
+        : await workflowApi.update(workflow.id, { name: workflow.name, description: workflow.description, definition: definitionFromCanvas(), revision: workflow.revision }, jwt, workspaceId);
+      setWorkflow(updated as any); 
+      setDirty(false); 
+      toast.success(isTemplate ? "Workflow template saved" : "Workflow draft saved"); 
+      return updated;
+    } catch (error) { 
+      toast.error(error instanceof Error ? error.message : "Failed to save workflow"); 
+      return null; 
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   const validate = async () => {
@@ -191,8 +216,50 @@ function WorkflowBuilderInner() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4">
-        <div className="flex min-w-0 items-center gap-3"><Button variant="ghost" size="icon-sm" onClick={() => navigate("/workflows")}><ArrowLeft size={16} /></Button><div className="min-w-0"><div className="flex items-center gap-2"><input value={workflow.name} onChange={(event) => { setWorkflow({ ...workflow, name: event.target.value }); setDirty(true); }} className="min-w-0 max-w-lg bg-transparent text-sm font-bold outline-none" /><span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${workflow.status === "published" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{workflow.status}{workflow.latest_version ? ` · v${workflow.latest_version}` : ""}</span></div><p className="truncate text-[10px] text-muted-foreground">Reusable research method · campaigns are not connected yet</p></div></div>
-        <div className="flex items-center gap-2"><span className="mr-1 text-[10px] text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><Button variant="outline" onClick={() => void openResultsDashboard()}><TableProperties size={14} /> Results Dashboard</Button><Button variant="outline" onClick={() => setShowTest(true)}><FlaskConical size={14} /> Test</Button><Button variant="outline" onClick={() => void validate()}><Check size={14} /> Validate</Button><Button variant="outline" disabled={saving || !dirty} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Save draft</Button><Button onClick={() => setShowPublish(true)}><Send size={14} /> Publish</Button></div>
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="ghost" size="icon-sm" onClick={() => navigate("/workflows")}>
+            <ArrowLeft size={16} />
+          </Button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <input 
+                value={workflow.name} 
+                onChange={(event) => { setWorkflow({ ...workflow, name: event.target.value }); setDirty(true); }} 
+                className="min-w-0 max-w-lg bg-transparent text-sm font-bold outline-none" 
+              />
+              <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${isTemplate ? "bg-indigo-500/10 text-indigo-600" : workflow.status === "published" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                {isTemplate ? `template · rev ${workflow.revision}` : workflow.status}
+                {!isTemplate && workflow.latest_version ? ` · v${workflow.latest_version}` : ""}
+              </span>
+            </div>
+            <p className="truncate text-[10px] text-muted-foreground">
+              {isTemplate ? "System Workflow Template · edits save directly to this template" : "Reusable research method · campaigns are not connected yet"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="mr-1 text-[10px] text-muted-foreground">
+            {dirty ? "Unsaved changes" : "All changes saved"}
+          </span>
+          <Button variant="outline" onClick={() => void openResultsDashboard()}>
+            <TableProperties size={14} /> Results Dashboard
+          </Button>
+          <Button variant="outline" onClick={() => setShowTest(true)}>
+            <FlaskConical size={14} /> Test
+          </Button>
+          <Button variant="outline" onClick={() => void validate()}>
+            <Check size={14} /> Validate
+          </Button>
+          <Button variant="outline" disabled={saving || !dirty} onClick={() => void save()}>
+            {saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} 
+            {isTemplate ? "Save template" : "Save draft"}
+          </Button>
+          {!isTemplate && (
+            <Button onClick={() => setShowPublish(true)}>
+              <Send size={14} /> Publish
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">

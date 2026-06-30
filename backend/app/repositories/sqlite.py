@@ -329,13 +329,46 @@ class SQLiteDashboardRepository(BaseDashboardRepository):
         row = cursor.fetchone()
         return dict(row) if row else None
 
-    def create(self, dashboard_id: str, workspace_id: str, name: str, description: str, prompt: str, schema: str, model: Optional[str]) -> Dict[str, Any]:
+    def create(self, dashboard_id: Any, workspace_id: Optional[str] = None, name: Optional[str] = None, description: Optional[str] = None, prompt: Optional[str] = None, schema: Optional[str] = None, model: Optional[str] = None, dashboard_type: Optional[str] = None, token_limit: Optional[int] = None) -> Dict[str, Any]:
+        import uuid
+        if isinstance(dashboard_id, dict):
+            payload = dashboard_id
+            dashboard_id = payload.get("id") or str(uuid.uuid4())
+            workspace_id = payload.get("workspace_id")
+            name = payload.get("name")
+            description = payload.get("description")
+            prompt = payload.get("prompt")
+            schema = payload.get("schema")
+            model = payload.get("model")
+            dashboard_type = payload.get("dashboard_type") or "campaign"
+            workflow_id = payload.get("workflow_id")
+            workflow_source = payload.get("workflow_source")
+            workflow_version = payload.get("workflow_version")
+            workflow_revision = payload.get("workflow_revision")
+            workflow_definition_json = payload.get("workflow_definition_json")
+            token_limit = payload.get("token_limit") or 2500000
+        else:
+            dashboard_type = dashboard_type or "campaign"
+            workflow_id = None
+            workflow_source = None
+            workflow_version = None
+            workflow_revision = None
+            workflow_definition_json = None
+            token_limit = token_limit if token_limit is not None else 2500000
+
         self.conn.execute(
             """
-            INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model)
-            VALUES (?, ?, ?, ?, ?, ?, ?);
+            INSERT INTO dashboards (
+                id, workspace_id, name, description, prompt, schema, model,
+                dashboard_type, workflow_id, workflow_source, workflow_version,
+                workflow_revision, workflow_definition_json, token_limit
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
-            (str(dashboard_id), str(workspace_id), name, description, prompt, schema, model)
+            (
+                str(dashboard_id), str(workspace_id), name, description, prompt, schema, model,
+                dashboard_type, workflow_id, workflow_source, workflow_version,
+                workflow_revision, workflow_definition_json, token_limit
+            )
         )
         return self.get_by_id(dashboard_id)
 

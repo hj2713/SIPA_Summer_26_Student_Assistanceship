@@ -91,12 +91,16 @@ def log_usage_to_db(
 
     try:
         with get_db_conn() as conn:
-            conn.execute(
-                """
+            query = """
                 INSERT INTO llm_usage_logs (
                     id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """,
+            """
+            if settings.DB_PROVIDER == "postgres":
+                query = query.replace("?", "%s")
+                
+            conn.execute(
+                query,
                 (
                     str(uuid.uuid4()),
                     provider,

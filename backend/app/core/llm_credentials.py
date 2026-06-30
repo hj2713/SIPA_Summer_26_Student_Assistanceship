@@ -79,13 +79,19 @@ def normalize_provider(provider: str) -> str:
     return normalized
 
 
+def _query(sql: str) -> str:
+    if settings.DB_PROVIDER == "postgres":
+        return sql.replace("?", "%s")
+    return sql
+
+
 def _migrate_legacy_credentials(user_id: str) -> None:
     """Migrate legacy columns in `users` table to `user_llm_credentials` table."""
     try:
         with get_db_conn() as conn:
             # Check if user already has records in user_llm_credentials
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) as count FROM user_llm_credentials WHERE user_id = ?", (user_id,))
+            cursor.execute(_query("SELECT COUNT(*) as count FROM user_llm_credentials WHERE user_id = ?"), (user_id,))
             row = cursor.fetchone()
             
             if row:
@@ -97,7 +103,7 @@ def _migrate_legacy_credentials(user_id: str) -> None:
                 return
 
             # Check if users table has legacy key
-            cursor.execute("SELECT llm_provider, llm_api_key_encrypted, llm_model, llm_base_url FROM users WHERE id = ?", (user_id,))
+            cursor.execute(_query("SELECT llm_provider, llm_api_key_encrypted, llm_model, llm_base_url FROM users WHERE id = ?"), (user_id,))
             user_row = cursor.fetchone()
             if not user_row:
                 return
@@ -115,10 +121,10 @@ def _migrate_legacy_credentials(user_id: str) -> None:
 
             if api_key_encrypted:
                 cursor.execute(
-                    """
+                    _query("""
                     INSERT INTO user_llm_credentials (id, user_id, provider, api_key_encrypted, model, base_url)
                     VALUES (?, ?, ?, ?, ?, ?)
-                    """,
+                    """),
                     (str(uuid.uuid4()), user_id, provider, api_key_encrypted, model, base_url)
                 )
                 conn.commit()
@@ -149,7 +155,7 @@ def get_user_llm_credentials(user_id: str | None) -> UserLLMCredentials | None:
     with get_db_conn() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT api_key_encrypted, model, base_url FROM user_llm_credentials WHERE user_id = ? AND provider = ?",
+            _query("SELECT api_key_encrypted, model, base_url FROM user_llm_credentials WHERE user_id = ? AND provider = ?"),
             (user_id, active_provider)
         )
         row = cursor.fetchone()
@@ -214,7 +220,7 @@ def get_user_llm_credentials_summary(user_id: str) -> LLMCredentialsResponse:
     with get_db_conn() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT provider, model, base_url, api_key_encrypted FROM user_llm_credentials WHERE user_id = ?",
+            _query("SELECT provider, model, base_url, api_key_encrypted FROM user_llm_credentials WHERE user_id = ?"),
             (user_id,)
         )
         rows = cursor.fetchall()
@@ -277,7 +283,7 @@ def update_user_llm_credentials(user_id: str, payload: LLMCredentialsUpdate) -> 
         
         # Check if row exists
         cursor.execute(
-            "SELECT id, api_key_encrypted FROM user_llm_credentials WHERE user_id = ? AND provider = ?",
+            _query("SELECT id, api_key_encrypted FROM user_llm_credentials WHERE user_id = ? AND provider = ?"),
             (user_id, provider)
         )
         existing = cursor.fetchone()
@@ -300,19 +306,19 @@ def update_user_llm_credentials(user_id: str, payload: LLMCredentialsUpdate) -> 
                 final_key = old_key
 
             cursor.execute(
-                """
+                _query("""
                 UPDATE user_llm_credentials
                 SET model = ?, base_url = ?, api_key_encrypted = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-                """,
+                """),
                 (model, base_url, final_key, row_id)
             )
         else:
             cursor.execute(
-                """
+                _query("""
                 INSERT INTO user_llm_credentials (id, user_id, provider, api_key_encrypted, model, base_url)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                """),
                 (str(uuid.uuid4()), user_id, provider, encrypted_api_key, model, base_url)
             )
         conn.commit()
@@ -324,7 +330,7 @@ def update_user_llm_credentials(user_id: str, payload: LLMCredentialsUpdate) -> 
         with get_db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT api_key_encrypted FROM user_llm_credentials WHERE user_id = ? AND provider = ?",
+                _query("SELECT api_key_encrypted FROM user_llm_credentials WHERE user_id = ? AND provider = ?"),
                 (user_id, provider)
             )
             key_row = cursor.fetchone()

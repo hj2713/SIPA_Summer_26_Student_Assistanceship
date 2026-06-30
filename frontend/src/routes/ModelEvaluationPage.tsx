@@ -902,19 +902,18 @@ export function ModelEvaluationPage() {
                   {AVAILABLE_MODELS.map(model => {
                     const isSelected = selectedModels.includes(model.id);
                     return (
-                      <div 
+                      <label 
                         key={model.id} 
-                        onClick={() => handleModelToggle(model.id)}
                         className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer select-none transition-colors text-xs ${isSelected ? 'border-primary bg-primary/5 text-primary font-semibold' : 'border-border bg-card'}`}
                       >
                         <input 
                           type="checkbox" 
                           checked={isSelected}
-                          readOnly
+                          onChange={() => handleModelToggle(model.id)}
                           className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
                         />
                         <span className="truncate">{model.name}</span>
-                      </div>
+                      </label>
                     );
                   })}
                 </div>

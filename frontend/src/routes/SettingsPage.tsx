@@ -191,6 +191,44 @@ export function SettingsPage() {
     }
   };
 
+  const handleDeleteKey = async () => {
+    if (!window.confirm("Are you sure you want to delete your saved API key? This will clear the key from the database.")) {
+      return;
+    }
+    if (!jwt) return;
+    setCredentialsSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          provider: credentials.provider,
+          model: credentials.model,
+          base_url: credentials.base_url,
+          api_key: null,
+          clear_api_key: true,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || "Failed to clear API key");
+      }
+      const data = await res.json();
+      setCredentials(data);
+      setApiKeyInput("");
+      setVerifiedModels([]);
+      toast.success("Saved API key deleted successfully");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to delete API key");
+    } finally {
+      setCredentialsSaving(false);
+    }
+  };
+
   const saveCredentials = async () => {
     if (!jwt) return;
     setCredentialsSaving(true);
@@ -517,9 +555,40 @@ export function SettingsPage() {
 
             {/* Models/Providers Breakdown Table */}
             <Card className="p-6">
-              <h3 className="font-bold text-sm text-foreground uppercase tracking-wide mb-6">
-                Model & Provider Breakdown
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b">
+                <div>
+                  <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                    Model & Provider Breakdown
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Historical metrics of model invocations, token usage, and pricing.
+                  </p>
+                </div>
+
+                {/* API Key Status & Actions inside the Breakdown Section */}
+                {credentials.has_api_key ? (
+                  <div className="flex items-center gap-2.5 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>{credentials.provider.toUpperCase()} API KEY:</span>
+                    </div>
+                    <span className="font-mono text-muted-foreground select-none">••••••••••••••••</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDeleteKey}
+                      className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:bg-red-500/10 px-2 py-1 h-7 rounded animate-in fade-in"
+                    >
+                      Delete Key
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-muted-foreground italic bg-muted/30 border p-2 rounded-lg">
+                    No API Key configured.
+                  </div>
+                )}
+              </div>
               
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">

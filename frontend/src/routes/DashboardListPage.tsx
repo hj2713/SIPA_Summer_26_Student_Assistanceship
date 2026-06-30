@@ -24,7 +24,7 @@ interface Campaign {
 }
 
 export function DashboardListPage() {
-  const { session, user } = useAuthContext();
+  const { session, user, activeWorkspace } = useAuthContext();
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,10 +40,10 @@ export function DashboardListPage() {
 
 
   const fetchCampaigns = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || !activeWorkspace?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards`, {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(activeWorkspace.id)}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch campaigns");
@@ -59,7 +59,7 @@ export function DashboardListPage() {
 
   useEffect(() => {
     void fetchCampaigns();
-  }, [session]);
+  }, [session, activeWorkspace?.id]);
 
   const handleCsvColumnImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,7 +126,7 @@ export function DashboardListPage() {
     toast.info("Analyzing system prompt and generating variable schema...", { duration: 4000 });
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dashboards`, {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(activeWorkspace?.id ?? "")}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

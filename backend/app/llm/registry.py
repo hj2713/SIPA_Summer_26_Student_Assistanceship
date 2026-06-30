@@ -28,11 +28,41 @@ from app.llm.types import LLMUsage
 
 # Model pricing matrix per 1M tokens: (input cost per 1M, output cost per 1M)
 PRICING_MAP = {
-    "gemini-3.1-flash-lite-preview": (0.075, 0.30),
-    "gemini-1.5-flash": (0.075, 0.30),
-    "gemini-1.5-pro": (1.25, 5.00),
-    "gpt-4o-mini": (0.15, 0.60),
-    "gpt-4o": (2.50, 10.00),
+    # 1. Google Gemini (Latest Top Models)
+    "gemini-3.1-pro": (2.00, 12.00),
+    "gemini-3.5-flash": (1.50, 9.00),
+    "gemini-3.1-flash-lite": (0.25, 1.50),
+    "gemini-3-flash": (0.50, 3.00),
+    
+    # 2. OpenAI (Latest Top Models)
+    "gpt-5.5-pro": (30.00, 180.00),
+    "gpt-5.5": (5.00, 30.00),
+    "gpt-5.4": (2.50, 15.00),
+    "gpt-5.4-mini": (0.75, 4.50),
+    "gpt-5.4-nano": (0.20, 1.25),
+    "o3-mini": (1.10, 4.40),
+    "o1-preview": (15.00, 60.00),
+    "o1-mini": (3.00, 12.00),
+    "o1": (15.00, 60.00),
+    
+    # 3. Anthropic Claude (Latest Top Models)
+    "claude-opus-4.8": (5.00, 25.00),
+    "claude-sonnet-5": (3.00, 15.00),
+    "claude-sonnet-4.6": (3.00, 15.00),
+    "claude-haiku-4.5": (1.00, 5.00),
+    
+    # 4. DeepSeek (Latest Top Models)
+    "deepseek-v4-pro": (1.74, 3.48),
+    "deepseek-v4-flash": (0.14, 0.28),
+    "deepseek-r1": (0.55, 2.19),
+    "deepseek-chat": (0.14, 0.28),
+    
+    # 5. Kimi / Moonshot (Latest Top Models)
+    "kimi-k2.7-code": (0.95, 4.00),
+    "kimi-k2.6": (0.95, 4.00),
+    "kimi-k2.5": (0.60, 3.00),
+    "kimi": (0.95, 4.00),
+    "moonshot": (0.95, 4.00),
 }
 
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:

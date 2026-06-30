@@ -211,7 +211,7 @@ async def verify_llm_credentials(
             client = genai.Client(api_key=api_key)
             # Test call
             await client.aio.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents="Hello",
                 config=types.GenerateContentConfig(max_output_tokens=1)
             )
@@ -233,7 +233,7 @@ async def verify_llm_credentials(
             client = anthropic.AsyncAnthropic(api_key=api_key)
             # Test call
             await client.messages.create(
-                model="claude-3-5-haiku-latest",
+                model="claude-sonnet-4-5",
                 max_tokens=1,
                 messages=[{"role": "user", "content": "Ping"}]
             )

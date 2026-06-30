@@ -36,11 +36,19 @@ interface UsageStatsResponse {
   timeline: UsageTimeline[];
 }
 
+interface SavedProviderKey {
+  provider: string;
+  model: string;
+  base_url: string;
+  has_api_key: boolean;
+}
+
 interface LLMCredentialsSettings {
   provider: "openai" | "openrouter" | "gemini" | "anthropic";
   model: string;
   base_url: string;
   has_api_key: boolean;
+  saved_keys?: SavedProviderKey[];
 }
 
 const DEFAULT_MODEL_BY_PROVIDER: Record<LLMCredentialsSettings["provider"], string> = {
@@ -191,8 +199,9 @@ export function SettingsPage() {
     }
   };
 
-  const handleDeleteKey = async () => {
-    if (!window.confirm("Are you sure you want to delete your saved API key? This will clear the key from the database.")) {
+  const handleDeleteKey = async (targetProvider?: string) => {
+    const prov = targetProvider ?? credentials.provider;
+    if (!window.confirm(`Are you sure you want to delete your saved ${prov.toUpperCase()} API key?`)) {
       return;
     }
     if (!jwt) return;
@@ -205,7 +214,7 @@ export function SettingsPage() {
           Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
-          provider: credentials.provider,
+          provider: prov,
           model: credentials.model,
           base_url: credentials.base_url,
           api_key: null,
@@ -214,16 +223,67 @@ export function SettingsPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || "Failed to clear API key");
+        throw new Error(body.detail || `Failed to clear ${prov} API key`);
       }
       const data = await res.json();
       setCredentials(data);
       setApiKeyInput("");
       setVerifiedModels([]);
-      toast.success("Saved API key deleted successfully");
+      toast.success(`${prov.toUpperCase()} API key deleted successfully`);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to delete API key");
+    } finally {
+      setCredentialsSaving(false);
+    }
+  };
+
+  const handleActivateProvider = async (prov: SavedProviderKey) => {
+    if (!jwt) return;
+    setCredentialsSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          provider: prov.provider,
+          model: prov.model,
+          base_url: prov.base_url,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `Failed to activate ${prov.provider}`);
+      }
+      const data = await res.json();
+      setCredentials(data);
+      setApiKeyInput("");
+      
+      // Update uiProvider selection to match activated provider
+      if (data.provider === "gemini") {
+        setUiProvider("google");
+      } else if (data.provider === "anthropic") {
+        setUiProvider("anthropic");
+      } else if (data.provider === "openai") {
+        setUiProvider("openai");
+      } else if (data.provider === "openrouter") {
+        if (data.model.includes("deepseek")) {
+          setUiProvider("deepseek");
+        } else if (data.model.includes("kimi") || data.model.includes("moonshot")) {
+          setUiProvider("kimi");
+        } else {
+          setUiProvider("openrouter");
+        }
+      }
+
+      setVerifiedModels([]);
+      toast.success(`${prov.provider.toUpperCase()} activated as default provider`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to activate provider");
     } finally {
       setCredentialsSaving(false);
     }
@@ -554,75 +614,154 @@ export function SettingsPage() {
             </Card>
 
             {/* Models/Providers Breakdown Table */}
-            <Card className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b">
-                <div>
-                  <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
-                    Model & Provider Breakdown
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Historical metrics of model invocations, token usage, and pricing.
-                  </p>
-                </div>
-
-                {/* API Key Status & Actions inside the Breakdown Section */}
-                {credentials.has_api_key ? (
-                  <div className="flex items-center gap-2.5 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-xs">
-                    <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>{credentials.provider.toUpperCase()} API KEY:</span>
-                    </div>
-                    <span className="font-mono text-muted-foreground select-none">••••••••••••••••</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDeleteKey}
-                      className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:bg-red-500/10 px-2 py-1 h-7 rounded animate-in fade-in"
-                    >
-                      Delete Key
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-muted-foreground italic bg-muted/30 border p-2 rounded-lg">
-                    No API Key configured.
-                  </div>
-                )}
+            <Card className="p-6 space-y-6">
+              <div>
+                <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                  Model & Provider Breakdown
+                </h3>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Manage saved provider keys and track historical usage costs.
+                </p>
               </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b text-muted-foreground uppercase font-bold tracking-wider">
-                      <th className="pb-3 pr-4">Provider</th>
-                      <th className="pb-3 pr-4">Model Name</th>
-                      <th className="pb-3 pr-4 text-right">Runs</th>
-                      <th className="pb-3 pr-4 text-right">Input Tokens</th>
-                      <th className="pb-3 pr-4 text-right">Output Tokens</th>
-                      <th className="pb-3 text-right">Estimated Cost</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(!stats?.breakdown || stats.breakdown.length === 0) ? (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-muted-foreground text-xs">
-                          No model metrics recorded yet.
-                        </td>
+
+              {/* API Credentials & Provider Settings Table */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Saved Provider Credentials
+                </h4>
+                <div className="overflow-x-auto rounded-lg border bg-muted/20">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b bg-muted/50 text-muted-foreground uppercase font-bold tracking-wider">
+                        <th className="p-3">Provider</th>
+                        <th className="p-3">Default Model</th>
+                        <th className="p-3">API Key Status</th>
+                        <th className="p-3 text-right">Actions</th>
                       </tr>
-                    ) : (
-                      stats.breakdown.map((row, index) => (
-                        <tr key={index} className="border-b last:border-0 hover:bg-muted/30">
-                          <td className="py-3 pr-4 font-bold text-indigo-600 capitalize">{row.provider}</td>
-                          <td className="py-3 pr-4 font-mono font-medium text-foreground">{row.model}</td>
-                          <td className="py-3 pr-4 text-right font-semibold">{row.calls}</td>
-                          <td className="py-3 pr-4 text-right text-muted-foreground">{row.input_tokens.toLocaleString()}</td>
-                          <td className="py-3 pr-4 text-right text-muted-foreground">{row.output_tokens.toLocaleString()}</td>
-                          <td className="py-3 text-right font-black text-emerald-600">${row.cost.toFixed(5)}</td>
+                    </thead>
+                    <tbody>
+                      {(["gemini", "anthropic", "openai", "openrouter"] as const).map((prov) => {
+                        const saved = credentials.saved_keys?.find(k => k.provider === prov);
+                        const isActive = credentials.provider === prov;
+                        
+                        const providerLabels: Record<string, string> = {
+                          gemini: "Google Gemini",
+                          anthropic: "Anthropic / Claude",
+                          openai: "OpenAI",
+                          openrouter: "OpenRouter",
+                        };
+
+                        return (
+                          <tr key={prov} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3 font-semibold text-foreground">
+                              {providerLabels[prov]}
+                            </td>
+                            <td className="p-3 font-mono text-muted-foreground">
+                              {saved?.model || "-"}
+                            </td>
+                            <td className="p-3">
+                              {saved?.has_api_key ? (
+                                <span className="font-mono text-emerald-600 font-medium">
+                                  Saved (••••••••)
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/60 italic">Not Configured</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right flex justify-end gap-2 items-center">
+                              {saved?.has_api_key ? (
+                                <>
+                                  {isActive ? (
+                                    <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
+                                      Active Default
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleActivateProvider(saved)}
+                                      className="text-[10px] font-bold px-2.5 py-0.5 h-7"
+                                    >
+                                      Activate
+                                    </Button>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteKey(prov)}
+                                    className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:bg-red-500/10 px-2 py-0.5 h-7 rounded"
+                                  >
+                                    Delete Key
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (prov === "gemini") setUiProvider("google");
+                                    else if (prov === "anthropic") setUiProvider("anthropic");
+                                    else if (prov === "openai") setUiProvider("openai");
+                                    else if (prov === "openrouter") setUiProvider("openrouter");
+                                    toast.info(`Enter and verify your key for ${providerLabels[prov]} above.`);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }}
+                                  className="text-[10px] font-semibold text-primary hover:underline px-2 py-0.5 h-7"
+                                >
+                                  Configure Key
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t pt-6">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  Usage & Metrics
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b text-muted-foreground uppercase font-bold tracking-wider">
+                        <th className="pb-3 pr-4">Provider</th>
+                        <th className="pb-3 pr-4">Model Name</th>
+                        <th className="pb-3 pr-4 text-right">Runs</th>
+                        <th className="pb-3 pr-4 text-right">Input Tokens</th>
+                        <th className="pb-3 pr-4 text-right">Output Tokens</th>
+                        <th className="pb-3 text-right">Estimated Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(!stats?.breakdown || stats.breakdown.length === 0) ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-muted-foreground text-xs">
+                            No model metrics recorded yet.
+                          </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        stats.breakdown.map((row, index) => (
+                          <tr key={index} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="py-3 pr-4 font-bold text-indigo-600 capitalize">{row.provider}</td>
+                            <td className="py-3 pr-4 font-mono font-medium text-foreground">{row.model}</td>
+                            <td className="py-3 pr-4 text-right font-semibold">{row.calls}</td>
+                            <td className="py-3 pr-4 text-right text-muted-foreground">{row.input_tokens.toLocaleString()}</td>
+                            <td className="py-3 pr-4 text-right text-muted-foreground">{row.output_tokens.toLocaleString()}</td>
+                            <td className="py-3 text-right font-black text-emerald-600">${row.cost.toFixed(5)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </Card>
           </div>

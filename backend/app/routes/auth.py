@@ -238,6 +238,12 @@ async def verify_llm_credentials(
                 messages=[{"role": "user", "content": "Ping"}]
             )
             models = [
+                "claude-sonnet-5",
+                "claude-opus-4.8",
+                "claude-opus-4.7",
+                "claude-sonnet-4-5",
+                "claude-sonnet-4.6",
+                "claude-haiku-4.5",
                 "claude-3-5-sonnet-latest",
                 "claude-3-5-sonnet-20241022",
                 "claude-3-5-haiku-latest",

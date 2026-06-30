@@ -97,6 +97,20 @@ def init_postgres_db():
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_llm_credentials (
+                    id VARCHAR(255) PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    provider VARCHAR(50) NOT NULL,
+                    api_key_encrypted TEXT,
+                    model VARCHAR(100),
+                    base_url TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unique_user_provider UNIQUE (user_id, provider)
+                );
+            """)
             
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS dashboards (
@@ -332,7 +346,6 @@ def init_sqlite_db():
             );
         """)
 
-        # Create users table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
@@ -346,6 +359,20 @@ def init_sqlite_db():
                 llm_model TEXT,
                 llm_base_url TEXT,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+            );
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_llm_credentials (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                provider TEXT NOT NULL,
+                api_key_encrypted TEXT,
+                model TEXT,
+                base_url TEXT,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                UNIQUE(user_id, provider)
             );
         """)
 

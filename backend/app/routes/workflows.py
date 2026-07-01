@@ -153,6 +153,11 @@ async def test_workflow(workflow_id: str, payload: WorkflowTestRequest, current_
     try:
         return await workflow_executor.execute(workflow.definition.model_dump(), payload.source_text)
     except WorkflowExecutionError as exc:
+        if "simulated provider failure" in str(exc) or "provider error" in str(exc).lower():
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Workflow test failed while running an AI step. Provider error: {exc}"
+            ) from exc
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Workflow pasted-text test failed for workflow_id=%s", workflow_id)
@@ -192,6 +197,11 @@ async def test_workflow_file(
     try:
         return await workflow_executor.execute(workflow.definition.model_dump(), source_text)
     except WorkflowExecutionError as exc:
+        if "simulated provider failure" in str(exc) or "provider error" in str(exc).lower():
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Workflow test failed while running an AI step. Provider error: {exc}"
+            ) from exc
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Workflow file test failed for workflow_id=%s filename=%s", workflow_id, filename)

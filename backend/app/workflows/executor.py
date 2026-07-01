@@ -21,7 +21,10 @@ FIELD_TYPES = {
 
 
 class WorkflowExecutionError(ValueError):
-    pass
+    def __init__(self, message: str, trace: list[dict[str, Any]] | None = None, context: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.trace = trace or []
+        self.context = context or {}
 
 
 class WorkflowExecutor:
@@ -127,103 +130,120 @@ class WorkflowExecutor:
             config = node.get("config") or {}
             outputs: Dict[str, Any] = {}
             message = ""
-            if node_kind == "document_input":
-                outputs = {"text_length": len(source_text), "source_policy": config.get("source_policy", "campaign_source")}
-            elif node_kind == "llm":
-                selected_inputs = {field: context.get(field) for field in config.get("input_fields") or []}
-                document_context = config.get("document_context", "source_text")
+            try:
+                if node_kind == "document_input":
+                    outputs = {"text_length": len(source_text), "source_policy": config.get("source_policy", "campaign_source")}
+                elif node_kind == "llm":
+                    selected_inputs = {field: context.get(field) for field in config.get("input_fields") or []}
+                    document_context = config.get("document_context", "source_text")
 
-                # Collect rank descriptor prompts from any directly-incoming rank_descriptor nodes
-                rank_descriptor_texts = []
-                for edge in node_incoming:
-                    src_id = edge.get("source")
-                    src_node = next((n for n in ordered if n["id"] == src_id), None)
-                    if src_node and src_node.get("kind") == "rank_descriptor":
-                        rd_instructions = str(src_node.get("config", {}).get("instructions", "") or "").strip()
-                        if rd_instructions:
-                            rank = src_node.get("config", {}).get("rank") or src_node.get("rank", "?")
-                            rank_descriptor_texts.append(f"Rank {rank}: {rd_instructions}")
-                # Sort by rank number so combined prompt is always ordered 1 → 4
-                rank_descriptor_texts.sort()
+                    # Collect rank descriptor prompts from any directly-incoming rank_descriptor nodes
+                    rank_descriptor_texts = []
+                    for edge in node_incoming:
+                        src_id = edge.get("source")
+                        src_node = next((n for n in ordered if n["id"] == src_id), None)
+                        if src_node and src_node.get("kind") == "rank_descriptor":
+                            rd_instructions = str(src_node.get("config", {}).get("instructions", "") or "").strip()
+                            if rd_instructions:
+                                rank = src_node.get("config", {}).get("rank") or src_node.get("rank", "?")
+                                rank_descriptor_texts.append(f"Rank {rank}: {rd_instructions}")
+                    # Sort by rank number so combined prompt is always ordered 1 → 4
+                    rank_descriptor_texts.sort()
 
-                base_instructions = str(config.get("instructions", "") or "")
-                if rank_descriptor_texts:
-                    combined_rank_text = "\n\n".join(rank_descriptor_texts)
-                    effective_instructions = (
-                        f"{base_instructions}\n\n"
-                        f"=== RANK DESCRIPTOR PROMPTS ===\n"
-                        f"Use the following per-rank criteria when assigning discretion_rank:\n\n"
-                        f"{combined_rank_text}"
-                    )
-                else:
-                    effective_instructions = base_instructions
-
-                prompt_parts = [
-                    f"=== STAGE ===\n{node['name']}",
-                    f"=== INSTRUCTIONS ===\n{effective_instructions}",
-                    f"=== DECLARED PRIOR OUTPUTS ===\n{selected_inputs or 'None'}",
-                ]
-                if document_context != "none":
-                    prompt_parts.append(f"=== SOURCE TEXT ===\n{source_text}")
-                
-                # model_override takes priority over all node/workflow-level model settings
-                effective_model = model_override or config.get("model") or model_name
-                llm = get_llm_for_model(effective_model)
-                llm_log_context = {"service": "workflow_test", "workflow_node_id": node_id}
-                if log_context:
-                    llm_log_context.update(log_context)
-                parsed = await llm.parse_structured(
-                    [
-                        LLMMessage(
-                            role="system",
-                            content="You are executing one stage of a versioned research coding workflow. Return only the requested structured fields.",
-                        ),
-                        LLMMessage(role="user", content="\n\n".join(prompt_parts)),
-                    ],
-                    schema=self._llm_schema(node),
-                    log_context=llm_log_context,
-                )
-                outputs = parsed.model_dump()
-            elif node_kind == "condition":
-                result = evaluate_expression(config.get("expression") or {}, context)
-                outputs = {"result": result}
-                message = "TRUE branch selected." if result else "FALSE branch selected."
-                for edge in outgoing[node_id]:
-                    handle = edge.get("source_handle")
-                    edge_active[edge["id"]] = (handle == "true" and result) or (handle == "false" and not result) or handle not in {"true", "false"}
-            elif node_kind == "set_value":
-                for assignment in config.get("assignments") or []:
-                    outputs[assignment["field"]] = assignment.get("value")
-            elif node_kind == "rank_descriptor":
-                # Store the instructions in context so they are accessible for tracing.
-                # The actual injection into downstream llm nodes happens when those nodes run.
-                rd_instructions = str(config.get("instructions", "") or "").strip()
-                outputs = {"instructions": rd_instructions, "rank": config.get("rank")}
-            elif node_kind == "validation":
-                rule_results = []
-                for rule in config.get("rules") or []:
-                    passed = evaluate_expression(rule.get("expression") or {}, context)
-                    rule_results.append({"name": rule.get("name", "Validation rule"), "passed": passed, "severity": rule.get("severity", "error")})
-                outputs = {"rules": rule_results, "valid": all(item["passed"] for item in rule_results)}
-            elif node_kind == "output":
-                for field in config.get("fields") or []:
-                    if isinstance(field, dict):
-                        source = str(field.get("source") or field.get("field") or "")
-                        key = str(field.get("key") or source)
+                    base_instructions = str(config.get("instructions", "") or "")
+                    if rank_descriptor_texts:
+                        combined_rank_text = "\n\n".join(rank_descriptor_texts)
+                        effective_instructions = (
+                            f"{base_instructions}\n\n"
+                            f"=== RANK DESCRIPTOR PROMPTS ===\n"
+                            f"Use the following per-rank criteria when assigning discretion_rank:\n\n"
+                            f"{combined_rank_text}"
+                        )
                     else:
-                        source = str(field)
-                        key = source
-                    if source:
-                        outputs[key] = self._context_value(context, source)
+                        effective_instructions = base_instructions
 
-            for key, value in outputs.items():
-                context[f"{node_id}.{key}"] = value
-                if key not in context:
-                    context[key] = value
-            if node_kind != "condition":
-                for edge in outgoing[node_id]:
-                    edge_active[edge["id"]] = True
-            trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "completed", "outputs": outputs, "message": message})
+                    prompt_parts = [
+                        f"=== STAGE ===\n{node['name']}",
+                        f"=== INSTRUCTIONS ===\n{effective_instructions}",
+                        f"=== DECLARED PRIOR OUTPUTS ===\n{selected_inputs or 'None'}",
+                    ]
+                    if document_context != "none":
+                        prompt_parts.append(f"=== SOURCE TEXT ===\n{source_text}")
+                    
+                    # model_override takes priority over all node/workflow-level model settings
+                    effective_model = model_override or config.get("model") or model_name
+                    llm = get_llm_for_model(effective_model)
+                    llm_log_context = {"service": "workflow_test", "workflow_node_id": node_id}
+                    if log_context:
+                        llm_log_context.update(log_context)
+                    parsed = await llm.parse_structured(
+                        [
+                            LLMMessage(
+                                role="system",
+                                content="You are executing one stage of a versioned research coding workflow. Return only the requested structured fields.",
+                            ),
+                            LLMMessage(role="user", content="\n\n".join(prompt_parts)),
+                        ],
+                        schema=self._llm_schema(node),
+                        log_context=llm_log_context,
+                    )
+                    outputs = parsed.model_dump()
+                elif node_kind == "condition":
+                    result = evaluate_expression(config.get("expression") or {}, context)
+                    outputs = {"result": result}
+                    message = "TRUE branch selected." if result else "FALSE branch selected."
+                    for edge in outgoing[node_id]:
+                        handle = edge.get("source_handle")
+                        edge_active[edge["id"]] = (handle == "true" and result) or (handle == "false" and not result) or handle not in {"true", "false"}
+                elif node_kind == "set_value":
+                    for assignment in config.get("assignments") or []:
+                        outputs[assignment["field"]] = assignment.get("value")
+                elif node_kind == "rank_descriptor":
+                    # Store the instructions in context so they are accessible for tracing.
+                    # The actual injection into downstream llm nodes happens when those nodes run.
+                    rd_instructions = str(config.get("instructions", "") or "").strip()
+                    outputs = {"instructions": rd_instructions, "rank": config.get("rank")}
+                elif node_kind == "validation":
+                    rule_results = []
+                    for rule in config.get("rules") or []:
+                        passed = evaluate_expression(rule.get("expression") or {}, context)
+                        rule_results.append({"name": rule.get("name", "Validation rule"), "passed": passed, "severity": rule.get("severity", "error")})
+                    outputs = {"rules": rule_results, "valid": all(item["passed"] for item in rule_results)}
+                elif node_kind == "output":
+                    for field in config.get("fields") or []:
+                        if isinstance(field, dict):
+                            source = str(field.get("source") or field.get("field") or "")
+                            key = str(field.get("key") or source)
+                        else:
+                            source = str(field)
+                            key = source
+                        if source:
+                            outputs[key] = self._context_value(context, source)
+
+                for key, value in outputs.items():
+                    context[f"{node_id}.{key}"] = value
+                    if key not in context:
+                        context[key] = value
+                if node_kind != "condition":
+                    for edge in outgoing[node_id]:
+                        edge_active[edge["id"]] = True
+                trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "completed", "outputs": outputs, "message": message})
+            except Exception as exc:
+                error_msg = str(exc)
+                trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "failed", "outputs": {}, "message": error_msg})
+                # Add all remaining nodes as skipped in the trace
+                executed_ids = {t["node_id"] for t in trace}
+                for remaining_node in ordered:
+                    if remaining_node["id"] not in executed_ids:
+                        trace.append({
+                            "node_id": remaining_node["id"],
+                            "name": remaining_node["name"],
+                            "kind": remaining_node["kind"],
+                            "status": "skipped",
+                            "outputs": {},
+                            "message": "Parent node execution failed."
+                        })
+                raise WorkflowExecutionError(error_msg, trace=trace, context=context)
 
         output_nodes = [item for item in trace if item["kind"] == "output" and item["status"] == "completed"]
         final_outputs = output_nodes[-1]["outputs"] if output_nodes else {}

@@ -324,6 +324,8 @@ class WorkflowDashboardService:
 
         except Exception as exc:
             logger.error("Workflow failed for model %s on doc %s: %s", model, document_id, exc)
+            trace_data = getattr(exc, "trace", [])
+            context_data = getattr(exc, "context", {})
             return {
                 "status": "failed",
                 "values": {},
@@ -332,6 +334,8 @@ class WorkflowDashboardService:
                 "output_tokens": 0,
                 "error_message": str(exc),
                 "error_type": "API_FAILURE",
+                "trace": trace_data,
+                "context": context_data,
             }
 
     # -------------------------------------------------------------------------
@@ -479,6 +483,8 @@ class WorkflowDashboardService:
                     error_message = str(exc)
                     if not models_to_run:
                         models_to_run = list(models)
+                    trace_data = getattr(exc, "trace", None)
+                    context_data = getattr(exc, "context", None)
                     for model in models_to_run:
                         existing_model_run = all_coded.get(model) if isinstance(all_coded.get(model), dict) else {}
                         all_coded[model] = {
@@ -487,8 +493,8 @@ class WorkflowDashboardService:
                             "cost": existing_model_run.get("cost", 0.0),
                             "input_tokens": existing_model_run.get("input_tokens", 0),
                             "output_tokens": existing_model_run.get("output_tokens", 0),
-                            "trace": existing_model_run.get("trace"),
-                            "context": existing_model_run.get("context"),
+                            "trace": trace_data or existing_model_run.get("trace"),
+                            "context": context_data or existing_model_run.get("context"),
                             "error_message": error_message,
                             "error_type": "API_FAILURE",
                         }

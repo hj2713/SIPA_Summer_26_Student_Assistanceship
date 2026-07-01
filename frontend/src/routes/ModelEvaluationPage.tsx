@@ -1351,6 +1351,30 @@ export function ModelEvaluationPage() {
                                 const isFailed = runStatus === "failed" || runStatus === "suspended_limit";
                                 const isMissing = runStatus === "missing";
 
+                                const docBase = doc.filename.split("/").pop()?.toLowerCase() || "";
+                                const benchRow = parsedBenchmark ? parsedBenchmark.rows.find(r => 
+                                  (r.Filename || "").split("/").pop()?.toLowerCase() === docBase
+                                ) : null;
+
+                                let benchVal: string | undefined = undefined;
+                                let isMismatch = false;
+
+                                if (benchRow) {
+                                  if (col.name === "delegate_law") {
+                                    benchVal = benchRow["DelegationLaw (Y/N)"];
+                                    const hasBenchmark = benchVal !== undefined && benchVal !== null && benchVal !== "";
+                                    const expDel = hasBenchmark ? normalizeVal(benchVal) : undefined;
+                                    const predDel = value !== undefined && value !== null ? normalizeVal(String(value)) : undefined;
+                                    isMismatch = hasBenchmark && runStatus === "completed" && expDel !== predDel;
+                                  } else if (col.name === "discretion_rank") {
+                                    benchVal = benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"];
+                                    const hasBenchmark = benchVal !== undefined && benchVal !== null && benchVal !== "";
+                                    const expRank = hasBenchmark ? parseFloat(benchVal || "") : NaN;
+                                    const predRank = value !== undefined && value !== null ? parseFloat(String(value)) : NaN;
+                                    isMismatch = hasBenchmark && runStatus === "completed" && (!isNaN(expRank) && !isNaN(predRank) && expRank !== predRank);
+                                  }
+                                }
+
                                 return (
                                   <td
                                     key={`${doc.document_id}-${col.name}-${model}`}
@@ -1375,7 +1399,15 @@ export function ModelEvaluationPage() {
                                       inputTokens: run.input_tokens,
                                       outputTokens: run.output_tokens,
                                     })}
-                                    className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${isFailed ? "bg-red-500/5" : isMissing ? "bg-amber-500/5" : ""}`}
+                                    className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${
+                                      isMismatch 
+                                        ? "bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900" 
+                                        : isFailed 
+                                          ? "bg-red-500/5" 
+                                          : isMissing 
+                                            ? "bg-amber-500/5" 
+                                            : ""
+                                    }`}
                                   >
                                     <div className="flex h-[88px] flex-col items-center justify-start overflow-hidden">
                                       {isPending ? (
@@ -1425,13 +1457,37 @@ export function ModelEvaluationPage() {
                                         </div>
                                       ) : (
                                         <>
-                                          <div
-                                            className={`max-w-[170px] overflow-hidden text-center font-semibold underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 ${
-                                              isLongformColumn(col.name) ? "line-clamp-3 text-[11px] leading-4" : "line-clamp-2 break-words"
-                                            }`}
-                                          >
-                                            {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
-                                          </div>
+                                          {isMismatch ? (
+                                            <div className="flex flex-col justify-center w-full py-0.5">
+                                              <div className="flex items-center justify-center gap-1 min-w-0">
+                                                <span 
+                                                  className="bg-rose-500 text-white rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center shrink-0 shadow-sm"
+                                                  title={`Benchmark value: ${benchVal}\nLLM value: ${value}`}
+                                                >
+                                                  !
+                                                </span>
+                                                <span className="truncate font-semibold text-xs leading-4">
+                                                  <span className="text-[10px] text-muted-foreground mr-1 select-none">LLM:</span>
+                                                  {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
+                                                </span>
+                                              </div>
+
+                                              <div className="text-[10px] text-rose-600 dark:text-rose-400 font-sans mt-1.5 pt-1.5 border-t border-rose-200/50 dark:border-rose-900/30 flex items-center justify-center min-w-0">
+                                                <span className="font-semibold mr-1 select-none">CSV:</span>
+                                                <span className="font-mono truncate bg-rose-500/5 px-1.5 py-0.5 rounded">
+                                                  {benchVal}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div
+                                              className={`max-w-[170px] overflow-hidden text-center font-semibold underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 ${
+                                                isLongformColumn(col.name) ? "line-clamp-3 text-[11px] leading-4" : "line-clamp-2 break-words"
+                                              }`}
+                                            >
+                                              {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
+                                            </div>
+                                          )}
                                           <div className="mt-1 text-[9px] text-muted-foreground/75 font-normal">
                                             {run.trace?.length ? `${run.trace.length} trace node${run.trace.length === 1 ? "" : "s"}` : "No trace"}
                                           </div>

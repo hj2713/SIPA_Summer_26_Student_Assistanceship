@@ -169,6 +169,35 @@ def log_usage_to_db(
 
 # OpenRouter canonical model IDs for models that don't already carry a "/" prefix
 _OPENROUTER_MODEL_MAP: dict[str, str] = {
+    # OpenAI
+    "gpt-4o-mini": "openai/gpt-4o-mini",
+    "gpt-4o": "openai/gpt-4o",
+    "gpt-4-turbo": "openai/gpt-4-turbo",
+    "o1-preview": "openai/o1-preview",
+    "o1-mini": "openai/o1-mini",
+    "o1": "openai/o1",
+    "o3-mini": "openai/o3-mini",
+    "o4-mini": "openai/o4-mini",
+    "o3": "openai/o3",
+    "gpt-5.5-pro": "openai/gpt-5.5-pro",
+    "gpt-5.5": "openai/gpt-5.5",
+    "gpt-5.4": "openai/gpt-5.4",
+    "gpt-5.4-mini": "openai/gpt-5.4-mini",
+    "gpt-5.4-nano": "openai/gpt-5.4-nano",
+    # Anthropic Claude
+    "claude-opus-4.8": "anthropic/claude-opus-4.8",
+    "claude-sonnet-5": "anthropic/claude-sonnet-5",
+    "claude-sonnet-4.6": "anthropic/claude-sonnet-4.6",
+    "claude-sonnet-4-5": "anthropic/claude-sonnet-4-5",
+    "claude-haiku-4.5": "anthropic/claude-haiku-4.5",
+    "claude-haiku-3-5": "anthropic/claude-3-5-haiku",
+    "claude-3-5-sonnet": "anthropic/claude-3.5-sonnet",
+    "claude-3-5-sonnet-latest": "anthropic/claude-3.5-sonnet",
+    "claude-3-5-haiku": "anthropic/claude-3.5-haiku",
+    "claude-3-5-haiku-latest": "anthropic/claude-3.5-haiku",
+    "claude-3-opus": "anthropic/claude-3-opus",
+    "claude-3-sonnet": "anthropic/claude-3-sonnet",
+    "claude-3-haiku": "anthropic/claude-3-haiku",
     # DeepSeek
     "deepseek-chat": "deepseek/deepseek-chat",
     "deepseek-r1": "deepseek/deepseek-r1",
@@ -206,12 +235,6 @@ def _classify_model(model: str) -> str:
     # Gemini family
     if m.startswith("gemini-"):
         return "gemini"
-    # Anthropic family
-    if m.startswith("claude-"):
-        return "anthropic"
-    # OpenAI family
-    if m.startswith(("gpt-", "o1-", "o3-", "o4-", "chatgpt-")):
-        return "openai"
     # Everything else → OpenRouter
     return "openrouter"
 
@@ -371,35 +394,20 @@ def _build_service_for_provider(
         llm_provider: LLMProvider = GeminiProvider(api_key=api_key, model=model_name)
         return LLMService(llm_provider)
 
-    if provider == "anthropic":
-        api_key = _pick_key("anthropic", user_creds, settings.ANTHROPIC_API_KEY)
-        if not api_key:
-            raise ValueError(
-                f"No Anthropic API key found for model '{model_name}'. "
-                "Add one in Settings → API Keys → Anthropic."
-            )
-        from app.llm.providers.anthropic_provider import AnthropicProvider
-        llm_provider: LLMProvider = AnthropicProvider(api_key=api_key, model=model_name)
-        return LLMService(llm_provider)
-
-    if provider == "openai":
-        api_key = _pick_key("openai", user_creds, settings.OPENAI_API_KEY)
-        if not api_key:
-            raise ValueError(
-                f"No OpenAI API key found for model '{model_name}'. "
-                "Add one in Settings → API Keys → OpenAI."
-            )
-        from app.llm.providers.openai_provider import OpenAIProvider
-        llm_provider = OpenAIProvider(api_key=api_key, model=model_name, tracer=tracer, name="openai")
-        return LLMService(llm_provider)
-
-    # provider == "openrouter"
+    # Route all other providers via OpenRouter
     api_key = _pick_key("openrouter", user_creds, settings.OPEN_ROUTER_API_KEY)
+    if not api_key:
+        # Fall back to provider-specific keys if no openrouter key was set
+        if provider == "openai":
+            api_key = _pick_key("openai", user_creds, settings.OPENAI_API_KEY)
+        elif provider == "anthropic":
+            api_key = _pick_key("anthropic", user_creds, settings.ANTHROPIC_API_KEY)
+
     if not api_key:
         raise ValueError(
             f"No OpenRouter API key found for model '{model_name}'. "
             "Add one in Settings → API Keys → OpenRouter. "
-            "DeepSeek, Kimi, Llama, Qwen and other non-Anthropic/OpenAI models route via OpenRouter."
+            "All non-Gemini models (including GPT and Claude models) route via OpenRouter."
         )
     openrouter_model = _resolve_openrouter_model(model_name)
     from app.llm.providers.openai_provider import OpenAIProvider
@@ -490,44 +498,21 @@ def _build_user_llm(
         )
         return LLMService(provider)
 
-    if provider_name == "openrouter":
-        from app.llm.providers.openai_provider import OpenAIProvider
-        provider = OpenAIProvider(
-            api_key=credentials.api_key,
-            model=model,
-            base_url=credentials.base_url or "https://openrouter.ai/api/v1",
-            default_headers={
-                "HTTP-Referer": "http://localhost:8000",
-                "X-Title": "Law Delegation Research",
-            },
-            tracer=tracer,
-            name="openrouter",
-        )
-        return LLMService(provider)
-
-    if provider_name == "openai":
-        from app.llm.providers.openai_provider import OpenAIProvider
-        provider = OpenAIProvider(
-            api_key=credentials.api_key,
-            model=model,
-            base_url=credentials.base_url or None,
-            tracer=tracer,
-            name="openai",
-        )
-        return LLMService(provider)
-
-    if provider_name == "anthropic":
-        from app.llm.providers.anthropic_provider import AnthropicProvider
-        provider = AnthropicProvider(
-            api_key=credentials.api_key,
-            model=model,
-        )
-        return LLMService(provider)
-
-    raise ValueError(
-        f"Unknown user LLM provider={provider_name!r}. "
-        "Supported: 'openai', 'openrouter', 'gemini', 'anthropic'."
+    # Route all other user credentials to OpenRouter
+    openrouter_model = _resolve_openrouter_model(model)
+    from app.llm.providers.openai_provider import OpenAIProvider
+    provider = OpenAIProvider(
+        api_key=credentials.api_key,
+        model=openrouter_model,
+        base_url=credentials.base_url or "https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "http://localhost:8000",
+            "X-Title": "Law Delegation Research",
+        },
+        tracer=tracer,
+        name="openrouter",
     )
+    return LLMService(provider)
 
 
 def _build_llm() -> LLMService:
@@ -542,11 +527,35 @@ def _build_llm() -> LLMService:
             model=settings.GEMINI_MODEL,
         )
         logger.info("LLMService initialized: gemini (model=%s)", provider.model)
-    elif provider_name in ("auto", "openrouter") and settings.OPEN_ROUTER_API_KEY:
+    else:
+        # Route all other providers via OpenRouter
+        api_key = settings.OPEN_ROUTER_API_KEY
+        if not api_key:
+            # Fall back to other keys for backward compatibility
+            if provider_name == "openai":
+                api_key = settings.OPENAI_API_KEY
+            elif provider_name == "anthropic":
+                api_key = settings.ANTHROPIC_API_KEY
+        
+        if not api_key:
+            raise ValueError(
+                "No OpenRouter API key found. "
+                "All non-Gemini models route via OpenRouter. "
+                "Please configure OPEN_ROUTER_API_KEY in your .env file."
+            )
+        
+        raw_model = settings.OPEN_ROUTER_MODEL_NAME
+        if provider_name == "openai" and settings.OPENAI_MODEL:
+            raw_model = settings.OPENAI_MODEL
+        elif provider_name == "anthropic" and settings.ANTHROPIC_MODEL:
+            raw_model = settings.ANTHROPIC_MODEL
+            
+        model = _resolve_openrouter_model(raw_model)
+        
         from app.llm.providers.openai_provider import OpenAIProvider
         provider = OpenAIProvider(
-            api_key=settings.OPEN_ROUTER_API_KEY,
-            model=settings.OPEN_ROUTER_MODEL_NAME,
+            api_key=api_key,
+            model=model,
             base_url="https://openrouter.ai/api/v1",
             default_headers={
                 "HTTP-Referer": "http://localhost:8000",
@@ -556,26 +565,5 @@ def _build_llm() -> LLMService:
             name="openrouter",
         )
         logger.info("LLMService initialized: openrouter (model=%s)", provider.model)
-    elif provider_name in ("auto", "openai"):
-        from app.llm.providers.openai_provider import OpenAIProvider
-        provider = OpenAIProvider(
-            api_key=settings.OPENAI_API_KEY,
-            model=settings.OPENAI_MODEL,
-            tracer=tracer,
-            name="openai",
-        )
-        logger.info("LLMService initialized: openai (model=%s)", provider.model)
-    elif provider_name in ("auto", "anthropic") and settings.ANTHROPIC_API_KEY:
-        from app.llm.providers.anthropic_provider import AnthropicProvider
-        provider = AnthropicProvider(
-            api_key=settings.ANTHROPIC_API_KEY,
-            model=settings.ANTHROPIC_MODEL,
-        )
-        logger.info("LLMService initialized: anthropic (model=%s)", provider.model)
-    else:
-        raise ValueError(
-            f"Unknown LLM_PROVIDER={provider_name!r}. "
-            "Supported: 'auto', 'openai', 'openrouter', 'gemini', 'anthropic'."
-        )
 
     return LLMService(provider)

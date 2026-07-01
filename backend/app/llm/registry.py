@@ -324,16 +324,26 @@ def get_llm_for_model(model_name: str | None = None) -> LLMService:
     if not model_name:
         return get_llm()
 
-    provider = _classify_model(model_name)
+    normalized_model_name = model_name.strip()
+    if "," in normalized_model_name:
+        primary_model_name = normalized_model_name.split(",", 1)[0].strip()
+        logger.info(
+            "Received multi-model string %r for single-model LLM selection; using primary model %r",
+            model_name,
+            primary_model_name,
+        )
+        normalized_model_name = primary_model_name
+
+    provider = _classify_model(normalized_model_name)
 
     # ── 1. Try per-user saved keys first ────────────────────────────────────
     user_creds = _get_request_llm_credentials()
     if user_creds:
-        return _build_service_for_provider(provider, model_name, user_creds=user_creds)
+        return _build_service_for_provider(provider, normalized_model_name, user_creds=user_creds)
 
     _raise_if_server_fallback_disabled()
     # ── 2. Fall back to server .env keys ────────────────────────────────────
-    return _build_service_for_provider(provider, model_name, user_creds=None)
+    return _build_service_for_provider(provider, normalized_model_name, user_creds=None)
 
 
 def _build_service_for_provider(

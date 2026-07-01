@@ -1167,7 +1167,11 @@ export function DashboardDetailPage() {
         setOrderedColumns(data.schema);
         setSchemaFields(data.schema);
       }
-      toast.success("Schema regenerated successfully!");
+      if (Array.isArray(data.schema) && data.schema.length > 0) {
+        toast.success("Schema regenerated successfully!");
+      } else {
+        toast.warning("Schema retry completed, but no variables were extracted. Review the prompt or define columns manually.");
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to regenerate schema");

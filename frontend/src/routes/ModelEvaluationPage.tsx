@@ -801,7 +801,7 @@ export function ModelEvaluationPage() {
         }
 
         // 2. Evaluate rank accuracy
-        const expRank = parseFloat(benchRow["RG_Discretion_Rank"] || "");
+        const expRank = parseFloat(benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "");
         const predRank = parseFloat(modelVals["discretion_rank"] || "");
         if (!isNaN(expRank) && !isNaN(predRank)) {
           rankTotal++;
@@ -1150,11 +1150,15 @@ export function ModelEvaluationPage() {
                           <div className="border-t border-border/20 pt-3 space-y-2">
                             <div className="flex justify-between items-center text-xs">
                               <span className="text-muted-foreground">Delegation Accuracy</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">{accuracy.delegation_percent}%</span>
+                              <span className="font-bold text-green-600 dark:text-green-400">
+                                {accuracy.delegation_percent}% ({accuracy.delegation_matches}/{accuracy.delegation_total})
+                              </span>
                             </div>
                             <div className="flex justify-between items-center text-xs">
                               <span className="text-muted-foreground">Rank Accuracy (Exact)</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">{accuracy.rank_percent}%</span>
+                              <span className="font-bold text-green-600 dark:text-green-400">
+                                {accuracy.rank_percent}% ({accuracy.rank_matches}/{accuracy.rank_total})
+                              </span>
                             </div>
                             {accuracy.mae !== null && (
                               <div className="flex justify-between items-center text-xs">

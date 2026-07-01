@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import uuid
 from pathlib import Path
 from typing import Any, Optional
 from fastapi import HTTPException, UploadFile
@@ -8,10 +9,12 @@ from fastapi import HTTPException, UploadFile
 from app.core.request_context import set_current_user_id
 from app.repositories import get_db_session
 from app.schemas.dashboard import DashboardRow, DashboardDocumentRow, WorkflowSource
+from app.schemas.document import DocumentStatus
 from app.services.campaign_service import campaign_service
 from app.services.document_service import document_service
-from app.services.ingestion_service import extract_text
+from app.services.ingestion_service import extract_text, chunk_text
 from app.workflows.executor import workflow_executor, WorkflowExecutionError
+from app.workflows.schema_fields import extract_dashboard_schema_fields
 
 logger = logging.getLogger(__name__)
 
@@ -46,19 +49,19 @@ class WorkflowDashboardService:
                 return campaign_service._dashboard_row(row)
 
             # Not found: create dashboard
-            workflow = session.coding_workflows.get(workflow_id)
+            workflow = session.workflows.get_by_id(workflow_id)
             if not workflow:
                 raise HTTPException(status_code=404, detail="Workflow not found.")
 
             if source == "published":
-                wf_version = session.coding_workflows.get_version(workflow_id, version)
+                wf_version = session.workflow_versions.get(workflow_id, version)
                 if not wf_version:
                     raise HTTPException(status_code=404, detail=f"Workflow version {version} not found.")
-                definition = wf_version["definition"]
-                wf_revision = wf_version["revision"]
+                definition = wf_version["definition_json"]
+                wf_revision = wf_version["version"]
                 name = f"{workflow['name']} (v{version})"
             else:
-                definition = workflow["definition"]
+                definition = workflow["draft_definition"]
                 wf_revision = workflow["revision"]
                 name = f"{workflow['name']} (Draft)"
 
@@ -68,27 +71,7 @@ class WorkflowDashboardService:
             except Exception:
                 def_dict = {}
 
-            nodes = def_dict.get("nodes") or []
-            schema_fields = []
-            seen = set()
-
-            # Output fields declared in variables nodes
-            for node in nodes:
-                if node.get("kind") == "output":
-                    config = node.get("config") or {}
-                    for field in config.get("outputs") or []:
-                        fname = field.get("key")
-                        if fname and fname not in seen:
-                            schema_fields.append({
-                                "name": fname,
-                                "type": field.get("type") or "string",
-                                "description": field.get("label") or f"Workflow Output: {fname}",
-                                "options": field.get("options") or None,
-                                "prompt": "",
-                                "depends_on": [],
-                                "workflow_source": f"{node['id']}.{fname}",
-                            })
-                            seen.add(fname)
+            schema_fields = extract_dashboard_schema_fields(def_dict)
 
             # Create the dashboard row
             dash_payload = {
@@ -106,8 +89,7 @@ class WorkflowDashboardService:
                 "workflow_revision": wf_revision,
                 "workflow_definition_json": json.dumps(def_dict),
             }
-            new_id = session.dashboards.create(dash_payload)
-            new_row = session.dashboards.get_by_id(new_id)
+            new_row = session.dashboards.create(dash_payload)
             return campaign_service._dashboard_row(new_row)
 
     def _create_text_document(
@@ -120,24 +102,59 @@ class WorkflowDashboardService:
     ) -> str:
         """Create doc and ingest text."""
         with self.db_session_factory() as session:
+            existing = session.documents.get_by_filename(workspace_id, filename)
             if replace_existing:
-                existing = session.documents.get_by_filename(workspace_id, filename)
                 if existing:
                     # Clear existing document chunks
                     session.chunks.delete_chunks_by_document(existing["id"])
-                    # Re-ingest
-                    document_service.ingest_document_text(existing["id"], text)
+                    chunks = chunk_text(text)
+                    session.chunks.create_chunks([
+                        {
+                            "id": str(uuid.uuid4()),
+                            "document_id": existing["id"],
+                            "user_id": user_id,
+                            "workspace_id": workspace_id,
+                            "content": chunk_content,
+                            "embedding": None,
+                            "metadata": json.dumps({"chunk_index": index}),
+                        }
+                        for index, chunk_content in enumerate(chunks)
+                    ])
+                    session.documents.update(existing["id"], {
+                        "status": DocumentStatus.completed.value,
+                        "error_message": None,
+                    })
                     return existing["id"]
+            elif existing:
+                return existing["id"]
 
             doc_id = document_service.create_document(
+                client=None,
                 workspace_id=workspace_id,
                 user_id=user_id,
                 filename=filename,
+                file_path="",
                 file_size=len(text),
-                status="completed",
+                content_type="text/plain",
             )
-            document_service.ingest_document_text(doc_id, text)
-            return doc_id
+            chunks = chunk_text(text)
+            session.chunks.create_chunks([
+                {
+                    "id": str(uuid.uuid4()),
+                    "document_id": str(doc_id.id),
+                    "user_id": user_id,
+                    "workspace_id": workspace_id,
+                    "content": chunk_content,
+                    "embedding": None,
+                    "metadata": json.dumps({"chunk_index": index}),
+                }
+                for index, chunk_content in enumerate(chunks)
+            ])
+            session.documents.update(str(doc_id.id), {
+                "status": DocumentStatus.completed.value,
+                "error_message": None,
+            })
+            return str(doc_id.id)
 
     def _document_text(self, document_id: str) -> str:
         """Gather all document chunks into a consolidated string."""

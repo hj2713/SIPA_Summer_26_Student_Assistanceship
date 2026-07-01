@@ -30,7 +30,7 @@ class WorkflowService:
 
     SEED_TEMPLATE_VERSIONS = {
         "blank": 1,
-        "law_delegation_discretion_rank": 2,
+        "law_delegation_discretion_rank": 3,
     }
 
     def _parse_definition(self, raw) -> WorkflowDefinition:

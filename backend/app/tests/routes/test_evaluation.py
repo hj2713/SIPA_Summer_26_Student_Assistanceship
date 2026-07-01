@@ -86,3 +86,95 @@ def test_add_model_to_campaign_happy_path(client, auth_headers):
         assert "queued 2 documents" in data["message"]
         mock_retry.assert_called_once_with(dashboard_id, '00000000-0000-0000-0000-000000000001', payload=None, retry_model="gpt-4o-mini")
 
+
+def test_link_workflow_to_campaign_rejects_mismatched_schema(client, auth_headers):
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.routes.dashboards.generate_schema_and_description", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = {
+            "description": "Mismatch campaign",
+            "schema": [
+                {"name": "delegate_law", "type": "boolean"},
+                {"name": "some_other_column", "type": "string"},
+            ],
+        }
+        campaign_res = client.post("/api/dashboards", json={
+            "name": "Mismatch campaign",
+            "prompt": "Extract delegation",
+            "model": "gemini-3.1-flash-lite,gpt-4o-mini",
+            "dashboard_type": "model_comparison",
+            "user_columns": [
+                {"name": "delegate_law", "type": "boolean"},
+                {"name": "some_other_column", "type": "string"},
+            ],
+        }, headers=auth_headers)
+        assert campaign_res.status_code == 201
+        campaign_id = campaign_res.json()["id"]
+
+    workflow_res = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Law Delegation + Discretion Rank",
+            "description": "Project-specific workflow",
+            "template": "law_delegation_discretion_rank",
+        },
+    )
+    assert workflow_res.status_code == 201
+    workflow_id = workflow_res.json()["id"]
+
+    link_res = client.patch(
+        f"/api/dashboards/{campaign_id}/link-workflow",
+        headers=auth_headers,
+        json={"workflow_id": workflow_id},
+    )
+    assert link_res.status_code == 409
+    assert "Workflow outputs do not match the campaign schema" in link_res.json()["detail"]
+
+
+def test_link_workflow_to_campaign_merges_matching_schema_workflow_sources(client, auth_headers):
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.routes.dashboards.generate_schema_and_description", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = {
+            "description": "Matching campaign",
+            "schema": [
+                {"name": "delegate_law", "type": "boolean", "description": "Prompt column 1"},
+                {"name": "discretion_rank", "type": "number", "description": "Prompt column 2"},
+            ],
+        }
+        campaign_res = client.post("/api/dashboards", json={
+            "name": "Matching campaign",
+            "prompt": "Extract delegation and rank",
+            "model": "gemini-3.1-flash-lite,gpt-4o-mini",
+            "dashboard_type": "model_comparison",
+            "user_columns": [
+                {"name": "delegate_law", "type": "boolean", "description": "Prompt column 1"},
+                {"name": "discretion_rank", "type": "number", "description": "Prompt column 2"},
+            ],
+        }, headers=auth_headers)
+        assert campaign_res.status_code == 201
+        campaign_id = campaign_res.json()["id"]
+
+    workflow_res = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Law Delegation + Discretion Rank",
+            "description": "Project-specific workflow",
+            "template": "law_delegation_discretion_rank",
+        },
+    )
+    assert workflow_res.status_code == 201
+    workflow_id = workflow_res.json()["id"]
+
+    link_res = client.patch(
+        f"/api/dashboards/{campaign_id}/link-workflow",
+        headers=auth_headers,
+        json={"workflow_id": workflow_id},
+    )
+    assert link_res.status_code == 200
+    schema = link_res.json()["schema"]
+    assert [col["name"] for col in schema] == ["delegate_law", "discretion_rank"]
+    assert schema[0]["workflow_source"] == "law_delegation.delegate_law"
+    assert schema[1]["workflow_source"] == "discretion_rank"

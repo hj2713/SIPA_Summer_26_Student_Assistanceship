@@ -38,6 +38,25 @@ def test_law_delegation_rank_workflow_is_valid_and_emits_two_outputs():
         "law_delegation.delegation_breadth",
         "law_delegation.delegation_centrality",
     ]
+    descriptor_ids = [node["id"] for node in definition["nodes"] if node["kind"] == "rank_descriptor"]
+    assert descriptor_ids == [
+        "rank_1_descriptor",
+        "rank_2_descriptor",
+        "rank_3_descriptor",
+        "rank_4_descriptor",
+    ]
+    rank_edges = {
+        (edge["source"], edge["target"])
+        for edge in definition["edges"]
+        if edge["target"] == "discretion_rank"
+    }
+    assert rank_edges == {
+        ("delegation_gate", "discretion_rank"),
+        ("rank_1_descriptor", "discretion_rank"),
+        ("rank_2_descriptor", "discretion_rank"),
+        ("rank_3_descriptor", "discretion_rank"),
+        ("rank_4_descriptor", "discretion_rank"),
+    }
     assert definition["outputs"] == [
         {"key": "delegate_law", "source": "law_delegation.delegate_law", "group": "Final"},
         {"key": "discretion_rank", "source": "discretion_rank", "group": "Final"},

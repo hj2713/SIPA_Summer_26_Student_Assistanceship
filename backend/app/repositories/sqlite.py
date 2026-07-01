@@ -392,6 +392,31 @@ class SQLiteDashboardRepository(BaseDashboardRepository):
         cursor.execute("SELECT * FROM dashboards WHERE workspace_id = ? ORDER BY created_at DESC;", (str(workspace_id),))
         return [dict(r) for r in cursor.fetchall()]
 
+    def get_for_workflow(self, workflow_id: str, workflow_source: str, workflow_version: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        cursor = self.conn.cursor()
+        if workflow_source == "published":
+            cursor.execute(
+                """
+                SELECT * FROM dashboards
+                WHERE workflow_id = ? AND dashboard_type = 'workflow' AND workflow_source = ? AND workflow_version = ?
+                ORDER BY created_at DESC
+                LIMIT 1;
+                """,
+                (str(workflow_id), workflow_source, workflow_version),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT * FROM dashboards
+                WHERE workflow_id = ? AND dashboard_type = 'workflow' AND workflow_source = ?
+                ORDER BY created_at DESC
+                LIMIT 1;
+                """,
+                (str(workflow_id), workflow_source),
+            )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
 class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn

@@ -59,6 +59,7 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
     assert templates.status_code == 200
     project_template = next(item for item in templates.json() if item["slug"] == "law_delegation_discretion_rank")
+    assert project_template["definition"]["metadata"]["seed_version"] == 3
     law_delegation_node = next(node for node in project_template["definition"]["nodes"] if node["id"] == "law_delegation")
     assert [output["key"] for output in law_delegation_node["config"]["outputs"]] == [
         "delegate_law",
@@ -69,6 +70,13 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
         "constraint_strength",
         "delegation_breadth",
         "delegation_centrality",
+    ]
+    descriptor_ids = [node["id"] for node in project_template["definition"]["nodes"] if node["kind"] == "rank_descriptor"]
+    assert descriptor_ids == [
+        "rank_1_descriptor",
+        "rank_2_descriptor",
+        "rank_3_descriptor",
+        "rank_4_descriptor",
     ]
 
     created = client.post(
@@ -198,7 +206,7 @@ def test_workflow_file_test_runs_without_persisting_document(client, auth_header
                 delegation_centrality="none",
             )
 
-    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     workflow = client.post(
         "/api/workflows?workspace_id=QA",
         headers=auth_headers,
@@ -214,7 +222,8 @@ def test_workflow_file_test_runs_without_persisting_document(client, auth_header
     assert response.status_code == 200
     body = response.json()
     assert body["outputs"] == {"delegate_law": False, "discretion_rank": 0}
-    assert "delegation_rationale" in body["trace"][1]["outputs"]
+    by_id = {item["node_id"]: item for item in body["trace"]}
+    assert "delegation_rationale" in by_id["law_delegation"]["outputs"]
     assert "delegation_rationale" not in body["outputs"]
 
 
@@ -223,7 +232,7 @@ def test_workflow_test_returns_json_provider_error(client, auth_headers, monkeyp
         async def parse_structured(self, messages, schema, log_context=None):
             raise ValueError("simulated provider failure")
 
-    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FailingLlm())
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FailingLlm())
     workflow = client.post(
         "/api/workflows?workspace_id=QA",
         headers=auth_headers,
@@ -254,7 +263,7 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
                 delegation_centrality="none",
             )
 
-    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     workflow = client.post(
         "/api/workflows?workspace_id=QA",
         headers=auth_headers,
@@ -270,6 +279,8 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
     dashboard = dashboard_response.json()
     assert dashboard["dashboard_type"] == "workflow"
     assert [field["name"] for field in dashboard["schema"]] == ["delegate_law", "discretion_rank"]
+    assert dashboard["schema"][0]["workflow_source"] == "law_delegation.delegate_law"
+    assert dashboard["schema"][1]["workflow_source"] == "discretion_rank"
 
     run_response = client.post(
         f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=QA",

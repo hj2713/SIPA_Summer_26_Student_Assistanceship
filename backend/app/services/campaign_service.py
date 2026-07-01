@@ -3,6 +3,7 @@ import uuid
 import json
 import asyncio
 from typing import List, Optional, Any, Dict
+from fastapi import HTTPException, status
 
 from app.core.database import get_db_conn
 from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow
@@ -10,6 +11,7 @@ from app.schemas.document import DocumentStatus
 from app.services.document_service import document_service as default_document_service, DocumentService
 from app.services.ingestion_service import ingestion_service as default_ingestion_service, IngestionService
 from app.services.coding_service import coding_service as default_coding_service, CodingService
+from app.workflows.schema_fields import extract_dashboard_schema_fields
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +177,7 @@ class CampaignService:
 
         if workflow_id:
             with self.db_session_factory() as session:
-                workflow = session.coding_workflows.get(workflow_id)
+                workflow = session.workflows.get_by_id(workflow_id)
                 if workflow:
                     workflow_definition_json = workflow["definition"]
                     workflow_revision = workflow["revision"]
@@ -183,27 +185,7 @@ class CampaignService:
                         def_dict = json.loads(workflow_definition_json) if isinstance(workflow_definition_json, str) else (workflow_definition_json or {})
                     except Exception:
                         def_dict = {}
-
-                    # Extract output fields schema
-                    nodes = def_dict.get("nodes") or []
-                    schema_fields = []
-                    seen = set()
-                    for node in nodes:
-                        if node.get("kind") == "output":
-                            config = node.get("config") or {}
-                            for field in config.get("outputs") or []:
-                                fname = field.get("key")
-                                if fname and fname not in seen:
-                                    schema_fields.append({
-                                        "name": fname,
-                                        "type": field.get("type") or "string",
-                                        "description": field.get("label") or f"Workflow Output: {fname}",
-                                        "options": field.get("options") or None,
-                                        "prompt": "",
-                                        "depends_on": [],
-                                        "workflow_source": f"{node['id']}.{fname}",
-                                    })
-                                    seen.add(fname)
+                    schema_fields = extract_dashboard_schema_fields(def_dict)
 
         from app.core.config import settings
         chosen_model = payload.model or settings.GEMINI_MODEL
@@ -382,9 +364,63 @@ class CampaignService:
         with self.db_session_factory() as session:
             row = session.dashboards.get_by_id(campaign_id)
             if not row:
-                from fastapi import HTTPException, status
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign dashboard not found.")
-            session.dashboards.update(campaign_id, {"workflow_id": workflow_id})
+            updates: dict[str, Any] = {"workflow_id": workflow_id}
+            if workflow_id:
+                workflow = session.workflows.get_by_id(workflow_id)
+                if not workflow:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coding workflow not found.")
+
+                workflow_definition_json = workflow["draft_definition"]
+                try:
+                    def_dict = json.loads(workflow_definition_json) if isinstance(workflow_definition_json, str) else (workflow_definition_json or {})
+                except Exception:
+                    def_dict = {}
+
+                workflow_schema = extract_dashboard_schema_fields(def_dict)
+                try:
+                    campaign_schema = json.loads(row["schema"]) if isinstance(row["schema"], str) else (row["schema"] or [])
+                except Exception:
+                    campaign_schema = []
+
+                workflow_names = [col.get("name") for col in workflow_schema if isinstance(col, dict) and col.get("name")]
+                campaign_names = [col.get("name") for col in campaign_schema if isinstance(col, dict) and col.get("name")]
+
+                if campaign_names and set(campaign_names) != set(workflow_names):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=(
+                            "Workflow outputs do not match the campaign schema. "
+                            f"Campaign columns: {', '.join(campaign_names)}. "
+                            f"Workflow outputs: {', '.join(workflow_names)}."
+                        ),
+                    )
+
+                if campaign_schema:
+                    campaign_by_name = {
+                        col.get("name"): col
+                        for col in campaign_schema
+                        if isinstance(col, dict) and col.get("name")
+                    }
+                    merged_schema = []
+                    for workflow_col in workflow_schema:
+                        existing = campaign_by_name.get(workflow_col["name"], {})
+                        merged = dict(existing)
+                        merged.update({
+                            "name": workflow_col["name"],
+                            "workflow_source": workflow_col.get("workflow_source"),
+                            "type": existing.get("type") or workflow_col.get("type"),
+                            "description": existing.get("description") or workflow_col.get("description"),
+                            "options": existing.get("options") if existing.get("options") is not None else workflow_col.get("options"),
+                            "prompt": existing.get("prompt", ""),
+                            "depends_on": existing.get("depends_on", []),
+                        })
+                        merged_schema.append(merged)
+                    updates["schema"] = json.dumps(merged_schema)
+                else:
+                    updates["schema"] = json.dumps(workflow_schema)
+
+            session.dashboards.update(campaign_id, updates)
             updated = session.dashboards.get_by_id(campaign_id)
             schema_list = []
             try:

@@ -493,6 +493,31 @@ class PostgresDashboardRepository(BaseDashboardRepository):
             cursor.execute("SELECT * FROM dashboards WHERE workspace_id = %s ORDER BY created_at DESC;", (str(workspace_id),))
             return cursor.fetchall()
 
+    def get_for_workflow(self, workflow_id: str, workflow_source: str, workflow_version: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            if workflow_source == "published":
+                cursor.execute(
+                    """
+                    SELECT * FROM dashboards
+                    WHERE workflow_id = %s AND dashboard_type = 'workflow' AND workflow_source = %s AND workflow_version = %s
+                    ORDER BY created_at DESC
+                    LIMIT 1;
+                    """,
+                    (str(workflow_id), workflow_source, workflow_version),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT * FROM dashboards
+                    WHERE workflow_id = %s AND dashboard_type = 'workflow' AND workflow_source = %s
+                    ORDER BY created_at DESC
+                    LIMIT 1;
+                    """,
+                    (str(workflow_id), workflow_source),
+                )
+            row = cursor.fetchone()
+            return row if row else None
+
 class PostgresDashboardDocumentRepository(BaseDashboardDocumentRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn

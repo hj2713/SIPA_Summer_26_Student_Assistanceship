@@ -114,6 +114,10 @@ class BaseDashboardRepository(ABC):
     def list_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
         pass
 
+    @abstractmethod
+    def get_for_workflow(self, workflow_id: str, workflow_source: str, workflow_version: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        pass
+
 class BaseDashboardDocumentRepository(ABC):
     @abstractmethod
     def get(self, dashboard_id: str, document_id: str) -> Optional[Dict[str, Any]]:

@@ -1,5 +1,10 @@
 import pytest
 import json
+from unittest.mock import patch
+
+from app.core.database import get_db_conn
+from app.services.campaign_service import campaign_service
+from app.tests.conftest import TEST_USER_ID
 
 def test_create_evaluation_campaign_requires_auth(client):
     response = client.post("/api/dashboards", json={
@@ -178,3 +183,67 @@ def test_link_workflow_to_campaign_merges_matching_schema_workflow_sources(clien
     assert [col["name"] for col in schema] == ["delegate_law", "discretion_rank"]
     assert schema[0]["workflow_source"] == "law_delegation.delegate_law"
     assert schema[1]["workflow_source"] == "discretion_rank"
+
+
+def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, auth_headers):
+    dashboard_id = "eval-dashboard-linked"
+    document_id = "10000000-0000-0000-0000-000000009999"
+    workflow_response = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Eval workflow",
+            "description": "Used for linked dashboard routing",
+            "template": "law_delegation_discretion_rank",
+        },
+    )
+    assert workflow_response.status_code == 201
+    workflow = workflow_response.json()
+    workflow_id = workflow["id"]
+
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO dashboards (
+                id, workspace_id, name, description, prompt, schema, model, dashboard_type,
+                workflow_id, workflow_source, workflow_definition_json
+            ) VALUES (?, 'QA', 'Eval Linked', '', 'Prompt', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
+            """,
+            (dashboard_id, workflow_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
+            VALUES (?, ?, 'QA', 'linked-law.txt', '/tmp/linked-law.txt', 10, 'text/plain', 'completed', '{}');
+            """,
+            (document_id, TEST_USER_ID),
+        )
+        conn.commit()
+
+    with patch(
+        "app.services.workflow_dashboard_service.workflow_dashboard_service.run_existing_documents_for_dashboard",
+    ) as mock_run, patch.object(campaign_service._coding_service, "schedule_coroutine") as mock_schedule:
+        campaign_service.link_campaign_documents(dashboard_id, [document_id], TEST_USER_ID)
+
+    mock_run.assert_called_once_with(
+        dashboard_id=dashboard_id,
+        workflow_id=workflow_id,
+        workspace_id="QA",
+        user_id=TEST_USER_ID,
+        document_ids=[document_id],
+        source="draft",
+        version=None,
+        rerun_document_ids={document_id},
+        retry_model=None,
+    )
+    mock_schedule.assert_called_once()
+    scheduled_coro = mock_schedule.call_args.args[0]
+    scheduled_coro.close()
+
+    with get_db_conn() as conn:
+        row = conn.execute(
+            "SELECT status FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
+            (dashboard_id, document_id),
+        ).fetchone()
+    assert row is not None
+    assert row["status"] == "pending"

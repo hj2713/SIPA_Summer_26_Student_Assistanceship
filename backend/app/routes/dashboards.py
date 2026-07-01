@@ -180,20 +180,14 @@ def link_campaign_documents(
     document_ids: List[str],
     current_user: CurrentUserDep
 ):
-    """Link existing global documents to this campaign and enqueue them for sequential LLM coding.
-    
-    Calls enqueue_sequential_coding directly to allow route-level test patch mocking.
-    """
+    """Link existing global documents to this campaign and enqueue processing on this dashboard."""
     if not current_user.can_add and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaign documents."
         )
 
-    campaign_service.link_campaign_documents_in_db(id, document_ids)
-    
-    # Calling the imported functional delegate allows pytest patches to intercept it
-    enqueue_sequential_coding(id, document_ids, current_user.id)
+    campaign_service.link_campaign_documents(id, document_ids, current_user.id)
     return {"message": f"Successfully linked {len(document_ids)} documents and enqueued them for coding."}
 
 

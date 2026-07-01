@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/constants";
 import { 
-  Trash2, Plus, Play, Sparkles, 
-  AlertTriangle, Upload, RefreshCw, 
-  DollarSign, BarChart2, ShieldAlert 
+  Trash2, Plus, Sparkles,
+  AlertTriangle, Upload, RefreshCw,
+  DollarSign, BarChart2, ShieldAlert,
+  Loader2, Layers, GitBranch
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
@@ -39,6 +40,16 @@ interface CampaignDocument {
   error_type?: string;
   current_step?: number;
   total_steps?: number;
+  workflow_trace?: any[];
+  workflow_context?: Record<string, any>;
+}
+
+interface WorkspaceDocument {
+  id: string;
+  filename: string;
+  metadata?: {
+    tags?: string[];
+  };
 }
 
 interface ModelStats {
@@ -108,6 +119,13 @@ export function ModelEvaluationPage() {
   const [retryingModel, setRetryingModel] = useState<string | null>(null);
   const [raisingLimit, setRaisingLimit] = useState(false);
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
+  const [showLinkDocumentsDialog, setShowLinkDocumentsDialog] = useState(false);
+  const [globalDocs, setGlobalDocs] = useState<WorkspaceDocument[]>([]);
+  const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
+  const [linkSearchQuery, setLinkSearchQuery] = useState("");
+  const [linkingDocs, setLinkingDocs] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Create Campaign State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -138,6 +156,10 @@ export function ModelEvaluationPage() {
     mae: number | null;
   }> | null>(null);
   const benchmarkInputRef = useRef<HTMLInputElement>(null);
+
+  const campaignModels = campaign?.model.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
+  const schemaColumns = (campaign?.schema ?? []).filter((col) => col?.name);
+  const supportsProfessorBenchmark = schemaColumns.some((col) => col.name === "delegate_law") && schemaColumns.some((col) => col.name === "discretion_rank");
 
   // Fetch all model comparison dashboards
   const fetchCampaigns = async () => {
@@ -173,6 +195,16 @@ export function ModelEvaluationPage() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const fetchGlobalDocs = async () => {
+    if (!session?.access_token || !activeWorkspace?.id) return;
+    const res = await fetch(`${API_BASE_URL}/api/documents?workspace_id=${encodeURIComponent(activeWorkspace.id)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) throw new Error("Failed to load workspace documents");
+    const data: WorkspaceDocument[] = await res.json();
+    setGlobalDocs(data);
   };
 
   // Fetch specific dashboard details
@@ -227,6 +259,18 @@ export function ModelEvaluationPage() {
       setBenchmarkAccuracy(null);
     }
   }, [id, session, activeWorkspace?.id]);
+
+  useEffect(() => {
+    if (!showLinkDocumentsDialog) {
+      setSelectedGlobalDocIds([]);
+      setLinkSearchQuery("");
+      return;
+    }
+    void fetchGlobalDocs().catch((err) => {
+      console.error(err);
+      toast.error("Failed to load workspace files");
+    });
+  }, [showLinkDocumentsDialog, session?.access_token, activeWorkspace?.id]);
 
   // Polling hook
   useEffect(() => {
@@ -290,12 +334,12 @@ export function ModelEvaluationPage() {
         throw new Error(errData.detail || "Failed to create comparison campaign");
       }
       const newCampaign = await res.json();
-      toast.success("Model evaluation campaign created! Use ⚡ Link Workflow to attach a workflow.");
+      toast.success("Model evaluation campaign created. Link a workflow, then add files from this evaluation page.");
       setShowCreateModal(false);
       setName("");
       setPrompt("");
       setSelectedModels(["gemini-1.5-flash", "gpt-4o-mini"]);
-      navigate(`/campaigns/${newCampaign.id}`);
+      navigate(`/evaluation/${newCampaign.id}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to create comparison campaign");
     } finally {
@@ -355,37 +399,20 @@ export function ModelEvaluationPage() {
     );
   };
 
-  // Ingest documents mapping
   const handleLinkDocuments = async () => {
     if (!campaign || !session?.access_token) return;
+    if (!campaign.workflow_id) {
+      toast.error("Link a workflow first. Model evaluation files run through the linked workflow on this page.");
+      return;
+    }
+    if (selectedGlobalDocIds.length === 0) {
+      toast.error("Select at least one workspace file.");
+      return;
+    }
+    const docIds = [...selectedGlobalDocIds];
+    setLinkingDocs(true);
     try {
-      // Find all global documents in workspace to link
-      const resWorkspaceDocs = await fetch(`${API_BASE_URL}/api/documents?workspace_id=${encodeURIComponent(activeWorkspace?.id ?? "")}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!resWorkspaceDocs.ok) throw new Error("Failed to load documents");
-      const wsDocs: any[] = await resWorkspaceDocs.json();
-      const docIds = wsDocs.map(d => d.id);
-      
-      if (docIds.length === 0) {
-        toast.warning("No documents found in workspace. Please ingest documents first.");
-        return;
-      }
-
-      toast.info(`Linking ${docIds.length} workspace documents to campaign...`);
       const linkRes = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/link`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ document_ids: docIds }),
-      });
-      if (!linkRes.ok) throw new Error("Failed to link documents");
-      toast.success("Linked documents successfully! Queueing runs...");
-      
-      // Trigger evaluation runs
-      const runRes = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/retry`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -393,13 +420,57 @@ export function ModelEvaluationPage() {
         },
         body: JSON.stringify(docIds),
       });
-      if (runRes.ok) {
-        toast.success("Successfully enqueued all documents for parallel multi-LLM classification!");
-        setIsPolling(true);
-        void fetchCampaignDetails(campaign.id);
-      }
+      if (!linkRes.ok) throw new Error("Failed to link documents");
+      toast.success(`Queued ${docIds.length} file${docIds.length === 1 ? "" : "s"} for workflow evaluation on this dashboard.`);
+      setShowLinkDocumentsDialog(false);
+      setSelectedGlobalDocIds([]);
+      setIsPolling(true);
+      void fetchCampaignDetails(campaign.id);
     } catch (err: any) {
       toast.error(err.message || "Failed to link documents");
+    } finally {
+      setLinkingDocs(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!campaign || !session?.access_token || !files || files.length === 0) return;
+    if (!campaign.workflow_id) {
+      toast.error("Link a workflow first. Model evaluation files run through the linked workflow on this page.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setUploadingFiles(true);
+    let successCount = 0;
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("workspace_id", activeWorkspace?.id ?? "");
+
+        const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || `Failed to upload ${file.name}`);
+        }
+        successCount += 1;
+      }
+
+      toast.success(`Queued ${successCount} uploaded file${successCount === 1 ? "" : "s"} for workflow evaluation.`);
+      setIsPolling(true);
+      void fetchCampaignDetails(campaign.id);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload files");
+    } finally {
+      setUploadingFiles(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -589,49 +660,37 @@ export function ModelEvaluationPage() {
   const handleExportComparisonCSV = () => {
     if (!campaign || documents.length === 0) return;
 
-    const campaignModels = campaign.model.split(",").map(m => m.trim());
-    
-    // Headers
     const headers = [
       "Filename",
-      "Professor Delegation",
-      "Professor Rank",
-      ...campaignModels.flatMap(model => [
-        `${model} Predicted Delegation`,
-        `${model} Predicted Rank`,
-        `${model} Status`,
-        `${model} Error`
-      ])
+      ...schemaColumns.flatMap((col) =>
+        campaignModels.flatMap((model) => [
+          `${col.name} [${model}]`,
+          `${col.name}_reasoning [${model}]`,
+          `${col.name}_status [${model}]`,
+          `${col.name}_error [${model}]`,
+        ]),
+      ),
     ];
 
-    // CSV rows compiler
     const csvRows = [
       headers.join(","),
       ...documents.map(doc => {
-        const docBase = doc.filename.split("/").pop()?.toLowerCase() || "";
-        const benchRow = parsedBenchmark?.rows.find(r => 
-          (r.Filename || "").split("/").pop()?.toLowerCase() === docBase
-        );
-
-        const profDel = benchRow ? benchRow["DelegationLaw (Y/N)"] || "" : "";
-        const profRank = benchRow ? benchRow["RG_Discretion_Rank"] || "" : "";
-
         const rowValues = [
           `"${doc.filename.replace(/"/g, '""')}"`,
-          `"${profDel}"`,
-          `"${profRank}"`,
-          ...campaignModels.flatMap(model => {
-            const modelRun = doc.coded_values?.[model] || {};
-            const modelVals = modelRun.values || {};
-            const predDel = modelVals["delegate_law"] !== undefined ? modelVals["delegate_law"] : "";
-            const predRank = modelVals["discretion_rank"] !== undefined ? modelVals["discretion_rank"] : "";
-            return [
-              `"${String(predDel).replace(/"/g, '""')}"`,
-              `"${String(predRank).replace(/"/g, '""')}"`,
-              `"${modelRun.status || "pending"}"`,
-              `"${(modelRun.error_message || "").replace(/"/g, '""')}"`
-            ];
-          })
+          ...schemaColumns.flatMap((col) =>
+            campaignModels.flatMap((model) => {
+              const modelRun = doc.coded_values?.[model] || {};
+              const modelVals = modelRun.values || {};
+              const value = modelVals[col.name] !== undefined ? modelVals[col.name] : "";
+              const reasoning = modelVals[`${col.name}_reasoning`] || "";
+              return [
+                `"${String(value).replace(/"/g, '""')}"`,
+                `"${String(reasoning).replace(/"/g, '""')}"`,
+                `"${modelRun.status || "pending"}"`,
+                `"${String(modelRun.error_message || "").replace(/"/g, '""')}"`,
+              ];
+            }),
+          ),
         ];
         return rowValues.join(",");
       })
@@ -680,41 +739,57 @@ export function ModelEvaluationPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                {documents.length === 0 ? (
-                  <Button onClick={handleLinkDocuments} className="gap-2 text-xs shadow-sm bg-gradient-to-r from-primary to-primary/80 hover:opacity-90">
-                    <Play size={13} className="fill-current" /> Run Evaluation on Workspace Documents
+                <input
+                  type="file"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <input
+                  type="file"
+                  accept=".csv"
+                  ref={benchmarkInputRef}
+                  onChange={handleBenchmarkUpload}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLinkDocumentsDialog(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  <Layers size={13} /> Link Workspace Files
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFiles}
+                  className="gap-1.5 text-xs"
+                >
+                  {uploadingFiles ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                  {uploadingFiles ? "Uploading..." : "Upload Local Files"}
+                </Button>
+                {supportsProfessorBenchmark && (
+                  <Button variant="outline" size="sm" onClick={() => benchmarkInputRef.current?.click()} className="gap-1.5 text-xs">
+                    <Upload size={13} /> {parsedBenchmark ? "Update Professor CSV" : "Upload Professor CSV"}
                   </Button>
-                ) : (
-                  <>
-                    <input
-                      type="file"
-                      accept=".csv"
-                      ref={benchmarkInputRef}
-                      onChange={handleBenchmarkUpload}
-                      className="hidden"
-                    />
-                    <Button variant="outline" size="sm" onClick={() => benchmarkInputRef.current?.click()} className="gap-1.5 text-xs">
-                      <Upload size={13} /> {parsedBenchmark ? "Update Professor CSV" : "Upload Professor CSV"}
-                    </Button>
-
-                    <Button variant="outline" size="sm" onClick={handleExportComparisonCSV} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
-                      <BarChart2 size={13} /> Export Comparison CSV
-                    </Button>
-
-                    <Button variant="outline" size="sm" onClick={() => setShowAddModelDialog(true)} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
-                      <Plus size={13} /> Add Model
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { void fetchWorkflows(); setSelectedWorkflowId(campaign?.workflow_id || ""); setShowLinkWorkflowDialog(true); }}
-                      className={`gap-1.5 text-xs ${campaign?.workflow_id ? "text-violet-600 border-violet-300 bg-violet-50 hover:bg-violet-100" : "text-muted-foreground border-muted hover:bg-muted/30"}`}
-                    >
-                      ⚡ {campaign?.workflow_id ? "Workflow Linked" : "Link Workflow"}
-                    </Button>
-                  </>
                 )}
+                <Button variant="outline" size="sm" onClick={handleExportComparisonCSV} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
+                  <BarChart2 size={13} /> Export CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowAddModelDialog(true)} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
+                  <Plus size={13} /> Add Model
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { void fetchWorkflows(); setSelectedWorkflowId(campaign?.workflow_id || ""); setShowLinkWorkflowDialog(true); }}
+                  className={`gap-1.5 text-xs ${campaign?.workflow_id ? "text-violet-600 border-violet-300 bg-violet-50 hover:bg-violet-100" : "text-muted-foreground border-muted hover:bg-muted/30"}`}
+                >
+                  ⚡ {campaign?.workflow_id ? "Workflow Linked" : "Link Workflow"}
+                </Button>
               </div>
             </div>
 
@@ -740,9 +815,29 @@ export function ModelEvaluationPage() {
                 </div>
               )}
 
+              <div className={`rounded-xl border p-4 text-xs ${campaign.workflow_id ? "border-violet-200 bg-violet-50/70" : "border-amber-200 bg-amber-50/70"}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-bold uppercase tracking-wide text-[11px] mb-1">
+                      {campaign.workflow_id ? "Workflow-driven evaluation dashboard" : "Workflow required"}
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {campaign.workflow_id
+                        ? "Files added here run through the linked workflow once per selected model, and the results stay on this model evaluation dashboard."
+                        : "Link a workflow before adding files. This page now evaluates only the files you explicitly select or upload here, and it no longer auto-runs every workspace file."}
+                    </p>
+                  </div>
+                  {campaign.workflow_id && (
+                    <div className="shrink-0 rounded-full bg-violet-100 px-3 py-1 font-semibold text-violet-700">
+                      Workflow attached
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Top Cost / Accuracy Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                {campaign.model.split(",").map(m => m.trim()).map(model => {
+                {campaignModels.map(model => {
                   const stat = usageStats.find(s => s.model === model);
                   const accuracy = benchmarkAccuracy?.[model];
                   return (
@@ -796,139 +891,121 @@ export function ModelEvaluationPage() {
               {/* Grid Spreadsheet comparison table */}
               <div className="rounded-xl border border-border/40 bg-card overflow-hidden shadow-sm flex-1 flex flex-col min-h-[400px]">
                 <div className="p-4 border-b border-border/30 bg-muted/10 flex justify-between items-center text-xs text-muted-foreground">
-                  <span className="font-medium">{documents.length} Classification Documents Linked</span>
+                  <span className="font-medium">{documents.length} evaluation file{documents.length === 1 ? "" : "s"} on this dashboard</span>
                   {isPolling && (
                     <span className="flex items-center gap-1.5 text-primary animate-pulse font-semibold">
-                      <RefreshCw className="animate-spin h-3.5 w-3.5" /> Background LLM parsing active...
+                      <RefreshCw className="animate-spin h-3.5 w-3.5" /> Workflow execution active...
                     </span>
                   )}
                 </div>
 
-                <div className="flex-1 overflow-auto max-h-[500px]">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-muted/30 sticky top-0 border-b border-border/30">
-                      <tr>
-                        <th className="p-3.5 font-bold border-r border-border/20 max-w-[200px] truncate">Filename</th>
-                        <th className="p-3.5 font-bold border-r border-border/20">Professor benchmark</th>
-                        {campaign.model.split(",").map(m => m.trim()).map(model => (
-                          <th key={model} className="p-3.5 font-bold border-r border-border/20 text-center" colSpan={2}>
-                            {model}
-                          </th>
-                        ))}
-                      </tr>
-                      <tr className="border-b border-border/20 bg-muted/10">
-                        <td className="p-2 border-r border-border/20 font-medium"></td>
-                        <td className="p-2 border-r border-border/20 text-muted-foreground italic text-[10px]">Delegation / Rank</td>
-                        {campaign.model.split(",").map(m => m.trim()).map(model => (
-                          <>
-                            <td key={`${model}-del`} className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/10">Delegation</td>
-                            <td key={`${model}-rank`} className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/20">Rank</td>
-                          </>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {documents.map((doc) => {
-                        const docBase = doc.filename.split("/").pop()?.toLowerCase() || "";
-                        const benchRow = parsedBenchmark?.rows.find(r => 
-                          (r.Filename || "").split("/").pop()?.toLowerCase() === docBase
-                        );
-
-                        return (
+                {documents.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 p-10 text-center">
+                    <div className="rounded-full bg-muted/40 p-4">
+                      <Layers className="h-7 w-7 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold">No files added yet</h3>
+                      <p className="text-xs text-muted-foreground max-w-md">
+                        Add workspace files or upload local files here. Each selected file will run through the linked workflow once per selected model, and the results will appear on this evaluation dashboard.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setShowLinkDocumentsDialog(true)} className="gap-1.5 text-xs">
+                        <Layers size={13} /> Link Workspace Files
+                      </Button>
+                      <Button size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5 text-xs">
+                        <Upload size={13} /> Upload Local Files
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-auto max-h-[560px]">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="bg-muted/30 sticky top-0 border-b border-border/30">
+                        <tr>
+                          <th className="p-3.5 font-bold border-r border-border/20 min-w-[220px]">Filename</th>
+                          {schemaColumns.map((col) => (
+                            <th key={col.name} className="p-3.5 font-bold border-r border-border/20 text-center" colSpan={campaignModels.length || 1}>
+                              {col.name}
+                            </th>
+                          ))}
+                        </tr>
+                        <tr className="border-b border-border/20 bg-muted/10">
+                          <td className="p-2 border-r border-border/20 text-[10px] font-medium text-muted-foreground">Selected document</td>
+                          {schemaColumns.map((col) => (
+                            campaignModels.map((model) => (
+                              <td key={`${col.name}-${model}`} className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/20">
+                                {model}
+                              </td>
+                            ))
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documents.map((doc) => (
                           <tr key={doc.document_id} className="border-b border-border/15 hover:bg-muted/5 transition-colors">
-                            <td className="p-3 border-r border-border/20 font-medium max-w-[200px] truncate" title={doc.filename}>
+                            <td className="p-3 border-r border-border/20 font-medium max-w-[260px] truncate" title={doc.filename}>
                               {doc.filename.split("/").pop()}
                             </td>
-                            <td className="p-3 border-r border-border/20 font-semibold text-muted-foreground">
-                              {benchRow ? (
-                                <span className="flex items-center gap-1">
-                                  {benchRow["DelegationLaw (Y/N)"] || "?"} / {benchRow["RG_Discretion_Rank"] !== undefined ? benchRow["RG_Discretion_Rank"] : "?"}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-muted-foreground italic">No Match</span>
-                              )}
-                            </td>
+                            {schemaColumns.map((col) => (
+                              campaignModels.map((model) => {
+                                const run = doc.coded_values?.[model] || {};
+                                const vals = run.values || {};
+                                const value = vals[col.name];
+                                const reasoning = vals[`${col.name}_reasoning`] || "No reasoning logged.";
+                                const history = vals[`${col.name}_history`] || [];
+                                const isPending = run.status === "processing" || run.status === "pending";
+                                const isFailed = run.status === "failed" || run.status === "suspended_limit";
 
-                            {campaign.model.split(",").map(m => m.trim()).map(model => {
-                              const run = doc.coded_values?.[model] || {};
-                              const vals = run.values || {};
-                              
-                              if (run.status === "processing" || run.status === "pending") {
                                 return (
-                                  <td key={`${model}-run`} className="p-3 text-center border-r border-border/20" colSpan={2}>
-                                    <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
-                                      <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {run.status}...
-                                    </span>
-                                  </td>
-                                );
-                              }
-                              
-                              if (run.status === "failed" || run.status === "suspended_limit") {
-                                return (
-                                  <td key={`${model}-run`} className="p-3 text-center border-r border-border/20" colSpan={2} title={run.error_message}>
-                                    <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
-                                      <AlertTriangle size={12} /> {run.status === "suspended_limit" ? "Suspended" : "Failed"}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              const isDelMatch = benchRow && normalizeVal(benchRow["DelegationLaw (Y/N)"]) === normalizeVal(vals["delegate_law"]);
-                              const isRankMatch = benchRow && parseFloat(benchRow["RG_Discretion_Rank"] || "") === parseFloat(vals["discretion_rank"] || "");
-
-                              return (
-                                <>
-                                  <td 
-                                    key={`${model}-del`} 
+                                  <td
+                                    key={`${doc.document_id}-${col.name}-${model}`}
                                     onClick={() => setSelectedCellView({
                                       filename: doc.filename.split("/").pop(),
                                       modelName: model,
-                                      columnName: "delegate_law",
-                                      value: vals["delegate_law"] !== undefined ? String(vals["delegate_law"]) : "-",
-                                      reasoning: vals["delegate_law_reasoning"] || "No reasoning logged.",
-                                      history: vals["delegate_law_history"] || []
+                                      columnName: col.name,
+                                      value: value !== undefined && value !== null && value !== "" ? String(value) : "—",
+                                      reasoning,
+                                      history,
+                                      status: run.status || "pending",
+                                      errorMessage: run.error_message || "",
+                                      trace: run.trace || [],
+                                      context: run.context || {},
+                                      cost: run.cost,
+                                      inputTokens: run.input_tokens,
+                                      outputTokens: run.output_tokens,
                                     })}
-                                    className={`p-3 text-center border-r border-border/10 font-medium cursor-pointer hover:bg-muted/10 transition-colors ${isDelMatch ? 'text-green-600 dark:text-green-400 bg-green-500/5' : benchRow ? 'text-red-500 bg-red-500/5' : ''}`}
+                                    className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${isFailed ? "bg-red-500/5" : ""}`}
                                   >
-                                    <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold">
-                                      {vals["delegate_law"] !== undefined ? String(vals["delegate_law"]) : "-"}
-                                    </div>
-                                    {run.cost !== undefined && (
-                                      <div className="text-[9px] text-muted-foreground/75 font-normal mt-0.5" title={`Individual execution cost: $${run.cost.toFixed(6)}`}>
-                                        ${run.cost.toFixed(5)}
-                                      </div>
+                                    {isPending ? (
+                                      <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
+                                        <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {run.status}...
+                                      </span>
+                                    ) : isFailed ? (
+                                      <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
+                                        <AlertTriangle size={12} /> {run.status === "suspended_limit" ? "Suspended" : "Failed"}
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold break-words">
+                                          {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
+                                        </div>
+                                        <div className="mt-1 text-[9px] text-muted-foreground/75 font-normal">
+                                          {run.trace?.length ? `${run.trace.length} trace node${run.trace.length === 1 ? "" : "s"}` : "No trace"}
+                                        </div>
+                                      </>
                                     )}
                                   </td>
-                                  <td 
-                                    key={`${model}-rank`} 
-                                    onClick={() => setSelectedCellView({
-                                      filename: doc.filename.split("/").pop(),
-                                      modelName: model,
-                                      columnName: "discretion_rank",
-                                      value: vals["discretion_rank"] !== undefined ? String(vals["discretion_rank"]) : "-",
-                                      reasoning: vals["discretion_rank_reasoning"] || "No reasoning logged.",
-                                      history: vals["discretion_rank_history"] || []
-                                    })}
-                                    className={`p-3 text-center border-r border-border/20 font-medium cursor-pointer hover:bg-muted/10 transition-colors ${isRankMatch ? 'text-green-600 dark:text-green-400 bg-green-500/5' : benchRow ? 'text-red-500 bg-red-500/5' : ''}`}
-                                  >
-                                    <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold">
-                                      {vals["discretion_rank"] !== undefined ? String(vals["discretion_rank"]) : "-"}
-                                    </div>
-                                    {run.input_tokens !== undefined && (
-                                      <div className="text-[9px] text-muted-foreground/75 font-normal mt-0.5" title={`Input: ${run.input_tokens || 0} / Output: ${run.output_tokens || 0} tokens`}>
-                                        {((run.input_tokens + run.output_tokens)).toLocaleString()} t
-                                      </div>
-                                    )}
-                                  </td>
-                                </>
-                              );
-                            })}
+                                );
+                              })
+                            ))}
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -1008,7 +1085,7 @@ export function ModelEvaluationPage() {
                         Models: {c.model.split(",").length} LLMs selected
                       </span>
                       <span className="flex items-center gap-1 text-primary font-bold group-hover:underline">
-                        Compare <Play size={10} className="fill-primary" />
+                        Open
                       </span>
                     </div>
                   </Card>
@@ -1166,7 +1243,7 @@ export function ModelEvaluationPage() {
                   className="font-mono text-sm leading-relaxed max-h-72 overflow-y-auto"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  After creating the campaign, use the <span className="font-semibold text-violet-600">⚡ Link Workflow</span> button in the dashboard header to attach a workflow for automated multi-model file processing.
+                  After creating the campaign, use the <span className="font-semibold text-violet-600">⚡ Link Workflow</span> button, then add files directly on the evaluation page using <span className="font-semibold">Link Workspace Files</span> or <span className="font-semibold">Upload Local Files</span>.
                 </p>
               </div>
 
@@ -1383,27 +1460,110 @@ export function ModelEvaluationPage() {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={showLinkDocumentsDialog} onOpenChange={setShowLinkDocumentsDialog}>
+          <DialogContent className="w-[96vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto p-5">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Layers className="text-primary" size={18} />
+                Select Workspace Files
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <p className="text-xs text-muted-foreground">
+                Choose the files you want to evaluate on this dashboard. Only the selected files will run through the linked workflow.
+              </p>
+
+              <Input
+                value={linkSearchQuery}
+                onChange={(e) => setLinkSearchQuery(e.target.value)}
+                placeholder="Search workspace files by name..."
+                className="text-xs"
+              />
+
+              <div className="rounded-lg border max-h-[420px] overflow-y-auto divide-y">
+                {globalDocs
+                  .filter((doc) => !documents.some((existing) => existing.document_id === doc.id))
+                  .filter((doc) => !linkSearchQuery.trim() || doc.filename.toLowerCase().includes(linkSearchQuery.toLowerCase()))
+                  .map((doc) => {
+                    const selected = selectedGlobalDocIds.includes(doc.id);
+                    return (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedGlobalDocIds((prev) =>
+                            prev.includes(doc.id) ? prev.filter((id) => id !== doc.id) : [...prev, doc.id],
+                          )
+                        }
+                        className={`w-full px-3 py-3 text-left text-xs transition-colors ${selected ? "bg-primary/5" : "hover:bg-muted/30"}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input readOnly checked={selected} type="checkbox" className="mt-0.5" />
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate">{doc.filename}</div>
+                            {doc.metadata?.tags?.length ? (
+                              <div className="text-[10px] text-muted-foreground mt-1">{doc.metadata.tags.join(", ")}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                {globalDocs.filter((doc) => !documents.some((existing) => existing.document_id === doc.id)).filter((doc) => !linkSearchQuery.trim() || doc.filename.toLowerCase().includes(linkSearchQuery.toLowerCase())).length === 0 && (
+                  <div className="p-8 text-center text-xs text-muted-foreground">
+                    No matching unlinked workspace files found.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t">
+                <div className="text-xs text-muted-foreground">
+                  {selectedGlobalDocIds.length} file{selectedGlobalDocIds.length === 1 ? "" : "s"} selected
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" size="sm" onClick={() => setShowLinkDocumentsDialog(false)} disabled={linkingDocs}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleLinkDocuments} disabled={linkingDocs || selectedGlobalDocIds.length === 0} className="gap-2 font-bold">
+                    {linkingDocs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
+                    Run Selected Files
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Inspect Coded Cell Modal */}
         <Dialog open={selectedCellView !== null} onOpenChange={(open) => !open && setSelectedCellView(null)}>
-          <DialogContent className="w-[92vw] sm:max-w-lg lg:max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+          <DialogContent className="w-[94vw] sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto p-6">
             <DialogHeader className="border-b pb-3 mb-4">
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <BarChart2 className="text-primary" size={18} />
-                LLM Prediction & Reasoning Detail
+                <GitBranch className="text-primary" size={18} />
+                LLM Result, Reasoning, and Workflow Trace
               </DialogTitle>
             </DialogHeader>
 
             {selectedCellView && (
               <div className="space-y-5 text-sm">
                 {/* Metadata cards */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Variable</span>
                     <span className="font-bold text-xs truncate block">{selectedCellView.columnName}</span>
                   </div>
-                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center col-span-2">
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Model Identifier</span>
                     <span className="font-bold text-xs truncate block text-primary">{selectedCellView.modelName}</span>
+                  </div>
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Run Status</span>
+                    <span className="font-bold text-xs truncate block">{selectedCellView.status}</span>
+                  </div>
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Trace Nodes</span>
+                    <span className="font-bold text-xs truncate block">{selectedCellView.trace?.length || 0}</span>
                   </div>
                 </div>
 
@@ -1420,6 +1580,15 @@ export function ModelEvaluationPage() {
                   </div>
                 </div>
 
+                {selectedCellView.errorMessage && (
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Run Error</span>
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-xs whitespace-pre-wrap">
+                      {selectedCellView.errorMessage}
+                    </div>
+                  </div>
+                )}
+
                 {/* Reasoning */}
                 <div className="space-y-1">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">AI Reasoning & Evidence</span>
@@ -1427,6 +1596,39 @@ export function ModelEvaluationPage() {
                     {selectedCellView.reasoning}
                   </div>
                 </div>
+
+                {selectedCellView.trace && selectedCellView.trace.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Workflow Trace</span>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {selectedCellView.trace.map((item: any, idx: number) => (
+                        <div key={idx} className="rounded-lg border bg-muted/20 p-3 text-[11px]">
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <span className="font-bold">{item.name || item.node_id}</span>
+                            <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
+                              {item.status || "completed"}
+                            </span>
+                          </div>
+                          {item.message ? (
+                            <div className="text-muted-foreground mb-2 whitespace-pre-wrap">{item.message}</div>
+                          ) : null}
+                          <pre className="rounded-md bg-background/80 p-2 overflow-x-auto whitespace-pre-wrap break-words">
+                            {JSON.stringify(item.outputs || {}, null, 2)}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedCellView.context && Object.keys(selectedCellView.context).length > 0 && (
+                  <div className="space-y-2 pt-3 border-t">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Workflow Context</span>
+                    <pre className="rounded-lg border bg-muted/20 p-3 text-[11px] overflow-x-auto whitespace-pre-wrap break-words max-h-56 overflow-y-auto">
+                      {JSON.stringify(selectedCellView.context, null, 2)}
+                    </pre>
+                  </div>
+                )}
 
                 {/* Audit trail history logs */}
                 {selectedCellView.history && selectedCellView.history.length > 0 && (

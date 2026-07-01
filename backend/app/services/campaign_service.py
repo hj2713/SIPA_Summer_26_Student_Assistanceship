@@ -419,6 +419,15 @@ class CampaignService:
                     updates["schema"] = json.dumps(merged_schema)
                 else:
                     updates["schema"] = json.dumps(workflow_schema)
+                updates["workflow_source"] = "draft"
+                updates["workflow_version"] = None
+                updates["workflow_revision"] = workflow["revision"]
+                updates["workflow_definition_json"] = workflow_definition_json
+            else:
+                updates["workflow_source"] = None
+                updates["workflow_version"] = None
+                updates["workflow_revision"] = None
+                updates["workflow_definition_json"] = None
 
             session.dashboards.update(campaign_id, updates)
             updated = session.dashboards.get_by_id(campaign_id)
@@ -474,6 +483,39 @@ class CampaignService:
         with self.db_session_factory() as session:
             return session.dashboard_documents.get_status_counts(id)
 
+    def _enqueue_dashboard_execution(
+        self,
+        dashboard_id: str,
+        user_id: str,
+        document_ids: List[str],
+        retry_model: Optional[str] = None,
+    ) -> None:
+        with self.db_session_factory() as session:
+            dash = session.dashboards.get_by_id(dashboard_id)
+
+        if not dash:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign dashboard not found.")
+
+        workflow_id = dash.get("workflow_id")
+        if workflow_id:
+            from app.services.workflow_dashboard_service import workflow_dashboard_service
+
+            coro = workflow_dashboard_service.run_existing_documents_for_dashboard(
+                dashboard_id=dashboard_id,
+                workflow_id=workflow_id,
+                workspace_id=dash["workspace_id"],
+                user_id=user_id,
+                document_ids=document_ids,
+                source=dash.get("workflow_source") or "draft",
+                version=dash.get("workflow_version"),
+                rerun_document_ids=set(document_ids),
+                retry_model=retry_model,
+            )
+            self._coding_service.schedule_coroutine(coro)
+            return
+
+        self._coding_service.enqueue_sequential_coding(dashboard_id, document_ids, user_id, retry_model=retry_model)
+
     def link_campaign_documents_in_db(self, id: str, document_ids: List[str]) -> None:
         """Link existing documents in the database junction table (DB only, no sequential coding trigger)."""
         with self.db_session_factory() as session:
@@ -483,7 +525,7 @@ class CampaignService:
     def link_campaign_documents(self, id: str, document_ids: List[str], user_id: str) -> None:
         """Link existing global documents to this campaign and enqueue them for sequential LLM coding."""
         self.link_campaign_documents_in_db(id, document_ids)
-        self._coding_service.enqueue_sequential_coding(id, document_ids, user_id)
+        self._enqueue_dashboard_execution(id, user_id, document_ids)
 
     def get_filenames_in_dashboard(self, dashboard_id: str) -> set:
         """Return the set of filenames already linked to a dashboard."""
@@ -560,22 +602,8 @@ class CampaignService:
         with self.db_session_factory() as session:
             session.dashboard_documents.link_document_if_not_exists(id, str(doc_id))
 
-        # Enqueue campaign coding
-        self._coding_service.enqueue_sequential_coding(id, [str(doc_id)], current_user.id)
-
-        return DashboardDocumentRow(
-            document_id=doc_id,
-            filename=filename,
-            file_size=file_size,
-            status="pending",
-            coded_values={},
-            error_message=None,
-            error_type=None,
-            tags=parsed_tags
-        )
-
-        # Enqueue campaign coding
-        self._coding_service.enqueue_sequential_coding(id, [str(doc_id)], current_user.id)
+        # Enqueue dashboard execution on the current dashboard
+        self._enqueue_dashboard_execution(id, current_user.id, [str(doc_id)])
 
         return DashboardDocumentRow(
             document_id=doc_id,
@@ -630,26 +658,7 @@ class CampaignService:
             if not doc_ids:
                 return []
 
-        # Route to workflow execution if campaign is linked to a workflow
-        with self.db_session_factory() as session:
-            dash = session.dashboards.get_by_id(id)
-            workflow_id = dash.get("workflow_id") if dash else None
-
-        if workflow_id:
-            from app.services.workflow_dashboard_service import workflow_dashboard_service
-            coro = workflow_dashboard_service.run_existing_documents(
-                workflow_id=workflow_id,
-                workspace_id=dash["workspace_id"],
-                user_id=user_id,
-                document_ids=doc_ids,
-                source=dash.get("workflow_source") or "draft",
-                version=dash.get("workflow_version"),
-                rerun_document_ids=set(doc_ids),
-                retry_model=retry_model
-            )
-            self._coding_service.schedule_coroutine(coro)
-        else:
-            self._coding_service.enqueue_sequential_coding(id, doc_ids, user_id, retry_model=retry_model)
+        self._enqueue_dashboard_execution(id, user_id, doc_ids, retry_model=retry_model)
 
         return doc_ids
 

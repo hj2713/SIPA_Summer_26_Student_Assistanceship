@@ -660,6 +660,79 @@ class WorkflowDashboardService:
 
         return dashboard, rows, skipped
 
+    async def run_existing_documents_for_dashboard(
+        self,
+        dashboard_id: str,
+        workflow_id: str,
+        workspace_id: str,
+        user_id: str,
+        document_ids: list[str],
+        source: WorkflowSource = "draft",
+        version: int | None = None,
+        rerun_document_ids: set[str] | None = None,
+        retry_model: str | None = None,
+    ) -> tuple[DashboardRow, list[DashboardDocumentRow], list[str]]:
+        """Run workflow documents while persisting results onto an existing dashboard row."""
+        rerun_document_ids = rerun_document_ids or set()
+        rows: list[DashboardDocumentRow] = []
+        skipped: list[str] = []
+
+        with self.db_session_factory() as session:
+            dash_row = session.dashboards.get_by_id(dashboard_id)
+            if not dash_row:
+                raise HTTPException(status_code=404, detail="Dashboard not found.")
+
+            definition_json = dash_row.get("workflow_definition_json")
+            if not definition_json:
+                workflow = session.workflows.get_by_id(workflow_id)
+                if not workflow:
+                    raise HTTPException(status_code=404, detail="Workflow not found.")
+                definition_json = workflow["draft_definition"]
+                session.dashboards.update(
+                    dashboard_id,
+                    {
+                        "workflow_id": workflow_id,
+                        "workflow_source": source,
+                        "workflow_version": version if source == "published" else None,
+                        "workflow_revision": workflow["revision"],
+                        "workflow_definition_json": definition_json,
+                    },
+                )
+
+            definition = json.loads(definition_json) if isinstance(definition_json, str) else (definition_json or {})
+
+        pending_doc_ids = []
+        for doc_id in document_ids:
+            doc = document_service.get_document(None, doc_id)
+            if not doc:
+                skipped.append(doc_id)
+                continue
+            with self.db_session_factory() as session:
+                existing = session.dashboard_documents.get(dashboard_id, doc_id)
+                if existing and doc_id not in rerun_document_ids and not retry_model:
+                    skipped.append(doc.filename)
+                    continue
+                session.dashboard_documents.create_or_update(dashboard_id, doc_id, "{}", "pending", current_step=0, total_steps=3)
+                pending_doc_ids.append(doc_id)
+
+                row = session.dashboard_documents.get_workflow_result(dashboard_id, doc_id)
+                if row:
+                    rows.append(campaign_service._dashboard_document_row(row))
+
+        if pending_doc_ids:
+            async def _exec_task():
+                for doc_id in pending_doc_ids:
+                    try:
+                        await self._execute_document(dashboard_id, doc_id, definition, retry_model)
+                    except Exception:
+                        logger.exception("Background execution failed for existing document %s on dashboard %s", doc_id, dashboard_id)
+
+            from app.services.coding_service import coding_service
+            coding_service.schedule_coroutine(_exec_task())
+
+        dashboard = campaign_service.get_campaign(dashboard_id)
+        return dashboard, rows, skipped
+
     def get_trace(self, dashboard_id: str, document_id: str) -> DashboardDocumentRow:
         with self.db_session_factory() as session:
             row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)

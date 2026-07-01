@@ -225,14 +225,14 @@ def test_link_campaign_documents_and_override_cell(client, auth_headers, clean_d
         conn.commit()
         
     # 2. Link document to campaign
-    with patch("app.routes.dashboards.enqueue_sequential_coding") as mock_enqueue:
+    with patch("app.services.campaign_service.campaign_service._enqueue_dashboard_execution") as mock_enqueue:
         response = client.post(
             f"/api/dashboards/{db_id}/documents/link",
             json=[doc_id],
             headers=auth_headers
         )
     assert response.status_code == 200
-    mock_enqueue.assert_called_once_with(db_id, [doc_id], "00000000-0000-0000-0000-000000000001")
+    mock_enqueue.assert_called_once_with(db_id, "00000000-0000-0000-0000-000000000001", [doc_id])
     
     # Check junction table record
     with get_db_conn() as conn:

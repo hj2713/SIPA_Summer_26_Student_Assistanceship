@@ -20,6 +20,7 @@ from app.schemas.workflow import (
     WorkflowValidationResult,
     WorkflowVersionRow,
 )
+from app.workflows.discretion_builder import compile_workflow_definition
 from app.workflows.templates import WORKFLOW_TEMPLATES
 from app.workflows.validator import validate_workflow_definition
 
@@ -30,12 +31,17 @@ class WorkflowService:
 
     SEED_TEMPLATE_VERSIONS = {
         "blank": 1,
-        "law_delegation_discretion_rank": 3,
+        "law_delegation_discretion_rank": 4,
     }
 
     def _parse_definition(self, raw) -> WorkflowDefinition:
         data = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        data = compile_workflow_definition(data)
         return WorkflowDefinition.model_validate(data)
+
+    def _normalize_definition(self, definition: WorkflowDefinition | dict) -> WorkflowDefinition:
+        payload = definition.model_dump() if isinstance(definition, WorkflowDefinition) else dict(definition or {})
+        return WorkflowDefinition.model_validate(compile_workflow_definition(payload))
 
     def _slugify(self, name: str) -> str:
         slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
@@ -120,13 +126,13 @@ class WorkflowService:
                 "description": "Project workflow with explicit Law Delegation audit fields and two clean final outputs.",
                 "category": "Project",
                 "seed_version": self.SEED_TEMPLATE_VERSIONS["law_delegation_discretion_rank"],
-                "definition": WORKFLOW_TEMPLATES["law_delegation_discretion_rank"](),
+                "definition": self._normalize_definition(WORKFLOW_TEMPLATES["law_delegation_discretion_rank"]()).model_dump(),
             },
         ]
         with self.db_session_factory() as session:
             for seed in seeds:
                 existing = session.workflow_templates.get_by_slug(workspace_id, seed["slug"])
-                seed_definition = seed["definition"]
+                seed_definition = self._normalize_definition(seed["definition"]).model_dump()
                 seed_definition.setdefault("metadata", {})["seed_version"] = seed["seed_version"]
                 if existing:
                     existing_definition = self._parse_definition(existing["definition_json"]).model_dump()
@@ -169,7 +175,7 @@ class WorkflowService:
     def create(self, payload: WorkflowCreate, workspace_id: str, user_id: str) -> WorkflowRow:
         workflow_id = str(uuid.uuid4())
         with self.db_session_factory() as session:
-            definition = self._resolve_template_definition(session, payload, workspace_id)
+            definition = self._normalize_definition(self._resolve_template_definition(session, payload, workspace_id))
             row = session.workflows.create(
                 workflow_id,
                 workspace_id,
@@ -191,7 +197,8 @@ class WorkflowService:
             return self._to_template_row(self._get_owned_template(session, template_id, workspace_id))
 
     def create_template(self, payload: WorkflowTemplateCreate | WorkflowTemplateImport, workspace_id: str, user_id: str) -> WorkflowTemplateRow:
-        issues = validate_workflow_definition(payload.definition.model_dump())
+        normalized_definition = self._normalize_definition(payload.definition)
+        issues = validate_workflow_definition(normalized_definition.model_dump())
         errors = [issue for issue in issues if issue.severity == "error"]
         if errors:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"message": "Template definition is invalid.", "issues": [issue.to_dict() for issue in errors]})
@@ -204,7 +211,7 @@ class WorkflowService:
                 payload.name.strip(),
                 payload.description.strip(),
                 payload.category.strip() or "General",
-                json.dumps(payload.definition.model_dump()),
+                json.dumps(normalized_definition.model_dump()),
                 user_id,
             )
         return self._to_template_row(row)
@@ -224,11 +231,12 @@ class WorkflowService:
             if payload.status is not None:
                 updates["status"] = payload.status
             if payload.definition is not None:
-                issues = validate_workflow_definition(payload.definition.model_dump())
+                normalized_definition = self._normalize_definition(payload.definition)
+                issues = validate_workflow_definition(normalized_definition.model_dump())
                 errors = [issue for issue in issues if issue.severity == "error"]
                 if errors:
                     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"message": "Template definition is invalid.", "issues": [issue.to_dict() for issue in errors]})
-                updates["definition_json"] = json.dumps(payload.definition.model_dump())
+                updates["definition_json"] = json.dumps(normalized_definition.model_dump())
             updated = session.workflow_templates.update(template_id, updates)
         return self._to_template_row(updated)
 
@@ -275,7 +283,8 @@ class WorkflowService:
             if payload.description is not None:
                 updates["description"] = payload.description.strip()
             if payload.definition is not None:
-                updates["draft_definition"] = json.dumps(payload.definition.model_dump())
+                normalized_definition = self._normalize_definition(payload.definition)
+                updates["draft_definition"] = json.dumps(normalized_definition.model_dump())
             updated = session.workflows.update(workflow_id, updates)
         return self._to_row(updated)
 
@@ -286,7 +295,7 @@ class WorkflowService:
 
     def validate(self, workflow_id: str, workspace_id: str) -> WorkflowValidationResult:
         workflow = self.get(workflow_id, workspace_id)
-        issues = validate_workflow_definition(workflow.definition.model_dump())
+        issues = validate_workflow_definition(self._normalize_definition(workflow.definition).model_dump())
         errors = sum(issue.severity == "error" for issue in issues)
         warnings = sum(issue.severity == "warning" for issue in issues)
         return WorkflowValidationResult(

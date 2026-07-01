@@ -7,10 +7,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuthContext } from "@/context/AuthContext";
+import { createDefaultDiscretionBuilder, ensureDiscretionBuilder, getPromptPreview } from "@/features/workflows/discretionBuilder";
 import { WorkflowInspector } from "@/features/workflows/WorkflowInspector";
 import { WorkflowNodeCard, type WorkflowCanvasNodeData } from "@/features/workflows/WorkflowNodeCard";
 import { workflowApi, type WorkflowTestResult } from "@/lib/workflowApi";
-import type { CodingWorkflow, WorkflowDefinition, WorkflowEdgeDefinition, WorkflowNodeDefinition, WorkflowNodeKind, WorkflowValidationResult } from "@/types/workflow";
+import type { CodingWorkflow, DiscretionBuilderConfig, WorkflowBuilderSummary, WorkflowDefinition, WorkflowEdgeDefinition, WorkflowNodeDefinition, WorkflowNodeKind, WorkflowOutputField, WorkflowValidationResult } from "@/types/workflow";
 
 type CanvasNode = Node<WorkflowCanvasNodeData>;
 const nodeTypes = { workflowNode: WorkflowNodeCard };
@@ -32,6 +33,28 @@ function toCanvasEdges(definition: WorkflowDefinition): Edge[] {
   return definition.edges.map((edge) => ({ id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.source_handle, targetHandle: edge.target_handle, label: edge.label, markerEnd: { type: MarkerType.ArrowClosed }, animated: edge.source_handle === "true" || edge.source_handle === "false" }));
 }
 
+function getDiscretionBuilder(definition: WorkflowDefinition | null | undefined): DiscretionBuilderConfig | null {
+  const builder = definition?.metadata?.builder;
+  if (!builder || typeof builder !== "object" || (builder as DiscretionBuilderConfig).kind !== "discretion_workflow") return null;
+  return builder as DiscretionBuilderConfig;
+}
+
+function getBuilderSummary(definition: WorkflowDefinition | null | undefined): WorkflowBuilderSummary | null {
+  const summary = definition?.metadata?.builder_summary;
+  if (!summary || typeof summary !== "object") return null;
+  return summary as WorkflowBuilderSummary;
+}
+
+function relevantStages(builder: DiscretionBuilderConfig | null): string[] {
+  if (!builder) return [];
+  const byMode: Record<DiscretionBuilderConfig["mode"], string[]> = {
+    cascade: ["delegation", "inventory", "decision", ...(builder.calibration_enabled ? ["calibration"] : [])],
+    multiclass: ["delegation", "multiclass", ...(builder.calibration_enabled ? ["calibration"] : [])],
+    binary: ["delegation", "binary_split", "low_rank", "high_rank", ...(builder.calibration_enabled ? ["calibration"] : [])],
+  };
+  return byMode[builder.mode];
+}
+
 function WorkflowBuilderInner() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -44,6 +67,7 @@ function WorkflowBuilderInner() {
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editorView, setEditorView] = useState<"builder" | "graph">("graph");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -58,6 +82,16 @@ function WorkflowBuilderInner() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<Awaited<ReturnType<typeof workflowApi.test>> | null>(null);
 
+  const hydrateWorkflow = useCallback((data: CodingWorkflow) => {
+    const builder = getDiscretionBuilder(data.definition);
+    const compiledDefinition = builder ? ensureDiscretionBuilder(data.definition) : data.definition;
+    const hydrated = { ...data, definition: compiledDefinition };
+    setWorkflow(hydrated);
+    setNodes(toCanvasNodes(compiledDefinition));
+    setEdges(toCanvasEdges(compiledDefinition));
+    setEditorView(builder ? "builder" : "graph");
+  }, []);
+
   useEffect(() => {
     if (!jwt || !id) return;
     const loadPromise = isTemplate 
@@ -65,30 +99,80 @@ function WorkflowBuilderInner() {
       : workflowApi.get(id, jwt, workspaceId);
       
     loadPromise
-      .then((data) => { 
-        setWorkflow(data as any); 
-        setNodes(toCanvasNodes(data.definition)); 
-        setEdges(toCanvasEdges(data.definition)); 
-      })
+      .then((data) => hydrateWorkflow(data as any))
       .catch((error) => { 
         toast.error(error.message); 
         navigate("/workflows"); 
       })
       .finally(() => setLoading(false));
-  }, [id, jwt, workspaceId, navigate, isTemplate]);
+  }, [id, jwt, workspaceId, navigate, isTemplate, hydrateWorkflow]);
 
-  const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => { setNodes((current) => applyNodeChanges(changes, current)); setDirty(true); }, []);
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => { setEdges((current) => applyEdgeChanges(changes, current)); setDirty(true); }, []);
-  const onConnect = useCallback((connection: Connection) => { setEdges((current) => addEdge({ ...connection, id: `edge_${crypto.randomUUID()}`, label: connection.sourceHandle === "true" ? "True" : connection.sourceHandle === "false" ? "False" : undefined, markerEnd: { type: MarkerType.ArrowClosed } }, current)); setDirty(true); }, []);
+  const builder = getDiscretionBuilder(workflow?.definition);
+  const builderSummary = getBuilderSummary(workflow?.definition);
+  const promptPreviews = useMemo(() => (workflow ? getPromptPreview(workflow.definition) : []), [workflow]);
+  const [selectedPreviewId, setSelectedPreviewId] = useState<string>("");
+  const activePreview = promptPreviews.find((item) => item.id === selectedPreviewId) || promptPreviews[0] || null;
+  const graphReadOnly = Boolean(builder);
 
-  const definitionFromCanvas = (): WorkflowDefinition => ({
-    schema_version: 1,
-    nodes: nodes.map((node) => ({ ...node.data.definition, position: node.position })),
-    edges: edges.map((edge): WorkflowEdgeDefinition => ({ id: edge.id, source: edge.source, target: edge.target, source_handle: edge.sourceHandle || undefined, target_handle: edge.targetHandle || undefined, label: typeof edge.label === "string" ? edge.label : undefined })),
-    outputs: workflow?.definition.outputs || [],
-    viewport: workflow?.definition.viewport || { x: 0, y: 0, zoom: 1 },
-    metadata: workflow?.definition.metadata || {},
-  });
+  useEffect(() => {
+    if (!promptPreviews.length) {
+      setSelectedPreviewId("");
+      return;
+    }
+    setSelectedPreviewId((current) => (promptPreviews.some((item) => item.id === current) ? current : promptPreviews[0].id));
+  }, [promptPreviews]);
+
+  const syncDefinition = useCallback((nextDefinition: WorkflowDefinition) => {
+    const compiled = getDiscretionBuilder(nextDefinition) ? ensureDiscretionBuilder(nextDefinition) : nextDefinition;
+    setWorkflow((current) => (current ? { ...current, definition: compiled } : current));
+    setNodes(toCanvasNodes(compiled));
+    setEdges(toCanvasEdges(compiled));
+    setDirty(true);
+  }, []);
+
+  const updateBuilder = useCallback((updater: (draft: DiscretionBuilderConfig) => void) => {
+    if (!workflow) return;
+    const currentBuilder = getDiscretionBuilder(workflow.definition) || createDefaultDiscretionBuilder();
+    const nextBuilder = JSON.parse(JSON.stringify(currentBuilder)) as DiscretionBuilderConfig;
+    updater(nextBuilder);
+    syncDefinition({
+      ...workflow.definition,
+      metadata: {
+        ...(workflow.definition.metadata || {}),
+        builder: nextBuilder,
+      },
+    });
+  }, [workflow, syncDefinition]);
+
+  const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
+    if (graphReadOnly) return;
+    setNodes((current) => applyNodeChanges(changes, current));
+    setDirty(true);
+  }, [graphReadOnly]);
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    if (graphReadOnly) return;
+    setEdges((current) => applyEdgeChanges(changes, current));
+    setDirty(true);
+  }, [graphReadOnly]);
+  const onConnect = useCallback((connection: Connection) => {
+    if (graphReadOnly) return;
+    setEdges((current) => addEdge({ ...connection, id: `edge_${crypto.randomUUID()}`, label: connection.sourceHandle === "true" ? "True" : connection.sourceHandle === "false" ? "False" : undefined, markerEnd: { type: MarkerType.ArrowClosed } }, current));
+    setDirty(true);
+  }, [graphReadOnly]);
+
+  const definitionFromCanvas = (): WorkflowDefinition => {
+    if (workflow && builder) {
+      return workflow.definition;
+    }
+    return {
+      schema_version: 1,
+      nodes: nodes.map((node) => ({ ...node.data.definition, position: node.position })),
+      edges: edges.map((edge): WorkflowEdgeDefinition => ({ id: edge.id, source: edge.source, target: edge.target, source_handle: edge.sourceHandle || undefined, target_handle: edge.targetHandle || undefined, label: typeof edge.label === "string" ? edge.label : undefined })),
+      outputs: workflow?.definition.outputs || [],
+      viewport: workflow?.definition.viewport || { x: 0, y: 0, zoom: 1 },
+      metadata: workflow?.definition.metadata || {},
+    };
+  };
 
   const save = async () => {
     if (!workflow) return null;
@@ -97,7 +181,7 @@ function WorkflowBuilderInner() {
       const updated = isTemplate
         ? await workflowApi.updateTemplate(workflow.id, { name: workflow.name, description: workflow.description, definition: definitionFromCanvas(), revision: workflow.revision }, jwt, workspaceId)
         : await workflowApi.update(workflow.id, { name: workflow.name, description: workflow.description, definition: definitionFromCanvas(), revision: workflow.revision }, jwt, workspaceId);
-      setWorkflow(updated as any); 
+      hydrateWorkflow(updated as any);
       setDirty(false); 
       toast.success(isTemplate ? "Workflow template saved" : "Workflow draft saved"); 
       return updated;
@@ -118,7 +202,7 @@ function WorkflowBuilderInner() {
   const publish = async () => {
     if (dirty && !(await save())) return;
     setPublishing(true);
-    try { const version = await workflowApi.publish(id, changelog, jwt, workspaceId); const refreshed = await workflowApi.get(id, jwt, workspaceId); setWorkflow(refreshed); setShowPublish(false); setChangelog(""); toast.success(`Published workflow version ${version.version}`); }
+    try { const version = await workflowApi.publish(id, changelog, jwt, workspaceId); const refreshed = await workflowApi.get(id, jwt, workspaceId); hydrateWorkflow(refreshed as any); setShowPublish(false); setChangelog(""); toast.success(`Published workflow version ${version.version}`); }
     catch (error) { toast.error(error instanceof Error ? error.message : "Publishing failed"); }
     finally { setPublishing(false); }
   };
@@ -180,6 +264,7 @@ function WorkflowBuilderInner() {
   };
 
   const addNode = (kind: WorkflowNodeKind) => {
+    if (graphReadOnly) return;
     const baseId = `${kind}_${nodes.length + 1}`;
     let idPart = baseId;
     let suffix = 2;
@@ -188,6 +273,20 @@ function WorkflowBuilderInner() {
     const config: Record<string, unknown> = kind === "llm" ? { document_context: "source_text", instructions: "", input_fields: [], outputs: [] } : kind === "condition" ? { expression: { op: "eq", left: { field: "" }, right: { literal: false } } } : kind === "set_value" ? { assignments: [] } : kind === "document_input" ? { source_policy: "campaign_source" } : kind === "output" ? { fields: [] } : kind === "rank_descriptor" ? { rank: 1, instructions: "" } : { rules: [] };
     const definition: WorkflowNodeDefinition = { id: idPart, kind, name: meta.label, description: meta.description, position: { x: 360 + (nodes.length % 3) * 80, y: 160 + (nodes.length % 5) * 90 }, config };
     setNodes((current) => [...current, { id: idPart, type: "workflowNode", position: definition.position, data: { definition } }]); setSelectedNodeId(idPart); setDirty(true);
+  };
+
+  const enableStageBuilder = () => {
+    if (!workflow) return;
+    syncDefinition(ensureDiscretionBuilder(workflow.definition));
+    setEditorView("builder");
+  };
+
+  const updateStageField = (stageKey: string, index: number, updater: (field: WorkflowOutputField) => WorkflowOutputField) => {
+    updateBuilder((draft) => {
+      const stage = draft.stages[stageKey];
+      if (!stage) return;
+      stage.outputs = stage.outputs.map((field, fieldIndex) => (fieldIndex === index ? updater(field) : field));
+    });
   };
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId)?.data.definition || null;
@@ -211,8 +310,18 @@ function WorkflowBuilderInner() {
     });
   }, [nodes, edges, selectedNodeId]);
 
-  const changeSelected = (definition: WorkflowNodeDefinition) => { setNodes((current) => current.map((node) => node.id === definition.id ? { ...node, data: { definition } } : node)); setDirty(true); };
-  const deleteSelected = () => { if (!selectedNodeId) return; setNodes((current) => current.filter((node) => node.id !== selectedNodeId)); setEdges((current) => current.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId)); setSelectedNodeId(null); setDirty(true); };
+  const changeSelected = (definition: WorkflowNodeDefinition) => {
+    if (graphReadOnly) return;
+    setNodes((current) => current.map((node) => node.id === definition.id ? { ...node, data: { definition } } : node));
+    setDirty(true);
+  };
+  const deleteSelected = () => {
+    if (graphReadOnly || !selectedNodeId) return;
+    setNodes((current) => current.filter((node) => node.id !== selectedNodeId));
+    setEdges((current) => current.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
+    setSelectedNodeId(null);
+    setDirty(true);
+  };
 
   if (loading || !workflow) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
@@ -241,6 +350,20 @@ function WorkflowBuilderInner() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {builder ? (
+            <div className="mr-2 flex items-center rounded-lg border bg-background p-1">
+              <Button variant={editorView === "builder" ? "default" : "ghost"} size="sm" onClick={() => setEditorView("builder")}>
+                Stage Builder
+              </Button>
+              <Button variant={editorView === "graph" ? "default" : "ghost"} size="sm" onClick={() => setEditorView("graph")}>
+                Graph
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={enableStageBuilder}>
+              <ListOrdered size={14} /> Enable Stage Builder
+            </Button>
+          )}
           <span className="mr-1 text-[10px] text-muted-foreground">
             {dirty ? "Unsaved changes" : "All changes saved"}
           </span>
@@ -265,13 +388,283 @@ function WorkflowBuilderInner() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <aside className="w-56 shrink-0 overflow-y-auto border-r bg-card p-3"><p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Add workflow step</p><div className="space-y-1">{PALETTE.map(({ kind, label, icon: Icon, description }) => <button key={kind} onClick={() => addNode(kind)} className="flex w-full items-start gap-2.5 rounded-lg border border-transparent p-2.5 text-left hover:border-border hover:bg-muted/50"><span className="rounded-md bg-muted p-1.5"><Icon size={14} /></span><span><span className="block text-[11px] font-semibold">{label}</span><span className="block text-[9px] leading-relaxed text-muted-foreground">{description}</span></span></button>)}</div><div className="mt-4 rounded-lg border border-dashed p-3 text-[9px] leading-relaxed text-muted-foreground">Connect nodes from right to left. Conditions expose separate TRUE and FALSE paths. Save and validate before publishing.</div></aside>
+      {builder && editorView === "builder" ? (
+        <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-h-0 overflow-y-auto p-5">
+            <div className="mb-4 rounded-xl border bg-card p-4">
+              <p className="text-sm font-semibold">Stage-based workflow builder</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Edit the legal coding logic as explicit stages. The node graph remains available as a compiled preview in the Graph tab, but this builder is the source of truth for builder-backed workflows.
+              </p>
+            </div>
 
-        <div className="min-w-0 flex-1 bg-muted/15"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeClick={(_, node) => setSelectedNodeId(node.id)} onPaneClick={() => setSelectedNodeId(null)} fitView minZoom={0.25} maxZoom={1.5} deleteKeyCode={["Backspace", "Delete"]}><Background gap={20} size={1} /><Controls /><MiniMap pannable zoomable nodeStrokeWidth={2} /></ReactFlow></div>
+            <div className="space-y-4">
+              <section className="rounded-xl border bg-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold">Workflow Settings</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Set the evaluation mode, source text policy, calibration behavior, and binary/cascade class labels.</p>
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">{builder.mode}</span>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Source Policy</label>
+                    <select
+                      value={builder.source_policy}
+                      onChange={(event) => updateBuilder((draft) => { draft.source_policy = event.target.value as DiscretionBuilderConfig["source_policy"]; })}
+                      className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs"
+                    >
+                      <option value="campaign_source">Selected by campaign</option>
+                      <option value="cq_summary">CQ summary only</option>
+                      <option value="major_provisions">Major provisions</option>
+                      <option value="full_text">Full statutory text</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Evaluation Mode</label>
+                    <select
+                      value={builder.mode}
+                      onChange={(event) => updateBuilder((draft) => { draft.mode = event.target.value as DiscretionBuilderConfig["mode"]; })}
+                      className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs"
+                    >
+                      <option value="cascade">Cascade</option>
+                      <option value="multiclass">Multiclass</option>
+                      <option value="binary">Binary decomposition</option>
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={builder.calibration_enabled}
+                      onChange={(event) => updateBuilder((draft) => { draft.calibration_enabled = event.target.checked; })}
+                    />
+                    <span>Enable optional calibration review stage</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Lower Class Label</label>
+                      <input
+                        value={builder.label_overrides.binary_low_class}
+                        onChange={(event) => updateBuilder((draft) => { draft.label_overrides.binary_low_class = event.target.value; })}
+                        className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Higher Class Label</label>
+                      <input
+                        value={builder.label_overrides.binary_high_class}
+                        onChange={(event) => updateBuilder((draft) => { draft.label_overrides.binary_high_class = event.target.value; })}
+                        className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-        <WorkflowInspector node={selectedNode} availableFields={availableFields} onChange={changeSelected} onDelete={deleteSelected} onClose={() => setSelectedNodeId(null)} />
-      </div>
+              {relevantStages(builder).map((stageKey) => {
+                const stage = builder.stages[stageKey];
+                return (
+                  <section key={stageKey} className="rounded-xl border bg-card p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{stage.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{stageKey.replaceAll("_", " ")}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedPreviewId(stageKey === "delegation" ? "law_delegation" : stageKey === "inventory" ? "discretion_inventory" : stageKey === "decision" ? "discretion_decision" : stageKey === "multiclass" ? "discretion_analysis" : stageKey === "binary_split" ? "binary_split" : stageKey === "low_rank" ? "low_rank_classifier" : stageKey === "high_rank" ? "high_rank_classifier" : "recalibration_review")}>
+                        Preview Prompt
+                      </Button>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-muted-foreground">Purpose</label>
+                          <textarea
+                            value={stage.purpose}
+                            onChange={(event) => updateBuilder((draft) => { draft.stages[stageKey].purpose = event.target.value; })}
+                            rows={3}
+                            className="mt-1 w-full rounded-md border bg-background p-3 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-muted-foreground">Prompt Text</label>
+                          <textarea
+                            value={stage.instructions}
+                            onChange={(event) => updateBuilder((draft) => { draft.stages[stageKey].instructions = event.target.value; })}
+                            rows={7}
+                            className="mt-1 w-full rounded-md border bg-background p-3 text-xs leading-relaxed outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border bg-muted/15 p-3">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Generated Fields</p>
+                        <div className="mt-2 space-y-2">
+                          {stage.outputs.map((output, index) => (
+                            <div key={`${stageKey}-${output.key}-${index}`} className="rounded-lg border bg-card p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-[10px] font-semibold">{output.key}</span>
+                                <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase ${output.visibility === "final" ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                                  {output.visibility || "internal"}
+                                </span>
+                              </div>
+                              <div className="mt-2 space-y-2">
+                                <input
+                                  value={output.label || ""}
+                                  onChange={(event) => updateStageField(stageKey, index, (field) => ({ ...field, label: event.target.value }))}
+                                  placeholder="Field label"
+                                  className="w-full rounded-md border bg-background px-2 py-1.5 text-[10px] outline-none focus:ring-2 focus:ring-primary/30"
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+                                  <select
+                                    value={output.type}
+                                    onChange={(event) => updateStageField(stageKey, index, (field) => ({ ...field, type: event.target.value }))}
+                                    className="rounded-md border bg-background px-2 py-1.5 text-[10px]"
+                                  >
+                                    <option value="boolean">boolean</option>
+                                    <option value="integer">integer</option>
+                                    <option value="decimal">decimal</option>
+                                    <option value="string">string</option>
+                                    <option value="enum">enum</option>
+                                    <option value="object">object</option>
+                                    <option value="list[string]">list[string]</option>
+                                    <option value="evidence[]">evidence[]</option>
+                                  </select>
+                                  <select
+                                    value={output.visibility || "internal"}
+                                    onChange={(event) => updateStageField(stageKey, index, (field) => ({ ...field, visibility: event.target.value as "internal" | "final" }))}
+                                    className="rounded-md border bg-background px-2 py-1.5 text-[10px]"
+                                  >
+                                    <option value="internal">internal trace field</option>
+                                    <option value="final">final campaign field</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+
+          <aside className="min-h-0 overflow-y-auto border-l bg-card p-5">
+            <section className="rounded-xl border bg-muted/15 p-4">
+              <p className="text-sm font-semibold">Workflow Summary</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-lg border bg-card px-3 py-2">
+                  <p className="font-bold uppercase text-muted-foreground">Mode</p>
+                  <p className="mt-1">{builderSummary?.mode || builder.mode}</p>
+                </div>
+                <div className="rounded-lg border bg-card px-3 py-2">
+                  <p className="font-bold uppercase text-muted-foreground">Calibration</p>
+                  <p className="mt-1">{(builderSummary?.calibration_enabled ?? builder.calibration_enabled) ? "Enabled" : "Off"}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Final Outputs</p>
+                <div className="mt-2 space-y-2">
+                  {(builderSummary?.final_outputs || []).map((item) => (
+                    <div key={`${item.key}-${item.source}`} className="rounded-lg border bg-card px-3 py-2">
+                      <p className="text-[11px] font-semibold">{item.label}</p>
+                      <p className="mt-1 font-mono text-[10px] text-muted-foreground">{item.source}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Internal Audit Outputs</p>
+                <div className="mt-2 space-y-2">
+                  {(builderSummary?.internal_outputs || []).length === 0 ? (
+                    <p className="rounded-lg border bg-card px-3 py-2 text-[11px] text-muted-foreground">No internal summary fields are currently exposed.</p>
+                  ) : (
+                    (builderSummary?.internal_outputs || []).map((item) => (
+                      <div key={`${item.key}-${item.source}`} className="rounded-lg border bg-card px-3 py-2">
+                        <p className="text-[11px] font-semibold">{item.label}</p>
+                        <p className="mt-1 font-mono text-[10px] text-muted-foreground">{item.source}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-4 rounded-xl border bg-muted/15 p-4">
+              <p className="text-sm font-semibold">Live Prompt Preview</p>
+              <p className="mt-1 text-xs text-muted-foreground">This is the compiled prompt sent into the workflow node for the selected stage.</p>
+              <div className="mt-3 space-y-2">
+                {promptPreviews.map((preview) => (
+                  <button
+                    key={preview.id}
+                    onClick={() => setSelectedPreviewId(preview.id)}
+                    className={`w-full rounded-lg border px-3 py-2 text-left text-xs ${activePreview?.id === preview.id ? "border-primary bg-primary/5" : "bg-card"}`}
+                  >
+                    <p className="font-semibold">{preview.name}</p>
+                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">{preview.id}</p>
+                  </button>
+                ))}
+              </div>
+              <pre className="mt-3 max-h-[50vh] overflow-auto rounded-lg border bg-card p-3 text-[10px] whitespace-pre-wrap leading-relaxed">
+                {activePreview?.instructions || "Select a stage to preview the compiled prompt."}
+              </pre>
+            </section>
+          </aside>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          {!builder && (
+            <aside className="w-56 shrink-0 overflow-y-auto border-r bg-card p-3">
+              <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Add workflow step</p>
+              <div className="space-y-1">
+                {PALETTE.map(({ kind, label, icon: Icon, description }) => (
+                  <button key={kind} onClick={() => addNode(kind)} className="flex w-full items-start gap-2.5 rounded-lg border border-transparent p-2.5 text-left hover:border-border hover:bg-muted/50">
+                    <span className="rounded-md bg-muted p-1.5"><Icon size={14} /></span>
+                    <span><span className="block text-[11px] font-semibold">{label}</span><span className="block text-[9px] leading-relaxed text-muted-foreground">{description}</span></span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 rounded-lg border border-dashed p-3 text-[9px] leading-relaxed text-muted-foreground">Connect nodes from right to left. Conditions expose separate TRUE and FALSE paths. Save and validate before publishing.</div>
+            </aside>
+          )}
+
+          <div className="min-w-0 flex-1 bg-muted/15">
+            {builder && (
+              <div className="border-b bg-card px-4 py-3 text-xs text-muted-foreground">
+                The graph view is a compiled preview for this builder-backed workflow. Edit stages in the Stage Builder tab; use this tab to inspect execution flow and field lineage.
+              </div>
+            )}
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+              onPaneClick={() => setSelectedNodeId(null)}
+              fitView
+              minZoom={0.25}
+              maxZoom={1.5}
+              deleteKeyCode={builder ? null : ["Backspace", "Delete"]}
+              nodesDraggable={!builder}
+              nodesConnectable={!builder}
+              elementsSelectable
+            >
+              <Background gap={20} size={1} />
+              <Controls />
+              <MiniMap pannable zoomable nodeStrokeWidth={2} />
+            </ReactFlow>
+          </div>
+
+          {!builder && (
+            <WorkflowInspector node={selectedNode} availableFields={availableFields} onChange={changeSelected} onDelete={deleteSelected} onClose={() => setSelectedNodeId(null)} />
+          )}
+        </div>
+      )}
 
       <Dialog open={showValidation} onOpenChange={setShowValidation}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle className="flex items-center gap-2">{validation?.valid ? <CheckCircle2 className="text-emerald-600" /> : <TriangleAlert className="text-amber-600" />} Workflow validation</DialogTitle></DialogHeader><div className="flex gap-3 rounded-lg bg-muted/40 p-3 text-xs"><span className="font-semibold">{validation?.errors || 0} errors</span><span className="font-semibold">{validation?.warnings || 0} warnings</span></div><div className="max-h-[55vh] space-y-2 overflow-y-auto">{validation?.issues.length === 0 ? <div className="py-8 text-center text-sm text-emerald-600">This workflow is structurally valid and ready to publish.</div> : validation?.issues.map((issue, index) => <button key={`${issue.code}-${index}`} onClick={() => { if (issue.node_id) setSelectedNodeId(issue.node_id); setShowValidation(false); }} className={`w-full rounded-lg border p-3 text-left ${issue.severity === "error" ? "border-destructive/30 bg-destructive/5" : "border-amber-500/30 bg-amber-500/5"}`}><div className="flex items-center gap-2"><span className="text-[9px] font-bold uppercase">{issue.severity}</span>{issue.node_id && <span className="font-mono text-[9px] text-muted-foreground">{issue.node_id}</span>}</div><p className="mt-1 text-xs">{issue.message}</p></button>)}</div></DialogContent></Dialog>
 

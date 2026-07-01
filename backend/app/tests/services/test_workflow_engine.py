@@ -1,5 +1,6 @@
 import pytest
 
+from app.workflows.discretion_builder import compile_workflow_definition, default_builder_metadata
 from app.workflows.executor import WorkflowExecutor
 from app.workflows.expressions import evaluate_expression
 from app.workflows.templates import delegation_discretion_definition, law_delegation_discretion_rank_definition
@@ -16,6 +17,8 @@ def test_law_delegation_rank_workflow_is_valid_and_emits_two_outputs():
     issues = validate_workflow_definition(definition)
 
     assert [issue for issue in issues if issue.severity == "error"] == []
+    assert definition["metadata"]["builder"]["kind"] == "discretion_workflow"
+    assert definition["metadata"]["builder"]["mode"] == "cascade"
     law_delegation = next(node for node in definition["nodes"] if node["id"] == "law_delegation")
     assert [output["key"] for output in law_delegation["config"]["outputs"]] == [
         "delegate_law",
@@ -27,36 +30,20 @@ def test_law_delegation_rank_workflow_is_valid_and_emits_two_outputs():
         "delegation_breadth",
         "delegation_centrality",
     ]
-    discretion_rank = next(node for node in definition["nodes"] if node["id"] == "discretion_rank")
-    assert discretion_rank["config"]["input_fields"] == [
-        "law_delegation.delegate_law",
-        "law_delegation.delegation_rationale",
-        "law_delegation.administrative_actors",
-        "law_delegation.delegated_authorities",
-        "law_delegation.constraints_summary",
-        "law_delegation.constraint_strength",
-        "law_delegation.delegation_breadth",
-        "law_delegation.delegation_centrality",
+    inventory = next(node for node in definition["nodes"] if node["id"] == "discretion_inventory")
+    assert [output["key"] for output in inventory["config"]["outputs"]] == [
+        "delegated_authority_summary",
+        "affirmative_discretion_signals",
+        "constraint_evidence",
+        "residual_leeway",
+        "provisional_rank",
+        "boundary_decision",
     ]
-    descriptor_ids = [node["id"] for node in definition["nodes"] if node["kind"] == "rank_descriptor"]
-    assert descriptor_ids == [
-        "rank_1_descriptor",
-        "rank_2_descriptor",
-        "rank_3_descriptor",
-        "rank_4_descriptor",
+    decision = next(node for node in definition["nodes"] if node["id"] == "discretion_decision")
+    assert [output["key"] for output in decision["config"]["outputs"]] == [
+        "discretion_rank",
+        "discretion_rationale",
     ]
-    rank_edges = {
-        (edge["source"], edge["target"])
-        for edge in definition["edges"]
-        if edge["target"] == "discretion_rank"
-    }
-    assert rank_edges == {
-        ("delegation_gate", "discretion_rank"),
-        ("rank_1_descriptor", "discretion_rank"),
-        ("rank_2_descriptor", "discretion_rank"),
-        ("rank_3_descriptor", "discretion_rank"),
-        ("rank_4_descriptor", "discretion_rank"),
-    }
     assert definition["outputs"] == [
         {"key": "delegate_law", "source": "law_delegation.delegate_law", "group": "Final"},
         {"key": "discretion_rank", "source": "discretion_rank", "group": "Final"},
@@ -66,6 +53,28 @@ def test_law_delegation_rank_workflow_is_valid_and_emits_two_outputs():
         {"source": "law_delegation.delegate_law", "key": "delegate_law", "label": "Delegate Law"},
         {"source": "discretion_rank", "key": "discretion_rank", "label": "Discretion Rank"},
     ]
+
+
+def test_builder_compiler_supports_multiclass_binary_and_calibration():
+    metadata = default_builder_metadata()
+    metadata["builder"]["mode"] = "multiclass"
+    metadata["builder"]["calibration_enabled"] = True
+    multiclass = compile_workflow_definition({"metadata": metadata, "nodes": [], "edges": [], "outputs": []})
+    multiclass_node_ids = [node["id"] for node in multiclass["nodes"]]
+    assert "discretion_analysis" in multiclass_node_ids
+    assert "recalibration_review" in multiclass_node_ids
+    assert "discretion_inventory" not in multiclass_node_ids
+
+    metadata = default_builder_metadata()
+    metadata["builder"]["mode"] = "binary"
+    binary = compile_workflow_definition({"metadata": metadata, "nodes": [], "edges": [], "outputs": []})
+    binary_node_ids = [node["id"] for node in binary["nodes"]]
+    assert "binary_split" in binary_node_ids
+    assert "binary_gate" in binary_node_ids
+    assert "low_rank_classifier" in binary_node_ids
+    assert "high_rank_classifier" in binary_node_ids
+    binary_gate = next(node for node in binary["nodes"] if node["id"] == "binary_gate")
+    assert binary_gate["config"]["expression"]["right"]["literal"] == "bounded"
 
 
 def test_delegation_false_condition_uses_structured_prior_output():
@@ -143,7 +152,8 @@ async def test_project_workflow_keeps_delegation_details_internal_when_false(mon
     assert "delegation_rationale" not in result["outputs"]
     by_id = {item["node_id"]: item for item in result["trace"]}
     assert by_id["law_delegation"]["outputs"]["delegation_rationale"]
-    assert by_id["discretion_rank"]["status"] == "skipped"
+    assert by_id["discretion_inventory"]["status"] == "skipped"
+    assert by_id["discretion_decision"]["status"] == "skipped"
 
 
 @pytest.mark.asyncio
@@ -165,10 +175,18 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
                     delegation_breadth="moderate",
                     delegation_centrality="central",
                 )
+            if node_id == "discretion_inventory":
+                return schema(
+                    delegated_authority_summary="The SEC receives meaningful rulemaking authority.",
+                    affirmative_discretion_signals=["The SEC can issue binding disclosure rules."],
+                    constraint_evidence=["The law contains statutory deadlines and disclosure scope limits."],
+                    residual_leeway="Substantial",
+                    provisional_rank=3,
+                    boundary_decision="Constraints exist, but they do not remove significant policy choice.",
+                )
             return schema(
                 discretion_rank=3,
                 discretion_rationale="Meaningful rulemaking authority with constraints.",
-                rank_evidence=["The SEC must issue disclosure rules."],
             )
 
     monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
@@ -177,6 +195,6 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
         "The law directs the SEC to issue rules governing financial disclosures.",
     )
 
-    assert calls == ["law_delegation", "discretion_rank"]
+    assert calls == ["law_delegation", "discretion_inventory", "discretion_decision"]
     assert result["outputs"] == {"delegate_law": True, "discretion_rank": 3}
     assert "delegation_rationale" not in result["outputs"]

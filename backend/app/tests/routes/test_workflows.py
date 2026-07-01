@@ -59,7 +59,9 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
     assert templates.status_code == 200
     project_template = next(item for item in templates.json() if item["slug"] == "law_delegation_discretion_rank")
-    assert project_template["definition"]["metadata"]["seed_version"] == 3
+    assert project_template["definition"]["metadata"]["seed_version"] == 4
+    assert project_template["definition"]["metadata"]["builder"]["kind"] == "discretion_workflow"
+    assert project_template["definition"]["metadata"]["builder"]["mode"] == "cascade"
     law_delegation_node = next(node for node in project_template["definition"]["nodes"] if node["id"] == "law_delegation")
     assert [output["key"] for output in law_delegation_node["config"]["outputs"]] == [
         "delegate_law",
@@ -71,13 +73,8 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
         "delegation_breadth",
         "delegation_centrality",
     ]
-    descriptor_ids = [node["id"] for node in project_template["definition"]["nodes"] if node["kind"] == "rank_descriptor"]
-    assert descriptor_ids == [
-        "rank_1_descriptor",
-        "rank_2_descriptor",
-        "rank_3_descriptor",
-        "rank_4_descriptor",
-    ]
+    assert any(node["id"] == "discretion_inventory" for node in project_template["definition"]["nodes"])
+    assert any(node["id"] == "discretion_decision" for node in project_template["definition"]["nodes"])
 
     created = client.post(
         "/api/workflows?workspace_id=QA",
@@ -94,6 +91,10 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     assert definition["outputs"] == [
         {"key": "delegate_law", "source": "law_delegation.delegate_law", "group": "Final"},
         {"key": "discretion_rank", "source": "discretion_rank", "group": "Final"},
+    ]
+    assert definition["metadata"]["builder_summary"]["final_outputs"] == [
+        {"key": "delegate_law", "label": "Delegate Law", "source": "law_delegation.delegate_law"},
+        {"key": "discretion_rank", "label": "Discretion Rank", "source": "discretion_rank"},
     ]
 
     validated = client.post(
@@ -252,15 +253,20 @@ def test_workflow_test_returns_json_provider_error(client, auth_headers, monkeyp
 def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_headers, monkeypatch):
     class FakeLlm:
         async def parse_structured(self, messages, schema, log_context=None):
+            if log_context["workflow_node_id"] == "law_delegation":
+                return schema(
+                    delegate_law=False,
+                    delegation_rationale="No new authority.",
+                    administrative_actors=[],
+                    delegated_authorities=[],
+                    constraints_summary="No delegated authority.",
+                    constraint_strength="none",
+                    delegation_breadth="none",
+                    delegation_centrality="none",
+                )
             return schema(
-                delegate_law=False,
-                delegation_rationale="No new authority.",
-                administrative_actors=[],
-                delegated_authorities=[],
-                constraints_summary="No delegated authority.",
-                constraint_strength="none",
-                delegation_breadth="none",
-                delegation_centrality="none",
+                discretion_rank=1,
+                discretion_rationale="Unused fallback.",
             )
 
     monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())

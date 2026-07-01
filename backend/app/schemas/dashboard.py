@@ -33,7 +33,7 @@ class DashboardCreate(BaseModel):
     user_columns: Optional[List[Union[str, UserColumnInput, Dict[str, Any]]]] = Field(default=None, description="Predefined variable columns with optional schemas/descriptions (takes priority over LLM generated schema)")
     model: Optional[str] = Field(default=None, description="Dynamic model choice for campaign coding run")
     dashboard_type: Optional[str] = Field(default="campaign", description="The type of dashboard (e.g. campaign or model_comparison)")
-    token_limit: Optional[int] = Field(default=2500000, description="The safety limit on cumulative token usage for LLM calls")
+    token_limit: Optional[int] = Field(default=5000000, description="The safety limit on cumulative token usage for LLM calls")
     workflow_id: Optional[str] = Field(default=None, description="Optional workflow ID to run evaluations via workflow nodes")
     workflow_source: Optional[str] = Field(default=None, description="Optional workflow source representation")
 
@@ -56,7 +56,7 @@ class DashboardRow(BaseModel):
     workflow_version: Optional[int] = None
     workflow_revision: Optional[int] = None
     created_at: datetime
-    token_limit: Optional[int] = 2500000
+    token_limit: Optional[int] = 5000000
 
     model_config = ConfigDict(populate_by_name=True)
 

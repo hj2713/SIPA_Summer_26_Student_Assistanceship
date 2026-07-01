@@ -346,7 +346,7 @@ class SQLiteDashboardRepository(BaseDashboardRepository):
             workflow_version = payload.get("workflow_version")
             workflow_revision = payload.get("workflow_revision")
             workflow_definition_json = payload.get("workflow_definition_json")
-            token_limit = payload.get("token_limit") or 2500000
+            token_limit = payload.get("token_limit") or 5000000
         else:
             dashboard_type = dashboard_type or "campaign"
             workflow_id = None
@@ -354,7 +354,7 @@ class SQLiteDashboardRepository(BaseDashboardRepository):
             workflow_version = None
             workflow_revision = None
             workflow_definition_json = None
-            token_limit = token_limit if token_limit is not None else 2500000
+            token_limit = token_limit if token_limit is not None else 5000000
 
         self.conn.execute(
             """

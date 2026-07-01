@@ -536,7 +536,7 @@ class WorkflowDashboardService:
                 schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
                 model_name = dash_row.get("model") or "gemini-3.1-flash-lite"
                 dashboard_type = dash_row.get("dashboard_type") or "campaign"
-                token_limit = dash_row.get("token_limit") or 2500000
+                token_limit = dash_row.get("token_limit") or 5000000
 
             is_multi_model = "," in model_name or dashboard_type == "model_comparison"
 

@@ -546,7 +546,7 @@ class CodingService:
             schema_json = campaign_row["schema"]
             model_name = campaign_row.get("model") or "gemini-3.1-flash-lite"
             dashboard_type = campaign_row.get("dashboard_type") or "campaign"
-            token_limit = campaign_row.get("token_limit") or 2500000
+            token_limit = campaign_row.get("token_limit") or 5000000
 
             # Determine selected models
             if "," in model_name or dashboard_type == "model_comparison":

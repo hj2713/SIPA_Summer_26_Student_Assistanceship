@@ -947,7 +947,7 @@ export function ModelEvaluationPage() {
                   </div>
                   <Button size="sm" variant="destructive" onClick={handleRaiseLimit} disabled={raisingLimit} className="gap-1.5 text-xs shrink-0 font-bold">
                     {raisingLimit ? <RefreshCw className="animate-spin h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-                    Authorize raise (+2.5M tokens) & Resume
+                    Authorize raise (+5M tokens) & Resume
                   </Button>
                 </div>
               )}

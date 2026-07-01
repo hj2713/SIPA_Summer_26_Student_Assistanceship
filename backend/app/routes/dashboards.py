@@ -292,11 +292,11 @@ def raise_token_limit(
         dashboard = session.dashboards.get_by_id(id)
         if not dashboard:
             raise HTTPException(status_code=404, detail="Dashboard not found")
-        current_limit = dashboard.get("token_limit") or 2500000
-        new_limit = current_limit + 2500000
+        current_limit = dashboard.get("token_limit") or 5000000
+        new_limit = current_limit + 5000000
         session.dashboards.update(id, {"token_limit": new_limit})
 
-    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload=None)
+    doc_ids = campaign_service.retry_failed_documents(id, current_user.id)
     return {"message": f"Successfully raised token limit to {new_limit} and queued suspended documents for retry.", "new_limit": new_limit}
 
 

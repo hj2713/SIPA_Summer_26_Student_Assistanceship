@@ -994,7 +994,7 @@ export function ModelEvaluationPage() {
                           </Button>
                         </div>
                       </CardHeader>
-                      <CardContent className="pt-4 space-y-3.5">
+                      <CardContent className="pt-4 space-y-2.5">
                         <div className="flex justify-between items-center text-xs">
                           <span className="text-muted-foreground flex items-center gap-1"><DollarSign size={13} /> Overall Cost</span>
                           <span className="font-bold text-primary">${(stat?.cost || 0).toFixed(4)}</span>
@@ -1002,6 +1002,14 @@ export function ModelEvaluationPage() {
                         <div className="flex justify-between items-center text-xs">
                           <span className="text-muted-foreground">Cumulative Tokens</span>
                           <span className="font-medium">{(((stat?.input_tokens || 0) + (stat?.output_tokens || 0)) / 1000).toFixed(1)}k</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs pl-3 border-l border-muted/50">
+                          <span className="text-muted-foreground/80">└ Input Tokens</span>
+                          <span className="font-medium text-muted-foreground">{(stat?.input_tokens || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs pl-3 border-l border-muted/50">
+                          <span className="text-muted-foreground/80">└ Output Tokens</span>
+                          <span className="font-medium text-muted-foreground">{(stat?.output_tokens || 0).toLocaleString()}</span>
                         </div>
 
                         {(processingDocs.length > 0 || failedDocs.length > 0 || missingDocs.length > 0) && (
@@ -1264,6 +1272,11 @@ export function ModelEvaluationPage() {
                                           <div className="mt-1 text-[9px] text-muted-foreground/75 font-normal">
                                             {run.trace?.length ? `${run.trace.length} trace node${run.trace.length === 1 ? "" : "s"}` : "No trace"}
                                           </div>
+                                          {(run.input_tokens || run.output_tokens) ? (
+                                            <div className="mt-0.5 text-[8.5px] text-muted-foreground/60 font-mono">
+                                              in:{run.input_tokens || 0} / out:{run.output_tokens || 0}
+                                            </div>
+                                          ) : null}
                                           {isLongformColumn(col.name) && (
                                             <div className="mt-1 text-[9px] font-medium text-muted-foreground">Click to read full text</div>
                                           )}
@@ -2070,6 +2083,22 @@ export function ModelEvaluationPage() {
                 <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Document File</span>
                   <span className="font-semibold text-xs truncate block">{selectedCellView.filename}</span>
+                </div>
+
+                {/* Economics breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Input Tokens</span>
+                    <span className="font-bold text-xs truncate block">{selectedCellView.inputTokens !== undefined && selectedCellView.inputTokens !== null ? selectedCellView.inputTokens.toLocaleString() : "—"}</span>
+                  </div>
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Output Tokens</span>
+                    <span className="font-bold text-xs truncate block">{selectedCellView.outputTokens !== undefined && selectedCellView.outputTokens !== null ? selectedCellView.outputTokens.toLocaleString() : "—"}</span>
+                  </div>
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Estimated Cost</span>
+                    <span className="font-bold text-xs truncate block text-emerald-600 dark:text-emerald-500">{selectedCellView.cost !== undefined && selectedCellView.cost !== null ? `$${selectedCellView.cost.toFixed(5)}` : "—"}</span>
+                  </div>
                 </div>
 
                 {/* Predicted Value */}

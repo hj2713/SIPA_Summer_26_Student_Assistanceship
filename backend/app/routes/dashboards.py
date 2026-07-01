@@ -335,6 +335,63 @@ def add_model_to_campaign(
     }
 
 
+@router.post("/{id}/delete-model", status_code=status.HTTP_200_OK)
+def delete_model_from_campaign(
+    id: str,
+    current_user: CurrentUserDep,
+    model: str = Query(..., description="The LLM model name to remove from the evaluation dashboard")
+):
+    """Remove an LLM model from the dashboard. This updates the dashboard's model list and removes its evaluations from dashboard documents."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaigns."
+        )
+
+    from app.repositories import get_db_session
+    import json
+    with get_db_session() as session:
+        dashboard = session.dashboards.get_by_id(id)
+        if not dashboard:
+            raise HTTPException(status_code=404, detail="Dashboard not found")
+        
+        current_models = [m.strip() for m in (dashboard.get("model") or "").split(",") if m.strip()]
+        target_model = model.strip()
+        if target_model not in current_models:
+            raise HTTPException(status_code=400, detail=f"Model {target_model} is not in this dashboard.")
+
+        current_models.remove(target_model)
+        updated_model_str = ",".join(current_models)
+        session.dashboards.update(id, {"model": updated_model_str})
+
+        # Remove the evaluations for this model from all dashboard documents
+        docs = session.dashboard_documents.list_by_dashboard_with_documents(id)
+        for doc in docs:
+            # doc can be a dict or a sqlite3.Row or postgres Row
+            # Let's inspect fields. doc['document_id'] is standard.
+            doc_id = doc.get("document_id") or doc.get("id")
+            if not doc_id:
+                continue
+            coded_values_str = doc.get("coded_values") or "{}"
+            try:
+                coded_vals = json.loads(coded_values_str) if isinstance(coded_values_str, str) else (coded_values_str or {})
+            except Exception:
+                coded_vals = {}
+            if target_model in coded_vals:
+                del coded_vals[target_model]
+                session.dashboard_documents.update_coded_values(
+                    id, 
+                    doc_id, 
+                    json.dumps(coded_vals), 
+                    status=doc.get("status") or "completed"
+                )
+
+    return {
+        "message": f"Successfully removed {target_model} from this dashboard.",
+        "model": updated_model_str
+    }
+
+
 @router.put("/{id}/documents/{doc_id}", status_code=status.HTTP_200_OK)
 def update_coded_cell(
     id: str,

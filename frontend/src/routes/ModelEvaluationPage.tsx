@@ -13,7 +13,7 @@ import {
   Trash2, Plus, Sparkles,
   AlertTriangle, Upload, RefreshCw,
   DollarSign, BarChart2, ShieldAlert,
-  Loader2, Layers, GitBranch
+  Loader2, Layers, GitBranch, X
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
@@ -680,6 +680,30 @@ export function ModelEvaluationPage() {
       setAddingModel(false);
     }
   };
+  // Delete/remove a model from campaign on-the-fly
+  const handleDeleteModelFromCampaign = async (modelName: string) => {
+    if (!campaign || !modelName || !session?.access_token) return;
+    if (!window.confirm(`Are you sure you want to delete "${modelName}"? This will permanently remove its evaluation results from this dashboard.`)) {
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/delete-model?model=${encodeURIComponent(modelName.trim())}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+        }
+      });
+      if (!response.ok) {
+        throw new Error(await response.text() || "Failed to delete model from campaign");
+      }
+      const data = await response.json();
+      toast.success(data.message || `Successfully removed ${modelName} from campaign.`);
+      void fetchCampaignDetails(campaign.id);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to remove model");
+    }
+  };
 
   // Parse Professor Benchmark CSV
   const handleBenchmarkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1000,9 +1024,17 @@ export function ModelEvaluationPage() {
                   {campaignModels.map((model) => (
                     <span
                       key={model}
-                      className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"
+                      className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 pl-3 pr-2 py-1 text-[11px] font-semibold text-primary gap-1"
                     >
                       {model}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteModelFromCampaign(model)}
+                        className="rounded-full p-0.5 hover:bg-primary/20 text-primary hover:text-destructive transition-colors focus:outline-none"
+                        title={`Delete ${model}`}
+                      >
+                        <X size={10} />
+                      </button>
                     </span>
                   ))}
                 </div>

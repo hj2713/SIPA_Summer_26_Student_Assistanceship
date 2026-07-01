@@ -379,7 +379,7 @@ class WorkflowDashboardService:
                         models_to_run = [
                             model
                             for model in models
-                            if model == retry_model and all_coded.get(model, {}).get("status") != "completed"
+                            if model == retry_model
                         ]
                     else:
                         models_to_run = [
@@ -524,7 +524,27 @@ class WorkflowDashboardService:
         if user_id:
             set_current_user_id(user_id)
         with self.db_session_factory() as session:
-            session.dashboard_documents.create_or_update(dashboard_id, document_id, "{}", "processing", current_step=1, total_steps=3)
+            existing = session.dashboard_documents.get(dashboard_id, document_id)
+            coded_vals_str = "{}"
+            if existing:
+                coded_vals_str = existing.get("coded_values") or "{}"
+                try:
+                    coded_vals = json.loads(coded_vals_str) if isinstance(coded_vals_str, str) else (coded_vals_str or {})
+                except Exception:
+                    coded_vals = {}
+                if retry_model:
+                    m_data = coded_vals.get(retry_model) or {}
+                    m_data["status"] = "processing"
+                    m_data["error_message"] = None
+                    coded_vals[retry_model] = m_data
+                else:
+                    for model_key, model_run in list(coded_vals.items()):
+                        if isinstance(model_run, dict) and model_run.get("status") in ["failed", "suspended_limit", "pending"]:
+                            model_run["status"] = "processing"
+                            model_run["error_message"] = None
+                            coded_vals[model_key] = model_run
+                coded_vals_str = json.dumps(coded_vals)
+            session.dashboard_documents.create_or_update(dashboard_id, document_id, coded_vals_str, "processing", current_step=1, total_steps=3)
         try:
             source_text = self._document_text(document_id)
             with self.db_session_factory() as session:
@@ -715,7 +735,28 @@ class WorkflowDashboardService:
                 if existing and doc_id not in rerun_document_ids and not retry_model:
                     skipped.append(doc.filename)
                     continue
-                session.dashboard_documents.create_or_update(dashboard.id, doc_id, "{}", "pending", current_step=0, total_steps=3)
+                
+                coded_vals_str = "{}"
+                if existing:
+                    coded_vals_str = existing.get("coded_values") or "{}"
+                    try:
+                        coded_vals = json.loads(coded_vals_str) if isinstance(coded_vals_str, str) else (coded_vals_str or {})
+                    except Exception:
+                        coded_vals = {}
+                    if retry_model:
+                        m_data = coded_vals.get(retry_model) or {}
+                        m_data["status"] = "pending"
+                        m_data["error_message"] = None
+                        coded_vals[retry_model] = m_data
+                    else:
+                        for model_key, model_run in list(coded_vals.items()):
+                            if isinstance(model_run, dict) and model_run.get("status") in ["failed", "suspended_limit", "pending"]:
+                                model_run["status"] = "pending"
+                                model_run["error_message"] = None
+                                coded_vals[model_key] = model_run
+                    coded_vals_str = json.dumps(coded_vals)
+
+                session.dashboard_documents.create_or_update(dashboard.id, doc_id, coded_vals_str, "pending", current_step=0, total_steps=3)
                 pending_doc_ids.append(doc_id)
                 
                 row = session.dashboard_documents.get_workflow_result(dashboard.id, doc_id)
@@ -793,7 +834,28 @@ class WorkflowDashboardService:
                 if existing and doc_id not in rerun_document_ids and not retry_model:
                     skipped.append(doc.filename)
                     continue
-                session.dashboard_documents.create_or_update(dashboard_id, doc_id, "{}", "pending", current_step=0, total_steps=3)
+                
+                coded_vals_str = "{}"
+                if existing:
+                    coded_vals_str = existing.get("coded_values") or "{}"
+                    try:
+                        coded_vals = json.loads(coded_vals_str) if isinstance(coded_vals_str, str) else (coded_vals_str or {})
+                    except Exception:
+                        coded_vals = {}
+                    if retry_model:
+                        m_data = coded_vals.get(retry_model) or {}
+                        m_data["status"] = "pending"
+                        m_data["error_message"] = None
+                        coded_vals[retry_model] = m_data
+                    else:
+                        for model_key, model_run in list(coded_vals.items()):
+                            if isinstance(model_run, dict) and model_run.get("status") in ["failed", "suspended_limit", "pending"]:
+                                model_run["status"] = "pending"
+                                model_run["error_message"] = None
+                                coded_vals[model_key] = model_run
+                    coded_vals_str = json.dumps(coded_vals)
+
+                session.dashboard_documents.create_or_update(dashboard_id, doc_id, coded_vals_str, "pending", current_step=0, total_steps=3)
                 pending_doc_ids.append(doc_id)
 
                 row = session.dashboard_documents.get_workflow_result(dashboard_id, doc_id)

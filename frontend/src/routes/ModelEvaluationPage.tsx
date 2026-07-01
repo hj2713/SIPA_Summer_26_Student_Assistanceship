@@ -188,6 +188,8 @@ export function ModelEvaluationPage() {
     return "missing";
   };
 
+  const isLongformColumn = (columnName: string): boolean => /rationale|reasoning|evidence/i.test(columnName);
+
   // Fetch all model comparison dashboards
   const fetchCampaigns = async () => {
     if (!session?.access_token || !activeWorkspace?.id) return;
@@ -1146,31 +1148,40 @@ export function ModelEvaluationPage() {
                                     })}
                                     className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${isFailed ? "bg-red-500/5" : isMissing ? "bg-amber-500/5" : ""}`}
                                   >
-                                    {isPending ? (
-                                      <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
-                                        <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {runStatus}...
-                                      </span>
-                                    ) : isFailed ? (
-                                      <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
-                                        <AlertTriangle size={12} /> {runStatus === "suspended_limit" ? "Suspended" : "Failed"}
-                                      </span>
-                                    ) : isMissing ? (
-                                      <div className="space-y-1">
-                                        <span className="flex items-center justify-center gap-1 text-amber-600 font-bold text-[10px]">
-                                          <AlertTriangle size={12} /> No result
+                                    <div className="flex h-[88px] flex-col items-center justify-start overflow-hidden">
+                                      {isPending ? (
+                                        <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
+                                          <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {runStatus}...
                                         </span>
-                                        <div className="text-[9px] text-muted-foreground">Run data was not saved for this model.</div>
-                                      </div>
-                                    ) : (
-                                      <>
-                                        <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold break-words">
-                                          {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
+                                      ) : isFailed ? (
+                                        <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
+                                          <AlertTriangle size={12} /> {runStatus === "suspended_limit" ? "Suspended" : "Failed"}
+                                        </span>
+                                      ) : isMissing ? (
+                                        <div className="space-y-1">
+                                          <span className="flex items-center justify-center gap-1 text-amber-600 font-bold text-[10px]">
+                                            <AlertTriangle size={12} /> No result
+                                          </span>
+                                          <div className="text-[9px] text-muted-foreground">Run data was not saved for this model.</div>
                                         </div>
-                                        <div className="mt-1 text-[9px] text-muted-foreground/75 font-normal">
-                                          {run.trace?.length ? `${run.trace.length} trace node${run.trace.length === 1 ? "" : "s"}` : "No trace"}
-                                        </div>
-                                      </>
-                                    )}
+                                      ) : (
+                                        <>
+                                          <div
+                                            className={`max-w-[170px] overflow-hidden text-center font-semibold underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 ${
+                                              isLongformColumn(col.name) ? "line-clamp-3 text-[11px] leading-4" : "line-clamp-2 break-words"
+                                            }`}
+                                          >
+                                            {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
+                                          </div>
+                                          <div className="mt-1 text-[9px] text-muted-foreground/75 font-normal">
+                                            {run.trace?.length ? `${run.trace.length} trace node${run.trace.length === 1 ? "" : "s"}` : "No trace"}
+                                          </div>
+                                          {isLongformColumn(col.name) && (
+                                            <div className="mt-1 text-[9px] font-medium text-muted-foreground">Click to read full text</div>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                   </td>
                                 );
                               })

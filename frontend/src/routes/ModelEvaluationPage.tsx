@@ -1105,7 +1105,7 @@ export function ModelEvaluationPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-auto max-h-[560px]">
+                  <div className="w-full overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead className="bg-muted/30 sticky top-0 border-b border-border/30">
                         <tr>

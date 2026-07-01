@@ -135,6 +135,31 @@ export function ModelEvaluationPage() {
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
   const [showLinkDocumentsDialog, setShowLinkDocumentsDialog] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
+    filename: 260,
+  });
+
+  const startResize = (e: React.MouseEvent, columnId: string) => {
+    e.preventDefault();
+    const startX = e.pageX;
+    const startWidth = columnWidths[columnId] || (columnId === "filename" ? 260 : 180);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(80, startWidth + (moveEvent.pageX - startX));
+      setColumnWidths((prev) => ({
+        ...prev,
+        [columnId]: newWidth,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
   const [globalDocs, setGlobalDocs] = useState<WorkspaceDocument[]>([]);
   const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
@@ -1067,7 +1092,7 @@ export function ModelEvaluationPage() {
               </div>
 
               {/* Grid Spreadsheet comparison table */}
-              <div className="rounded-xl border border-border/40 bg-card overflow-hidden shadow-sm flex-1 flex flex-col min-h-[400px]">
+              <div className="rounded-xl border border-border/40 bg-card shadow-sm w-full">
                 <div className="p-4 border-b border-border/30 bg-muted/10 flex justify-between items-center text-xs text-muted-foreground">
                   <span className="font-medium">{documents.length} evaluation file{documents.length === 1 ? "" : "s"} on this dashboard</span>
                   <div className="flex items-center gap-2">
@@ -1115,20 +1140,50 @@ export function ModelEvaluationPage() {
                 ) : (
                   <div className="w-full overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
-                      <thead className="bg-muted/30 sticky top-0 border-b border-border/30">
+                      <thead className="sticky top-0 z-20 bg-card border-b border-border/30">
                         <tr>
-                          <th className="p-3.5 font-bold border-r border-border/20 min-w-[220px]">Filename</th>
+                          <th 
+                            style={{ 
+                              width: `${columnWidths["filename"] || 260}px`, 
+                              minWidth: `${columnWidths["filename"] || 260}px`, 
+                              maxWidth: `${columnWidths["filename"] || 260}px` 
+                            }}
+                            className="p-3.5 font-bold border-r border-border/20 relative group bg-card select-none"
+                          >
+                            <span>Filename</span>
+                            <div
+                              onMouseDown={(e) => startResize(e, "filename")}
+                              className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100 transition-opacity select-none z-30"
+                            />
+                          </th>
                           {schemaColumns.map((col) => (
-                            <th key={col.name} className="p-3.5 font-bold border-r border-border/20 text-center" colSpan={campaignModels.length || 1}>
+                            <th key={col.name} className="p-3.5 font-bold border-r border-border/20 text-center bg-card" colSpan={campaignModels.length || 1}>
                               {col.name}
                             </th>
                           ))}
                         </tr>
                         <tr className="border-b border-border/20 bg-muted/10">
-                          <td className="p-2 border-r border-border/20 text-[10px] font-medium text-muted-foreground">Selected document</td>
+                          <td 
+                            style={{ 
+                              width: `${columnWidths["filename"] || 260}px`, 
+                              minWidth: `${columnWidths["filename"] || 260}px`, 
+                              maxWidth: `${columnWidths["filename"] || 260}px` 
+                            }}
+                            className="p-2 border-r border-border/20 text-[10px] font-medium text-muted-foreground bg-muted/20"
+                          >
+                            Selected document
+                          </td>
                           {schemaColumns.map((col) => (
                             campaignModels.map((model) => (
-                              <td key={`${col.name}-${model}`} className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/20">
+                              <td 
+                                key={`${col.name}-${model}`} 
+                                style={{ 
+                                  width: `${columnWidths[`${col.name}-${model}`] || 180}px`, 
+                                  minWidth: `${columnWidths[`${col.name}-${model}`] || 180}px`, 
+                                  maxWidth: `${columnWidths[`${col.name}-${model}`] || 180}px` 
+                                }}
+                                className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/20 relative group bg-muted/20 select-none"
+                              >
                                 <div className="flex items-center justify-center gap-1 group">
                                   <span className="truncate max-w-[100px]" title={model}>{model}</span>
                                   <button
@@ -1144,6 +1199,10 @@ export function ModelEvaluationPage() {
                                     <RefreshCw className={`h-2.5 w-2.5 ${retryingModel === model ? "animate-spin text-primary" : ""}`} />
                                   </button>
                                 </div>
+                                <div
+                                  onMouseDown={(e) => startResize(e, `${col.name}-${model}`)}
+                                  className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100 transition-opacity select-none z-30"
+                                />
                               </td>
                             ))
                           ))}
@@ -1152,7 +1211,15 @@ export function ModelEvaluationPage() {
                       <tbody>
                         {documents.map((doc) => (
                           <tr key={doc.document_id} className="border-b border-border/15 hover:bg-muted/5 transition-colors">
-                            <td className="p-3 border-r border-border/20 align-top" title={doc.filename}>
+                            <td 
+                              style={{ 
+                                width: `${columnWidths["filename"] || 260}px`, 
+                                minWidth: `${columnWidths["filename"] || 260}px`, 
+                                maxWidth: `${columnWidths["filename"] || 260}px` 
+                              }}
+                              className="p-3 border-r border-border/20 align-top" 
+                              title={doc.filename}
+                            >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="font-medium max-w-[220px] truncate">{basename(doc.filename)}</div>
@@ -1196,6 +1263,11 @@ export function ModelEvaluationPage() {
                                 return (
                                   <td
                                     key={`${doc.document_id}-${col.name}-${model}`}
+                                    style={{ 
+                                      width: `${columnWidths[`${col.name}-${model}`] || 180}px`, 
+                                      minWidth: `${columnWidths[`${col.name}-${model}`] || 180}px`, 
+                                      maxWidth: `${columnWidths[`${col.name}-${model}`] || 180}px` 
+                                    }}
                                     onClick={() => setSelectedCellView({
                                       documentId: doc.document_id,
                                       filename: basename(doc.filename),

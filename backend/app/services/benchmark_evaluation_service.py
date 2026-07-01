@@ -168,7 +168,11 @@ class BenchmarkEvaluationService:
             coded = doc.coded_values or {}
             expected_delegate = self._parse_bool(benchmark.get("DelegationLaw (Y/N)"))
             predicted_delegate = self._parse_bool(coded.get("delegate_law"))
-            expected_rank = self._parse_rank(benchmark.get("RG_Discretion_Rank"))
+            expected_rank = self._parse_rank(
+                benchmark.get("RG_Discretion_Rank") or 
+                benchmark.get("Discretion_Rank") or 
+                benchmark.get("discretion_rank")
+            )
             predicted_rank = self._parse_rank(coded.get("discretion_rank"))
 
             if expected_delegate is not None and predicted_delegate is not None:

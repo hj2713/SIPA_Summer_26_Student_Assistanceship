@@ -107,8 +107,13 @@ PRICING_MAP = {
     "mistral-large": (2.00, 6.00),
     "mistral-codestral": (0.30, 0.90),
     "mistral-nemo": (0.07, 0.07),
+    "mistral-small-2603": (0.15, 0.60),
     # 9. Minimax (via OpenRouter)
     "minimax-01": (0.20, 0.20),
+    # 10. Qwen3.7 Plus (via OpenRouter)
+    "qwen3.7-plus": (0.32, 1.28),
+    # 11. IBM Granite (via OpenRouter)
+    "granite-4.1-8b": (0.00, 0.00),
 }
 
 
@@ -234,9 +239,14 @@ _OPENROUTER_MODEL_MAP: dict[str, str] = {
     "mistral-codestral": "mistralai/codestral-2501",
     "mistral-nemo": "mistralai/mistral-nemo",
     "mistral": "mistralai/mistral-large",
+    "mistral-small-2603": "mistralai/mistral-small-2603",
     # Minimax
     "minimax-01": "minimax/minimax-01",
     "minimax": "minimax/minimax-01",
+    # Qwen
+    "qwen3.7-plus": "qwen/qwen3.7-plus",
+    # IBM Granite
+    "granite-4.1-8b": "ibm-granite/granite-4.1-8b",
 }
 
 

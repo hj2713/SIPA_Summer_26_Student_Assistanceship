@@ -115,7 +115,10 @@ const ALL_PRICING_MODELS = [
   "mistral-large",
   "mistral-codestral",
   "mistral-nemo",
-  "minimax-01"
+  "minimax-01",
+  "mistral-small-2603",
+  "qwen3.7-plus",
+  "granite-4.1-8b"
 ];
 
 export function ModelEvaluationPage() {

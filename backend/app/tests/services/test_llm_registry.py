@@ -10,4 +10,4 @@ def test_get_llm_for_model_uses_primary_model_from_multi_model_string():
         result = get_llm_for_model("gemini-1.5-flash,gpt-4o-mini")
 
     assert result == "sentinel"
-    mock_build.assert_called_once_with("openrouter", "gemini-1.5-flash", user_creds=None)
+    mock_build.assert_called_once_with("gemini", "gemini-1.5-flash", user_creds=None)

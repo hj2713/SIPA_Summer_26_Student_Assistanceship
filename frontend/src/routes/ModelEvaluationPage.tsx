@@ -835,6 +835,35 @@ export function ModelEvaluationPage() {
                 </div>
               </div>
 
+              <div className="rounded-xl border border-border/40 bg-card/60 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Active models on this dashboard</div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Add another LLM at any time. The new model will run across every file already linked to this dashboard.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddModelDialog(true)}
+                    className="gap-1.5 self-start text-xs text-primary border-primary/20 hover:bg-primary/5"
+                  >
+                    <Plus size={13} /> Add Another Model
+                  </Button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {campaignModels.map((model) => (
+                    <span
+                      key={model}
+                      className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"
+                    >
+                      {model}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
               {/* Top Cost / Accuracy Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {campaignModels.map(model => {

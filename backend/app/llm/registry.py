@@ -4,6 +4,7 @@
 chosen at first call based on `settings`.
 
 Routing rules (hard rule, no exceptions):
+  - model starts with "gemini-"         → Google Gemini API (GEMINI_API_KEY)
   - model starts with "claude-"         → Anthropic API (ANTHROPIC_API_KEY)
   - model starts with "gpt-" / "o1-" / "o3-" / "o4-" → OpenAI API (OPENAI_API_KEY)
   - everything else (deepseek, kimi, qwen, llama, etc.) → OpenRouter API (OPEN_ROUTER_API_KEY)
@@ -163,7 +164,7 @@ def log_usage_to_db(
 
 
 # ---------------------------------------------------------------------------
-# Three-provider routing table
+# Provider routing table
 # ---------------------------------------------------------------------------
 
 # OpenRouter canonical model IDs for models that don't already carry a "/" prefix
@@ -197,11 +198,14 @@ _OPENROUTER_MODEL_MAP: dict[str, str] = {
 
 
 def _classify_model(model: str) -> str:
-    """Return 'anthropic', 'openai', or 'openrouter' for any model name string."""
+    """Return the provider name for any model name string."""
     m = model.lower().strip()
     # Already a namespaced OpenRouter ID (e.g. "deepseek/deepseek-chat")
     if "/" in m:
         return "openrouter"
+    # Gemini family
+    if m.startswith("gemini-"):
+        return "gemini"
     # Anthropic family
     if m.startswith("claude-"):
         return "anthropic"
@@ -310,16 +314,17 @@ def get_llm() -> LLMService:
 
 
 def get_llm_for_model(model_name: str | None = None) -> LLMService:
-    """Get an LLMService for a specific model name using the three-provider routing rule.
+    """Get an LLMService for a specific model name using provider-aware routing.
 
     Routing (hard rule, in order):
-      1. model starts with "claude-"              → Anthropic
-      2. model starts with "gpt-" / "o1-" / etc. → OpenAI
-      3. everything else                          → OpenRouter
+      1. model starts with "gemini-"              → Gemini
+      2. model starts with "claude-"              → Anthropic
+      3. model starts with "gpt-" / "o1-" / etc. → OpenAI
+      4. everything else                          → OpenRouter
 
     API keys come from (in preference order):
       1. Per-user saved keys in `user_llm_credentials`
-      2. Server .env keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY)
+      2. Server .env keys (GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY)
     """
     if not model_name:
         return get_llm()
@@ -354,6 +359,17 @@ def _build_service_for_provider(
 ) -> LLMService:
     """Build the correct LLMService given a classified provider and optional user key store."""
     tracer = get_tracer()
+
+    if provider == "gemini":
+        api_key = _pick_key("gemini", user_creds, settings.GEMINI_API_KEY)
+        if not api_key:
+            raise ValueError(
+                f"No Gemini API key found for model '{model_name}'. "
+                "Add one in Settings → API Keys → Google Gemini."
+            )
+        from app.llm.providers.gemini_provider import GeminiProvider
+        llm_provider: LLMProvider = GeminiProvider(api_key=api_key, model=model_name)
+        return LLMService(llm_provider)
 
     if provider == "anthropic":
         api_key = _pick_key("anthropic", user_creds, settings.ANTHROPIC_API_KEY)

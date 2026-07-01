@@ -212,12 +212,12 @@ _OPENROUTER_MODEL_MAP: dict[str, str] = {
     "deepseek-v4-pro": "deepseek/deepseek-chat",
     "deepseek-v4-flash": "deepseek/deepseek-chat",
     # Kimi / Moonshot
-    "kimi-k2.7-code": "moonshot/kimi-k2.7-code",
-    "kimi-k2.6": "moonshot/kimi-k2.6",
-    "kimi-k2.5": "moonshot/kimi-k2.5",
-    "kimi-k2": "moonshot/kimi-k2",
-    "kimi": "moonshot/kimi-k2.5",
-    "moonshot": "moonshot/kimi-k2.5",
+    "kimi-k2.7-code": "moonshotai/kimi-k2.7-code",
+    "kimi-k2.6": "moonshotai/kimi-k2.6",
+    "kimi-k2.5": "moonshotai/kimi-k2.5",
+    "kimi-k2": "moonshotai/kimi-k2",
+    "kimi": "moonshotai/kimi-k2.5",
+    "moonshot": "moonshotai/kimi-k2.5",
     # Meta Llama
     "llama-3.3-70b": "meta-llama/llama-3.3-70b-instruct",
     "llama-3.1-70b": "meta-llama/llama-3.1-70b-instruct",

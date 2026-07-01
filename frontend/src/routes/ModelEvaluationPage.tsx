@@ -241,8 +241,14 @@ export function ModelEvaluationPage() {
   const getModelRunStatus = (doc: CampaignDocument, model: string): string => {
     const run = getModelRun(doc, model);
     if (typeof run.status === "string" && run.status.trim()) return run.status;
-    if (doc.status === "processing") return "processing";
-    if (doc.status === "pending") return "pending";
+    if (doc.status === "processing" || doc.status === "pending") {
+      const hasAnyCompleted = Object.values(doc.coded_values || {}).some(
+        (r: any) => r && typeof r === "object" && r.status === "completed"
+      );
+      if (!hasAnyCompleted) {
+        return doc.status;
+      }
+    }
     return "missing";
   };
 

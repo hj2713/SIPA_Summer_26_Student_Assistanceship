@@ -160,6 +160,30 @@ export function ModelEvaluationPage() {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   };
+
+  const getModelStatsForField = (model: string, colName: string) => {
+    let completed = 0;
+    let running = 0;
+    let failed = 0;
+    
+    documents.forEach((doc) => {
+      const run = doc.coded_values?.[model] || {};
+      const status = run.status || (doc.status === "processing" ? "processing" : doc.status === "pending" ? "pending" : "missing");
+      
+      const hasValue = run.values && run.values[colName] !== undefined && run.values[colName] !== null && run.values[colName] !== "";
+      
+      if (status === "completed" && hasValue) {
+        completed++;
+      } else if (status === "processing" || status === "pending") {
+        running++;
+      } else {
+        failed++;
+      }
+    });
+    
+    return { completed, running, failed, total: documents.length };
+  };
+
   const [globalDocs, setGlobalDocs] = useState<WorkspaceDocument[]>([]);
   const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
@@ -1185,7 +1209,7 @@ export function ModelEvaluationPage() {
                                 className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/20 relative group bg-muted/20 select-none"
                               >
                                 <div className="flex items-center justify-center gap-1 group">
-                                  <span className="truncate max-w-[100px]" title={model}>{model}</span>
+                                  <span className="truncate max-w-[100px] font-semibold text-foreground/90" title={model}>{model}</span>
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -1199,6 +1223,18 @@ export function ModelEvaluationPage() {
                                     <RefreshCw className={`h-2.5 w-2.5 ${retryingModel === model ? "animate-spin text-primary" : ""}`} />
                                   </button>
                                 </div>
+                                {(() => {
+                                  const stats = getModelStatsForField(model, col.name);
+                                  return (
+                                    <div className="mt-1 text-[9px] text-muted-foreground/80 space-y-0.5 font-normal">
+                                      <div>Values: <span className="font-bold text-foreground">{stats.completed}</span>/{stats.total}</div>
+                                      <div className="text-[8px] flex items-center justify-center gap-1.5 opacity-80">
+                                        <span className="text-primary">● {stats.running} run</span>
+                                        <span className="text-destructive">● {stats.failed} fail</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                                 <div
                                   onMouseDown={(e) => startResize(e, `${col.name}-${model}`)}
                                   className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100 transition-opacity select-none z-30"

@@ -129,6 +129,7 @@ export function ModelEvaluationPage() {
   const [usageStats, setUsageStats] = useState<ModelStats[]>([]);
   const [isPolling, setIsPolling] = useState(false);
   const [retryingModel, setRetryingModel] = useState<string | null>(null);
+  const [retryingAllFailed, setRetryingAllFailed] = useState(false);
   const [retryingDocumentKey, setRetryingDocumentKey] = useState<string | null>(null);
   const [raisingLimit, setRaisingLimit] = useState(false);
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
@@ -553,6 +554,27 @@ export function ModelEvaluationPage() {
     }
   };
 
+  const handleRetryAllFailed = async () => {
+    if (!campaign || !session?.access_token) return;
+    setRetryingAllFailed(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/retry`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to retry all failed runs");
+      }
+      toast.success("Queued all failed model runs for retry.");
+      setIsPolling(true);
+      void fetchCampaignDetails(campaign.id);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to retry all failed runs");
+    } finally {
+      setRetryingAllFailed(false);
+    }
+  };
+
   // Raise token safety limit
   const handleRaiseLimit = async () => {
     if (!campaign || !session?.access_token) return;
@@ -771,6 +793,12 @@ export function ModelEvaluationPage() {
     if (!d.coded_values) return false;
     return Object.values(d.coded_values).some((v: any) => v.status === "suspended_limit");
   });
+  const hasAnyFailedRuns = documents.some((doc) =>
+    campaignModels.some((model) => {
+      const status = getModelRunStatus(doc, model);
+      return status === "failed" || status === "suspended_limit";
+    }),
+  );
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground animate-fade-in">
@@ -1033,11 +1061,26 @@ export function ModelEvaluationPage() {
               <div className="rounded-xl border border-border/40 bg-card overflow-hidden shadow-sm flex-1 flex flex-col min-h-[400px]">
                 <div className="p-4 border-b border-border/30 bg-muted/10 flex justify-between items-center text-xs text-muted-foreground">
                   <span className="font-medium">{documents.length} evaluation file{documents.length === 1 ? "" : "s"} on this dashboard</span>
-                  {isPolling && (
-                    <span className="flex items-center gap-1.5 text-primary animate-pulse font-semibold">
-                      <RefreshCw className="animate-spin h-3.5 w-3.5" /> Workflow execution active...
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {hasAnyFailedRuns && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRetryAllFailed}
+                        disabled={retryingAllFailed || isPolling}
+                        className="h-7 gap-1.5 px-2 text-[10px] font-semibold"
+                      >
+                        <RefreshCw className={`h-3 w-3 ${retryingAllFailed ? "animate-spin" : ""}`} />
+                        Retry all failed
+                      </Button>
+                    )}
+                    {isPolling && (
+                      <span className="flex items-center gap-1.5 text-primary animate-pulse font-semibold">
+                        <RefreshCw className="animate-spin h-3.5 w-3.5" /> Workflow execution active...
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {documents.length === 0 ? (

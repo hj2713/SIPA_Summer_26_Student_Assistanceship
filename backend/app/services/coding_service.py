@@ -619,16 +619,14 @@ class CodingService:
                         except Exception:
                             coded_values = {}
 
-                    suspended_any = False
-                    failed_any = False
-                    completed_all = True
-
                     for current_model in models:
                         model_data = coded_values.get(current_model) or {}
                         model_status = model_data.get("status") or "pending"
 
-                        # Skip if completed, unless explicitly retrying this model
-                        if model_status == "completed" and (not retry_model or retry_model != current_model):
+                        if retry_model and current_model != retry_model:
+                            continue
+
+                        if model_status == "completed":
                             continue
 
                         # Check token safety limit
@@ -647,8 +645,6 @@ class CodingService:
                                 "error_message": f"Token limit of {token_limit} exceeded.",
                                 "error_type": "API_FAILURE"
                             }
-                            suspended_any = True
-                            completed_all = False
                             continue
 
                         # Run coding for this model
@@ -758,22 +754,28 @@ class CodingService:
                                 "error_message": err_str,
                                 "error_type": error_type
                             }
-                            failed_any = True
-                            completed_all = False
 
                     # Determine overall document status
-                    if completed_all:
+                    statuses = [
+                        coded_values.get(model_name, {}).get("status", "pending")
+                        for model_name in models
+                    ]
+                    if statuses and all(status == "completed" for status in statuses):
                         overall_status = "completed"
                         overall_error = None
                         overall_err_type = None
-                    elif suspended_any:
+                    elif any(status == "suspended_limit" for status in statuses):
                         overall_status = "failed"
                         overall_error = f"Token limit exceeded for some models. Please authorize raise."
                         overall_err_type = "API_FAILURE"
-                    else:
+                    elif any(status == "failed" for status in statuses):
                         overall_status = "failed"
                         overall_error = "One or more LLM models failed."
                         overall_err_type = "API_FAILURE"
+                    else:
+                        overall_status = "processing"
+                        overall_error = None
+                        overall_err_type = None
 
                     with self.db_session_factory() as session:
                         session.dashboard_documents.update_coded_values(

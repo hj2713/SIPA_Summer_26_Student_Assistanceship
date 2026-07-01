@@ -346,6 +346,7 @@ class WorkflowDashboardService:
         definition: dict[str, Any],
         schema_fields: list,
         token_limit: int,
+        user_id: Optional[str] = None,
         retry_model: Optional[str] = None,
         files_concurrency: int = 2,
     ) -> None:
@@ -359,6 +360,8 @@ class WorkflowDashboardService:
 
         async def process_doc(doc_id: str) -> None:
             async with semaphore:
+                if user_id:
+                    set_current_user_id(user_id)
                 all_coded: dict[str, Any] = {}
                 models_to_run: list[str] = []
                 try:
@@ -372,11 +375,18 @@ class WorkflowDashboardService:
                     except Exception:
                         all_coded = {}
 
-                    models_to_run = [
-                        model
-                        for model in models
-                        if retry_model == model or all_coded.get(model, {}).get("status") != "completed"
-                    ]
+                    if retry_model:
+                        models_to_run = [
+                            model
+                            for model in models
+                            if model == retry_model and all_coded.get(model, {}).get("status") != "completed"
+                        ]
+                    else:
+                        models_to_run = [
+                            model
+                            for model in models
+                            if all_coded.get(model, {}).get("status") != "completed"
+                        ]
                     if not models_to_run:
                         return
 
@@ -508,8 +518,11 @@ class WorkflowDashboardService:
         dashboard_id: str,
         document_id: str,
         definition: dict[str, Any],
+        user_id: Optional[str] = None,
         retry_model: Optional[str] = None,
     ) -> DashboardDocumentRow:
+        if user_id:
+            set_current_user_id(user_id)
         with self.db_session_factory() as session:
             session.dashboard_documents.create_or_update(dashboard_id, document_id, "{}", "processing", current_step=1, total_steps=3)
         try:
@@ -537,6 +550,7 @@ class WorkflowDashboardService:
                     definition=definition,
                     schema_fields=schema_fields,
                     token_limit=token_limit,
+                    user_id=user_id,
                     retry_model=retry_model,
                     files_concurrency=2,
                 )
@@ -612,7 +626,7 @@ class WorkflowDashboardService:
             dash_row = session.dashboards.get_by_id(dashboard.id)
             definition = json.loads(dash_row["workflow_definition_json"])
 
-        row = await self._execute_document(dashboard.id, doc_id, definition)
+        row = await self._execute_document(dashboard.id, doc_id, definition, user_id=user_id)
         return dashboard, row
 
     async def run_uploaded_files(
@@ -662,7 +676,7 @@ class WorkflowDashboardService:
             async def _exec_task():
                 for doc_id in pending_doc_ids:
                     try:
-                        await self._execute_document(dashboard.id, doc_id, definition)
+                        await self._execute_document(dashboard.id, doc_id, definition, user_id=user_id)
                     except Exception:
                         logger.exception("Background execution failed for uploaded file document %s", doc_id)
 
@@ -712,7 +726,13 @@ class WorkflowDashboardService:
             async def _exec_task():
                 for doc_id in pending_doc_ids:
                     try:
-                        await self._execute_document(dashboard.id, doc_id, definition, retry_model)
+                        await self._execute_document(
+                            dashboard.id,
+                            doc_id,
+                            definition,
+                            user_id=user_id,
+                            retry_model=retry_model,
+                        )
                     except Exception:
                         logger.exception("Background execution failed for existing document %s", doc_id)
 
@@ -784,7 +804,13 @@ class WorkflowDashboardService:
             async def _exec_task():
                 for doc_id in pending_doc_ids:
                     try:
-                        await self._execute_document(dashboard_id, doc_id, definition, retry_model)
+                        await self._execute_document(
+                            dashboard_id,
+                            doc_id,
+                            definition,
+                            user_id=user_id,
+                            retry_model=retry_model,
+                        )
                     except Exception:
                         logger.exception("Background execution failed for existing document %s on dashboard %s", doc_id, dashboard_id)
 

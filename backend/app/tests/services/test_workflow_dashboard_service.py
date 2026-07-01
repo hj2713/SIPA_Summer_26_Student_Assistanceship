@@ -64,3 +64,49 @@ def test_run_model_comparison_parallel_persists_all_models():
     assert row["status"] == "completed"
     assert coded["gemini-3.1-flash-lite"]["values"]["delegate_law"] == "gemini-3.1-flash-lite"
     assert coded["deepseek-v4-flash"]["values"]["delegate_law"] == "deepseek-v4-flash"
+
+
+def test_run_model_comparison_parallel_marks_models_failed_when_document_load_crashes():
+    dashboard_id = "workflow-dash-crash"
+    document_id = "workflow-doc-crash"
+
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval Crash', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
+            (dashboard_id,),
+        )
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            (document_id,),
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, coded_values, status) VALUES (?, ?, '{}', 'processing');",
+            (dashboard_id, document_id),
+        )
+        conn.commit()
+
+    service = WorkflowDashboardService()
+    service._document_text = lambda _doc_id: (_ for _ in ()).throw(RuntimeError("storage unavailable"))
+
+    asyncio.run(
+        service.run_model_comparison_parallel(
+            dashboard_id=dashboard_id,
+            document_ids=[document_id],
+            models=["gemini-3.1-flash-lite", "deepseek-v4-flash"],
+            definition={"nodes": [], "edges": [], "outputs": []},
+            schema_fields=[],
+            token_limit=2500000,
+        )
+    )
+
+    with get_db_conn() as conn:
+        row = conn.execute(
+            "SELECT coded_values, status, error_message FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
+            (dashboard_id, document_id),
+        ).fetchone()
+
+    coded = json.loads(row["coded_values"])
+    assert row["status"] == "failed"
+    assert "storage unavailable" in row["error_message"]
+    assert coded["gemini-3.1-flash-lite"]["status"] == "failed"
+    assert coded["deepseek-v4-flash"]["status"] == "failed"

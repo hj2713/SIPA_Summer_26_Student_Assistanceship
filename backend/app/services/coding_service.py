@@ -783,9 +783,10 @@ class CodingService:
                             status=overall_status
                         )
                         if overall_error:
-                            session.dashboard_documents.update_error(
+                            session.dashboard_documents.update_status(
                                 dashboard_id=dashboard_id,
                                 document_id=doc_id,
+                                status=overall_status,
                                 error_message=overall_error,
                                 error_type=overall_err_type
                             )
@@ -935,9 +936,10 @@ class CodingService:
                     error_msg = err_str
                 
                 with self.db_session_factory() as session:
-                    session.dashboard_documents.update_error(
+                    session.dashboard_documents.update_status(
                         dashboard_id=dashboard_id,
                         document_id=doc_id,
+                        status="failed",
                         error_message=error_msg,
                         error_type=error_type
                     )

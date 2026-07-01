@@ -60,6 +60,18 @@ interface ModelStats {
   calls: number;
 }
 
+interface ModelRunRecord {
+  values?: Record<string, any>;
+  status?: string;
+  cost?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  trace?: any[];
+  context?: Record<string, any>;
+  error_message?: string | null;
+  error_type?: string | null;
+}
+
 interface BenchmarkRow {
   Filename: string;
   "DelegationLaw (Y/N)"?: string;
@@ -117,6 +129,7 @@ export function ModelEvaluationPage() {
   const [usageStats, setUsageStats] = useState<ModelStats[]>([]);
   const [isPolling, setIsPolling] = useState(false);
   const [retryingModel, setRetryingModel] = useState<string | null>(null);
+  const [retryingDocumentKey, setRetryingDocumentKey] = useState<string | null>(null);
   const [raisingLimit, setRaisingLimit] = useState(false);
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
   const [showLinkDocumentsDialog, setShowLinkDocumentsDialog] = useState(false);
@@ -160,6 +173,20 @@ export function ModelEvaluationPage() {
   const campaignModels = campaign?.model.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
   const schemaColumns = (campaign?.schema ?? []).filter((col) => col?.name);
   const supportsProfessorBenchmark = schemaColumns.some((col) => col.name === "delegate_law") && schemaColumns.some((col) => col.name === "discretion_rank");
+  const basename = (filename: string) => filename.split("/").pop() || filename;
+
+  const getModelRun = (doc: CampaignDocument, model: string): ModelRunRecord => {
+    const run = doc.coded_values?.[model];
+    return run && typeof run === "object" ? run : {};
+  };
+
+  const getModelRunStatus = (doc: CampaignDocument, model: string): string => {
+    const run = getModelRun(doc, model);
+    if (typeof run.status === "string" && run.status.trim()) return run.status;
+    if (doc.status === "processing") return "processing";
+    if (doc.status === "pending") return "pending";
+    return "missing";
+  };
 
   // Fetch all model comparison dashboards
   const fetchCampaigns = async () => {
@@ -491,6 +518,36 @@ export function ModelEvaluationPage() {
       toast.error(err.message);
     } finally {
       setRetryingModel(null);
+    }
+  };
+
+  const handleRetryDocument = async (documentId: string, modelName?: string) => {
+    if (!campaign || !session?.access_token) return;
+    const retryKey = `${documentId}:${modelName || "all"}`;
+    setRetryingDocumentKey(retryKey);
+    try {
+      const url = new URL(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/retry`);
+      if (modelName) {
+        url.searchParams.set("model", modelName);
+      }
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify([documentId]),
+      });
+      if (!res.ok) {
+        throw new Error(modelName ? `Failed to retry ${modelName} for this file` : "Failed to retry file");
+      }
+      toast.success(modelName ? `Queued ${modelName} to retry on this file.` : "Queued file for retry.");
+      setIsPolling(true);
+      void fetchCampaignDetails(campaign.id);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to retry file");
+    } finally {
+      setRetryingDocumentKey(null);
     }
   };
 
@@ -869,19 +926,42 @@ export function ModelEvaluationPage() {
                 {campaignModels.map(model => {
                   const stat = usageStats.find(s => s.model === model);
                   const accuracy = benchmarkAccuracy?.[model];
+                  const processingDocs = documents.filter((doc) => {
+                    const status = getModelRunStatus(doc, model);
+                    return status === "processing" || status === "pending";
+                  });
+                  const failedDocs = documents.filter((doc) => {
+                    const status = getModelRunStatus(doc, model);
+                    return status === "failed" || status === "suspended_limit";
+                  });
+                  const missingDocs = documents.filter((doc) => getModelRunStatus(doc, model) === "missing");
                   return (
                     <Card key={model} className="border border-border/40 bg-card/10 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-2 border-b border-border/10 bg-muted/5 flex flex-row items-center justify-between py-3">
-                        <div className="font-bold text-xs truncate max-w-[150px]">{model}</div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleRetryModel(model)}
-                          disabled={retryingModel !== null || isPolling}
-                          className="h-6 w-6 text-muted-foreground hover:text-primary rounded-md"
-                        >
-                          <RefreshCw className={`h-3 w-3 ${retryingModel === model ? 'animate-spin' : ''}`} />
-                        </Button>
+                      <CardHeader className="pb-2 border-b border-border/10 bg-muted/5 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs truncate max-w-[180px]">{model}</div>
+                            <div className="mt-1 text-[10px] text-muted-foreground">
+                              {processingDocs.length > 0
+                                ? `${processingDocs.length} file${processingDocs.length === 1 ? "" : "s"} active`
+                                : failedDocs.length > 0
+                                  ? `${failedDocs.length} failed`
+                                  : missingDocs.length > 0
+                                    ? `${missingDocs.length} missing result`
+                                    : "All visible files synced"}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetryModel(model)}
+                            disabled={retryingModel !== null || isPolling}
+                            className="h-7 gap-1.5 px-2 text-[10px] font-semibold"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${retryingModel === model ? 'animate-spin' : ''}`} />
+                            Retry failed
+                          </Button>
+                        </div>
                       </CardHeader>
                       <CardContent className="pt-4 space-y-3.5">
                         <div className="flex justify-between items-center text-xs">
@@ -892,6 +972,36 @@ export function ModelEvaluationPage() {
                           <span className="text-muted-foreground">Cumulative Tokens</span>
                           <span className="font-medium">{(((stat?.input_tokens || 0) + (stat?.output_tokens || 0)) / 1000).toFixed(1)}k</span>
                         </div>
+
+                        {(processingDocs.length > 0 || failedDocs.length > 0 || missingDocs.length > 0) && (
+                          <div className="border-t border-border/20 pt-3 space-y-2">
+                            {processingDocs.length > 0 && (
+                              <div className="space-y-1">
+                                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Processing files</div>
+                                {processingDocs.slice(0, 3).map((doc) => (
+                                  <div key={`${model}-${doc.document_id}-processing`} className="truncate text-[11px] text-primary">
+                                    {basename(doc.filename)}
+                                  </div>
+                                ))}
+                                {processingDocs.length > 3 && (
+                                  <div className="text-[10px] text-muted-foreground">
+                                    +{processingDocs.length - 3} more
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {failedDocs.length > 0 && (
+                              <div className="text-[11px] text-destructive">
+                                {failedDocs.length} file{failedDocs.length === 1 ? "" : "s"} failed on this model.
+                              </div>
+                            )}
+                            {missingDocs.length > 0 && (
+                              <div className="text-[11px] text-amber-600">
+                                {missingDocs.length} file{missingDocs.length === 1 ? "" : "s"} finished without a saved result on this model.
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {accuracy && (
                           <div className="border-t border-border/20 pt-3 space-y-2">
@@ -974,30 +1084,59 @@ export function ModelEvaluationPage() {
                       <tbody>
                         {documents.map((doc) => (
                           <tr key={doc.document_id} className="border-b border-border/15 hover:bg-muted/5 transition-colors">
-                            <td className="p-3 border-r border-border/20 font-medium max-w-[260px] truncate" title={doc.filename}>
-                              {doc.filename.split("/").pop()}
+                            <td className="p-3 border-r border-border/20 align-top" title={doc.filename}>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="font-medium max-w-[220px] truncate">{basename(doc.filename)}</div>
+                                  <div className="mt-1 text-[10px] text-muted-foreground">
+                                    {campaignModels.filter((model) => {
+                                      const status = getModelRunStatus(doc, model);
+                                      return status === "failed" || status === "suspended_limit";
+                                    }).length} failed
+                                    {" • "}
+                                    {campaignModels.filter((model) => getModelRunStatus(doc, model) === "missing").length} missing
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleRetryDocument(doc.document_id);
+                                  }}
+                                  disabled={retryingDocumentKey === `${doc.document_id}:all`}
+                                  className="h-7 shrink-0 gap-1.5 px-2 text-[10px] font-semibold"
+                                >
+                                  <RefreshCw className={`h-3 w-3 ${retryingDocumentKey === `${doc.document_id}:all` ? "animate-spin" : ""}`} />
+                                  Retry file
+                                </Button>
+                              </div>
                             </td>
                             {schemaColumns.map((col) => (
                               campaignModels.map((model) => {
-                                const run = doc.coded_values?.[model] || {};
+                                const run = getModelRun(doc, model);
                                 const vals = run.values || {};
                                 const value = vals[col.name];
                                 const reasoning = vals[`${col.name}_reasoning`] || "No reasoning logged.";
                                 const history = vals[`${col.name}_history`] || [];
-                                const isPending = run.status === "processing" || run.status === "pending";
-                                const isFailed = run.status === "failed" || run.status === "suspended_limit";
+                                const runStatus = getModelRunStatus(doc, model);
+                                const isPending = runStatus === "processing" || runStatus === "pending";
+                                const isFailed = runStatus === "failed" || runStatus === "suspended_limit";
+                                const isMissing = runStatus === "missing";
 
                                 return (
                                   <td
                                     key={`${doc.document_id}-${col.name}-${model}`}
                                     onClick={() => setSelectedCellView({
-                                      filename: doc.filename.split("/").pop(),
+                                      documentId: doc.document_id,
+                                      filename: basename(doc.filename),
                                       modelName: model,
                                       columnName: col.name,
                                       value: value !== undefined && value !== null && value !== "" ? String(value) : "—",
                                       reasoning,
                                       history,
-                                      status: run.status || "pending",
+                                      status: runStatus,
                                       errorMessage: run.error_message || "",
                                       trace: run.trace || [],
                                       context: run.context || {},
@@ -1005,16 +1144,23 @@ export function ModelEvaluationPage() {
                                       inputTokens: run.input_tokens,
                                       outputTokens: run.output_tokens,
                                     })}
-                                    className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${isFailed ? "bg-red-500/5" : ""}`}
+                                    className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${isFailed ? "bg-red-500/5" : isMissing ? "bg-amber-500/5" : ""}`}
                                   >
                                     {isPending ? (
                                       <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
-                                        <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {run.status}...
+                                        <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {runStatus}...
                                       </span>
                                     ) : isFailed ? (
                                       <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
-                                        <AlertTriangle size={12} /> {run.status === "suspended_limit" ? "Suspended" : "Failed"}
+                                        <AlertTriangle size={12} /> {runStatus === "suspended_limit" ? "Suspended" : "Failed"}
                                       </span>
+                                    ) : isMissing ? (
+                                      <div className="space-y-1">
+                                        <span className="flex items-center justify-center gap-1 text-amber-600 font-bold text-[10px]">
+                                          <AlertTriangle size={12} /> No result
+                                        </span>
+                                        <div className="text-[9px] text-muted-foreground">Run data was not saved for this model.</div>
+                                      </div>
                                     ) : (
                                       <>
                                         <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold break-words">
@@ -1625,6 +1771,21 @@ export function ModelEvaluationPage() {
                     {selectedCellView.reasoning}
                   </div>
                 </div>
+
+                {(selectedCellView.status === "failed" || selectedCellView.status === "suspended_limit" || selectedCellView.status === "missing") && (
+                  <div className="flex justify-start">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleRetryDocument(selectedCellView.documentId, selectedCellView.modelName)}
+                      disabled={retryingDocumentKey === `${selectedCellView.documentId}:${selectedCellView.modelName}`}
+                      className="gap-2 text-xs font-bold"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${retryingDocumentKey === `${selectedCellView.documentId}:${selectedCellView.modelName}` ? "animate-spin" : ""}`} />
+                      Retry this model for this file
+                    </Button>
+                  </div>
+                )}
 
                 {selectedCellView.trace && selectedCellView.trace.length > 0 && (
                   <div className="space-y-2 pt-3 border-t">

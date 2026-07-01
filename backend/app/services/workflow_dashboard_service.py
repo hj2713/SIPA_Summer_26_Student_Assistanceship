@@ -359,91 +359,142 @@ class WorkflowDashboardService:
 
         async def process_doc(doc_id: str) -> None:
             async with semaphore:
-                source_text = self._document_text(doc_id)
-
-                with self.db_session_factory() as session:
-                    doc_dd = session.dashboard_documents.get(dashboard_id, doc_id)
-                    existing_str = doc_dd.get("coded_values") if doc_dd else "{}"
+                all_coded: dict[str, Any] = {}
+                models_to_run: list[str] = []
                 try:
-                    all_coded = json.loads(existing_str) if existing_str else {}
-                except Exception:
-                    all_coded = {}
+                    source_text = self._document_text(doc_id)
 
-                models_to_run = [
-                    model
-                    for model in models
-                    if retry_model == model or all_coded.get(model, {}).get("status") != "completed"
-                ]
-                if not models_to_run:
-                    return
+                    with self.db_session_factory() as session:
+                        doc_dd = session.dashboard_documents.get(dashboard_id, doc_id)
+                        existing_str = doc_dd.get("coded_values") if doc_dd else "{}"
+                    try:
+                        all_coded = json.loads(existing_str) if existing_str else {}
+                    except Exception:
+                        all_coded = {}
 
-                async def run_one_model(model: str) -> tuple[str, dict[str, Any]]:
-                    model_result = await self._run_model_for_document(
-                        dashboard_id,
-                        doc_id,
-                        definition,
-                        model,
-                        source_text,
-                        schema_fields,
-                        token_limit,
-                    )
-                    return model, model_result
+                    models_to_run = [
+                        model
+                        for model in models
+                        if retry_model == model or all_coded.get(model, {}).get("status") != "completed"
+                    ]
+                    if not models_to_run:
+                        return
 
-                model_results = await asyncio.gather(*[run_one_model(model) for model in models_to_run])
+                    for model in models_to_run:
+                        existing_model_run = all_coded.get(model) if isinstance(all_coded.get(model), dict) else {}
+                        all_coded[model] = {
+                            "values": existing_model_run.get("values") or {},
+                            "status": "processing",
+                            "cost": existing_model_run.get("cost"),
+                            "input_tokens": existing_model_run.get("input_tokens"),
+                            "output_tokens": existing_model_run.get("output_tokens"),
+                            "trace": existing_model_run.get("trace"),
+                            "context": existing_model_run.get("context"),
+                            "error_message": None,
+                            "error_type": None,
+                        }
 
-                for model, model_result in model_results:
-                    all_coded[model] = {
-                        "values": model_result["values"],
-                        "status": model_result["status"],
-                        "cost": model_result.get("cost"),
-                        "input_tokens": model_result.get("input_tokens"),
-                        "output_tokens": model_result.get("output_tokens"),
-                        "trace": model_result.get("trace"),
-                        "context": model_result.get("context"),
-                        "error_message": model_result.get("error_message"),
-                        "error_type": model_result.get("error_type"),
-                    }
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_coded_values(
+                            dashboard_id,
+                            doc_id,
+                            json.dumps(all_coded),
+                            status="processing",
+                        )
 
-                statuses = [
-                    v.get("status", "pending")
-                    for v in all_coded.values()
-                    if isinstance(v, dict) and "status" in v
-                ]
-                if statuses and all(s == "completed" for s in statuses):
-                    overall_status = "completed"
-                elif any(s == "suspended_limit" for s in statuses) or any(s == "failed" for s in statuses):
-                    overall_status = "failed"
-                else:
-                    overall_status = "processing"
+                    async def run_one_model(model: str) -> tuple[str, dict[str, Any]]:
+                        model_result = await self._run_model_for_document(
+                            dashboard_id,
+                            doc_id,
+                            definition,
+                            model,
+                            source_text,
+                            schema_fields,
+                            token_limit,
+                        )
+                        return model, model_result
 
-                representative_trace: list[dict[str, Any]] = []
-                representative_context: dict[str, Any] = {}
-                representative_error: str | None = None
-                representative_error_type: str | None = None
-                for _model, model_result in model_results:
-                    if not representative_trace and model_result.get("trace"):
-                        representative_trace = model_result.get("trace") or []
-                    if not representative_context and model_result.get("context"):
-                        representative_context = model_result.get("context") or {}
-                    if not representative_error and model_result.get("error_message"):
-                        representative_error = model_result.get("error_message")
-                        representative_error_type = model_result.get("error_type") or "API_FAILURE"
+                    model_results = await asyncio.gather(*[run_one_model(model) for model in models_to_run])
 
-                with self.db_session_factory() as session:
-                    session.dashboard_documents.update_workflow_result(
-                        dashboard_id,
-                        doc_id,
-                        json.dumps(all_coded),
-                        json.dumps(representative_trace),
-                        json.dumps(representative_context),
-                        status=overall_status,
-                    )
-                    if representative_error and overall_status == "failed":
-                        session.dashboard_documents.update_error(
+                    for model, model_result in model_results:
+                        all_coded[model] = {
+                            "values": model_result["values"],
+                            "status": model_result["status"],
+                            "cost": model_result.get("cost"),
+                            "input_tokens": model_result.get("input_tokens"),
+                            "output_tokens": model_result.get("output_tokens"),
+                            "trace": model_result.get("trace"),
+                            "context": model_result.get("context"),
+                            "error_message": model_result.get("error_message"),
+                            "error_type": model_result.get("error_type"),
+                        }
+
+                    statuses = [
+                        all_coded.get(model, {}).get("status", "pending")
+                        for model in models
+                    ]
+                    if statuses and all(status == "completed" for status in statuses):
+                        overall_status = "completed"
+                    elif any(status in {"suspended_limit", "failed"} for status in statuses):
+                        overall_status = "failed"
+                    else:
+                        overall_status = "processing"
+
+                    representative_trace: list[dict[str, Any]] = []
+                    representative_context: dict[str, Any] = {}
+                    representative_error: str | None = None
+                    representative_error_type: str | None = None
+                    for _model, model_result in model_results:
+                        if not representative_trace and model_result.get("trace"):
+                            representative_trace = model_result.get("trace") or []
+                        if not representative_context and model_result.get("context"):
+                            representative_context = model_result.get("context") or {}
+                        if not representative_error and model_result.get("error_message"):
+                            representative_error = model_result.get("error_message")
+                            representative_error_type = model_result.get("error_type") or "API_FAILURE"
+
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_workflow_result(
+                            dashboard_id,
+                            doc_id,
+                            json.dumps(all_coded),
+                            json.dumps(representative_trace),
+                            json.dumps(representative_context),
+                            status=overall_status,
+                            error_message=representative_error if overall_status == "failed" else None,
+                            error_type=(representative_error_type or "API_FAILURE") if overall_status == "failed" and representative_error else None,
+                        )
+                except Exception as exc:
+                    logger.exception("Workflow model comparison failed before completion for doc %s", doc_id)
+                    error_message = str(exc)
+                    if not models_to_run:
+                        models_to_run = list(models)
+                    for model in models_to_run:
+                        existing_model_run = all_coded.get(model) if isinstance(all_coded.get(model), dict) else {}
+                        all_coded[model] = {
+                            "values": existing_model_run.get("values") or {},
+                            "status": "failed",
+                            "cost": existing_model_run.get("cost", 0.0),
+                            "input_tokens": existing_model_run.get("input_tokens", 0),
+                            "output_tokens": existing_model_run.get("output_tokens", 0),
+                            "trace": existing_model_run.get("trace"),
+                            "context": existing_model_run.get("context"),
+                            "error_message": error_message,
+                            "error_type": "API_FAILURE",
+                        }
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_coded_values(
+                            dashboard_id,
+                            doc_id,
+                            json.dumps(all_coded),
+                            status="failed",
+                        )
+                        session.dashboard_documents.update_status(
                             dashboard_id=dashboard_id,
                             document_id=doc_id,
-                            error_message=representative_error,
-                            error_type=representative_error_type or "API_FAILURE",
+                            status="failed",
+                            error_message=error_message,
+                            error_type="API_FAILURE",
                         )
 
         await asyncio.gather(*[process_doc(doc_id) for doc_id in document_ids])

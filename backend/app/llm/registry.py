@@ -171,6 +171,11 @@ class LLMService:
     ) -> BaseModel:
         parsed_val, usage = await self._provider.parse_structured(messages, schema)
         if usage:
+            if log_context and "usage_accumulator" in log_context:
+                try:
+                    log_context["usage_accumulator"].append(usage)
+                except Exception:
+                    pass
             log_usage_to_db(
                 provider=self.provider_name,
                 model=self.model,
@@ -226,11 +231,26 @@ def get_llm_for_model(model_name: str | None = None) -> LLMService:
             model=model_name,
         )
         return LLMService(provider)
-    elif "/" in model_name or (settings.OPEN_ROUTER_API_KEY and not settings.OPENAI_API_KEY):
+    elif "/" in model_name or (settings.OPEN_ROUTER_API_KEY and (not settings.OPENAI_API_KEY or not model_lower.startswith(("gpt-", "o1-", "o3-", "gemini-", "claude-")))):
+        openrouter_model = model_name
+        if "/" not in openrouter_model:
+            mapping = {
+                "deepseek-chat": "deepseek/deepseek-chat",
+                "deepseek-r1": "deepseek/deepseek-r1",
+                "deepseek-v4-pro": "deepseek/deepseek-chat",
+                "deepseek-v4-flash": "deepseek/deepseek-chat",
+                "kimi-k2.7-code": "moonshot/kimi-k2.7-code",
+                "kimi-k2.6": "moonshot/kimi-k2.6",
+                "kimi-k2.5": "moonshot/kimi-k2.5",
+                "kimi": "moonshot/kimi-k2.5",
+                "moonshot": "moonshot/kimi-k2.5",
+            }
+            openrouter_model = mapping.get(model_lower, model_name)
+
         from app.llm.providers.openai_provider import OpenAIProvider
         provider = OpenAIProvider(
             api_key=settings.OPEN_ROUTER_API_KEY or settings.OPENAI_API_KEY,
-            model=model_name,
+            model=openrouter_model,
             base_url="https://openrouter.ai/api/v1" if settings.OPEN_ROUTER_API_KEY else None,
             default_headers={
                 "HTTP-Referer": "http://localhost:8000",

@@ -232,7 +232,18 @@ class WorkflowDashboardService:
                         continue
 
                     try:
-                        result = await workflow_executor.execute(definition, source_text, model_name=current_model)
+                        usage_list = []
+                        ctx = {
+                            "service": "workflow_coding",
+                            "campaign_id": str(dashboard_id),
+                            "usage_accumulator": usage_list
+                        }
+                        result = await workflow_executor.execute(
+                            definition, 
+                            source_text, 
+                            model_name=current_model,
+                            log_context=ctx
+                        )
                         model_coded = dict(result["outputs"])
                         model_context = result.get("context", {})
 
@@ -305,13 +316,22 @@ class WorkflowDashboardService:
                                 }
                             ]
 
+                        # Compute tokens and cost
+                        input_tokens = sum(u.input_tokens for u in usage_list if u)
+                        output_tokens = sum(u.output_tokens for u in usage_list if u)
+                        from app.llm.registry import calculate_cost
+                        cost = calculate_cost(current_model, input_tokens, output_tokens)
+
                         coded_values[current_model] = {
                             "values": model_coded,
                             "status": "completed",
                             "error_message": None,
                             "error_type": None,
                             "trace": result["trace"],
-                            "context": result["context"]
+                            "context": result["context"],
+                            "input_tokens": input_tokens,
+                            "output_tokens": output_tokens,
+                            "cost": cost
                         }
 
                     except Exception as model_err:

@@ -106,6 +106,7 @@ export function ModelEvaluationPage() {
   const [isPolling, setIsPolling] = useState(false);
   const [retryingModel, setRetryingModel] = useState<string | null>(null);
   const [raisingLimit, setRaisingLimit] = useState(false);
+  const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
 
   // Create Campaign State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -116,6 +117,12 @@ export function ModelEvaluationPage() {
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
   const [searchModelQuery, setSearchModelQuery] = useState("");
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [showAddModelDialog, setShowAddModelDialog] = useState(false);
+  const [newModelToAdd, setNewModelToAdd] = useState("");
+  const [addingModel, setAddingModel] = useState(false);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [sourceType, setSourceType] = useState<"prompt" | "workflow">("prompt");
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
 
   // Professor Benchmark State
   const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: BenchmarkRow[] } | null>(null);
@@ -147,6 +154,22 @@ export function ModelEvaluationPage() {
       toast.error("Failed to load evaluation dashboards");
     } finally {
       setLoadingList(false);
+    }
+  };
+
+  // Fetch all workflows in the workspace
+  const fetchWorkflows = async () => {
+    if (!session?.access_token || !activeWorkspace?.id) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/workflows?workspace_id=${encodeURIComponent(activeWorkspace.id)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflows(data);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -194,6 +217,7 @@ export function ModelEvaluationPage() {
       void fetchCampaignDetails(id);
     } else {
       void fetchCampaigns();
+      void fetchWorkflows();
       setCampaign(null);
       setDocuments([]);
       setUsageStats([]);
@@ -235,8 +259,16 @@ export function ModelEvaluationPage() {
   // Handle campaign creation
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !prompt.trim()) {
-      toast.error("Name and System Prompt are required.");
+    if (!name.trim()) {
+      toast.error("Campaign name is required.");
+      return;
+    }
+    if (sourceType === "prompt" && !prompt.trim()) {
+      toast.error("System Prompt is required.");
+      return;
+    }
+    if (sourceType === "workflow" && !selectedWorkflowId) {
+      toast.error("Please select a workflow to run.");
       return;
     }
     if (selectedModels.length === 0) {
@@ -245,22 +277,33 @@ export function ModelEvaluationPage() {
     }
 
     setCreating(true);
-    toast.info("Analyzing rubric codebook and building variable schema...", { duration: 4000 });
+    if (sourceType === "workflow") {
+      toast.info("Setting up workflow evaluation campaign...", { duration: 4000 });
+    } else {
+      toast.info("Analyzing rubric codebook and building variable schema...", { duration: 4000 });
+    }
 
     try {
+      const body: any = {
+        name: name.trim(),
+        prompt: sourceType === "prompt" ? prompt.trim() : "Workflow evaluation",
+        model: selectedModels.join(","),
+        dashboard_type: "model_comparison",
+        token_limit: 2500000,
+      };
+
+      if (sourceType === "workflow") {
+        body.workflow_id = selectedWorkflowId;
+        body.workflow_source = "draft";
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(activeWorkspace?.id ?? "")}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          prompt: prompt.trim(),
-          model: selectedModels.join(","),
-          dashboard_type: "model_comparison",
-          token_limit: 2500000
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -274,6 +317,8 @@ export function ModelEvaluationPage() {
       setName("");
       setPrompt("");
       setSelectedModels(["gemini-1.5-flash", "gpt-4o-mini"]);
+      setSourceType("prompt");
+      setSelectedWorkflowId("");
       navigate(`/campaigns/${newCampaign.id}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to create comparison campaign");
@@ -395,6 +440,34 @@ export function ModelEvaluationPage() {
       toast.error(err.message);
     } finally {
       setRaisingLimit(false);
+    }
+  };
+
+  // Add a new model to campaign on-the-fly
+  const handleAddModelToCampaign = async () => {
+    if (!campaign || !newModelToAdd.trim() || !session?.access_token) return;
+    setAddingModel(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/add-model?model=${encodeURIComponent(newModelToAdd.trim())}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+        }
+      });
+      if (!response.ok) {
+        throw new Error(await response.text() || "Failed to add model to campaign");
+      }
+      const data = await response.json();
+      toast.success(data.message || `Successfully added ${newModelToAdd.trim()} to evaluation.`);
+      setShowAddModelDialog(false);
+      setNewModelToAdd("");
+      setIsPolling(true);
+      void fetchCampaignDetails(campaign.id);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to add model");
+    } finally {
+      setAddingModel(false);
     }
   };
 
@@ -626,6 +699,10 @@ export function ModelEvaluationPage() {
                     <Button variant="outline" size="sm" onClick={handleExportComparisonCSV} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
                       <BarChart2 size={13} /> Export Comparison CSV
                     </Button>
+
+                    <Button variant="outline" size="sm" onClick={() => setShowAddModelDialog(true)} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
+                      <Plus size={13} /> Add Model
+                    </Button>
                   </>
                 )}
               </div>
@@ -791,11 +868,47 @@ export function ModelEvaluationPage() {
 
                               return (
                                 <>
-                                  <td key={`${model}-del`} className={`p-3 text-center border-r border-border/10 font-medium ${isDelMatch ? 'text-green-600 dark:text-green-400 bg-green-500/5' : benchRow ? 'text-red-500 bg-red-500/5' : ''}`}>
-                                    {vals["delegate_law"] !== undefined ? String(vals["delegate_law"]) : "-"}
+                                  <td 
+                                    key={`${model}-del`} 
+                                    onClick={() => setSelectedCellView({
+                                      filename: doc.filename.split("/").pop(),
+                                      modelName: model,
+                                      columnName: "delegate_law",
+                                      value: vals["delegate_law"] !== undefined ? String(vals["delegate_law"]) : "-",
+                                      reasoning: vals["delegate_law_reasoning"] || "No reasoning logged.",
+                                      history: vals["delegate_law_history"] || []
+                                    })}
+                                    className={`p-3 text-center border-r border-border/10 font-medium cursor-pointer hover:bg-muted/10 transition-colors ${isDelMatch ? 'text-green-600 dark:text-green-400 bg-green-500/5' : benchRow ? 'text-red-500 bg-red-500/5' : ''}`}
+                                  >
+                                    <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold">
+                                      {vals["delegate_law"] !== undefined ? String(vals["delegate_law"]) : "-"}
+                                    </div>
+                                    {run.cost !== undefined && (
+                                      <div className="text-[9px] text-muted-foreground/75 font-normal mt-0.5" title={`Individual execution cost: $${run.cost.toFixed(6)}`}>
+                                        ${run.cost.toFixed(5)}
+                                      </div>
+                                    )}
                                   </td>
-                                  <td key={`${model}-rank`} className={`p-3 text-center border-r border-border/20 font-medium ${isRankMatch ? 'text-green-600 dark:text-green-400 bg-green-500/5' : benchRow ? 'text-red-500 bg-red-500/5' : ''}`}>
-                                    {vals["discretion_rank"] !== undefined ? String(vals["discretion_rank"]) : "-"}
+                                  <td 
+                                    key={`${model}-rank`} 
+                                    onClick={() => setSelectedCellView({
+                                      filename: doc.filename.split("/").pop(),
+                                      modelName: model,
+                                      columnName: "discretion_rank",
+                                      value: vals["discretion_rank"] !== undefined ? String(vals["discretion_rank"]) : "-",
+                                      reasoning: vals["discretion_rank_reasoning"] || "No reasoning logged.",
+                                      history: vals["discretion_rank_history"] || []
+                                    })}
+                                    className={`p-3 text-center border-r border-border/20 font-medium cursor-pointer hover:bg-muted/10 transition-colors ${isRankMatch ? 'text-green-600 dark:text-green-400 bg-green-500/5' : benchRow ? 'text-red-500 bg-red-500/5' : ''}`}
+                                  >
+                                    <div className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 font-semibold">
+                                      {vals["discretion_rank"] !== undefined ? String(vals["discretion_rank"]) : "-"}
+                                    </div>
+                                    {run.input_tokens !== undefined && (
+                                      <div className="text-[9px] text-muted-foreground/75 font-normal mt-0.5" title={`Input: ${run.input_tokens || 0} / Output: ${run.output_tokens || 0} tokens`}>
+                                        {((run.input_tokens + run.output_tokens)).toLocaleString()} t
+                                      </div>
+                                    )}
                                   </td>
                                 </>
                               );
@@ -1028,19 +1141,74 @@ export function ModelEvaluationPage() {
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  System Prompt / Codebook
+              {/* Source Type Toggle */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                  Evaluation Source
                 </label>
-                <Textarea
-                  required
-                  rows={8}
-                  placeholder="Paste research rules or scoring rubrics here. The AI will extract discretion/delegation scores across all selected models based on these instructions."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  disabled={creating}
-                  className="font-mono text-sm leading-relaxed max-h-72 overflow-y-auto"
-                />
+                <div className="flex bg-muted/30 rounded-lg p-1 gap-1 w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setSourceType("prompt")}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${sourceType === "prompt" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    📝 System Prompt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSourceType("workflow"); void fetchWorkflows(); }}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${sourceType === "workflow" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    ⚡ Workflow
+                  </button>
+                </div>
+
+                {sourceType === "prompt" && (
+                  <div className="space-y-1">
+                    <Textarea
+                      required
+                      rows={8}
+                      placeholder="Paste research rules or scoring rubrics here. The AI will extract discretion/delegation scores across all selected models based on these instructions."
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      disabled={creating}
+                      className="font-mono text-sm leading-relaxed max-h-72 overflow-y-auto"
+                    />
+                  </div>
+                )}
+
+                {sourceType === "workflow" && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Select a workflow to run all uploaded files through. The workflow's output variables will become the evaluation columns.
+                    </p>
+                    {workflows.length === 0 ? (
+                      <div className="border rounded-lg p-4 text-center text-xs text-muted-foreground">
+                        No workflows found in this workspace. Create one in the Workflows section first.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {workflows.map((wf: any) => (
+                          <div
+                            key={wf.id}
+                            onClick={() => setSelectedWorkflowId(wf.id)}
+                            className={`border rounded-lg p-3 cursor-pointer transition-all ${selectedWorkflowId === wf.id ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40 hover:bg-muted/20"}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold">{wf.name}</span>
+                              {selectedWorkflowId === wf.id && (
+                                <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">Selected</span>
+                              )}
+                            </div>
+                            {wf.description && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{wf.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t">
@@ -1056,14 +1224,194 @@ export function ModelEvaluationPage() {
                   {creating ? (
                     <>
                       <div className="h-4 w-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                      Analyzing...
+                      {sourceType === "workflow" ? "Setting up..." : "Analyzing..."}
                     </>
                   ) : (
-                    "Create Evaluation Campaign"
+                    sourceType === "workflow" ? "⚡ Create Workflow Campaign" : "Create Evaluation Campaign"
                   )}
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Model Modal */}
+        <Dialog open={showAddModelDialog} onOpenChange={(open) => !addingModel && setShowAddModelDialog(open)}>
+          <DialogContent className="w-[90vw] sm:max-w-md max-h-[85vh] overflow-y-auto p-5">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Plus className="text-primary" size={18} />
+                Add LLM Model to Campaign
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-2">
+              <p className="text-xs text-muted-foreground">
+                Enter or search for a model to add to the evaluation dashboard. Adding a new model will trigger evaluations for it across all documents currently in the campaign.
+              </p>
+              
+              <div className="space-y-1.5 relative">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                  Select Model to Add
+                </label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="text"
+                    placeholder="Search or type custom model..."
+                    value={newModelToAdd}
+                    onChange={(e) => {
+                      setNewModelToAdd(e.target.value);
+                      setShowModelDropdown(true);
+                    }}
+                    onFocus={() => setShowModelDropdown(true)}
+                  />
+                </div>
+
+                {/* Autocomplete Dropdown list */}
+                {showModelDropdown && (
+                  <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-card border rounded-lg shadow-lg z-50">
+                    <div className="flex justify-between items-center px-3 py-1.5 border-b bg-muted/20 text-[10px] uppercase font-bold text-muted-foreground">
+                      <span>Suggested Models</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowModelDropdown(false)}
+                        className="text-muted-foreground hover:text-foreground text-xs"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    {ALL_PRICING_MODELS
+                      .filter(m => m.toLowerCase().includes(newModelToAdd.toLowerCase()))
+                      .map(model => {
+                        const isAlreadyPresent = campaign?.model.split(",").map(m => m.trim()).includes(model);
+                        return (
+                          <div 
+                            key={model}
+                            onClick={() => {
+                              if (!isAlreadyPresent) {
+                                setNewModelToAdd(model);
+                              }
+                              setShowModelDropdown(false);
+                            }}
+                            className={`px-3 py-2 text-xs cursor-pointer hover:bg-primary/5 flex items-center justify-between ${isAlreadyPresent ? 'opacity-50 cursor-not-allowed bg-muted/10' : ''}`}
+                          >
+                            <span>{model}</span>
+                            {isAlreadyPresent && <span className="text-[10px] text-muted-foreground">Already in Campaign</span>}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddModelDialog(false);
+                    setNewModelToAdd("");
+                  }}
+                  disabled={addingModel}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAddModelToCampaign} 
+                  disabled={addingModel || !newModelToAdd.trim()} 
+                  className="gap-2 text-xs font-bold"
+                >
+                  {addingModel ? (
+                    <>
+                      <div className="h-3.5 w-3.5 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                      Queueing...
+                    </>
+                  ) : (
+                    "Add & Start Evaluation"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Inspect Coded Cell Modal */}
+        <Dialog open={selectedCellView !== null} onOpenChange={(open) => !open && setSelectedCellView(null)}>
+          <DialogContent className="w-[92vw] sm:max-w-lg lg:max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+            <DialogHeader className="border-b pb-3 mb-4">
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <BarChart2 className="text-primary" size={18} />
+                LLM Prediction & Reasoning Detail
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedCellView && (
+              <div className="space-y-5 text-sm">
+                {/* Metadata cards */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Variable</span>
+                    <span className="font-bold text-xs truncate block">{selectedCellView.columnName}</span>
+                  </div>
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center col-span-2">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Model Identifier</span>
+                    <span className="font-bold text-xs truncate block text-primary">{selectedCellView.modelName}</span>
+                  </div>
+                </div>
+
+                <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Document File</span>
+                  <span className="font-semibold text-xs truncate block">{selectedCellView.filename}</span>
+                </div>
+
+                {/* Predicted Value */}
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Predicted Value</span>
+                  <div className="bg-primary/5 text-primary border border-primary/20 rounded-lg p-3 font-mono font-bold text-sm inline-block">
+                    {selectedCellView.value}
+                  </div>
+                </div>
+
+                {/* Reasoning */}
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">AI Reasoning & Evidence</span>
+                  <div className="bg-card border rounded-lg p-4 font-normal text-xs leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto shadow-inner">
+                    {selectedCellView.reasoning}
+                  </div>
+                </div>
+
+                {/* Audit trail history logs */}
+                {selectedCellView.history && selectedCellView.history.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Version Audit Trail</span>
+                    <div className="space-y-2 max-h-36 overflow-y-auto">
+                      {selectedCellView.history.map((h: any, idx: number) => (
+                        <div key={idx} className="bg-muted/20 border border-border/10 p-2.5 rounded-md text-[11px] space-y-1">
+                          <div className="flex justify-between font-bold text-muted-foreground">
+                            <span>Version {h.version || (idx + 1)} ({h.source || "ai"})</span>
+                            <span>{h.timestamp ? new Date(h.timestamp).toLocaleString() : ""}</span>
+                          </div>
+                          <div className="font-semibold text-foreground">Value: {String(h.value)}</div>
+                          {h.reasoning && <div className="text-muted-foreground whitespace-pre-wrap">{h.reasoning}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-3 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelectedCellView(null)}
+                    className="text-xs font-bold px-4"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 

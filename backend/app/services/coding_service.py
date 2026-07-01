@@ -310,6 +310,7 @@ class CodingService:
         schema_fields: list[dict[str, Any]],
         doc_text: str,
         dashboard_id: str,
+        log_context: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """Code schema columns in order, feeding prior values into dependent columns."""
         coded_values: dict[str, Any] = {}
@@ -325,7 +326,7 @@ class CodingService:
                     LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
                 ],
                 schema=model,
-                log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+                log_context=log_context or {"service": "campaign_coding", "campaign_id": str(dashboard_id)},
             )
             if parsed is None:
                 raise ValueError(f"LLM returned empty parsed result for column {col['name']}")
@@ -623,6 +624,12 @@ class CodingService:
 
                         # Run coding for this model
                         llm = get_llm_for_model(current_model)
+                        usage_list = []
+                        ctx = {
+                            "service": "campaign_coding",
+                            "campaign_id": str(dashboard_id),
+                            "usage_accumulator": usage_list
+                        }
                         try:
                             if self._schema_uses_staged_coding(schema_fields):
                                 model_values = await self._code_document_staged(
@@ -631,6 +638,7 @@ class CodingService:
                                     schema_fields=schema_fields,
                                     doc_text=doc_text,
                                     dashboard_id=dashboard_id,
+                                    log_context=ctx,
                                 )
                             else:
                                 fields = {}
@@ -669,11 +677,17 @@ class CodingService:
                                         LLMMessage(role="user", content=f"Document content to code:\n\n{doc_text}"),
                                     ],
                                     schema=CodedOutputModel,
-                                    log_context={"service": "campaign_coding", "campaign_id": str(dashboard_id)},
+                                    log_context=ctx,
                                 )
                                 if parsed is None:
                                     raise ValueError("LLM returned empty parsed result")
                                 model_values = parsed.model_dump()
+
+                            # Compute tokens and cost
+                            input_tokens = sum(u.input_tokens for u in usage_list if u)
+                            output_tokens = sum(u.output_tokens for u in usage_list if u)
+                            from app.llm.registry import calculate_cost
+                            cost = calculate_cost(current_model, input_tokens, output_tokens)
 
                             # Format history
                             import datetime
@@ -696,7 +710,10 @@ class CodingService:
                                 "values": model_values,
                                 "status": "completed",
                                 "error_message": None,
-                                "error_type": None
+                                "error_type": None,
+                                "input_tokens": input_tokens,
+                                "output_tokens": output_tokens,
+                                "cost": cost
                             }
 
                         except Exception as api_err:

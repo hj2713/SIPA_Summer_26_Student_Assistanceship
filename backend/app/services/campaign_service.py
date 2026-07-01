@@ -165,23 +165,68 @@ class CampaignService:
         """Save a new campaign with pre-generated metadata (used to allow route mock patching)."""
         dashboard_id = str(uuid.uuid4())
         desc = payload.description or generated_meta.get("description", "Research campaign.")
+        
+        workflow_id = payload.workflow_id
+        workflow_source = payload.workflow_source or "draft"
+        workflow_version = None
+        workflow_revision = None
+        workflow_definition_json = None
         schema_fields = generated_meta.get("schema", [])
+
+        if workflow_id:
+            with self.db_session_factory() as session:
+                workflow = session.coding_workflows.get(workflow_id)
+                if workflow:
+                    workflow_definition_json = workflow["definition"]
+                    workflow_revision = workflow["revision"]
+                    try:
+                        def_dict = json.loads(workflow_definition_json) if isinstance(workflow_definition_json, str) else (workflow_definition_json or {})
+                    except Exception:
+                        def_dict = {}
+
+                    # Extract output fields schema
+                    nodes = def_dict.get("nodes") or []
+                    schema_fields = []
+                    seen = set()
+                    for node in nodes:
+                        if node.get("kind") == "output":
+                            config = node.get("config") or {}
+                            for field in config.get("outputs") or []:
+                                fname = field.get("key")
+                                if fname and fname not in seen:
+                                    schema_fields.append({
+                                        "name": fname,
+                                        "type": field.get("type") or "string",
+                                        "description": field.get("label") or f"Workflow Output: {fname}",
+                                        "options": field.get("options") or None,
+                                        "prompt": "",
+                                        "depends_on": [],
+                                        "workflow_source": f"{node['id']}.{fname}",
+                                    })
+                                    seen.add(fname)
 
         from app.core.config import settings
         chosen_model = payload.model or settings.GEMINI_MODEL
 
+        dash_payload = {
+            "id": dashboard_id,
+            "workspace_id": workspace_id,
+            "name": payload.name,
+            "description": desc,
+            "prompt": payload.prompt,
+            "schema": json.dumps(schema_fields),
+            "model": chosen_model,
+            "dashboard_type": payload.dashboard_type or "campaign",
+            "workflow_id": workflow_id,
+            "workflow_source": workflow_source,
+            "workflow_version": workflow_version,
+            "workflow_revision": workflow_revision,
+            "workflow_definition_json": workflow_definition_json,
+            "token_limit": payload.token_limit
+        }
+
         with self.db_session_factory() as session:
-            row = session.dashboards.create(
-                dashboard_id=dashboard_id,
-                workspace_id=workspace_id,
-                name=payload.name,
-                description=desc,
-                prompt=payload.prompt,
-                schema=json.dumps(schema_fields),
-                model=chosen_model,
-                dashboard_type=payload.dashboard_type,
-                token_limit=payload.token_limit
-            )
+            row = session.dashboards.create(dash_payload)
 
         return self._dashboard_row(row, schema_fields)
 
@@ -515,7 +560,27 @@ class CampaignService:
             if not doc_ids:
                 return []
 
-        self._coding_service.enqueue_sequential_coding(id, doc_ids, user_id, retry_model=retry_model)
+        # Route to workflow execution if campaign is linked to a workflow
+        with self.db_session_factory() as session:
+            dash = session.dashboards.get_by_id(id)
+            workflow_id = dash.get("workflow_id") if dash else None
+
+        if workflow_id:
+            from app.services.workflow_dashboard_service import workflow_dashboard_service
+            coro = workflow_dashboard_service.run_existing_documents(
+                workflow_id=workflow_id,
+                workspace_id=dash["workspace_id"],
+                user_id=user_id,
+                document_ids=doc_ids,
+                source=dash.get("workflow_source") or "draft",
+                version=dash.get("workflow_version"),
+                rerun_document_ids=set(doc_ids),
+                retry_model=retry_model
+            )
+            self._coding_service.schedule_coroutine(coro)
+        else:
+            self._coding_service.enqueue_sequential_coding(id, doc_ids, user_id, retry_model=retry_model)
+
         return doc_ids
 
     def update_coded_cell(

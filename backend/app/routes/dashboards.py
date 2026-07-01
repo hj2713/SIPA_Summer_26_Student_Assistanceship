@@ -32,8 +32,11 @@ async def create_campaign(
             detail="You do not have permission to create campaigns."
         )
 
-    # Calling the imported functional delegate allows pytest patches to intercept it
-    generated = await generate_schema_and_description(payload.prompt, payload.user_columns, payload.model)
+    # Skip prompt schema generation if this campaign is linked to a workflow
+    if payload.workflow_id:
+        generated = {"description": payload.description or "Workflow evaluation campaign.", "schema": []}
+    else:
+        generated = await generate_schema_and_description(payload.prompt, payload.user_columns, payload.model)
     return campaign_service.create_campaign_with_schema(payload, generated, workspace_id)
 
 
@@ -282,6 +285,41 @@ def raise_token_limit(
 
     doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload=None)
     return {"message": f"Successfully raised token limit to {new_limit} and queued suspended documents for retry.", "new_limit": new_limit}
+
+
+@router.post("/{id}/add-model", status_code=status.HTTP_200_OK)
+def add_model_to_campaign(
+    id: str,
+    current_user: CurrentUserDep,
+    model: str = Query(..., description="The LLM model name to add to the evaluation dashboard")
+):
+    """Add a new model to the evaluation dashboard and trigger evaluations for it."""
+    if not current_user.can_add and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaigns."
+        )
+
+    from app.repositories import get_db_session
+    with get_db_session() as session:
+        dashboard = session.dashboards.get_by_id(id)
+        if not dashboard:
+            raise HTTPException(status_code=404, detail="Dashboard not found")
+        
+        current_models = [m.strip() for m in (dashboard.get("model") or "").split(",") if m.strip()]
+        new_model = model.strip()
+        if new_model in current_models:
+            return {"message": f"Model {new_model} is already present in this dashboard.", "model": dashboard.get("model")}
+
+        current_models.append(new_model)
+        updated_model_str = ",".join(current_models)
+        session.dashboards.update(id, {"model": updated_model_str})
+
+    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload=None, retry_model=new_model)
+    return {
+        "message": f"Successfully added {new_model} and queued {len(doc_ids)} documents for evaluation.",
+        "model": updated_model_str
+    }
 
 
 @router.put("/{id}/documents/{doc_id}", status_code=status.HTTP_200_OK)

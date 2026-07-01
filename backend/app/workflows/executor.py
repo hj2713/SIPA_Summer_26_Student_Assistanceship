@@ -70,7 +70,13 @@ class WorkflowExecutor:
             current = current[part]
         return current
 
-    async def execute(self, definition: Dict[str, Any], source_text: str, model_name: Optional[str] = None) -> Dict[str, Any]:
+    async def execute(
+        self,
+        definition: Dict[str, Any],
+        source_text: str,
+        model_name: Optional[str] = None,
+        log_context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         issues = validate_workflow_definition(definition)
         errors = [issue.to_dict() for issue in issues if issue.severity == "error"]
         if errors:
@@ -116,6 +122,9 @@ class WorkflowExecutor:
                     prompt_parts.append(f"=== SOURCE TEXT ===\n{source_text}")
                 
                 llm = get_llm_for_model(model_name)
+                llm_log_context = {"service": "workflow_test", "workflow_node_id": node_id}
+                if log_context:
+                    llm_log_context.update(log_context)
                 parsed = await llm.parse_structured(
                     [
                         LLMMessage(
@@ -125,7 +134,7 @@ class WorkflowExecutor:
                         LLMMessage(role="user", content="\n\n".join(prompt_parts)),
                     ],
                     schema=self._llm_schema(node),
-                    log_context={"service": "workflow_test", "workflow_node_id": node_id},
+                    log_context=llm_log_context,
                 )
                 outputs = parsed.model_dump()
             elif node_kind == "condition":

@@ -34,6 +34,8 @@ class DashboardCreate(BaseModel):
     model: Optional[str] = Field(default=None, description="Dynamic model choice for campaign coding run")
     dashboard_type: Optional[str] = Field(default="campaign", description="The type of dashboard (e.g. campaign or model_comparison)")
     token_limit: Optional[int] = Field(default=2500000, description="The safety limit on cumulative token usage for LLM calls")
+    workflow_id: Optional[str] = Field(default=None, description="Optional workflow ID to run evaluations via workflow nodes")
+    workflow_source: Optional[str] = Field(default=None, description="Optional workflow source representation")
 
 class DashboardRow(BaseModel):
     id: str

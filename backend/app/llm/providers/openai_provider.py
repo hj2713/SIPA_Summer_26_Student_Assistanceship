@@ -104,15 +104,37 @@ class OpenAIProvider:
         try:
             parsed = schema.model_validate_json(cleaned)
         except Exception as e:
-            # Fallback: try to find first { and last }
+            # Fallback 1: try to find first { and last } for JSON
             match = re.search(r'\{.*\}', cleaned, re.DOTALL)
             if match:
                 try:
                     parsed = schema.model_validate_json(match.group(0))
                 except Exception:
-                    raise e
+                    # If JSON parsing within braces failed, let's try YAML
+                    try:
+                        import yaml
+                        parsed_yaml = yaml.safe_load(cleaned)
+                        if isinstance(parsed_yaml, list) and len(parsed_yaml) > 0 and isinstance(parsed_yaml[0], dict):
+                            parsed_yaml = parsed_yaml[0]
+                        if isinstance(parsed_yaml, dict):
+                            parsed = schema.model_validate(parsed_yaml)
+                        else:
+                            raise e
+                    except Exception:
+                        raise e
             else:
-                raise e
+                # Fallback 2: try direct YAML parsing
+                try:
+                    import yaml
+                    parsed_yaml = yaml.safe_load(cleaned)
+                    if isinstance(parsed_yaml, list) and len(parsed_yaml) > 0 and isinstance(parsed_yaml[0], dict):
+                        parsed_yaml = parsed_yaml[0]
+                    if isinstance(parsed_yaml, dict):
+                        parsed = schema.model_validate(parsed_yaml)
+                    else:
+                        raise e
+                except Exception:
+                    raise e
 
         usage_obj = getattr(response, "usage", None)
         usage = LLMUsage(

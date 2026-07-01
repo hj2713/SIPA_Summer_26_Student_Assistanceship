@@ -946,8 +946,29 @@ export function ModelEvaluationPage() {
                   {uploadingFiles ? "Uploading..." : "Upload Local Files"}
                 </Button>
                 {supportsProfessorBenchmark && (
-                  <Button variant="outline" size="sm" onClick={() => benchmarkInputRef.current?.click()} className="gap-1.5 text-xs">
-                    <Upload size={13} /> {parsedBenchmark ? "Update Professor CSV" : "Upload Professor CSV"}
+                  <Button
+                    variant={parsedBenchmark ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      if (parsedBenchmark) {
+                        setParsedBenchmark(null);
+                        setBenchmarkAccuracy(null);
+                        toast.info("Cleared professor benchmark comparison.");
+                      } else {
+                        benchmarkInputRef.current?.click();
+                      }
+                    }}
+                    className="gap-1.5 text-xs"
+                  >
+                    {parsedBenchmark ? (
+                      <>
+                        <X size={13} /> Remove Benchmark
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={13} /> Test Against Benchmarks
+                      </>
+                    )}
                   </Button>
                 )}
                 <Button variant="outline" size="sm" onClick={handleExportComparisonCSV} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">

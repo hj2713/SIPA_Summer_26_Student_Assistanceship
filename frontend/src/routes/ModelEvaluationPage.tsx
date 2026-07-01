@@ -134,6 +134,7 @@ export function ModelEvaluationPage() {
   const [raisingLimit, setRaisingLimit] = useState(false);
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
   const [showLinkDocumentsDialog, setShowLinkDocumentsDialog] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [globalDocs, setGlobalDocs] = useState<WorkspaceDocument[]>([]);
   const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
@@ -1120,7 +1121,21 @@ export function ModelEvaluationPage() {
                           {schemaColumns.map((col) => (
                             campaignModels.map((model) => (
                               <td key={`${col.name}-${model}`} className="p-2 text-center text-muted-foreground text-[10px] font-medium border-r border-border/20">
-                                {model}
+                                <div className="flex items-center justify-center gap-1 group">
+                                  <span className="truncate max-w-[100px]" title={model}>{model}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void handleRetryModel(model);
+                                    }}
+                                    title={`Retry all failed runs for ${model}`}
+                                    className="p-0.5 rounded hover:bg-muted text-muted-foreground/60 hover:text-primary transition-colors cursor-pointer"
+                                    disabled={retryingModel === model}
+                                  >
+                                    <RefreshCw className={`h-2.5 w-2.5 ${retryingModel === model ? "animate-spin text-primary" : ""}`} />
+                                  </button>
+                                </div>
                               </td>
                             ))
                           ))}
@@ -1197,15 +1212,45 @@ export function ModelEvaluationPage() {
                                           <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {runStatus}...
                                         </span>
                                       ) : isFailed ? (
-                                        <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
-                                          <AlertTriangle size={12} /> {runStatus === "suspended_limit" ? "Suspended" : "Failed"}
-                                        </span>
+                                        <div className="flex flex-col items-center gap-1.5 justify-center">
+                                          <span className="flex items-center justify-center gap-1 text-destructive font-bold text-[10px]">
+                                            <AlertTriangle size={12} /> {runStatus === "suspended_limit" ? "Suspended" : "Failed"}
+                                          </span>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-1.5 text-[9px] text-muted-foreground hover:text-primary hover:bg-muted font-medium flex items-center gap-1"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              void handleRetryDocument(doc.document_id, model);
+                                            }}
+                                            disabled={retryingDocumentKey === `${doc.document_id}:${model}`}
+                                          >
+                                            <RefreshCw className={`h-2.5 w-2.5 ${retryingDocumentKey === `${doc.document_id}:${model}` ? "animate-spin text-primary" : ""}`} />
+                                            Retry
+                                          </Button>
+                                        </div>
                                       ) : isMissing ? (
-                                        <div className="space-y-1">
+                                        <div className="space-y-1.5 flex flex-col items-center justify-center">
                                           <span className="flex items-center justify-center gap-1 text-amber-600 font-bold text-[10px]">
                                             <AlertTriangle size={12} /> No result
                                           </span>
-                                          <div className="text-[9px] text-muted-foreground">Run data was not saved for this model.</div>
+                                          <div className="text-[9px] text-muted-foreground">Run data was not saved.</div>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-1.5 text-[9px] text-muted-foreground hover:text-primary hover:bg-muted font-medium flex items-center gap-1"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              void handleRetryDocument(doc.document_id, model);
+                                            }}
+                                            disabled={retryingDocumentKey === `${doc.document_id}:${model}`}
+                                          >
+                                            <RefreshCw className={`h-2.5 w-2.5 ${retryingDocumentKey === `${doc.document_id}:${model}` ? "animate-spin text-primary" : ""}`} />
+                                            Retry
+                                          </Button>
                                         </div>
                                       ) : (
                                         <>
@@ -1690,75 +1735,301 @@ export function ModelEvaluationPage() {
         </Dialog>
 
         <Dialog open={showLinkDocumentsDialog} onOpenChange={setShowLinkDocumentsDialog}>
-          <DialogContent className="w-[96vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto p-5">
+          <DialogContent className="w-[96vw] sm:max-w-xl max-h-[85vh] flex flex-col p-5">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <Layers className="text-primary" size={18} />
-                Select Workspace Files
+              <DialogTitle className="text-lg font-bold flex items-center gap-2 border-b pb-2">
+                <Layers size={18} className="text-primary" />
+                Link Workspace Files
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-2">
-              <p className="text-xs text-muted-foreground">
-                Choose the files you want to evaluate on this dashboard. Only the selected files will run through the linked workflow.
-              </p>
+            
+            <p className="text-xs text-muted-foreground my-2">
+              Choose the files you want to evaluate on this dashboard. Only the selected files will run through the linked workflow.
+            </p>
 
+            <div className="mb-3">
               <Input
+                type="text"
+                placeholder="Search workspace files by name..."
                 value={linkSearchQuery}
                 onChange={(e) => setLinkSearchQuery(e.target.value)}
-                placeholder="Search workspace files by name..."
-                className="text-xs"
+                className="text-xs h-9"
               />
+            </div>
 
-              <div className="rounded-lg border max-h-[420px] overflow-y-auto divide-y">
-                {globalDocs
-                  .filter((doc) => !documents.some((existing) => existing.document_id === doc.id))
-                  .filter((doc) => !linkSearchQuery.trim() || doc.filename.toLowerCase().includes(linkSearchQuery.toLowerCase()))
-                  .map((doc) => {
-                    const selected = selectedGlobalDocIds.includes(doc.id);
-                    return (
-                      <button
-                        key={doc.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedGlobalDocIds((prev) =>
-                            prev.includes(doc.id) ? prev.filter((id) => id !== doc.id) : [...prev, doc.id],
-                          )
-                        }
-                        className={`w-full px-3 py-3 text-left text-xs transition-colors ${selected ? "bg-primary/5" : "hover:bg-muted/30"}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <input readOnly checked={selected} type="checkbox" className="mt-0.5" />
-                          <div className="min-w-0">
-                            <div className="font-semibold truncate">{doc.filename}</div>
+            <div className="flex-grow overflow-y-auto border border-border/80 rounded-lg p-2 bg-muted/5 min-h-[300px] max-h-[45vh]">
+              {globalDocs.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-12">No workspace documents found.</p>
+              ) : (() => {
+                const unlinkedDocs = globalDocs.filter((gd) => !documents.some((d) => d.document_id === gd.id));
+                const filteredUnlinkedDocs = unlinkedDocs.filter((gd) => {
+                  if (!linkSearchQuery.trim()) return true;
+                  const q = linkSearchQuery.toLowerCase();
+                  const nameMatch = gd.filename.toLowerCase().includes(q);
+                  const tags = gd.metadata?.tags || [];
+                  const tagsMatch = tags.some((t: string) => t.toLowerCase().includes(q));
+                  return nameMatch || tagsMatch;
+                });
+
+                if (filteredUnlinkedDocs.length === 0) {
+                  return <p className="text-center text-xs text-muted-foreground py-12">No matching workspace documents found.</p>;
+                }
+
+                // Node definitions
+                interface LinkFileNode {
+                  type: "file";
+                  name: string;
+                  document: any;
+                }
+
+                interface LinkFolderNode {
+                  type: "folder";
+                  name: string;
+                  path: string;
+                  children: { [key: string]: LinkFileNode | LinkFolderNode };
+                }
+
+                // Build tree helper
+                const root: LinkFolderNode = {
+                  type: "folder",
+                  name: "",
+                  path: "",
+                  children: {},
+                };
+
+                for (const doc of filteredUnlinkedDocs) {
+                  const parts = doc.filename.split("/");
+                  let current = root;
+                  for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    const isLast = i === parts.length - 1;
+                    const currentPath = current.path ? `${current.path}/${part}` : part;
+                    if (isLast) {
+                      current.children[part] = {
+                        type: "file",
+                        name: part,
+                        document: doc,
+                      };
+                    } else {
+                      if (!current.children[part]) {
+                        current.children[part] = {
+                          type: "folder",
+                          name: part,
+                          path: currentPath,
+                          children: {},
+                        };
+                      }
+                      current = current.children[part] as LinkFolderNode;
+                    }
+                  }
+                }
+
+                const getDocsInFolder = (node: LinkFolderNode): any[] => {
+                  const docs: any[] = [];
+                  const traverse = (n: LinkFolderNode) => {
+                    for (const key in n.children) {
+                      const child = n.children[key];
+                      if (child.type === "file") {
+                        docs.push(child.document);
+                      } else {
+                        traverse(child);
+                      }
+                    }
+                  };
+                  traverse(node);
+                  return docs;
+                };
+
+                const toggleFolderSelection = (folderNode: LinkFolderNode) => {
+                  const folderDocs = getDocsInFolder(folderNode);
+                  const folderDocIds = folderDocs.map(d => d.id);
+                  const allSelected = folderDocIds.every(id => selectedGlobalDocIds.includes(id));
+                  if (allSelected) {
+                    setSelectedGlobalDocIds(prev => prev.filter(id => !folderDocIds.includes(id)));
+                  } else {
+                    setSelectedGlobalDocIds(prev => {
+                      const newSelection = [...prev];
+                      folderDocIds.forEach(id => {
+                        if (!newSelection.includes(id)) newSelection.push(id);
+                      });
+                      return newSelection;
+                    });
+                  }
+                };
+
+                const getFolderSelectionState = (folderNode: LinkFolderNode) => {
+                  const folderDocs = getDocsInFolder(folderNode);
+                  if (folderDocs.length === 0) return { checked: false, indeterminate: false };
+                  const selectedCount = folderDocs.filter(d => selectedGlobalDocIds.includes(d.id)).length;
+                  return {
+                    checked: selectedCount === folderDocs.length,
+                    indeterminate: selectedCount > 0 && selectedCount < folderDocs.length
+                  };
+                };
+
+                const getSortedChildren = (children: { [key: string]: LinkFileNode | LinkFolderNode }) => {
+                  return Object.values(children).sort((a, b) => {
+                    if (a.type !== b.type) {
+                      return a.type === "folder" ? -1 : 1;
+                    }
+                    return a.name.localeCompare(b.name);
+                  });
+                };
+
+                // Collapsible folder states for link modal
+                const renderTree = (node: LinkFolderNode, depth = 0): React.ReactNode[] => {
+                  const sortedChildren = getSortedChildren(node.children);
+                  const rows: React.ReactNode[] = [];
+
+                  sortedChildren.forEach((child) => {
+                    if (child.type === "folder") {
+                      const isExpanded = expandedFolders[child.path] !== false; // default to true
+                      const folderDocs = getDocsInFolder(child);
+                      const { checked, indeterminate } = getFolderSelectionState(child);
+
+                      rows.push(
+                        <div 
+                           key={child.path} 
+                           className="flex items-center justify-between py-1.5 px-2 hover:bg-muted/40 rounded transition-colors text-xs select-none"
+                           style={{ paddingLeft: `${depth * 16 + 8}px` }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedFolders(prev => ({ ...prev, [child.path]: !isExpanded }));
+                              }}
+                              className="p-0.5 hover:bg-muted rounded text-muted-foreground transition-transform"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                className={`transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                              >
+                                <polyline points="9 18 15 12 9 6" />
+                              </svg>
+                            </button>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              ref={(el) => {
+                                if (el) {
+                                  el.indeterminate = indeterminate;
+                                }
+                              }}
+                              onChange={() => toggleFolderSelection(child)}
+                              className="rounded border-input text-primary focus:ring-ring shrink-0 h-3.5 w-3.5"
+                            />
+                            <div className="rounded-md bg-primary/10 p-0.5 text-primary">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z" />
+                              </svg>
+                            </div>
+                            <span className="font-semibold truncate text-foreground/95" title={child.name}>
+                              {child.name}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground bg-muted/80 px-1 rounded">
+                              {folderDocs.length}
+                            </span>
+                          </div>
+                        </div>
+                      );
+
+                      if (isExpanded) {
+                        rows.push(...renderTree(child, depth + 1));
+                      }
+                    } else {
+                      const doc = child.document;
+                      const isSelected = selectedGlobalDocIds.includes(doc.id);
+                      rows.push(
+                        <div 
+                          key={doc.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedGlobalDocIds(selectedGlobalDocIds.filter((id) => id !== doc.id));
+                            } else {
+                              setSelectedGlobalDocIds([...selectedGlobalDocIds, doc.id]);
+                            }
+                          }}
+                          className={`flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer hover:bg-muted/40 transition-all text-xs ${
+                            isSelected ? "bg-primary/5" : ""
+                          }`}
+                          style={{ paddingLeft: `${depth * 16 + 28}px` }}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            readOnly
+                            className="rounded border-input text-primary focus:ring-ring shrink-0 h-3.5 w-3.5"
+                          />
+                          <div className="flex-1 truncate">
+                            <div className="flex items-center gap-1.5">
+                              <div className="rounded bg-muted p-0.5 text-muted-foreground flex-shrink-0">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                  <polyline points="14 2 14 8 20 8" />
+                                  <line x1="16" y1="13" x2="8" y2="13" />
+                                  <line x1="16" y1="17" x2="8" y2="17" />
+                                  <polyline points="10 9 9 9 8 9" />
+                                </svg>
+                              </div>
+                              <span className="truncate font-medium text-foreground/90" title={doc.filename.split("/").pop()}>
+                                {doc.filename.split("/").pop()}
+                              </span>
+                            </div>
                             {doc.metadata?.tags?.length ? (
-                              <div className="text-[10px] text-muted-foreground mt-1">{doc.metadata.tags.join(", ")}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5 pl-6 flex items-center gap-1">
+                                <span>Tags:</span>
+                                <span className="italic">{doc.metadata.tags.join(", ")}</span>
+                              </div>
                             ) : null}
                           </div>
                         </div>
-                      </button>
-                    );
-                  })}
+                      );
+                    }
+                  });
 
-                {globalDocs.filter((doc) => !documents.some((existing) => existing.document_id === doc.id)).filter((doc) => !linkSearchQuery.trim() || doc.filename.toLowerCase().includes(linkSearchQuery.toLowerCase())).length === 0 && (
-                  <div className="p-8 text-center text-xs text-muted-foreground">
-                    No matching unlinked workspace files found.
-                  </div>
-                )}
+                  return rows;
+                })(root);
+
+                return <div className="divide-y divide-border/10">{renderTree(root)}</div>;
+              })()}
+            </div>
+
+            <div className="flex justify-between items-center pt-3 mt-2 border-t">
+              <div className="text-xs text-muted-foreground">
+                {selectedGlobalDocIds.length} file{selectedGlobalDocIds.length === 1 ? "" : "s"} selected
               </div>
-
-              <div className="flex justify-between items-center pt-2 border-t">
-                <div className="text-xs text-muted-foreground">
-                  {selectedGlobalDocIds.length} file{selectedGlobalDocIds.length === 1 ? "" : "s"} selected
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" size="sm" onClick={() => setShowLinkDocumentsDialog(false)} disabled={linkingDocs}>
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleLinkDocuments} disabled={linkingDocs || selectedGlobalDocIds.length === 0} className="gap-2 font-bold">
-                    {linkingDocs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
-                    Run Selected Files
-                  </Button>
-                </div>
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm" onClick={() => setShowLinkDocumentsDialog(false)} disabled={linkingDocs}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleLinkDocuments} disabled={linkingDocs || selectedGlobalDocIds.length === 0} className="gap-2 font-bold">
+                  {linkingDocs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
+                  Run Selected Files
+                </Button>
               </div>
             </div>
           </DialogContent>

@@ -2012,7 +2012,7 @@ export function ModelEvaluationPage() {
                   });
 
                   return rows;
-                })(root);
+                };
 
                 return <div className="divide-y divide-border/10">{renderTree(root)}</div>;
               })()}

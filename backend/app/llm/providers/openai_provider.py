@@ -84,14 +84,35 @@ class OpenAIProvider:
         messages: Sequence[LLMMessage],
         schema: type[BaseModel],
     ) -> tuple[BaseModel, LLMUsage]:
-        response = await self._client.beta.chat.completions.parse(
+        import re
+        response = await self._client.chat.completions.create(
             model=self._model,
             messages=[_to_openai_message(m) for m in messages],
-            response_format=schema,
         )
-        parsed = response.choices[0].message.parsed
-        if parsed is None:
-            raise ValueError(f"{self._name}: provider returned empty parsed result")
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError(f"{self._name}: provider returned empty response")
+
+        # Strip markdown wrapping
+        cleaned = content.strip()
+        cleaned = re.sub(r'^```[a-zA-Z]*\s*', '', cleaned)
+        cleaned = re.sub(r'```$', '', cleaned)
+        cleaned = re.sub(r"^'''[a-zA-Z]*\s*", '', cleaned)
+        cleaned = re.sub(r"'''$", '', cleaned)
+        cleaned = cleaned.strip()
+
+        try:
+            parsed = schema.model_validate_json(cleaned)
+        except Exception as e:
+            # Fallback: try to find first { and last }
+            match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+            if match:
+                try:
+                    parsed = schema.model_validate_json(match.group(0))
+                except Exception:
+                    raise e
+            else:
+                raise e
 
         usage_obj = getattr(response, "usage", None)
         usage = LLMUsage(

@@ -1008,7 +1008,17 @@ export function ModelEvaluationPage() {
               {/* Top Cost / Accuracy Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {campaignModels.map(model => {
-                  const stat = usageStats.find(s => s.model === model);
+                  const stat = usageStats.find(s => {
+                    const dbModel = s.model.toLowerCase().split('/').pop() || "";
+                    const targetModel = model.toLowerCase().split('/').pop() || "";
+                    if (dbModel === targetModel) return true;
+                    // Check if one contains the other (helps with aliases like deepseek-chat mapping to deepseek-v4-flash)
+                    if (targetModel.includes("deepseek") && dbModel.includes("deepseek")) return true;
+                    if (targetModel.includes("kimi") && dbModel.includes("kimi")) return true;
+                    if (targetModel.includes("minimax") && dbModel.includes("minimax")) return true;
+                    if (targetModel.includes("mistral") && dbModel.includes("mistral")) return true;
+                    return false;
+                  });
                   const accuracy = benchmarkAccuracy?.[model];
                   const processingDocs = documents.filter((doc) => {
                     const status = getModelRunStatus(doc, model);

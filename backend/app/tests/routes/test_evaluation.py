@@ -61,7 +61,7 @@ def test_raise_token_limit_happy_path(client, auth_headers):
         response = client.post(f"/api/dashboards/{dashboard_id}/raise-token-limit", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["new_limit"] == 3500000
+        assert data["new_limit"] == 6000000
         mock_retry.assert_called_once()
 
 

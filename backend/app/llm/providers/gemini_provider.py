@@ -138,4 +138,24 @@ class GeminiProvider:
             output_tokens=getattr(usage_obj, "candidates_token_count", 0) or 0,
         )
 
-        return schema.model_validate_json(response.text), usage
+        cleaned = response.text.strip()
+        import re
+        cleaned = re.sub(r'^```[a-zA-Z]*\s*', '', cleaned)
+        cleaned = re.sub(r'```$', '', cleaned)
+        cleaned = re.sub(r"^'''[a-zA-Z]*\s*", '', cleaned)
+        cleaned = re.sub(r"'''$", '', cleaned)
+        cleaned = cleaned.strip()
+
+        try:
+            parsed = schema.model_validate_json(cleaned)
+        except Exception as e:
+            match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+            if match:
+                try:
+                    parsed = schema.model_validate_json(match.group(0))
+                except Exception:
+                    raise e
+            else:
+                raise e
+
+        return parsed, usage

@@ -801,9 +801,9 @@ export function ModelEvaluationPage() {
         }
 
         // 2. Evaluate rank accuracy
-        const expRank = parseFloat(benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "");
-        const predRank = parseFloat(modelVals["discretion_rank"] || "");
-        if (!isNaN(expRank) && !isNaN(predRank)) {
+        if (expDel) {
+          const expRank = expDel === "no" ? 0 : parseFloat(benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "0");
+          const predRank = predDel === "no" ? 0 : parseFloat(String(modelVals["discretion_rank"] || "0"));
           rankTotal++;
           if (expRank === predRank) rankMatches++;
           rankErrors.push(Math.abs(predRank - expRank));
@@ -1392,11 +1392,12 @@ export function ModelEvaluationPage() {
                                     const predDel = value !== undefined && value !== null ? normalizeVal(String(value)) : undefined;
                                     isMismatch = hasBenchmark && runStatus === "completed" && expDel !== predDel;
                                   } else if (col.name === "discretion_rank") {
-                                    benchVal = benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"];
-                                    const hasBenchmark = benchVal !== undefined && benchVal !== null && benchVal !== "";
-                                    const expRank = hasBenchmark ? parseFloat(benchVal || "") : NaN;
-                                    const predRank = value !== undefined && value !== null ? parseFloat(String(value)) : NaN;
-                                    isMismatch = hasBenchmark && runStatus === "completed" && (!isNaN(expRank) && !isNaN(predRank) && expRank !== predRank);
+                                    const expDel = normalizeVal(benchRow["DelegationLaw (Y/N)"]);
+                                    const predDel = normalizeVal(vals["delegate_law"]);
+                                    const expRank = expDel === "no" ? 0 : parseFloat(benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "0");
+                                    const predRank = predDel === "no" ? 0 : parseFloat(String(value || "0"));
+                                    isMismatch = runStatus === "completed" && expRank !== predRank;
+                                    benchVal = expDel === "no" ? "0" : (benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "0");
                                   }
                                 }
 

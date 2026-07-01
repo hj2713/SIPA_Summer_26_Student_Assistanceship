@@ -36,7 +36,7 @@ async def create_campaign(
     if payload.workflow_id:
         generated = {"description": payload.description or "Workflow evaluation campaign.", "schema": []}
     else:
-        generated = await generate_schema_and_description(payload.prompt, payload.user_columns, payload.model)
+        generated = await generate_schema_and_description(payload.prompt, payload.user_columns)
     return campaign_service.create_campaign_with_schema(payload, generated, workspace_id)
 
 

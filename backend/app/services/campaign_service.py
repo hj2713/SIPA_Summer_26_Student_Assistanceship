@@ -1481,7 +1481,7 @@ class CampaignService:
     async def regenerate_campaign_schema(self, id: str) -> DashboardRow:
         """Regenerate campaign schema by running the LLM prompt extraction again."""
         campaign = self.get_campaign(id)
-        generated = await self._coding_service.generate_schema_and_description(campaign.prompt, model_name=campaign.model)
+        generated = await self._coding_service.generate_schema_and_description(campaign.prompt)
         schema_fields = generated.get("schema", [])
         desc = generated.get("description", campaign.description)
 

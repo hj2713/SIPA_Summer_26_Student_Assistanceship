@@ -8,9 +8,10 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, create_model
 from concurrent.futures import ThreadPoolExecutor
 
+from app.core.config import settings
 from app.core.database import get_db_conn
 from app.core.request_context import set_current_user_id
-from app.llm import LLMMessage, get_llm, get_llm_for_model
+from app.llm import LLMMessage, LLMService, get_llm, get_llm_for_model
 from app.services.document_service import document_service as default_document_service, DocumentService
 
 logger = logging.getLogger(__name__)
@@ -226,6 +227,23 @@ class CodingService:
 
         return ordered
 
+    def _schema_generation_llm(self) -> LLMService:
+        """Schema extraction always uses the fixed server-side Gemini model."""
+        if settings.GEMINI_API_KEY:
+            from app.llm.providers.gemini_provider import GeminiProvider
+
+            return LLMService(
+                GeminiProvider(
+                    api_key=settings.GEMINI_API_KEY,
+                    model=settings.GEMINI_MODEL,
+                )
+            )
+
+        logger.warning(
+            "GEMINI_API_KEY is not configured; falling back to default LLM for schema generation."
+        )
+        return get_llm()
+
     def _field_type_for_column(self, col: dict[str, Any]) -> Any:
         col_type = col.get("type", "string")
         if col_type == "number":
@@ -335,9 +353,20 @@ class CodingService:
 
     async def generate_schema_and_description(self, prompt_text: str, user_columns: Optional[List[str]] = None, model_name: Optional[str] = None) -> Dict[str, Any]:
         """Analyze the campaign prompt using the LLM to generate description and schema."""
-        from app.llm import get_llm_for_model
-        llm = get_llm_for_model(model_name)
-        logger.info("Generating campaign schema using provider=%s model=%s", llm.provider_name, llm.model)
+        llm = self._schema_generation_llm()
+        if model_name:
+            logger.info(
+                "Ignoring campaign model %r for schema generation; using fixed provider=%s model=%s",
+                model_name,
+                llm.provider_name,
+                llm.model,
+            )
+        else:
+            logger.info(
+                "Generating campaign schema using fixed provider=%s model=%s",
+                llm.provider_name,
+                llm.model,
+            )
 
         try:
             parsed = await llm.parse_structured(

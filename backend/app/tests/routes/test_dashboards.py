@@ -78,7 +78,7 @@ def test_create_campaign_with_model(client, auth_headers, clean_db):
     data = response.json()
     assert data["name"] == "Discretion Coding with Model"
     assert data["model"] == "gpt-4o"
-    mock_gen.assert_called_once_with("Test system prompt for coding discretion.", None, "gpt-4o")
+    mock_gen.assert_called_once_with("Test system prompt for coding discretion.", None)
 
 def test_list_and_get_campaigns(client, auth_headers, clean_db):
     # Insert a dashboard manually

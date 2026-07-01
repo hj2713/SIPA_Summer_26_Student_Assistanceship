@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import json
 from pathlib import Path
@@ -166,7 +167,271 @@ class WorkflowDashboardService:
                 logger.exception("Could not read workflow source text for document_id=%s", document_id)
         raise HTTPException(status_code=400, detail="Document text content could not be retrieved.")
 
-    async def _execute_document(self, dashboard_id: str, document_id: str, definition: dict[str, Any], retry_model: Optional[str] = None) -> DashboardDocumentRow:
+    # -------------------------------------------------------------------------
+    # Core per-model, per-document runner
+    # -------------------------------------------------------------------------
+
+    def _extract_reasoning(self, col_name: str, workflow_source: Optional[str], model_context: dict) -> Optional[str]:
+        """Pull the reasoning/rationale string for a column from the workflow context."""
+        if not workflow_source:
+            return None
+        parts = str(workflow_source).split(".")
+        node_id = parts[0]
+        field_name = parts[1] if len(parts) > 1 else node_id
+
+        candidates = [
+            f"{node_id}.{field_name}_reasoning",
+            f"{node_id}.{field_name}_rationale",
+            f"{node_id}.{field_name}_explanation",
+            f"{node_id}.{col_name}_reasoning",
+            f"{node_id}.{col_name}_rationale",
+            f"{node_id}.{col_name}_explanation",
+            f"{node_id}.reasoning",
+            f"{node_id}.rationale",
+            f"{node_id}.explanation",
+            f"{field_name}_reasoning",
+            f"{field_name}_rationale",
+            f"{col_name}_reasoning",
+            f"{col_name}_rationale",
+        ]
+        for c in candidates:
+            if c in model_context and model_context[c]:
+                return str(model_context[c])
+
+        # Fallback: find any reasoning-like key under the same node
+        node_prefix = f"{node_id}."
+        reasoning_keys = [
+            k for k in model_context
+            if k.startswith(node_prefix)
+            and any(kw in k[len(node_prefix):].lower() for kw in ("reason", "rationale", "explain"))
+        ]
+        if len(reasoning_keys) == 1:
+            return str(model_context[reasoning_keys[0]])
+        for k in reasoning_keys:
+            suffix = k[len(node_prefix):].lower()
+            if field_name.lower() in suffix or col_name.lower() in suffix:
+                return str(model_context[k])
+        if reasoning_keys:
+            return str(model_context[reasoning_keys[0]])
+        return None
+
+    async def _run_model_for_document(
+        self,
+        dashboard_id: str,
+        document_id: str,
+        definition: dict[str, Any],
+        model: str,
+        source_text: str,
+        schema_fields: list,
+        token_limit: int,
+    ) -> dict:
+        """Run the workflow once for a single model and return the coded-values dict for that model.
+        
+        Returns a dict matching the coded_values[model] structure:
+          { status, values, cost, input_tokens, output_tokens, trace, context, error_message, error_type }
+        """
+        import datetime
+
+        # Token safety check
+        with self.db_session_factory() as session:
+            stats = session.usage_logs.get_usage_stats(timeframe="all", campaign_id=dashboard_id)
+        token_sum = 0
+        for item in (stats.get("breakdown") or []):
+            if item.get("model") == model:
+                token_sum = item.get("input_tokens", 0) + item.get("output_tokens", 0)
+
+        if token_sum >= token_limit:
+            logger.warning("Token safety limit %d exceeded for model %s (sum=%d)", token_limit, model, token_sum)
+            return {
+                "status": "suspended_limit",
+                "values": {},
+                "cost": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "error_message": f"Token limit of {token_limit} exceeded.",
+                "error_type": "API_FAILURE",
+            }
+
+        try:
+            usage_list: list = []
+            ctx = {
+                "service": "workflow_coding",
+                "campaign_id": str(dashboard_id),
+                "usage_accumulator": usage_list,
+            }
+            result = await workflow_executor.execute(
+                definition,
+                source_text,
+                model_override=model,  # ALL nodes use this model
+                log_context=ctx,
+            )
+            model_coded: dict = dict(result["outputs"])
+            model_context: dict = result.get("context", {})
+
+            # Enrich with reasoning and history for each schema column
+            for col in schema_fields:
+                col_name = col.get("name")
+                if not col_name:
+                    continue
+                reasoning = self._extract_reasoning(col_name, col.get("workflow_source"), model_context)
+                if reasoning is not None:
+                    model_coded[f"{col_name}_reasoning"] = reasoning
+                val = model_coded.get(col_name)
+                model_coded[f"{col_name}_history"] = [
+                    {
+                        "version": 1,
+                        "value": val,
+                        "reasoning": reasoning,
+                        "feedback_prompt": None,
+                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+                        "source": "ai",
+                    }
+                ]
+
+            input_tokens = sum(u.input_tokens for u in usage_list if u)
+            output_tokens = sum(u.output_tokens for u in usage_list if u)
+            from app.llm.registry import calculate_cost
+            cost = calculate_cost(model, input_tokens, output_tokens)
+
+            return {
+                "status": "completed",
+                "values": model_coded,
+                "cost": cost,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "trace": result["trace"],
+                "context": result["context"],
+                "error_message": None,
+                "error_type": None,
+            }
+
+        except Exception as exc:
+            logger.error("Workflow failed for model %s on doc %s: %s", model, document_id, exc)
+            return {
+                "status": "failed",
+                "values": {},
+                "cost": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "error_message": str(exc),
+                "error_type": "API_FAILURE",
+            }
+
+    # -------------------------------------------------------------------------
+    # Parallel multi-model dispatcher
+    # -------------------------------------------------------------------------
+
+    async def run_model_comparison_parallel(
+        self,
+        dashboard_id: str,
+        document_ids: list[str],
+        models: list[str],
+        definition: dict[str, Any],
+        schema_fields: list,
+        token_limit: int,
+        retry_model: Optional[str] = None,
+        files_concurrency: int = 2,
+    ) -> None:
+        """Run all LLM models in parallel; each model processes files with a Semaphore(files_concurrency).
+
+        Execution model:
+          - N models → N concurrent async tasks (fully parallel, separate API keys)
+          - Each model task → semaphore limits to `files_concurrency` files at once (default 2)
+          - Results for each (model, document) are written atomically to coded_values[model]
+        """
+        async def process_model(model: str, sem: asyncio.Semaphore) -> None:
+            async def process_doc(doc_id: str) -> None:
+                async with sem:
+                    source_text = self._document_text(doc_id)
+
+                    # Skip already-completed unless this is a targeted retry
+                    with self.db_session_factory() as session:
+                        doc_dd = session.dashboard_documents.get(dashboard_id, doc_id)
+                        existing_str = doc_dd.get("coded_values") if doc_dd else "{}"
+                    try:
+                        coded = json.loads(existing_str) if existing_str else {}
+                    except Exception:
+                        coded = {}
+
+                    if coded.get(model, {}).get("status") == "completed" and retry_model != model:
+                        return
+
+                    model_result = await self._run_model_for_document(
+                        dashboard_id, doc_id, definition, model,
+                        source_text, schema_fields, token_limit,
+                    )
+
+                    # Atomic read-modify-write per document
+                    with self.db_session_factory() as session:
+                        doc_dd2 = session.dashboard_documents.get(dashboard_id, doc_id)
+                        existing_str2 = doc_dd2.get("coded_values") if doc_dd2 else "{}"
+                    try:
+                        all_coded = json.loads(existing_str2) if existing_str2 else {}
+                    except Exception:
+                        all_coded = {}
+
+                    all_coded[model] = {
+                        "values": model_result["values"],
+                        "status": model_result["status"],
+                        "cost": model_result.get("cost"),
+                        "input_tokens": model_result.get("input_tokens"),
+                        "output_tokens": model_result.get("output_tokens"),
+                        "trace": model_result.get("trace"),
+                        "context": model_result.get("context"),
+                        "error_message": model_result.get("error_message"),
+                        "error_type": model_result.get("error_type"),
+                    }
+
+                    # Determine overall status from all models present
+                    statuses = [v.get("status", "pending") for v in all_coded.values() if isinstance(v, dict) and "status" in v]
+                    if all(s == "completed" for s in statuses):
+                        overall_status = "completed"
+                    elif any(s == "suspended_limit" for s in statuses):
+                        overall_status = "failed"
+                    elif any(s == "failed" for s in statuses):
+                        overall_status = "failed"
+                    else:
+                        overall_status = "processing"
+
+                    last_trace = model_result.get("trace") or []
+                    last_context = model_result.get("context") or {}
+                    with self.db_session_factory() as session:
+                        session.dashboard_documents.update_workflow_result(
+                            dashboard_id,
+                            doc_id,
+                            json.dumps(all_coded),
+                            json.dumps(last_trace),
+                            json.dumps(last_context),
+                            status=overall_status,
+                        )
+                        if model_result.get("error_message") and overall_status == "failed":
+                            session.dashboard_documents.update_error(
+                                dashboard_id=dashboard_id,
+                                document_id=doc_id,
+                                error_message=model_result["error_message"],
+                                error_type=model_result.get("error_type") or "API_FAILURE",
+                            )
+
+            # Process all docs for this model with concurrency cap
+            await asyncio.gather(*[process_doc(doc_id) for doc_id in document_ids])
+
+        # Launch all model workers in parallel
+        await asyncio.gather(*[
+            process_model(model, asyncio.Semaphore(files_concurrency))
+            for model in models
+        ])
+
+    # -------------------------------------------------------------------------
+    # Legacy _execute_document — now delegates to helpers
+    # -------------------------------------------------------------------------
+
+    async def _execute_document(
+        self,
+        dashboard_id: str,
+        document_id: str,
+        definition: dict[str, Any],
+        retry_model: Optional[str] = None,
+    ) -> DashboardDocumentRow:
         with self.db_session_factory() as session:
             session.dashboard_documents.create_or_update(dashboard_id, document_id, "{}", "processing", current_step=1, total_steps=3)
         try:
@@ -174,7 +439,6 @@ class WorkflowDashboardService:
             with self.db_session_factory() as session:
                 session.dashboard_documents.update_progress(dashboard_id, document_id, 2, 3)
 
-            # Resolve models from dashboard
             with self.db_session_factory() as session:
                 dash_row = session.dashboards.get_by_id(dashboard_id)
                 schema_json = dash_row.get("schema") if dash_row else "[]"
@@ -183,310 +447,71 @@ class WorkflowDashboardService:
                 dashboard_type = dash_row.get("dashboard_type") or "campaign"
                 token_limit = dash_row.get("token_limit") or 2500000
 
-            if "," in model_name or dashboard_type == "model_comparison":
-                models = [m.strip() for m in model_name.split(",") if m.strip()]
-                is_multi_model = True
-            else:
-                models = [model_name]
-                is_multi_model = False
+            is_multi_model = "," in model_name or dashboard_type == "model_comparison"
 
             if is_multi_model:
-                # Multi-model logic for Workflow runs
-                with self.db_session_factory() as session:
-                    doc_dd = session.dashboard_documents.get(dashboard_id, document_id)
-                    existing_coded_str = doc_dd.get("coded_values") if doc_dd else "{}"
-                    try:
-                        coded_values = json.loads(existing_coded_str) if existing_coded_str else {}
-                    except Exception:
-                        coded_values = {}
-
-                suspended_any = False
-                failed_any = False
-                completed_all = True
-
-                for current_model in models:
-                    model_data = coded_values.get(current_model) or {}
-                    model_status = model_data.get("status") or "pending"
-
-                    if model_status == "completed" and (not retry_model or retry_model != current_model):
-                        continue
-
-                    # Check token safety limit
-                    token_sum = 0
-                    with self.db_session_factory() as session:
-                        stats = session.usage_logs.get_usage_stats(timeframe="all", campaign_id=dashboard_id)
-                        for item in stats.get("breakdown") or []:
-                            if item.get("model") == current_model:
-                                token_sum = item.get("input_tokens", 0) + item.get("output_tokens", 0)
-
-                    if token_sum >= token_limit:
-                        logger.warning("Token safety limit %d exceeded for model %s (sum=%d)", token_limit, current_model, token_sum)
-                        coded_values[current_model] = {
-                            "values": model_data.get("values") or {},
-                            "status": "suspended_limit",
-                            "error_message": f"Token limit of {token_limit} exceeded.",
-                            "error_type": "API_FAILURE"
-                        }
-                        suspended_any = True
-                        completed_all = False
-                        continue
-
-                    try:
-                        usage_list = []
-                        ctx = {
-                            "service": "workflow_coding",
-                            "campaign_id": str(dashboard_id),
-                            "usage_accumulator": usage_list
-                        }
-                        result = await workflow_executor.execute(
-                            definition, 
-                            source_text, 
-                            model_name=current_model,
-                            log_context=ctx
-                        )
-                        model_coded = dict(result["outputs"])
-                        model_context = result.get("context", {})
-
-                        # Match intermediate LLM node outputs representing reasoning
-                        for col in schema_fields:
-                            col_name = col.get("name")
-                            if not col_name:
-                                continue
-                            workflow_source = col.get("workflow_source")
-                            
-                            reasoning = None
-                            if workflow_source:
-                                parts = str(workflow_source).split(".")
-                                node_id = parts[0]
-                                field_name = parts[1] if len(parts) > 1 else node_id
-                                
-                                candidates = [
-                                    f"{node_id}.{field_name}_reasoning",
-                                    f"{node_id}.{field_name}_rationale",
-                                    f"{node_id}.{field_name}_explanation",
-                                    f"{node_id}.{col_name}_reasoning",
-                                    f"{node_id}.{col_name}_rationale",
-                                    f"{node_id}.{col_name}_explanation",
-                                    f"{node_id}.reasoning",
-                                    f"{node_id}.rationale",
-                                    f"{node_id}.explanation",
-                                    f"{field_name}_reasoning",
-                                    f"{field_name}_rationale",
-                                    f"{col_name}_reasoning",
-                                    f"{col_name}_rationale",
-                                ]
-                                for candidate in candidates:
-                                    if candidate in model_context and model_context[candidate]:
-                                        reasoning = str(model_context[candidate])
-                                        break
-                                
-                                if not reasoning:
-                                    node_prefix = f"{node_id}."
-                                    node_keys = [k for k in model_context.keys() if k.startswith(node_prefix)]
-                                    reasoning_keys = []
-                                    for k in node_keys:
-                                        suffix = k[len(node_prefix):].lower()
-                                        if "reason" in suffix or "rationale" in suffix or "explain" in suffix:
-                                            reasoning_keys.append(k)
-                                    if len(reasoning_keys) == 1:
-                                        reasoning = str(model_context[reasoning_keys[0]])
-                                    elif len(reasoning_keys) > 1:
-                                        for k in reasoning_keys:
-                                            suffix = k[len(node_prefix):].lower()
-                                            if field_name.lower() in suffix or col_name.lower() in suffix:
-                                                reasoning = str(model_context[k])
-                                                break
-                                        if not reasoning:
-                                            reasoning = str(model_context[reasoning_keys[0]])
-                            
-                            if reasoning is not None:
-                                model_coded[f"{col_name}_reasoning"] = reasoning
-
-                            # Initialize history for audit logs
-                            import datetime
-                            val = model_coded.get(col_name)
-                            model_coded[f"{col_name}_history"] = [
-                                {
-                                    "version": 1,
-                                    "value": val,
-                                    "reasoning": reasoning,
-                                    "feedback_prompt": None,
-                                    "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
-                                    "source": "ai"
-                                }
-                            ]
-
-                        # Compute tokens and cost
-                        input_tokens = sum(u.input_tokens for u in usage_list if u)
-                        output_tokens = sum(u.output_tokens for u in usage_list if u)
-                        from app.llm.registry import calculate_cost
-                        cost = calculate_cost(current_model, input_tokens, output_tokens)
-
-                        coded_values[current_model] = {
-                            "values": model_coded,
-                            "status": "completed",
-                            "error_message": None,
-                            "error_type": None,
-                            "trace": result["trace"],
-                            "context": result["context"],
-                            "input_tokens": input_tokens,
-                            "output_tokens": output_tokens,
-                            "cost": cost
-                        }
-
-                    except Exception as model_err:
-                        logger.error("Workflow failed for model %s on doc %s: %s", current_model, document_id, model_err)
-                        coded_values[current_model] = {
-                            "values": {},
-                            "status": "failed",
-                            "error_message": str(model_err),
-                            "error_type": "API_FAILURE"
-                        }
-                        failed_any = True
-                        completed_all = False
-
-                # Determine overall document status
-                if completed_all:
-                    overall_status = "completed"
-                    overall_error = None
-                    overall_err_type = None
-                elif suspended_any:
-                    overall_status = "failed"
-                    overall_error = f"Token limit exceeded for some models. Please authorize raise."
-                    overall_err_type = "API_FAILURE"
-                else:
-                    overall_status = "failed"
-                    overall_error = "One or more LLM models failed."
-                    overall_err_type = "API_FAILURE"
-
-                # Save nested coded values to DB
-                # For backward-compatibility we can save last model's trace and context at the top level
-                last_model = models[-1]
-                last_trace = coded_values.get(last_model, {}).get("trace") or []
-                last_context = coded_values.get(last_model, {}).get("context") or {}
-
-                with self.db_session_factory() as session:
-                    session.dashboard_documents.update_workflow_result(
-                        dashboard_id,
-                        document_id,
-                        json.dumps(coded_values),
-                        json.dumps(last_trace),
-                        json.dumps(last_context),
-                        status=overall_status,
-                    )
-                    if overall_error:
-                        session.dashboard_documents.update_error(
-                            dashboard_id=dashboard_id,
-                            document_id=document_id,
-                            error_message=overall_error,
-                            error_type=overall_err_type
-                        )
-                with self.db_session_factory() as session:
-                    row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
-                return campaign_service._dashboard_document_row(row)
-
+                models = [m.strip() for m in model_name.split(",") if m.strip()]
+                # Delegate to parallel runner (single-document, all models)
+                await self.run_model_comparison_parallel(
+                    dashboard_id=dashboard_id,
+                    document_ids=[document_id],
+                    models=models,
+                    definition=definition,
+                    schema_fields=schema_fields,
+                    token_limit=token_limit,
+                    retry_model=retry_model,
+                    files_concurrency=2,
+                )
             else:
-                # Single-model (standard) workflow run
+                # Single-model standard workflow run
+                import datetime
                 result = await workflow_executor.execute(definition, source_text)
                 coded_values = dict(result["outputs"])
                 context = result.get("context", {})
-                import datetime
-
                 for col in schema_fields:
                     col_name = col.get("name")
                     if not col_name:
                         continue
-                    workflow_source = col.get("workflow_source")
-                    
-                    reasoning = None
-                    if workflow_source:
-                        parts = str(workflow_source).split(".")
-                        node_id = parts[0]
-                        field_name = parts[1] if len(parts) > 1 else node_id
-                        
-                        candidates = [
-                            f"{node_id}.{field_name}_reasoning",
-                            f"{node_id}.{field_name}_rationale",
-                            f"{node_id}.{field_name}_explanation",
-                            f"{node_id}.{col_name}_reasoning",
-                            f"{node_id}.{col_name}_rationale",
-                            f"{node_id}.{col_name}_explanation",
-                            f"{node_id}.reasoning",
-                            f"{node_id}.rationale",
-                            f"{node_id}.explanation",
-                            f"{field_name}_reasoning",
-                            f"{field_name}_rationale",
-                            f"{col_name}_reasoning",
-                            f"{col_name}_rationale",
-                        ]
-                        for candidate in candidates:
-                            if candidate in context and context[candidate]:
-                                reasoning = str(context[candidate])
-                                break
-                        
-                        if not reasoning:
-                            node_prefix = f"{node_id}."
-                            node_keys = [k for k in context.keys() if k.startswith(node_prefix)]
-                            reasoning_keys = []
-                            for k in node_keys:
-                                suffix = k[len(node_prefix):].lower()
-                                if "reason" in suffix or "rationale" in suffix or "explain" in suffix:
-                                    reasoning_keys.append(k)
-                            if len(reasoning_keys) == 1:
-                                reasoning = str(context[reasoning_keys[0]])
-                            elif len(reasoning_keys) > 1:
-                                for k in reasoning_keys:
-                                    suffix = k[len(node_prefix):].lower()
-                                    if field_name.lower() in suffix or col_name.lower() in suffix:
-                                        reasoning = str(context[k])
-                                        break
-                                if not reasoning:
-                                    reasoning = str(context[reasoning_keys[0]])
-                    
+                    reasoning = self._extract_reasoning(col_name, col.get("workflow_source"), context)
                     if reasoning is not None:
                         coded_values[f"{col_name}_reasoning"] = reasoning
-                    
                     val = coded_values.get(col_name)
                     coded_values[f"{col_name}_history"] = [
                         {
-                            "version": 1,
-                            "value": val,
-                            "reasoning": reasoning,
+                            "version": 1, "value": val, "reasoning": reasoning,
                             "feedback_prompt": None,
                             "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
-                            "source": "ai"
+                            "source": "ai",
                         }
                     ]
-
                 with self.db_session_factory() as session:
                     session.dashboard_documents.update_workflow_result(
-                        dashboard_id,
-                        document_id,
-                        json.dumps(coded_values),
-                        json.dumps(result["trace"]),
-                        json.dumps(result["context"]),
+                        dashboard_id, document_id,
+                        json.dumps(coded_values), json.dumps(result["trace"]), json.dumps(result["context"]),
                         status="completed",
                     )
-                    row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
-                return campaign_service._dashboard_document_row(row)
+
         except WorkflowExecutionError as exc:
             error_message = str(exc)
+            with self.db_session_factory() as session:
+                session.dashboard_documents.update_workflow_result(
+                    dashboard_id, document_id, "{}", json.dumps([]), json.dumps({}),
+                    status="failed", error_message=error_message, error_type="API_FAILURE",
+                )
         except Exception as exc:
-            logger.exception("Workflow dashboard execution failed for dashboard_id=%s document_id=%s", dashboard_id, document_id)
+            logger.exception("Workflow execution failed dashboard=%s doc=%s", dashboard_id, document_id)
             error_message = str(exc)
+            with self.db_session_factory() as session:
+                session.dashboard_documents.update_workflow_result(
+                    dashboard_id, document_id, "{}", json.dumps([]), json.dumps({}),
+                    status="failed", error_message=error_message, error_type="API_FAILURE",
+                )
+
         with self.db_session_factory() as session:
-            session.dashboard_documents.update_workflow_result(
-                dashboard_id,
-                document_id,
-                "{}",
-                json.dumps([]),
-                json.dumps({}),
-                status="failed",
-                error_message=error_message,
-                error_type="API_FAILURE",
-            )
             row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
         return campaign_service._dashboard_document_row(row)
+
+
 
     async def run_text(
         self,

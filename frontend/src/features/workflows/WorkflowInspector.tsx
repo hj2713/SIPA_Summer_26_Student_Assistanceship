@@ -258,6 +258,32 @@ export function WorkflowInspector({ node, availableFields, onChange, onDelete, o
             </p>
           </section>
         )}
+        {node.kind === "rank_descriptor" && (
+          <section className="space-y-3 border-t pt-4">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[10px] font-bold text-orange-600 uppercase tracking-wider">
+                Rank {String(node.config.rank ?? "?")} — System Prompt
+              </span>
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Write the criteria that define when a law should be assigned this rank. At runtime, all four rank
+              prompts are combined and appended to the Discretion Rank feature node's instructions.
+            </p>
+            <div>
+              <label className="text-[9px] font-bold uppercase text-muted-foreground/80">Rank criteria prompt</label>
+              <TextArea
+                rows={12}
+                value={String(node.config.instructions || "")}
+                onChange={(event) => patchConfig({ instructions: event.target.value })}
+                className="mt-1 font-sans placeholder:text-muted-foreground/50"
+                placeholder={`Describe what makes a law a Rank ${String(node.config.rank ?? "?")}…`}
+              />
+            </div>
+            <p className="rounded-md bg-orange-500/8 border border-orange-500/20 p-2 text-[9px] leading-relaxed text-orange-700">
+              This node produces no outputs of its own. Its prompt is injected into the connected Discretion Rank node.
+            </p>
+          </section>
+        )}
         {node.kind === "output" && <section className="space-y-2 border-t pt-4"><p className="text-[10px] font-bold uppercase text-muted-foreground">Fields exposed to campaigns</p><p className="text-[10px] leading-relaxed text-muted-foreground">Select only final research variables. Internal details can remain available in traces without becoming dashboard columns.</p><div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">{availableFields.length === 0 ? <p className="p-2 text-[10px] text-muted-foreground">Connect producing nodes before this output node.</p> : availableFields.map((field) => { const selected = exposedFields.some((item) => typeof item === "string" ? item === field : item.source === field); return <label key={field} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[10px] hover:bg-muted"><input type="checkbox" checked={selected} onChange={() => { const nextFields = selected ? exposedFields.filter((item) => typeof item === "string" ? item !== field : item.source !== field) : [...exposedFields, { source: field, key: field.split(".").pop() || field }]; patchConfig({ fields: nextFields }); }} /><span className="truncate font-mono">{field}</span></label>; })}</div>{exposedFields.length > 0 && <div className="space-y-1 rounded-md bg-muted/30 p-2"><p className="text-[9px] font-bold uppercase text-muted-foreground">Final output mapping</p>{exposedFields.map((item, index) => { const source = typeof item === "string" ? item : item.source; const key = typeof item === "string" ? item : item.key || item.source; return <div key={`${source}-${index}`} className="flex items-center gap-1 text-[9px]"><span className="truncate font-mono text-muted-foreground">{source}</span><span>→</span><span className="font-mono font-semibold">{key}</span></div>; })}</div>}<p className="rounded-md bg-amber-500/10 p-2 text-[9px] leading-relaxed text-amber-700">Campaign integration remains intentionally disabled in this release.</p></section>}
       </div>
 

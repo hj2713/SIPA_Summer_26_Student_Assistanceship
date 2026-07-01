@@ -26,6 +26,7 @@ interface Campaign {
   dashboard_type: string;
   token_limit: number;
   created_at: string;
+  workflow_id?: string | null;
 }
 
 interface CampaignDocument {
@@ -121,8 +122,9 @@ export function ModelEvaluationPage() {
   const [newModelToAdd, setNewModelToAdd] = useState("");
   const [addingModel, setAddingModel] = useState(false);
   const [workflows, setWorkflows] = useState<any[]>([]);
-  const [sourceType, setSourceType] = useState<"prompt" | "workflow">("prompt");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
+  const [showLinkWorkflowDialog, setShowLinkWorkflowDialog] = useState(false);
+  const [linkingWorkflow, setLinkingWorkflow] = useState(false);
 
   // Professor Benchmark State
   const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: BenchmarkRow[] } | null>(null);
@@ -256,19 +258,11 @@ export function ModelEvaluationPage() {
     return () => clearInterval(interval);
   }, [isPolling, id, session]);
 
-  // Handle campaign creation
+  // Handle campaign creation (prompt-based only; workflow is linked separately after creation)
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error("Campaign name is required.");
-      return;
-    }
-    if (sourceType === "prompt" && !prompt.trim()) {
-      toast.error("System Prompt is required.");
-      return;
-    }
-    if (sourceType === "workflow" && !selectedWorkflowId) {
-      toast.error("Please select a workflow to run.");
+    if (!name.trim() || !prompt.trim()) {
+      toast.error("Name and System Prompt are required.");
       return;
     }
     if (selectedModels.length === 0) {
@@ -277,53 +271,60 @@ export function ModelEvaluationPage() {
     }
 
     setCreating(true);
-    if (sourceType === "workflow") {
-      toast.info("Setting up workflow evaluation campaign...", { duration: 4000 });
-    } else {
-      toast.info("Analyzing rubric codebook and building variable schema...", { duration: 4000 });
-    }
+    toast.info("Analyzing rubric codebook and building variable schema...", { duration: 4000 });
 
     try {
-      const body: any = {
-        name: name.trim(),
-        prompt: sourceType === "prompt" ? prompt.trim() : "Workflow evaluation",
-        model: selectedModels.join(","),
-        dashboard_type: "model_comparison",
-        token_limit: 2500000,
-      };
-
-      if (sourceType === "workflow") {
-        body.workflow_id = selectedWorkflowId;
-        body.workflow_source = "draft";
-      }
-
       const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(activeWorkspace?.id ?? "")}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          name: name.trim(),
+          prompt: prompt.trim(),
+          model: selectedModels.join(","),
+          dashboard_type: "model_comparison",
+          token_limit: 2500000,
+        }),
       });
-
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.detail || "Failed to create comparison campaign");
       }
-
       const newCampaign = await res.json();
-      toast.success("Model evaluation campaign created successfully!");
+      toast.success("Model evaluation campaign created! Use ⚡ Link Workflow to attach a workflow.");
       setShowCreateModal(false);
       setName("");
       setPrompt("");
       setSelectedModels(["gemini-1.5-flash", "gpt-4o-mini"]);
-      setSourceType("prompt");
-      setSelectedWorkflowId("");
       navigate(`/campaigns/${newCampaign.id}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to create comparison campaign");
     } finally {
       setCreating(false);
+    }
+  };
+
+  // Handle linking/unlinking a workflow to the current campaign
+  const handleLinkWorkflow = async () => {
+    if (!campaign || !session) return;
+    setLinkingWorkflow(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/link-workflow`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ workflow_id: selectedWorkflowId || null }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to link workflow");
+      }
+      const updated = await res.json();
+      setCampaign(updated);
+      setShowLinkWorkflowDialog(false);
+      toast.success(selectedWorkflowId ? "Workflow linked! New file uploads will run through this workflow." : "Workflow unlinked.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to link workflow");
+    } finally {
+      setLinkingWorkflow(false);
     }
   };
 
@@ -702,6 +703,15 @@ export function ModelEvaluationPage() {
 
                     <Button variant="outline" size="sm" onClick={() => setShowAddModelDialog(true)} className="gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/5">
                       <Plus size={13} /> Add Model
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { void fetchWorkflows(); setSelectedWorkflowId(campaign?.workflow_id || ""); setShowLinkWorkflowDialog(true); }}
+                      className={`gap-1.5 text-xs ${campaign?.workflow_id ? "text-violet-600 border-violet-300 bg-violet-50 hover:bg-violet-100" : "text-muted-foreground border-muted hover:bg-muted/30"}`}
+                    >
+                      ⚡ {campaign?.workflow_id ? "Workflow Linked" : "Link Workflow"}
                     </Button>
                   </>
                 )}
@@ -1141,74 +1151,23 @@ export function ModelEvaluationPage() {
                 )}
               </div>
 
-              {/* Source Type Toggle */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                  Evaluation Source
+              {/* Evaluation Source — always prompt-based at creation */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  System Prompt / Codebook
                 </label>
-                <div className="flex bg-muted/30 rounded-lg p-1 gap-1 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setSourceType("prompt")}
-                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${sourceType === "prompt" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    📝 System Prompt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setSourceType("workflow"); void fetchWorkflows(); }}
-                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${sourceType === "workflow" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    ⚡ Workflow
-                  </button>
-                </div>
-
-                {sourceType === "prompt" && (
-                  <div className="space-y-1">
-                    <Textarea
-                      required
-                      rows={8}
-                      placeholder="Paste research rules or scoring rubrics here. The AI will extract discretion/delegation scores across all selected models based on these instructions."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      disabled={creating}
-                      className="font-mono text-sm leading-relaxed max-h-72 overflow-y-auto"
-                    />
-                  </div>
-                )}
-
-                {sourceType === "workflow" && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Select a workflow to run all uploaded files through. The workflow's output variables will become the evaluation columns.
-                    </p>
-                    {workflows.length === 0 ? (
-                      <div className="border rounded-lg p-4 text-center text-xs text-muted-foreground">
-                        No workflows found in this workspace. Create one in the Workflows section first.
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {workflows.map((wf: any) => (
-                          <div
-                            key={wf.id}
-                            onClick={() => setSelectedWorkflowId(wf.id)}
-                            className={`border rounded-lg p-3 cursor-pointer transition-all ${selectedWorkflowId === wf.id ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40 hover:bg-muted/20"}`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold">{wf.name}</span>
-                              {selectedWorkflowId === wf.id && (
-                                <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">Selected</span>
-                              )}
-                            </div>
-                            {wf.description && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{wf.description}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <Textarea
+                  required
+                  rows={8}
+                  placeholder="Paste research rules or scoring rubrics here. The AI will extract discretion/delegation scores across all selected models based on these instructions."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  disabled={creating}
+                  className="font-mono text-sm leading-relaxed max-h-72 overflow-y-auto"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  After creating the campaign, use the <span className="font-semibold text-violet-600">⚡ Link Workflow</span> button in the dashboard header to attach a workflow for automated multi-model file processing.
+                </p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t">
@@ -1224,10 +1183,10 @@ export function ModelEvaluationPage() {
                   {creating ? (
                     <>
                       <div className="h-4 w-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                      {sourceType === "workflow" ? "Setting up..." : "Analyzing..."}
+                      Analyzing...
                     </>
                   ) : (
-                    sourceType === "workflow" ? "⚡ Create Workflow Campaign" : "Create Evaluation Campaign"
+                    "Create Evaluation Campaign"
                   )}
                 </Button>
               </div>
@@ -1330,6 +1289,94 @@ export function ModelEvaluationPage() {
                   ) : (
                     "Add & Start Evaluation"
                   )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Link Workflow Dialog */}
+        <Dialog open={showLinkWorkflowDialog} onOpenChange={(open) => !linkingWorkflow && setShowLinkWorkflowDialog(open)}>
+          <DialogContent className="w-[90vw] sm:max-w-lg max-h-[85vh] overflow-y-auto p-5">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                ⚡ Link Workflow to Campaign
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <p className="text-xs text-muted-foreground">
+                When a workflow is linked, every file uploaded to this dashboard will run through the workflow
+                <strong> once per selected model</strong> (with model injected). Results populate the dashboard columns automatically.
+              </p>
+
+              {campaign?.workflow_id && (
+                <div className="flex items-center justify-between border border-violet-200 bg-violet-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-violet-700">Currently linked:</span>
+                    <span className="text-xs text-violet-600 font-mono">{workflows.find((w: any) => w.id === campaign.workflow_id)?.name || campaign.workflow_id}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedWorkflowId(""); }}
+                    className="text-[11px] text-destructive font-bold hover:underline"
+                  >
+                    Unlink
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select a Workflow</p>
+                {workflows.length === 0 ? (
+                  <div className="border rounded-lg p-6 text-center text-xs text-muted-foreground">
+                    No workflows found in this workspace. Create one in the Workflows section first.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                    {workflows.map((wf: any) => (
+                      <div
+                        key={wf.id}
+                        onClick={() => setSelectedWorkflowId(selectedWorkflowId === wf.id ? "" : wf.id)}
+                        className={`border rounded-lg p-3 cursor-pointer transition-all ${selectedWorkflowId === wf.id ? "border-violet-400 bg-violet-50 shadow-sm" : "border-border hover:border-violet-200 hover:bg-muted/20"}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold">{wf.name}</span>
+                          {selectedWorkflowId === wf.id && (
+                            <span className="text-[10px] text-violet-700 font-bold bg-violet-100 px-2 py-0.5 rounded-full">Selected</span>
+                          )}
+                        </div>
+                        {wf.description && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{wf.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+                <p className="text-[11px] text-muted-foreground font-semibold">How it works:</p>
+                <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                  <li>Each uploaded file runs through the workflow <strong>N times</strong> (once per model)</li>
+                  <li>All N model runs happen <strong>in parallel</strong> — separate API keys, no waiting</li>
+                  <li>Each run uses max 2 concurrent files (<em>Semaphore(2)</em>) per model</li>
+                  <li>Results land in the dashboard columns, side-by-side per model</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2 border-t">
+                <Button variant="outline" size="sm" onClick={() => setShowLinkWorkflowDialog(false)} disabled={linkingWorkflow}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleLinkWorkflow}
+                  disabled={linkingWorkflow}
+                  className="gap-2 font-bold"
+                >
+                  {linkingWorkflow ? (
+                    <><div className="h-3.5 w-3.5 border-2 border-background border-t-transparent rounded-full animate-spin" /> Saving...</>
+                  ) : selectedWorkflowId ? "Link Workflow" : "Unlink Workflow"}
                 </Button>
               </div>
             </div>

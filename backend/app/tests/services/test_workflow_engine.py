@@ -82,7 +82,7 @@ async def test_executor_skips_rank_llm_when_delegation_is_false(monkeypatch):
             calls.append(log_context["workflow_node_id"])
             return schema(delegate_law=False)
 
-    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     result = await WorkflowExecutor().execute(
         delegation_discretion_definition(),
         "The summary describes a technical filing change and grants no new authority.",
@@ -113,7 +113,7 @@ async def test_project_workflow_keeps_delegation_details_internal_when_false(mon
                 delegation_centrality="none",
             )
 
-    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     result = await WorkflowExecutor().execute(
         law_delegation_discretion_rank_definition(),
         "The law only changes a filing deadline and grants no new agency authority.",
@@ -122,8 +122,8 @@ async def test_project_workflow_keeps_delegation_details_internal_when_false(mon
     assert calls == ["law_delegation"]
     assert result["outputs"] == {"delegate_law": False, "discretion_rank": 0}
     assert "delegation_rationale" not in result["outputs"]
-    assert result["trace"][1]["outputs"]["delegation_rationale"]
     by_id = {item["node_id"]: item for item in result["trace"]}
+    assert by_id["law_delegation"]["outputs"]["delegation_rationale"]
     assert by_id["discretion_rank"]["status"] == "skipped"
 
 
@@ -152,7 +152,7 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
                 rank_evidence=["The SEC must issue disclosure rules."],
             )
 
-    monkeypatch.setattr("app.workflows.executor.get_llm", lambda: FakeLlm())
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     result = await WorkflowExecutor().execute(
         law_delegation_discretion_rank_definition(),
         "The law directs the SEC to issue rules governing financial disclosures.",

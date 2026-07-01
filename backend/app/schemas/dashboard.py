@@ -37,6 +37,11 @@ class DashboardCreate(BaseModel):
     workflow_id: Optional[str] = Field(default=None, description="Optional workflow ID to run evaluations via workflow nodes")
     workflow_source: Optional[str] = Field(default=None, description="Optional workflow source representation")
 
+
+class LinkWorkflowPayload(BaseModel):
+    """Payload for linking or unlinking a workflow from a dashboard."""
+    workflow_id: Optional[str] = Field(default=None, description="Workflow ID to link. Pass null to unlink.")
+
 class DashboardRow(BaseModel):
     id: str
     workspace_id: str

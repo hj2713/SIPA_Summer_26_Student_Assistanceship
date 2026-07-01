@@ -1,9 +1,15 @@
 """LLMService: the single entry point used everywhere in the app.
 
 `get_llm()` returns a process-wide singleton. The concrete provider is
-chosen at first call based on `settings`. To swap providers, set
-`LLM_PROVIDER` in the environment (or rely on the auto-detect: OpenRouter
-key wins over the direct OpenAI key).
+chosen at first call based on `settings`.
+
+Routing rules (hard rule, no exceptions):
+  - model starts with "claude-"         → Anthropic API (ANTHROPIC_API_KEY)
+  - model starts with "gpt-" / "o1-" / "o3-" / "o4-" → OpenAI API (OPENAI_API_KEY)
+  - everything else (deepseek, kimi, qwen, llama, etc.) → OpenRouter API (OPEN_ROUTER_API_KEY)
+
+When per-user saved keys are present, the matching key for each provider
+is fetched from `user_llm_credentials` instead of the server `.env`.
 """
 from __future__ import annotations
 
@@ -26,53 +32,91 @@ from typing import Any
 import uuid
 from app.llm.types import LLMUsage
 
+# ---------------------------------------------------------------------------
 # Model pricing matrix per 1M tokens: (input cost per 1M, output cost per 1M)
+# ---------------------------------------------------------------------------
 PRICING_MAP = {
-    # 1. Google Gemini (Latest Top Models)
+    # 1. Google Gemini
     "gemini-3.1-pro": (2.00, 12.00),
     "gemini-3.5-flash": (1.50, 9.00),
     "gemini-3.1-flash-lite": (0.25, 1.50),
     "gemini-3-flash": (0.50, 3.00),
-    
-    # 2. OpenAI (Latest Top Models)
+    "gemini-1.5-flash": (0.075, 0.30),
+    "gemini-1.5-pro": (3.50, 10.50),
+    "gemini-2.0-flash": (0.10, 0.40),
+    "gemini-2.5-flash": (0.15, 0.60),
+    "gemini-2.5-pro": (1.25, 10.00),
+
+    # 2. OpenAI
     "gpt-5.5-pro": (30.00, 180.00),
     "gpt-5.5": (5.00, 30.00),
     "gpt-5.4": (2.50, 15.00),
     "gpt-5.4-mini": (0.75, 4.50),
     "gpt-5.4-nano": (0.20, 1.25),
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4-turbo": (10.00, 30.00),
     "o3-mini": (1.10, 4.40),
+    "o4-mini": (1.10, 4.40),
     "o1-preview": (15.00, 60.00),
     "o1-mini": (3.00, 12.00),
     "o1": (15.00, 60.00),
-    
-    # 3. Anthropic Claude (Latest Top Models)
+    "o3": (10.00, 40.00),
+
+    # 3. Anthropic Claude
     "claude-opus-4.8": (5.00, 25.00),
     "claude-sonnet-5": (3.00, 15.00),
     "claude-sonnet-4.6": (3.00, 15.00),
+    "claude-sonnet-4-5": (3.00, 15.00),
     "claude-haiku-4.5": (1.00, 5.00),
-    
-    # 4. DeepSeek (Latest Top Models)
+    "claude-haiku-3-5": (0.80, 4.00),
+    "claude-3-5-sonnet": (3.00, 15.00),
+    "claude-3-5-haiku": (0.80, 4.00),
+    "claude-3-opus": (15.00, 75.00),
+
+    # 4. DeepSeek (via OpenRouter)
     "deepseek-v4-pro": (1.74, 3.48),
     "deepseek-v4-flash": (0.14, 0.28),
     "deepseek-r1": (0.55, 2.19),
     "deepseek-chat": (0.14, 0.28),
-    
-    # 5. Kimi / Moonshot (Latest Top Models)
+    "deepseek-v3": (0.28, 0.88),
+    "deepseek-r1-0528": (0.55, 2.19),
+
+    # 5. Kimi / Moonshot (via OpenRouter)
     "kimi-k2.7-code": (0.95, 4.00),
     "kimi-k2.6": (0.95, 4.00),
     "kimi-k2.5": (0.60, 3.00),
+    "kimi-k2": (0.60, 3.00),
     "kimi": (0.95, 4.00),
     "moonshot": (0.95, 4.00),
+
+    # 6. Meta Llama (via OpenRouter)
+    "llama-3.3": (0.18, 0.60),
+    "llama-3.1": (0.18, 0.60),
+    "llama-4-maverick": (0.22, 0.88),
+    "llama-4-scout": (0.18, 0.60),
+
+    # 7. Qwen (via OpenRouter)
+    "qwen3": (0.40, 1.60),
+    "qwen2.5": (0.28, 0.88),
+    "qwen-turbo": (0.14, 0.28),
+    "qwq-32b": (0.15, 0.60),
+    "qwen2-vl": (0.40, 1.20),
 }
+
 
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     """Calculate the cost of an LLM invocation using local pricing map."""
     model_lower = model.lower()
+    # Strip openrouter namespace prefix like "deepseek/" → "deepseek-chat"
+    if "/" in model_lower:
+        model_lower = model_lower.split("/")[-1]
     for key, (in_p, out_p) in PRICING_MAP.items():
         if key in model_lower:
             return (input_tokens * (in_p / 1_000_000.0)) + (output_tokens * (out_p / 1_000_000.0))
-    # Fallback to general low-cost model pricing (e.g. gpt-4o-mini / gemini-1.5-flash)
+    # Fallback to low-cost pricing
     return (input_tokens * (0.15 / 1_000_000.0)) + (output_tokens * (0.60 / 1_000_000.0))
+
 
 def log_usage_to_db(
     provider: str,
@@ -116,6 +160,69 @@ def log_usage_to_db(
             conn.commit()
     except Exception as e:
         logger.error("Failed to log LLM usage: %s", e)
+
+
+# ---------------------------------------------------------------------------
+# Three-provider routing table
+# ---------------------------------------------------------------------------
+
+# OpenRouter canonical model IDs for models that don't already carry a "/" prefix
+_OPENROUTER_MODEL_MAP: dict[str, str] = {
+    # DeepSeek
+    "deepseek-chat": "deepseek/deepseek-chat",
+    "deepseek-r1": "deepseek/deepseek-r1",
+    "deepseek-r1-0528": "deepseek/deepseek-r1-0528",
+    "deepseek-v3": "deepseek/deepseek-v3",
+    "deepseek-v4-pro": "deepseek/deepseek-chat",
+    "deepseek-v4-flash": "deepseek/deepseek-chat",
+    # Kimi / Moonshot
+    "kimi-k2.7-code": "moonshot/kimi-k2.7-code",
+    "kimi-k2.6": "moonshot/kimi-k2.6",
+    "kimi-k2.5": "moonshot/kimi-k2.5",
+    "kimi-k2": "moonshot/kimi-k2",
+    "kimi": "moonshot/kimi-k2.5",
+    "moonshot": "moonshot/kimi-k2.5",
+    # Meta Llama
+    "llama-3.3-70b": "meta-llama/llama-3.3-70b-instruct",
+    "llama-3.1-70b": "meta-llama/llama-3.1-70b-instruct",
+    "llama-4-maverick": "meta-llama/llama-4-maverick",
+    "llama-4-scout": "meta-llama/llama-4-scout",
+    # Qwen
+    "qwen3-235b": "qwen/qwen3-235b-a22b",
+    "qwen3-30b": "qwen/qwen3-30b-a3b",
+    "qwen2.5-72b": "qwen/qwen-2.5-72b-instruct",
+    "qwq-32b": "qwen/qwq-32b",
+    "qwen-turbo": "qwen/qwen-turbo",
+}
+
+
+def _classify_model(model: str) -> str:
+    """Return 'anthropic', 'openai', or 'openrouter' for any model name string."""
+    m = model.lower().strip()
+    # Already a namespaced OpenRouter ID (e.g. "deepseek/deepseek-chat")
+    if "/" in m:
+        return "openrouter"
+    # Anthropic family
+    if m.startswith("claude-"):
+        return "anthropic"
+    # OpenAI family
+    if m.startswith(("gpt-", "o1-", "o3-", "o4-", "chatgpt-")):
+        return "openai"
+    # Everything else → OpenRouter
+    return "openrouter"
+
+
+def _resolve_openrouter_model(model: str) -> str:
+    """Map a friendly model name to the canonical OpenRouter model ID."""
+    # Already namespaced — pass through
+    if "/" in model:
+        return model
+    resolved = _OPENROUTER_MODEL_MAP.get(model.lower())
+    if resolved:
+        return resolved
+    # Best-effort: return as-is (OpenRouter accepts many aliases)
+    logger.warning("No explicit OpenRouter mapping for model=%r — passing through as-is", model)
+    return model
 
 
 class LLMService:
@@ -203,72 +310,113 @@ def get_llm() -> LLMService:
 
 
 def get_llm_for_model(model_name: str | None = None) -> LLMService:
-    """Get or build an LLMService for a specific model name.
-    If model_name is None, returns the default process-wide get_llm() instance.
-    """
-    credentials = _get_request_llm_credentials()
-    if credentials:
-        return _build_user_llm(credentials, model_name=model_name)
-    _raise_if_server_fallback_disabled()
+    """Get an LLMService for a specific model name using the three-provider routing rule.
 
+    Routing (hard rule, in order):
+      1. model starts with "claude-"              → Anthropic
+      2. model starts with "gpt-" / "o1-" / etc. → OpenAI
+      3. everything else                          → OpenRouter
+
+    API keys come from (in preference order):
+      1. Per-user saved keys in `user_llm_credentials`
+      2. Server .env keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY)
+    """
     if not model_name:
         return get_llm()
 
+    provider = _classify_model(model_name)
+
+    # ── 1. Try per-user saved keys first ────────────────────────────────────
+    user_creds = _get_request_llm_credentials()
+    if user_creds:
+        return _build_service_for_provider(provider, model_name, user_creds=user_creds)
+
+    _raise_if_server_fallback_disabled()
+    # ── 2. Fall back to server .env keys ────────────────────────────────────
+    return _build_service_for_provider(provider, model_name, user_creds=None)
+
+
+def _build_service_for_provider(
+    provider: str,
+    model_name: str,
+    *,
+    user_creds: UserLLMCredentials | None,
+) -> LLMService:
+    """Build the correct LLMService given a classified provider and optional user key store."""
     tracer = get_tracer()
-    model_lower = model_name.lower()
 
-    if model_lower.startswith("gemini-"):
-        from app.llm.providers.gemini_provider import GeminiProvider
-        provider: LLMProvider = GeminiProvider(
-            api_key=settings.GEMINI_API_KEY,
-            model=model_name,
-        )
-        return LLMService(provider)
-    elif model_lower.startswith("claude-"):
+    if provider == "anthropic":
+        api_key = _pick_key("anthropic", user_creds, settings.ANTHROPIC_API_KEY)
+        if not api_key:
+            raise ValueError(
+                f"No Anthropic API key found for model '{model_name}'. "
+                "Add one in Settings → API Keys → Anthropic."
+            )
         from app.llm.providers.anthropic_provider import AnthropicProvider
-        provider = AnthropicProvider(
-            api_key=settings.ANTHROPIC_API_KEY,
-            model=model_name,
-        )
-        return LLMService(provider)
-    elif "/" in model_name or (settings.OPEN_ROUTER_API_KEY and (not settings.OPENAI_API_KEY or not model_lower.startswith(("gpt-", "o1-", "o3-", "gemini-", "claude-")))):
-        openrouter_model = model_name
-        if "/" not in openrouter_model:
-            mapping = {
-                "deepseek-chat": "deepseek/deepseek-chat",
-                "deepseek-r1": "deepseek/deepseek-r1",
-                "deepseek-v4-pro": "deepseek/deepseek-chat",
-                "deepseek-v4-flash": "deepseek/deepseek-chat",
-                "kimi-k2.7-code": "moonshot/kimi-k2.7-code",
-                "kimi-k2.6": "moonshot/kimi-k2.6",
-                "kimi-k2.5": "moonshot/kimi-k2.5",
-                "kimi": "moonshot/kimi-k2.5",
-                "moonshot": "moonshot/kimi-k2.5",
-            }
-            openrouter_model = mapping.get(model_lower, model_name)
+        llm_provider: LLMProvider = AnthropicProvider(api_key=api_key, model=model_name)
+        return LLMService(llm_provider)
 
+    if provider == "openai":
+        api_key = _pick_key("openai", user_creds, settings.OPENAI_API_KEY)
+        if not api_key:
+            raise ValueError(
+                f"No OpenAI API key found for model '{model_name}'. "
+                "Add one in Settings → API Keys → OpenAI."
+            )
         from app.llm.providers.openai_provider import OpenAIProvider
-        provider = OpenAIProvider(
-            api_key=settings.OPEN_ROUTER_API_KEY or settings.OPENAI_API_KEY,
-            model=openrouter_model,
-            base_url="https://openrouter.ai/api/v1" if settings.OPEN_ROUTER_API_KEY else None,
-            default_headers={
-                "HTTP-Referer": "http://localhost:8000",
-                "X-Title": "Agentic RAG",
-            } if settings.OPEN_ROUTER_API_KEY else None,
-            tracer=tracer,
-            name="openrouter" if settings.OPEN_ROUTER_API_KEY else "openai",
+        llm_provider = OpenAIProvider(api_key=api_key, model=model_name, tracer=tracer, name="openai")
+        return LLMService(llm_provider)
+
+    # provider == "openrouter"
+    api_key = _pick_key("openrouter", user_creds, settings.OPEN_ROUTER_API_KEY)
+    if not api_key:
+        raise ValueError(
+            f"No OpenRouter API key found for model '{model_name}'. "
+            "Add one in Settings → API Keys → OpenRouter. "
+            "DeepSeek, Kimi, Llama, Qwen and other non-Anthropic/OpenAI models route via OpenRouter."
         )
-        return LLMService(provider)
-    else:
-        from app.llm.providers.openai_provider import OpenAIProvider
-        provider = OpenAIProvider(
-            api_key=settings.OPENAI_API_KEY or settings.GEMINI_API_KEY,
-            model=model_name,
-            tracer=tracer,
-            name="openai",
-        )
-        return LLMService(provider)
+    openrouter_model = _resolve_openrouter_model(model_name)
+    from app.llm.providers.openai_provider import OpenAIProvider
+    llm_provider = OpenAIProvider(
+        api_key=api_key,
+        model=openrouter_model,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "http://localhost:8000",
+            "X-Title": "Law Delegation Research",
+        },
+        tracer=tracer,
+        name="openrouter",
+    )
+    return LLMService(llm_provider)
+
+
+def _pick_key(
+    provider: str,
+    user_creds: UserLLMCredentials | None,
+    server_env_key: str | None,
+) -> str | None:
+    """Return the best API key for `provider`.
+
+    Priority: per-user saved key for that provider → server .env key.
+    The user's *active* provider key only wins when it matches the target provider.
+    """
+    if user_creds:
+        # Try to get the provider-specific key from the user's saved key store
+        from app.core.llm_credentials import get_user_llm_credentials_for_provider
+        user_id = get_current_user_id()
+        if user_id:
+            try:
+                creds = get_user_llm_credentials_for_provider(user_id, provider)
+                if creds and creds.api_key:
+                    return creds.api_key
+            except Exception:
+                pass
+        # Fall through to active-provider key only if it matches
+        if user_creds.provider.lower() == provider and user_creds.api_key:
+            return user_creds.api_key
+
+    return server_env_key or None
 
 
 def reset_llm() -> None:
@@ -299,7 +447,11 @@ def _build_user_llm(
     *,
     model_name: str | None = None,
 ) -> LLMService:
-    """Build an LLM service using the current user's saved provider credentials."""
+    """Build an LLM service using the current user's *active* saved provider credentials.
+    
+    Note: this is only called for the default (no model override) path.
+    For model overrides (multi-model evaluation), use get_llm_for_model() directly.
+    """
     tracer = get_tracer()
     provider_name = credentials.provider.lower()
     model = model_name or credentials.model
@@ -320,7 +472,7 @@ def _build_user_llm(
             base_url=credentials.base_url or "https://openrouter.ai/api/v1",
             default_headers={
                 "HTTP-Referer": "http://localhost:8000",
-                "X-Title": "Agentic RAG",
+                "X-Title": "Law Delegation Research",
             },
             tracer=tracer,
             name="openrouter",
@@ -372,7 +524,7 @@ def _build_llm() -> LLMService:
             base_url="https://openrouter.ai/api/v1",
             default_headers={
                 "HTTP-Referer": "http://localhost:8000",
-                "X-Title": "Agentic RAG",
+                "X-Title": "Law Delegation Research",
             },
             tracer=tracer,
             name="openrouter",

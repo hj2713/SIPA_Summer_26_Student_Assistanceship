@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, MarkerType, MiniMap, ReactFlow, ReactFlowProvider, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowLeft, Bot, Braces, Check, CheckCircle2, FileInput, FlaskConical, GitBranch, Loader2, Play, Save, Send, TableProperties, TriangleAlert, Upload } from "lucide-react";
+import { ArrowLeft, Bot, Braces, Check, CheckCircle2, FileInput, FlaskConical, GitBranch, ListOrdered, Loader2, Play, Save, Send, TableProperties, TriangleAlert, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +22,7 @@ const PALETTE: Array<{ kind: WorkflowNodeKind; label: string; icon: typeof Bot; 
   { kind: "set_value", label: "Set value", icon: Braces, description: "Deterministic assignment" },
   { kind: "validation", label: "Validation", icon: CheckCircle2, description: "Cross-field consistency" },
   { kind: "output", label: "Dashboard output", icon: TableProperties, description: "Expose final fields" },
+  { kind: "rank_descriptor", label: "Rank descriptor", icon: ListOrdered, description: "System prompt for one rank" },
 ];
 
 function toCanvasNodes(definition: WorkflowDefinition): CanvasNode[] {
@@ -184,7 +185,7 @@ function WorkflowBuilderInner() {
     let suffix = 2;
     while (nodes.some((node) => node.id === idPart)) idPart = `${baseId}_${suffix++}`;
     const meta = PALETTE.find((item) => item.kind === kind)!;
-    const config: Record<string, unknown> = kind === "llm" ? { document_context: "source_text", instructions: "", input_fields: [], outputs: [] } : kind === "condition" ? { expression: { op: "eq", left: { field: "" }, right: { literal: false } } } : kind === "set_value" ? { assignments: [] } : kind === "document_input" ? { source_policy: "campaign_source" } : kind === "output" ? { fields: [] } : { rules: [] };
+    const config: Record<string, unknown> = kind === "llm" ? { document_context: "source_text", instructions: "", input_fields: [], outputs: [] } : kind === "condition" ? { expression: { op: "eq", left: { field: "" }, right: { literal: false } } } : kind === "set_value" ? { assignments: [] } : kind === "document_input" ? { source_policy: "campaign_source" } : kind === "output" ? { fields: [] } : kind === "rank_descriptor" ? { rank: 1, instructions: "" } : { rules: [] };
     const definition: WorkflowNodeDefinition = { id: idPart, kind, name: meta.label, description: meta.description, position: { x: 360 + (nodes.length % 3) * 80, y: 160 + (nodes.length % 5) * 90 }, config };
     setNodes((current) => [...current, { id: idPart, type: "workflowNode", position: definition.position, data: { definition } }]); setSelectedNodeId(idPart); setDirty(true);
   };
@@ -202,6 +203,8 @@ function WorkflowBuilderInner() {
     }
     return nodes.flatMap((node) => {
     if (!ancestorIds.has(node.id)) return [];
+    // rank_descriptor nodes produce no outputs — skip them in the field list
+    if (node.data.definition.kind === "rank_descriptor") return [];
     const outputs = (node.data.definition.config.outputs as Array<{ key: string }> | undefined) || [];
     const assignments = (node.data.definition.config.assignments as Array<{ field: string }> | undefined) || [];
     return [...outputs.map((output) => `${node.id}.${output.key}`), ...assignments.map((assignment) => assignment.field)].filter(Boolean);

@@ -4,7 +4,8 @@ export type WorkflowNodeKind =
   | "condition"
   | "set_value"
   | "validation"
-  | "output";
+  | "output"
+  | "rank_descriptor";
 
 export interface WorkflowOutputField {
   key: string;

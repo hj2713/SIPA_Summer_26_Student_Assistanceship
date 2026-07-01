@@ -199,6 +199,50 @@ def get_user_llm_credentials(user_id: str | None) -> UserLLMCredentials | None:
     )
 
 
+def get_user_llm_credentials_for_provider(user_id: str, provider: str) -> UserLLMCredentials | None:
+    """Fetch saved credentials for a *specific* provider, regardless of the user's active provider.
+
+    Used by the three-provider routing in registry.py so that, e.g., an OpenRouter key can be
+    fetched even when the user's currently active provider is 'gemini'.
+    """
+    if not user_id:
+        return None
+
+    provider = provider.strip().lower()
+    if provider not in SUPPORTED_LLM_PROVIDERS:
+        return None
+
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            _query("SELECT api_key_encrypted, model, base_url FROM user_llm_credentials WHERE user_id = ? AND provider = ?"),
+            (user_id, provider)
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return None
+
+    if isinstance(row, dict):
+        api_key_encrypted = row.get("api_key_encrypted")
+        model = row.get("model") or DEFAULT_MODEL_BY_PROVIDER.get(provider, "")
+        base_url = (row.get("base_url") or "").strip() or None
+    else:
+        api_key_encrypted = row[0]
+        model = (row[1] or DEFAULT_MODEL_BY_PROVIDER.get(provider, "")).strip()
+        base_url = (row[2] or "").strip() or None
+
+    if not api_key_encrypted:
+        return None
+
+    try:
+        api_key = decrypt_api_key(api_key_encrypted)
+    except Exception:
+        return None
+
+    return UserLLMCredentials(provider=provider, api_key=api_key, model=model, base_url=base_url)
+
+
 def get_user_llm_credentials_summary(user_id: str) -> LLMCredentialsResponse:
     # Run migration check
     _migrate_legacy_credentials(user_id)

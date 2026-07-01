@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bot, Braces, CheckCircle2, FileInput, GitBranch, TableProperties } from "lucide-react";
+import { Bot, Braces, CheckCircle2, FileInput, GitBranch, ListOrdered, TableProperties } from "lucide-react";
 import type { WorkflowNodeDefinition, WorkflowNodeKind } from "@/types/workflow";
 
 export interface WorkflowCanvasNodeData extends Record<string, unknown> {
@@ -13,6 +13,7 @@ const NODE_META: Record<WorkflowNodeKind, { label: string; color: string; icon: 
   set_value: { label: "Set value", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/25", icon: Braces },
   validation: { label: "Validation", color: "text-rose-600 bg-rose-500/10 border-rose-500/25", icon: CheckCircle2 },
   output: { label: "Output", color: "text-cyan-600 bg-cyan-500/10 border-cyan-500/25", icon: TableProperties },
+  rank_descriptor: { label: "Rank descriptor", color: "text-orange-600 bg-orange-500/10 border-orange-500/25", icon: ListOrdered },
 };
 
 export function WorkflowNodeCard({ data, selected }: NodeProps) {
@@ -30,6 +31,9 @@ export function WorkflowNodeCard({ data, selected }: NodeProps) {
             <Icon size={12} /> {meta.label}
           </span>
           {definition.kind === "llm" && <span className="text-[9px] text-muted-foreground">{outputCount} outputs</span>}
+          {definition.kind === "rank_descriptor" && (
+            <span className="text-[9px] font-bold text-orange-600">Rank {String(definition.config.rank ?? "?")}</span>
+          )}
         </div>
         <p className="truncate text-sm font-semibold">{definition.name}</p>
         <p className="mt-1 line-clamp-2 min-h-8 text-[10px] leading-relaxed text-muted-foreground">

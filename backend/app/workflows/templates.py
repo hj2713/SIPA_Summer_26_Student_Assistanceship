@@ -288,11 +288,75 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                 },
             },
             {
+                "id": "rank_1_descriptor",
+                "kind": "rank_descriptor",
+                "name": "Rank 1 - Minimal Discretion",
+                "description": "Criteria defining when discretion rank should be assigned 1.",
+                "position": {"x": 880, "y": 420},
+                "config": {
+                    "rank": 1,
+                    "instructions": (
+                        "Rank 1 = Minimal Discretion: narrow, mechanical, procedural, ministerial, or tightly constrained authority. "
+                        "The agency has little to no room for policy judgment - it must follow explicit statutory commands. "
+                        "Examples: mandatory notice filings, fixed-formula calculations, ministerial record-keeping obligations, "
+                        "or carry-out-without-deviation mandates with no waiver or exemption power."
+                    ),
+                },
+            },
+            {
+                "id": "rank_2_descriptor",
+                "kind": "rank_descriptor",
+                "name": "Rank 2 - Limited Discretion",
+                "description": "Criteria defining when discretion rank should be assigned 2.",
+                "position": {"x": 880, "y": 560},
+                "config": {
+                    "rank": 2,
+                    "instructions": (
+                        "Rank 2 = Limited Discretion: real implementation, supervisory, regulatory, or enforcement authority exists, "
+                        "but significant rules, standards, reporting, consultation, appeals, exemptions, oversight, deadlines, or other "
+                        "constraints bound the authority. The agency exercises genuine judgment within a clearly bounded space - it can "
+                        "decide how to implement but cannot freely set the policy goal itself."
+                    ),
+                },
+            },
+            {
+                "id": "rank_3_descriptor",
+                "kind": "rank_descriptor",
+                "name": "Rank 3 - Substantial Discretion",
+                "description": "Criteria defining when discretion rank should be assigned 3.",
+                "position": {"x": 880, "y": 700},
+                "config": {
+                    "rank": 3,
+                    "instructions": (
+                        "Rank 3 = Substantial Discretion: meaningful authority to interpret, implement, enforce, supervise, regulate, "
+                        "approve, waive, exempt, or set standards; constraints exist but still leave significant room for judgment. "
+                        "The agency can shape the practical reach and stringency of the law in important ways. Congressional or judicial "
+                        "oversight exists but does not tightly pre-determine outcomes."
+                    ),
+                },
+            },
+            {
+                "id": "rank_4_descriptor",
+                "kind": "rank_descriptor",
+                "name": "Rank 4 - High Discretion",
+                "description": "Criteria defining when discretion rank should be assigned 4.",
+                "position": {"x": 880, "y": 840},
+                "config": {
+                    "rank": 4,
+                    "instructions": (
+                        "Rank 4 = High Discretion: broad policymaking, rulemaking, standard-setting, waiver, exemption, enforcement, "
+                        "supervisory, or interpretive authority across many provisions or central parts of the law, with few meaningful "
+                        "constraints. The agency is essentially co-author of the regulatory regime - it can define the rules of the game, "
+                        "grant or deny waivers broadly, and exercise wide enforcement discretion with minimal hard statutory guardrails."
+                    ),
+                },
+            },
+            {
                 "id": "discretion_rank",
                 "kind": "llm",
                 "name": "Discretion Rank feature",
                 "description": "Rank agency discretion using the Law Delegation decision trace.",
-                "position": {"x": 1020, "y": 430},
+                "position": {"x": 1200, "y": 600},
                 "config": {
                     "document_context": "source_text",
                     "instructions": DISCRETION_RANK_INSTRUCTIONS,
@@ -318,7 +382,7 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                 "kind": "validation",
                 "name": "Consistency check",
                 "description": "Ensure the final rank follows the DelegateLaw relationship.",
-                "position": {"x": 1350, "y": 260},
+                "position": {"x": 1520, "y": 260},
                 "config": {
                     "rules": [
                         {
@@ -357,7 +421,7 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
                 "kind": "output",
                 "name": "Final dashboard outputs",
                 "description": "Only final research variables are emitted as dashboard columns.",
-                "position": {"x": 1660, "y": 260},
+                "position": {"x": 1830, "y": 260},
                 "config": {
                     "fields": [
                         {"source": "law_delegation.delegate_law", "key": "delegate_law", "label": "Delegate Law"},
@@ -371,6 +435,10 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
             {"id": "e-delegation-gate", "source": "law_delegation", "target": "delegation_gate"},
             {"id": "e-gate-zero", "source": "delegation_gate", "target": "rank_zero", "source_handle": "true", "label": "No delegation"},
             {"id": "e-gate-rank", "source": "delegation_gate", "target": "discretion_rank", "source_handle": "false", "label": "Delegation found"},
+            {"id": "e-rank1-dr", "source": "rank_1_descriptor", "target": "discretion_rank"},
+            {"id": "e-rank2-dr", "source": "rank_2_descriptor", "target": "discretion_rank"},
+            {"id": "e-rank3-dr", "source": "rank_3_descriptor", "target": "discretion_rank"},
+            {"id": "e-rank4-dr", "source": "rank_4_descriptor", "target": "discretion_rank"},
             {"id": "e-zero-validate", "source": "rank_zero", "target": "consistency_check"},
             {"id": "e-rank-validate", "source": "discretion_rank", "target": "consistency_check"},
             {"id": "e-validate-output", "source": "consistency_check", "target": "dashboard_output"},
@@ -379,7 +447,7 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
             {"key": "delegate_law", "source": "law_delegation.delegate_law", "group": "Final"},
             {"key": "discretion_rank", "source": "discretion_rank", "group": "Final"},
         ],
-        "viewport": {"x": 0, "y": 0, "zoom": 0.72},
+        "viewport": {"x": 0, "y": 0, "zoom": 0.65},
     }
 
 

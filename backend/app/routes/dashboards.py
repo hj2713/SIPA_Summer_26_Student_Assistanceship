@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Depends, Query
 
 from app.core.deps import CurrentUserDep, get_workspace_id
-from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, DashboardDocumentPage, DocumentCampaignMappingRequest, DocumentCampaignMappingRow, CampaignStatusSummary, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload, BenchmarkComparisonSummary
+from app.schemas.dashboard import DashboardCreate, DashboardUpdate, DashboardRow, DashboardDocumentRow, DashboardDocumentPage, DocumentCampaignMappingRequest, DocumentCampaignMappingRow, CampaignStatusSummary, CellUpdatePayload, ReevaluateCellPayload, ReevaluateColumnPayload, ReevaluateRowPayload, BenchmarkComparisonSummary, LinkWorkflowPayload
 from app.services import campaign_service
 from app.services.benchmark_evaluation_service import benchmark_evaluation_service
 from app.services.coding_service import generate_schema_and_description, enqueue_sequential_coding
@@ -101,6 +101,25 @@ def update_campaign(
             detail="You do not have permission to modify campaigns."
         )
     return campaign_service.update_campaign(id, payload)
+
+
+@router.patch("/{id}/link-workflow", response_model=DashboardRow)
+def link_workflow(
+    id: str,
+    payload: LinkWorkflowPayload,
+    current_user: CurrentUserDep,
+):
+    """Link (or unlink) a workflow to an existing dashboard.
+    
+    Pass workflow_id to link, or null to unlink. No documents are re-processed;
+    new uploads and retries will automatically use the linked workflow.
+    """
+    if not current_user.is_admin and not current_user.can_add:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify campaigns."
+        )
+    return campaign_service.link_workflow_to_campaign(id, payload.workflow_id)
 
 
 

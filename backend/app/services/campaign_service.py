@@ -372,6 +372,40 @@ class CampaignService:
 
         return result
 
+    def link_workflow_to_campaign(self, campaign_id: str, workflow_id: Optional[str]) -> DashboardRow:
+        """Link or unlink a workflow from a dashboard.
+        
+        When linked, new file uploads and retries will run through the workflow
+        once per selected model (with model_override injected). No existing
+        documents are re-processed automatically.
+        """
+        with self.db_session_factory() as session:
+            row = session.dashboards.get_by_id(campaign_id)
+            if not row:
+                from fastapi import HTTPException, status
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign dashboard not found.")
+            session.dashboards.update(campaign_id, {"workflow_id": workflow_id})
+            updated = session.dashboards.get_by_id(campaign_id)
+            schema_list = []
+            try:
+                schema_list = json.loads(updated["schema"]) if isinstance(updated["schema"], str) else (updated["schema"] or [])
+            except Exception:
+                pass
+            return DashboardRow(
+                id=updated["id"],
+                workspace_id=updated["workspace_id"],
+                name=updated["name"],
+                description=updated.get("description") or "",
+                prompt=updated.get("prompt") or "",
+                schema=schema_list,
+                model=updated.get("model"),
+                dashboard_type=updated.get("dashboard_type") or "campaign",
+                workflow_id=updated.get("workflow_id"),
+                workflow_source=updated.get("workflow_source"),
+                created_at=updated["created_at"],
+                token_limit=updated.get("token_limit"),
+            )
+
 
     def list_campaign_documents(self, id: str) -> List[DashboardDocumentRow]:
         """List all documents linked to this campaign, along with their coded values and statuses."""

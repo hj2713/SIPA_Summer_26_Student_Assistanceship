@@ -9,6 +9,7 @@ ALLOWED_NODE_KINDS = {
     "set_value",
     "validation",
     "output",
+    "rank_descriptor",
 }
 
 
@@ -53,6 +54,9 @@ def validate_workflow_definition(definition: Dict[str, Any]) -> List[ValidationI
             output_keys = [output.get("key") for output in outputs]
             if any(not key for key in output_keys) or len(set(output_keys)) != len(output_keys):
                 issues.append(ValidationIssue("error", "invalid_output_keys", "LLM output keys must be non-empty and unique within the node.", node_id))
+        elif kind == "rank_descriptor":
+            if not str(config.get("instructions", "")).strip():
+                issues.append(ValidationIssue("warning", "empty_rank_descriptor", "Rank descriptor node has no prompt yet. Add criteria before publishing.", node_id))
         elif kind == "condition" and not config.get("expression"):
             issues.append(ValidationIssue("error", "missing_condition", "Condition nodes require an expression.", node_id))
         elif kind == "set_value" and not (config.get("assignments") or []):

@@ -75,8 +75,16 @@ class WorkflowExecutor:
         definition: Dict[str, Any],
         source_text: str,
         model_name: Optional[str] = None,
+        model_override: Optional[str] = None,
         log_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Execute a workflow definition against a source text.
+        
+        Args:
+            model_override: When set, ALL LLM nodes in this workflow run will use this
+                model, regardless of any node-level model setting. Used for multi-model
+                comparison runs where the same workflow is executed once per model.
+        """
         issues = validate_workflow_definition(definition)
         errors = [issue.to_dict() for issue in issues if issue.severity == "error"]
         if errors:
@@ -90,6 +98,10 @@ class WorkflowExecutor:
                 incoming[edge["target"]].append(edge)
                 outgoing[edge["source"]].append(edge)
 
+        # Build a kind lookup so we can distinguish control-flow edges from
+        # data-injection edges (rank_descriptor → llm) during activation checks.
+        node_kind_by_id: Dict[str, str] = {n["id"]: n.get("kind", "") for n in ordered}
+
         context: Dict[str, Any] = {"document.text": source_text}
         edge_active: Dict[str, bool] = {}
         trace = []
@@ -98,7 +110,14 @@ class WorkflowExecutor:
             node_id = node["id"]
             node_kind = node["kind"]
             node_incoming = incoming[node_id]
-            active = not node_incoming or any(edge_active.get(edge["id"], False) for edge in node_incoming)
+            # rank_descriptor edges are data-injection only; exclude them from
+            # the control-flow activation check so they cannot force a skipped
+            # branch (e.g. the rank=0 path) to run the discretion_rank LLM.
+            control_incoming = [
+                e for e in node_incoming
+                if node_kind_by_id.get(e.get("source")) != "rank_descriptor"
+            ]
+            active = not control_incoming or any(edge_active.get(e["id"], False) for e in control_incoming)
             if not active:
                 trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "skipped", "outputs": {}, "message": "This branch was not selected."})
                 for edge in outgoing[node_id]:
@@ -113,15 +132,43 @@ class WorkflowExecutor:
             elif node_kind == "llm":
                 selected_inputs = {field: context.get(field) for field in config.get("input_fields") or []}
                 document_context = config.get("document_context", "source_text")
+
+                # Collect rank descriptor prompts from any directly-incoming rank_descriptor nodes
+                rank_descriptor_texts = []
+                for edge in node_incoming:
+                    src_id = edge.get("source")
+                    src_node = next((n for n in ordered if n["id"] == src_id), None)
+                    if src_node and src_node.get("kind") == "rank_descriptor":
+                        rd_instructions = str(src_node.get("config", {}).get("instructions", "") or "").strip()
+                        if rd_instructions:
+                            rank = src_node.get("config", {}).get("rank") or src_node.get("rank", "?")
+                            rank_descriptor_texts.append(f"Rank {rank}: {rd_instructions}")
+                # Sort by rank number so combined prompt is always ordered 1 → 4
+                rank_descriptor_texts.sort()
+
+                base_instructions = str(config.get("instructions", "") or "")
+                if rank_descriptor_texts:
+                    combined_rank_text = "\n\n".join(rank_descriptor_texts)
+                    effective_instructions = (
+                        f"{base_instructions}\n\n"
+                        f"=== RANK DESCRIPTOR PROMPTS ===\n"
+                        f"Use the following per-rank criteria when assigning discretion_rank:\n\n"
+                        f"{combined_rank_text}"
+                    )
+                else:
+                    effective_instructions = base_instructions
+
                 prompt_parts = [
                     f"=== STAGE ===\n{node['name']}",
-                    f"=== INSTRUCTIONS ===\n{config.get('instructions', '')}",
+                    f"=== INSTRUCTIONS ===\n{effective_instructions}",
                     f"=== DECLARED PRIOR OUTPUTS ===\n{selected_inputs or 'None'}",
                 ]
                 if document_context != "none":
                     prompt_parts.append(f"=== SOURCE TEXT ===\n{source_text}")
                 
-                llm = get_llm_for_model(model_name)
+                # model_override takes priority over all node/workflow-level model settings
+                effective_model = model_override or config.get("model") or model_name
+                llm = get_llm_for_model(effective_model)
                 llm_log_context = {"service": "workflow_test", "workflow_node_id": node_id}
                 if log_context:
                     llm_log_context.update(log_context)
@@ -147,6 +194,11 @@ class WorkflowExecutor:
             elif node_kind == "set_value":
                 for assignment in config.get("assignments") or []:
                     outputs[assignment["field"]] = assignment.get("value")
+            elif node_kind == "rank_descriptor":
+                # Store the instructions in context so they are accessible for tracing.
+                # The actual injection into downstream llm nodes happens when those nodes run.
+                rd_instructions = str(config.get("instructions", "") or "").strip()
+                outputs = {"instructions": rd_instructions, "rank": config.get("rank")}
             elif node_kind == "validation":
                 rule_results = []
                 for rule in config.get("rules") or []:

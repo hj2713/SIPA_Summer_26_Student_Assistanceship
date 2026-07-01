@@ -111,7 +111,11 @@ const ALL_PRICING_MODELS = [
   "kimi-k2.6",
   "kimi-k2.5",
   "kimi",
-  "moonshot"
+  "moonshot",
+  "mistral-large",
+  "mistral-codestral",
+  "mistral-nemo",
+  "minimax-01"
 ];
 
 export function ModelEvaluationPage() {

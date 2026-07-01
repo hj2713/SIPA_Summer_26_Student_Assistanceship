@@ -103,6 +103,12 @@ PRICING_MAP = {
     "qwen-turbo": (0.14, 0.28),
     "qwq-32b": (0.15, 0.60),
     "qwen2-vl": (0.40, 1.20),
+    # 8. Mistral (via OpenRouter)
+    "mistral-large": (2.00, 6.00),
+    "mistral-codestral": (0.30, 0.90),
+    "mistral-nemo": (0.07, 0.07),
+    # 9. Minimax (via OpenRouter)
+    "minimax-01": (0.20, 0.20),
 }
 
 
@@ -223,6 +229,14 @@ _OPENROUTER_MODEL_MAP: dict[str, str] = {
     "qwen2.5-72b": "qwen/qwen-2.5-72b-instruct",
     "qwq-32b": "qwen/qwq-32b",
     "qwen-turbo": "qwen/qwen-turbo",
+    # Mistral
+    "mistral-large": "mistralai/mistral-large",
+    "mistral-codestral": "mistralai/codestral-2501",
+    "mistral-nemo": "mistralai/mistral-nemo",
+    "mistral": "mistralai/mistral-large",
+    # Minimax
+    "minimax-01": "minimax/minimax-01",
+    "minimax": "minimax/minimax-01",
 }
 
 

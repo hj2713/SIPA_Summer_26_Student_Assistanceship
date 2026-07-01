@@ -55,15 +55,39 @@ interface BenchmarkRow {
   [key: string]: any;
 }
 
-const AVAILABLE_MODELS = [
-  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite", provider: "google" },
-  { id: "gemini-3.1-flash", name: "Gemini 3.1 Flash", provider: "google" },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "google" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "google" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
-  { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
-  { id: "o1-mini", name: "o1 Mini", provider: "openai" },
-  { id: "deepseek-chat", name: "DeepSeek Chat", provider: "deepseek" }
+const ALL_PRICING_MODELS = [
+  "gemini-3.5-flash",
+  "gemini-3.1-pro",
+  "gemini-3.1-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gpt-4o-mini",
+  "gpt-4o",
+  "gpt-5.5-pro",
+  "gpt-5.5",
+  "gpt-5.4",
+  "gpt-5.4-mini",
+  "gpt-5.4-nano",
+  "o3-mini",
+  "o1-preview",
+  "o1-mini",
+  "o1",
+  "claude-3-5-sonnet",
+  "claude-opus-4.8",
+  "claude-sonnet-5",
+  "claude-sonnet-4.6",
+  "claude-haiku-4.5",
+  "deepseek-v4-pro",
+  "deepseek-v4-flash",
+  "deepseek-r1",
+  "deepseek-chat",
+  "kimi-k2.7-code",
+  "kimi-k2.6",
+  "kimi-k2.5",
+  "kimi",
+  "moonshot"
 ];
 
 export function ModelEvaluationPage() {
@@ -90,6 +114,8 @@ export function ModelEvaluationPage() {
   const [selectedModels, setSelectedModels] = useState<string[]>(["gemini-1.5-flash", "gpt-4o-mini"]);
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
+  const [searchModelQuery, setSearchModelQuery] = useState("");
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
 
   // Professor Benchmark State
   const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: BenchmarkRow[] } | null>(null);
@@ -893,30 +919,113 @@ export function ModelEvaluationPage() {
                 />
               </div>
 
-              {/* Models selection checkboxes */}
-              <div className="space-y-2">
+              {/* Models selection tags & search dropdown */}
+              <div className="space-y-2 relative">
                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
                   Select Models to Compare
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-muted/10 p-3 rounded-lg border border-border/30">
-                  {AVAILABLE_MODELS.map(model => {
-                    const isSelected = selectedModels.includes(model.id);
-                    return (
-                      <label 
-                        key={model.id} 
-                        className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer select-none transition-colors text-xs ${isSelected ? 'border-primary bg-primary/5 text-primary font-semibold' : 'border-border bg-card'}`}
+                
+                {/* Selected models badges */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedModels.map(model => (
+                    <span 
+                      key={model} 
+                      className="inline-flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 rounded-md px-2 py-0.5 text-xs font-semibold"
+                    >
+                      {model}
+                      <button 
+                        type="button" 
+                        onClick={() => handleModelToggle(model)}
+                        className="text-primary hover:text-destructive transition-colors ml-0.5 font-bold"
                       >
-                        <input 
-                          type="checkbox" 
-                          checked={isSelected}
-                          onChange={() => handleModelToggle(model.id)}
-                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                        />
-                        <span className="truncate">{model.name}</span>
-                      </label>
-                    );
-                  })}
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                  {selectedModels.length === 0 && (
+                    <span className="text-xs text-muted-foreground italic">No models selected. Search and add below.</span>
+                  )}
                 </div>
+
+                {/* Model Search bar */}
+                <div className="flex gap-2">
+                  <Input 
+                    type="text"
+                    placeholder="Search or type a custom model name (e.g. gemini-3.5-flash)..."
+                    value={searchModelQuery}
+                    onChange={(e) => {
+                      setSearchModelQuery(e.target.value);
+                      setShowModelDropdown(true);
+                    }}
+                    onFocus={() => setShowModelDropdown(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && searchModelQuery.trim()) {
+                        e.preventDefault();
+                        const modelToAdd = searchModelQuery.trim();
+                        if (!selectedModels.includes(modelToAdd)) {
+                          setSelectedModels(prev => [...prev, modelToAdd]);
+                        }
+                        setSearchModelQuery("");
+                        setShowModelDropdown(false);
+                      }
+                    }}
+                  />
+                  {searchModelQuery.trim() && (
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => {
+                        const modelToAdd = searchModelQuery.trim();
+                        if (!selectedModels.includes(modelToAdd)) {
+                          setSelectedModels(prev => [...prev, modelToAdd]);
+                        }
+                        setSearchModelQuery("");
+                        setShowModelDropdown(false);
+                      }}
+                    >
+                      Add Custom
+                    </Button>
+                  )}
+                </div>
+
+                {/* Autocomplete Dropdown list */}
+                {showModelDropdown && (
+                  <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-card border rounded-lg shadow-lg z-50">
+                    <div className="flex justify-between items-center px-3 py-1.5 border-b bg-muted/20 text-[10px] uppercase font-bold text-muted-foreground">
+                      <span>Suggested Models</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowModelDropdown(false)}
+                        className="text-muted-foreground hover:text-foreground text-xs"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    {ALL_PRICING_MODELS
+                      .filter(m => m.toLowerCase().includes(searchModelQuery.toLowerCase()))
+                      .map(model => {
+                        const isSelected = selectedModels.includes(model);
+                        return (
+                          <div 
+                            key={model}
+                            onClick={() => {
+                              handleModelToggle(model);
+                              setShowModelDropdown(false);
+                            }}
+                            className={`px-3 py-2 text-xs cursor-pointer hover:bg-primary/5 flex items-center justify-between ${isSelected ? 'bg-primary/5 text-primary font-semibold' : ''}`}
+                          >
+                            <span>{model}</span>
+                            {isSelected && <span className="text-[10px] text-primary">✓ Selected</span>}
+                          </div>
+                        );
+                      })}
+                    {ALL_PRICING_MODELS.filter(m => m.toLowerCase().includes(searchModelQuery.toLowerCase())).length === 0 && (
+                      <div className="px-3 py-4 text-xs text-muted-foreground italic text-center">
+                        No matches found. Press Enter or click "Add Custom" to use "{searchModelQuery}".
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">

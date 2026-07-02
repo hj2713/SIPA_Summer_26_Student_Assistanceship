@@ -16,6 +16,9 @@ import {
   Loader2, Layers, GitBranch, X
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { WorkflowTraceGraph } from "@/features/workflows/WorkflowTraceGraph";
+import { workflowApi } from "@/lib/workflowApi";
+import type { WorkflowDefinition } from "@/types/workflow";
 
 interface Campaign {
   id: string;
@@ -140,6 +143,8 @@ export function ModelEvaluationPage() {
   const [retryingDocumentKey, setRetryingDocumentKey] = useState<string | null>(null);
   const [raisingLimit, setRaisingLimit] = useState(false);
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
+  const [traceViewMode, setTraceViewMode] = useState<"list" | "graph">("list");
+  const [linkedWorkflowDefinition, setLinkedWorkflowDefinition] = useState<WorkflowDefinition | null>(null);
   const [showLinkDocumentsDialog, setShowLinkDocumentsDialog] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
@@ -312,6 +317,17 @@ export function ModelEvaluationPage() {
       if (!resDash.ok) throw new Error("Failed to load dashboard details");
       const campaignData: Campaign = await resDash.json();
       setCampaign(campaignData);
+      if (campaignData.workflow_id && activeWorkspace?.id) {
+        try {
+          const workflow = await workflowApi.get(campaignData.workflow_id, session.access_token, activeWorkspace.id);
+          setLinkedWorkflowDefinition(workflow.definition);
+        } catch (workflowErr) {
+          console.error(workflowErr);
+          setLinkedWorkflowDefinition(null);
+        }
+      } else {
+        setLinkedWorkflowDefinition(null);
+      }
 
       // 2. Fetch documents
       const resDocs = await fetch(`${API_BASE_URL}/api/dashboards/${campaignId}/documents`, {
@@ -347,6 +363,7 @@ export function ModelEvaluationPage() {
       void fetchCampaigns();
       void fetchWorkflows();
       setCampaign(null);
+      setLinkedWorkflowDefinition(null);
       setDocuments([]);
       setUsageStats([]);
       setParsedBenchmark(null);
@@ -1434,22 +1451,25 @@ export function ModelEvaluationPage() {
                                       minWidth: `${columnWidths[`${col.name}-${model}`] || 180}px`, 
                                       maxWidth: `${columnWidths[`${col.name}-${model}`] || 180}px` 
                                     }}
-                                    onClick={() => setSelectedCellView({
-                                      documentId: doc.document_id,
-                                      filename: basename(doc.filename),
-                                      modelName: model,
-                                      columnName: col.name,
-                                      value: value !== undefined && value !== null && value !== "" ? String(value) : "—",
-                                      reasoning,
-                                      history,
-                                      status: runStatus,
-                                      errorMessage: run.error_message || "",
-                                      trace: run.trace || [],
-                                      context: run.context || {},
-                                      cost: run.cost,
-                                      inputTokens: run.input_tokens,
-                                      outputTokens: run.output_tokens,
-                                    })}
+                                    onClick={() => {
+                                      setTraceViewMode("list");
+                                      setSelectedCellView({
+                                        documentId: doc.document_id,
+                                        filename: basename(doc.filename),
+                                        modelName: model,
+                                        columnName: col.name,
+                                        value: value !== undefined && value !== null && value !== "" ? String(value) : "—",
+                                        reasoning,
+                                        history,
+                                        status: runStatus,
+                                        errorMessage: run.error_message || "",
+                                        trace: run.trace || [],
+                                        context: run.context || {},
+                                        cost: run.cost,
+                                        inputTokens: run.input_tokens,
+                                        outputTokens: run.output_tokens,
+                                      });
+                                    }}
                                     className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${
                                       isMismatch 
                                         ? "bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900" 
@@ -2375,7 +2395,7 @@ export function ModelEvaluationPage() {
 
         {/* Inspect Coded Cell Modal */}
         <Dialog open={selectedCellView !== null} onOpenChange={(open) => !open && setSelectedCellView(null)}>
-          <DialogContent className="w-[94vw] sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogContent className="w-[96vw] sm:max-w-3xl lg:max-w-6xl max-h-[92vh] overflow-y-auto p-6">
             <DialogHeader className="border-b pb-3 mb-4">
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <GitBranch className="text-primary" size={18} />
@@ -2467,26 +2487,60 @@ export function ModelEvaluationPage() {
                 )}
 
                 {selectedCellView.trace && selectedCellView.trace.length > 0 && (
-                  <div className="space-y-2 pt-3 border-t">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Workflow Trace</span>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {selectedCellView.trace.map((item: any, idx: number) => (
-                        <div key={idx} className="rounded-lg border bg-muted/20 p-3 text-[11px]">
-                          <div className="flex items-center justify-between gap-3 mb-2">
-                            <span className="font-bold">{item.name || item.node_id}</span>
-                            <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
-                              {item.status || "completed"}
-                            </span>
-                          </div>
-                          {item.message ? (
-                            <div className="text-muted-foreground mb-2 whitespace-pre-wrap">{item.message}</div>
-                          ) : null}
-                          <pre className="rounded-md bg-background/80 p-2 overflow-x-auto whitespace-pre-wrap break-words">
-                            {JSON.stringify(item.outputs || {}, null, 2)}
-                          </pre>
-                        </div>
-                      ))}
+                  <div className="space-y-3 pt-3 border-t">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Workflow Trace</span>
+                      <div className="inline-flex rounded-lg border bg-muted/20 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setTraceViewMode("list")}
+                          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${traceViewMode === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          Step View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTraceViewMode("graph")}
+                          disabled={!linkedWorkflowDefinition}
+                          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${traceViewMode === "graph" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"} disabled:cursor-not-allowed disabled:opacity-50`}
+                        >
+                          Graph View
+                        </button>
+                      </div>
                     </div>
+
+                    {traceViewMode === "graph" ? (
+                      linkedWorkflowDefinition ? (
+                        <WorkflowTraceGraph
+                          definition={linkedWorkflowDefinition}
+                          trace={selectedCellView.trace}
+                          context={selectedCellView.context || {}}
+                        />
+                      ) : (
+                        <div className="rounded-lg border border-dashed p-4 text-[11px] text-muted-foreground">
+                          Workflow definition is still loading for this campaign, so the graph preview is not ready yet.
+                        </div>
+                      )
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {selectedCellView.trace.map((item: any, idx: number) => (
+                          <div key={idx} className="rounded-lg border bg-muted/20 p-3 text-[11px]">
+                            <div className="flex items-center justify-between gap-3 mb-2">
+                              <span className="font-bold">{item.name || item.node_id}</span>
+                              <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
+                                {item.status || "completed"}
+                              </span>
+                            </div>
+                            {item.message ? (
+                              <div className="text-muted-foreground mb-2 whitespace-pre-wrap">{item.message}</div>
+                            ) : null}
+                            <pre className="rounded-md bg-background/80 p-2 overflow-x-auto whitespace-pre-wrap break-words">
+                              {JSON.stringify(item.outputs || {}, null, 2)}
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

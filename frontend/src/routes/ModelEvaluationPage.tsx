@@ -202,6 +202,7 @@ export function ModelEvaluationPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [createWorkflowId, setCreateWorkflowId] = useState("");
   const [selectedModels, setSelectedModels] = useState<string[]>(["gemini-1.5-flash", "gpt-4o-mini"]);
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
@@ -395,11 +396,18 @@ export function ModelEvaluationPage() {
     return () => clearInterval(interval);
   }, [isPolling, id, session]);
 
-  // Handle campaign creation (prompt-based only; workflow is linked separately after creation)
+  // Handle campaign creation. When a workflow is selected, dashboard columns come
+  // directly from workflow outputs instead of prompt schema extraction.
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !prompt.trim()) {
-      toast.error("Name and System Prompt are required.");
+    const hasWorkflow = Boolean(createWorkflowId);
+    const trimmedPrompt = prompt.trim();
+    if (!name.trim()) {
+      toast.error("Campaign name is required.");
+      return;
+    }
+    if (!hasWorkflow && !trimmedPrompt) {
+      toast.error("Add a workflow or enter a system prompt.");
       return;
     }
     if (selectedModels.length === 0) {
@@ -408,7 +416,12 @@ export function ModelEvaluationPage() {
     }
 
     setCreating(true);
-    toast.info("Analyzing rubric codebook and building variable schema...", { duration: 4000 });
+    toast.info(
+      hasWorkflow
+        ? "Creating workflow-first evaluation campaign and deriving dashboard columns from workflow outputs..."
+        : "Analyzing rubric codebook and building variable schema...",
+      { duration: 4000 },
+    );
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(activeWorkspace?.id ?? "")}`, {
@@ -416,10 +429,11 @@ export function ModelEvaluationPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           name: name.trim(),
-          prompt: prompt.trim(),
+          prompt: trimmedPrompt,
           model: selectedModels.join(","),
           dashboard_type: "model_comparison",
           token_limit: 2500000,
+          workflow_id: createWorkflowId || undefined,
         }),
       });
       if (!res.ok) {
@@ -427,10 +441,15 @@ export function ModelEvaluationPage() {
         throw new Error(errData.detail || "Failed to create comparison campaign");
       }
       const newCampaign = await res.json();
-      toast.success("Model evaluation campaign created. Link a workflow, then add files from this evaluation page.");
+      toast.success(
+        hasWorkflow
+          ? "Workflow-first evaluation campaign created. Add files on the evaluation page to run them through the linked workflow."
+          : "Model evaluation campaign created. You can still link a workflow later if you want.",
+      );
       setShowCreateModal(false);
       setName("");
       setPrompt("");
+      setCreateWorkflowId("");
       setSelectedModels(["gemini-1.5-flash", "gpt-4o-mini"]);
       navigate(`/evaluation/${newCampaign.id}`);
     } catch (err: any) {
@@ -1628,7 +1647,19 @@ export function ModelEvaluationPage() {
         )}
 
         {/* Create Campaign Modal */}
-        <Dialog open={showCreateModal} onOpenChange={(open) => !creating && setShowCreateModal(open)}>
+        <Dialog
+          open={showCreateModal}
+          onOpenChange={(open) => {
+            if (creating) return;
+            setShowCreateModal(open);
+            if (!open) {
+              setName("");
+              setPrompt("");
+              setCreateWorkflowId("");
+              setSearchModelQuery("");
+            }
+          }}
+        >
           <DialogContent className="w-[96vw] sm:max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-y-auto p-5">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -1760,22 +1791,65 @@ export function ModelEvaluationPage() {
                 )}
               </div>
 
-              {/* Evaluation Source — always prompt-based at creation */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  System Prompt / Codebook
+                  Attach Workflow
+                </label>
+                {workflows.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground">
+                    No workflows found in this workspace yet. If you continue without one, this campaign will fall back to prompt-based schema extraction.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto rounded-lg border p-2">
+                    {workflows.map((wf: any) => {
+                      const isSelected = createWorkflowId === wf.id;
+                      return (
+                        <button
+                          key={wf.id}
+                          type="button"
+                          onClick={() => setCreateWorkflowId(isSelected ? "" : wf.id)}
+                          className={`w-full rounded-lg border p-3 text-left transition-all ${isSelected ? "border-violet-400 bg-violet-50 shadow-sm" : "border-border hover:border-violet-200 hover:bg-muted/20"}`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-semibold">{wf.name}</span>
+                            {isSelected && (
+                              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">Attached</span>
+                            )}
+                          </div>
+                          {wf.description && (
+                            <p className="mt-1 text-[11px] text-muted-foreground">{wf.description}</p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  If a workflow is attached here, the dashboard columns will be created from the workflow outputs immediately. The campaign will no longer depend on prompt analysis to decide its schema.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {createWorkflowId ? "Campaign Notes (Optional)" : "System Prompt / Codebook"}
                 </label>
                 <Textarea
-                  required
+                  required={!createWorkflowId}
                   rows={8}
-                  placeholder="Paste research rules or scoring rubrics here. The AI will extract discretion/delegation scores across all selected models based on these instructions."
+                  placeholder={
+                    createWorkflowId
+                      ? "Optional notes for humans. Schema will come from the attached workflow, not from this text."
+                      : "Paste research rules or scoring rubrics here. The AI will extract discretion/delegation scores across all selected models based on these instructions."
+                  }
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   disabled={creating}
                   className="font-mono text-sm leading-relaxed max-h-72 overflow-y-auto"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  After creating the campaign, use the <span className="font-semibold text-violet-600">⚡ Link Workflow</span> button, then add files directly on the evaluation page using <span className="font-semibold">Link Workspace Files</span> or <span className="font-semibold">Upload Local Files</span>.
+                  {createWorkflowId
+                    ? "This text is optional metadata only for a workflow-first campaign. Files will run through the attached workflow once per selected model."
+                    : "Without a workflow, this prompt is analyzed to create the campaign columns and coding rubric."}
                 </p>
               </div>
 

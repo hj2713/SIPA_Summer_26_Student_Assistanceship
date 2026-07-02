@@ -1,7 +1,8 @@
 # Memory — SIPA_SA
 
-> Generated: 2026-07-01 00:34:02  
-> Total memories: **0**  
+> Generated: 2026-07-02 11:11:40  
+> Total memories: **1**  
+> Breakdown: decision: 1
 
 ---
 
@@ -25,7 +26,11 @@
 
 *Architectural choices, approach selections, and their rationale.*
 
-*No memories of this type.*
+### Implemented global PostgreSQL connection pooling i...
+
+Implemented global PostgreSQL connection pooling in app/core/database.py to resolve latency/connection overhead, and created scheduled keep-alive scripts under scripts/cron/ to prevent backend container and Supabase database spin-downs.
+
+*Confidence: 1.0 | Status: active | Created: 2026-07-02T15:11:37*
 
 ---
 

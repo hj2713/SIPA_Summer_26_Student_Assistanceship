@@ -179,7 +179,7 @@ class CampaignService:
             with self.db_session_factory() as session:
                 workflow = session.workflows.get_by_id(workflow_id)
                 if workflow:
-                    workflow_definition_json = workflow["definition"]
+                    workflow_definition_json = workflow["draft_definition"]
                     workflow_revision = workflow["revision"]
                     try:
                         def_dict = json.loads(workflow_definition_json) if isinstance(workflow_definition_json, str) else (workflow_definition_json or {})

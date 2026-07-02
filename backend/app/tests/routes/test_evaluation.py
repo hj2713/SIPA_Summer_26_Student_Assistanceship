@@ -38,6 +38,37 @@ def test_create_evaluation_campaign_happy_path(client, auth_headers):
         assert data["model"] == "gemini-3.1-flash-lite,gpt-4o-mini"
         assert data["token_limit"] == 3000000
 
+def test_create_evaluation_campaign_with_workflow_derives_schema_from_workflow(client, auth_headers):
+    workflow_res = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Law Delegation + Discretion Rank",
+            "description": "Project-specific workflow",
+            "template": "law_delegation_discretion_rank",
+        },
+    )
+    assert workflow_res.status_code == 201
+    workflow_id = workflow_res.json()["id"]
+
+    from unittest.mock import AsyncMock, patch
+    with patch("app.routes.dashboards.generate_schema_and_description", new_callable=AsyncMock) as mock_gen:
+        response = client.post("/api/dashboards", json={
+            "name": "Workflow First Evaluation",
+            "prompt": "",
+            "workflow_id": workflow_id,
+            "model": "gemini-3.1-flash-lite,gpt-4o-mini",
+            "dashboard_type": "model_comparison",
+        }, headers=auth_headers)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["workflow_id"] == workflow_id
+    assert [col["name"] for col in data["schema"]] == ["delegate_law", "discretion_rank"]
+    assert data["schema"][0]["workflow_source"] == "law_delegation.delegate_law"
+    assert data["schema"][1]["workflow_source"] == "discretion_rank"
+    mock_gen.assert_not_called()
+
 def test_raise_token_limit_happy_path(client, auth_headers):
     # First create a dashboard
     from unittest.mock import AsyncMock, patch

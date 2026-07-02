@@ -216,6 +216,57 @@ def test_link_workflow_to_campaign_merges_matching_schema_workflow_sources(clien
     assert schema[1]["workflow_source"] == "discretion_rank"
 
 
+def test_linked_workflow_cannot_be_changed_or_unlinked(client, auth_headers):
+    workflow_one_res = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Workflow One",
+            "description": "First workflow",
+            "template": "law_delegation_discretion_rank",
+        },
+    )
+    workflow_two_res = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Workflow Two",
+            "description": "Second workflow",
+            "template": "law_delegation_discretion_rank",
+        },
+    )
+    assert workflow_one_res.status_code == 201
+    assert workflow_two_res.status_code == 201
+    workflow_one_id = workflow_one_res.json()["id"]
+    workflow_two_id = workflow_two_res.json()["id"]
+
+    campaign_res = client.post("/api/dashboards", json={
+        "name": "Locked workflow campaign",
+        "prompt": "",
+        "workflow_id": workflow_one_id,
+        "model": "gemini-3.1-flash-lite,gpt-4o-mini",
+        "dashboard_type": "model_comparison",
+    }, headers=auth_headers)
+    assert campaign_res.status_code == 201
+    campaign_id = campaign_res.json()["id"]
+
+    relink_res = client.patch(
+        f"/api/dashboards/{campaign_id}/link-workflow",
+        headers=auth_headers,
+        json={"workflow_id": workflow_two_id},
+    )
+    assert relink_res.status_code == 409
+    assert "locked workflow" in relink_res.json()["detail"]
+
+    unlink_res = client.patch(
+        f"/api/dashboards/{campaign_id}/link-workflow",
+        headers=auth_headers,
+        json={"workflow_id": None},
+    )
+    assert unlink_res.status_code == 409
+    assert "locked workflow" in unlink_res.json()["detail"]
+
+
 def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, auth_headers):
     dashboard_id = "eval-dashboard-linked"
     document_id = "10000000-0000-0000-0000-000000009999"

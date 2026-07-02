@@ -365,6 +365,22 @@ class CampaignService:
             row = session.dashboards.get_by_id(campaign_id)
             if not row:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign dashboard not found.")
+            current_workflow_id = row.get("workflow_id")
+            if current_workflow_id:
+                if workflow_id == current_workflow_id:
+                    schema_list = []
+                    try:
+                        schema_list = json.loads(row["schema"]) if isinstance(row["schema"], str) else (row["schema"] or [])
+                    except Exception:
+                        pass
+                    return self._dashboard_row(row, schema_list)
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        "This campaign already has a locked workflow. "
+                        "Create a new campaign if you want to evaluate with a different workflow."
+                    ),
+                )
             updates: dict[str, Any] = {"workflow_id": workflow_id}
             if workflow_id:
                 workflow = session.workflows.get_by_id(workflow_id)

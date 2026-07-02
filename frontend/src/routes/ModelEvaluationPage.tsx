@@ -999,10 +999,16 @@ export function ModelEvaluationPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => { void fetchWorkflows(); setSelectedWorkflowId(campaign?.workflow_id || ""); setShowLinkWorkflowDialog(true); }}
-                  className={`gap-1.5 text-xs ${campaign?.workflow_id ? "text-violet-600 border-violet-300 bg-violet-50 hover:bg-violet-100" : "text-muted-foreground border-muted hover:bg-muted/30"}`}
+                  onClick={() => {
+                    if (campaign?.workflow_id) return;
+                    void fetchWorkflows();
+                    setSelectedWorkflowId(campaign?.workflow_id || "");
+                    setShowLinkWorkflowDialog(true);
+                  }}
+                  disabled={Boolean(campaign?.workflow_id)}
+                  className={`gap-1.5 text-xs ${campaign?.workflow_id ? "text-violet-600 border-violet-300 bg-violet-50 opacity-100 disabled:opacity-100" : "text-muted-foreground border-muted hover:bg-muted/30"}`}
                 >
-                  ⚡ {campaign?.workflow_id ? "Workflow Linked" : "Link Workflow"}
+                  ⚡ {campaign?.workflow_id ? "Workflow Locked" : "Link Workflow"}
                 </Button>
               </div>
             </div>
@@ -1037,7 +1043,7 @@ export function ModelEvaluationPage() {
                     </div>
                     <p className="text-muted-foreground leading-relaxed">
                       {campaign.workflow_id
-                        ? "Files added here run through the linked workflow once per selected model, and the results stay on this model evaluation dashboard."
+                        ? "Files added here run through the linked workflow once per selected model, and the results stay on this model evaluation dashboard. The workflow is now locked for this campaign so the column schema cannot drift later."
                         : "Link a workflow before adding files. This page now evaluates only the files you explicitly select or upload here, and it no longer auto-runs every workspace file."}
                     </p>
                   </div>

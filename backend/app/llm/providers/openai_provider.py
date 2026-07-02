@@ -6,6 +6,7 @@ of the app never depends on the SDK directly.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
@@ -84,64 +85,58 @@ class OpenAIProvider:
         messages: Sequence[LLMMessage],
         schema: type[BaseModel],
     ) -> tuple[BaseModel, LLMUsage]:
-        import re
+        base_messages = [_to_openai_message(m) for m in messages]
         response = await self._client.chat.completions.create(
             model=self._model,
-            messages=[_to_openai_message(m) for m in messages],
+            messages=base_messages,
+            response_format={"type": "json_object"},
         )
         content = response.choices[0].message.content
         if not content:
             raise ValueError(f"{self._name}: provider returned empty response")
 
-        # Strip markdown wrapping
-        cleaned = content.strip()
-        cleaned = re.sub(r'^```[a-zA-Z]*\s*', '', cleaned)
-        cleaned = re.sub(r'```$', '', cleaned)
-        cleaned = re.sub(r"^'''[a-zA-Z]*\s*", '', cleaned)
-        cleaned = re.sub(r"'''$", '', cleaned)
-        cleaned = cleaned.strip()
+        cleaned = _clean_structured_text(content)
+        usage = _usage_from_response(response)
 
         try:
-            parsed = schema.model_validate_json(cleaned)
-        except Exception as e:
-            # Fallback 1: try to find first { and last } for JSON
-            match = re.search(r'\{.*\}', cleaned, re.DOTALL)
-            if match:
-                try:
-                    parsed = schema.model_validate_json(match.group(0))
-                except Exception:
-                    # If JSON parsing within braces failed, let's try YAML
-                    try:
-                        import yaml
-                        parsed_yaml = yaml.safe_load(cleaned)
-                        if isinstance(parsed_yaml, list) and len(parsed_yaml) > 0 and isinstance(parsed_yaml[0], dict):
-                            parsed_yaml = parsed_yaml[0]
-                        if isinstance(parsed_yaml, dict):
-                            parsed = schema.model_validate(parsed_yaml)
-                        else:
-                            raise e
-                    except Exception:
-                        raise e
-            else:
-                # Fallback 2: try direct YAML parsing
-                try:
-                    import yaml
-                    parsed_yaml = yaml.safe_load(cleaned)
-                    if isinstance(parsed_yaml, list) and len(parsed_yaml) > 0 and isinstance(parsed_yaml[0], dict):
-                        parsed_yaml = parsed_yaml[0]
-                    if isinstance(parsed_yaml, dict):
-                        parsed = schema.model_validate(parsed_yaml)
-                    else:
-                        raise e
-                except Exception:
-                    raise e
+            parsed = _parse_structured_payload(cleaned, schema)
+            return parsed, usage
+        except Exception as first_error:
+            logger.warning(
+                "%s: structured parse failed for model=%s, attempting one repair pass: %s",
+                self._name,
+                self._model,
+                first_error,
+            )
 
-        usage_obj = getattr(response, "usage", None)
-        usage = LLMUsage(
-            input_tokens=getattr(usage_obj, "prompt_tokens", 0) or 0,
-            output_tokens=getattr(usage_obj, "completion_tokens", 0) or 0,
-        )
-        return parsed, usage
+            repair_messages = [
+                *base_messages,
+                {"role": "assistant", "content": cleaned},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Your previous response did not satisfy the required schema {schema.__name__}. "
+                        "Return corrected JSON only. Include every required field and keep all keys explicit. "
+                        f"Validation error: {first_error}"
+                    ),
+                },
+            ]
+            repair_response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=repair_messages,
+                response_format={"type": "json_object"},
+            )
+            repair_content = repair_response.choices[0].message.content
+            if not repair_content:
+                raise ValueError(f"{self._name}: provider returned empty response on structured repair pass")
+            repair_cleaned = _clean_structured_text(repair_content)
+            repair_usage = _usage_from_response(repair_response)
+            combined_usage = LLMUsage(
+                input_tokens=usage.input_tokens + repair_usage.input_tokens,
+                output_tokens=usage.output_tokens + repair_usage.output_tokens,
+            )
+            parsed = _parse_structured_payload(repair_cleaned, schema)
+            return parsed, combined_usage
 
 
 # ---------------------------------------------------------------------------
@@ -220,4 +215,44 @@ def _from_openai_chunk(chunk: Any) -> LLMChunk:
         tool_call_deltas=tuple(tool_call_deltas),
         usage=usage,
         finish_reason=finish_reason,
+    )
+
+
+def _clean_structured_text(content: str) -> str:
+    cleaned = content.strip()
+    cleaned = re.sub(r'^```[a-zA-Z]*\s*', '', cleaned)
+    cleaned = re.sub(r'```$', '', cleaned)
+    cleaned = re.sub(r"^'''[a-zA-Z]*\s*", '', cleaned)
+    cleaned = re.sub(r"'''$", '', cleaned)
+    return cleaned.strip()
+
+
+def _parse_structured_payload(cleaned: str, schema: type[BaseModel]) -> BaseModel:
+    try:
+        return schema.model_validate_json(cleaned)
+    except Exception as original_error:
+        match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+        if match:
+            try:
+                return schema.model_validate_json(match.group(0))
+            except Exception:
+                pass
+        try:
+            import yaml
+
+            parsed_yaml = yaml.safe_load(cleaned)
+            if isinstance(parsed_yaml, list) and len(parsed_yaml) > 0 and isinstance(parsed_yaml[0], dict):
+                parsed_yaml = parsed_yaml[0]
+            if isinstance(parsed_yaml, dict):
+                return schema.model_validate(parsed_yaml)
+        except Exception:
+            pass
+        raise original_error
+
+
+def _usage_from_response(response: Any) -> LLMUsage:
+    usage_obj = getattr(response, "usage", None)
+    return LLMUsage(
+        input_tokens=getattr(usage_obj, "prompt_tokens", 0) or 0,
+        output_tokens=getattr(usage_obj, "completion_tokens", 0) or 0,
     )

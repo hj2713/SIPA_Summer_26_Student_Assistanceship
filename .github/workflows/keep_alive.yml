@@ -1,0 +1,53 @@
+name: Keep-Alive Cron Jobs
+
+on:
+  schedule:
+    # Run every 10 minutes to keep backend awake
+    - cron: '*/10 * * * *'
+    # Run once a day at midnight UTC to keep database active
+    - cron: '0 0 * * *'
+  # Allow manual triggering from GitHub actions page
+  workflow_dispatch: {}
+
+jobs:
+  keep_alive:
+    name: Run Keep-Alive Pings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install psycopg[binary] python-dotenv
+
+      - name: Run Keep-Alive Pings
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # 1. Ping Backend API (every 10 minutes)
+          if [ -n "$BACKEND_URL" ]; then
+            echo "=== Pinging Backend API ==="
+            python scripts/cron/ping_backend.py
+          else
+            echo "=== Skipping backend ping: BACKEND_URL secret is not set ==="
+          fi
+
+          # 2. Ping Supabase Database (daily or manual)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event.schedule }}" = "0 0 * * *" ]; then
+            if [ -n "$DATABASE_URL" ]; then
+              echo "=== Pinging Supabase Database ==="
+              python scripts/cron/ping_supabase.py
+            else
+              echo "=== Skipping database ping: DATABASE_URL secret is not set ==="
+            fi
+          else
+            echo "=== Skipping database ping: Not scheduled for daily run ==="
+          fi

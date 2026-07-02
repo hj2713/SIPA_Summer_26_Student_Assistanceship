@@ -3,7 +3,11 @@ import pytest
 from app.workflows.discretion_builder import compile_workflow_definition, default_builder_metadata
 from app.workflows.executor import WorkflowExecutor
 from app.workflows.expressions import evaluate_expression
-from app.workflows.templates import delegation_discretion_definition, law_delegation_discretion_rank_definition
+from app.workflows.templates import (
+    delegation_discretion_definition,
+    law_delegation_discretion_rank_definition,
+    professor_discretion_prompt_suite_definition,
+)
 from app.workflows.validator import validate_workflow_definition
 
 
@@ -75,6 +79,27 @@ def test_builder_compiler_supports_multiclass_binary_and_calibration():
     assert "high_rank_classifier" in binary_node_ids
     binary_gate = next(node for node in binary["nodes"] if node["id"] == "binary_gate")
     assert binary_gate["config"]["expression"]["right"]["literal"] == "bounded"
+
+
+def test_professor_prompt_suite_workflow_is_valid_and_exposes_prompt_family_outputs():
+    definition = professor_discretion_prompt_suite_definition()
+    issues = validate_workflow_definition(definition)
+
+    assert [issue for issue in issues if issue.severity == "error"] == []
+    by_id = {node["id"]: node for node in definition["nodes"]}
+    assert by_id["document_input"]["config"]["source_policy"] == "full_text"
+    assert by_id["shared_inventory"]["kind"] == "llm"
+    assert by_id["cascade_stage2_screen"]["kind"] == "llm"
+    assert by_id["cascade_stage3_screen"]["kind"] == "llm"
+    assert by_id["cascade_stage4_screen"]["kind"] == "llm"
+    assert by_id["m9_multiclass"]["kind"] == "llm"
+    assert by_id["b3_band_screen"]["kind"] == "llm"
+    assert by_id["b3_finalize"]["kind"] == "llm"
+    output_fields = by_id["dashboard_output"]["config"]["fields"]
+    output_keys = [field["key"] for field in output_fields]
+    assert "cascade_discretion_rank" in output_keys
+    assert "m9_discretion_rank" in output_keys
+    assert "b3_discretion_rank" in output_keys
 
 
 def test_delegation_false_condition_uses_structured_prior_output():
@@ -198,3 +223,32 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
     assert calls == ["law_delegation", "discretion_inventory", "discretion_decision"]
     assert result["outputs"] == {"delegate_law": True, "discretion_rank": 3}
     assert "delegation_rationale" not in result["outputs"]
+
+
+@pytest.mark.asyncio
+async def test_professor_prompt_suite_sets_all_rank_paths_to_zero_when_no_delegation(monkeypatch):
+    calls = []
+
+    class FakeLlm:
+        async def parse_structured(self, messages, schema, log_context=None):
+            calls.append(log_context["workflow_node_id"])
+            if log_context["workflow_node_id"] == "delegation_gate":
+                return schema(
+                    delegate_law=False,
+                    delegation_rationale="No new delegated authority appears in the law.",
+                    agency_or_actor=[],
+                    delegated_authority=[],
+                )
+            raise AssertionError("No downstream LLM should run when delegation is false.")
+
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
+    result = await WorkflowExecutor().execute(
+        professor_discretion_prompt_suite_definition(),
+        "The law only adjusts a reporting deadline and does not grant new authority.",
+    )
+
+    assert calls == ["delegation_gate"]
+    assert result["outputs"]["delegate_law"] is False
+    assert result["outputs"]["cascade_discretion_rank"] == 0
+    assert result["outputs"]["m9_discretion_rank"] == 0
+    assert result["outputs"]["b3_discretion_rank"] == 0

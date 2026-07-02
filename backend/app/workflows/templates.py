@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from app.workflows.professor_discretion_suite import professor_discretion_prompt_suite_definition
 from app.workflows.discretion_builder import compile_workflow_definition, default_builder_metadata
 
 
@@ -234,4 +235,5 @@ WORKFLOW_TEMPLATES = {
     "blank": blank_workflow_definition,
     "delegation_discretion": delegation_discretion_definition,
     "law_delegation_discretion_rank": law_delegation_discretion_rank_definition,
+    "professor_discretion_prompt_suite": professor_discretion_prompt_suite_definition,
 }

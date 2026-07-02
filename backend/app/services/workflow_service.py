@@ -32,6 +32,7 @@ class WorkflowService:
     SEED_TEMPLATE_VERSIONS = {
         "blank": 1,
         "law_delegation_discretion_rank": 4,
+        "professor_discretion_prompt_suite": 1,
     }
 
     def _parse_definition(self, raw) -> WorkflowDefinition:
@@ -127,6 +128,14 @@ class WorkflowService:
                 "category": "Project",
                 "seed_version": self.SEED_TEMPLATE_VERSIONS["law_delegation_discretion_rank"],
                 "definition": self._normalize_definition(WORKFLOW_TEMPLATES["law_delegation_discretion_rank"]()).model_dump(),
+            },
+            {
+                "slug": "professor_discretion_prompt_suite",
+                "name": "Professor Discretion Prompt Suite",
+                "description": "Multi-step workflow that runs the professor's cascade, M9 multiclass, and B3 binary discretion prompts side by side.",
+                "category": "Project",
+                "seed_version": self.SEED_TEMPLATE_VERSIONS["professor_discretion_prompt_suite"],
+                "definition": self._normalize_definition(WORKFLOW_TEMPLATES["professor_discretion_prompt_suite"]()).model_dump(),
             },
         ]
         with self.db_session_factory() as session:

@@ -105,6 +105,39 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     assert validated.json()["valid"] is True
 
 
+def test_create_professor_prompt_suite_template_and_workflow(client, auth_headers):
+    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
+    assert templates.status_code == 200
+    suite_template = next(item for item in templates.json() if item["slug"] == "professor_discretion_prompt_suite")
+    assert suite_template["definition"]["metadata"]["workflow_family"] == "professor_discretion_prompt_suite"
+    node_ids = {node["id"] for node in suite_template["definition"]["nodes"]}
+    assert {"shared_inventory", "cascade_stage2_screen", "m9_multiclass", "b3_band_screen", "b3_finalize"} <= node_ids
+
+    created = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Professor Prompt Suite",
+            "description": "Workflow version of the professor's new prompt family",
+            "template_id": suite_template["id"],
+        },
+    )
+    assert created.status_code == 201
+    definition = created.json()["definition"]
+    output_fields = next(node for node in definition["nodes"] if node["id"] == "dashboard_output")["config"]["fields"]
+    output_keys = [field["key"] for field in output_fields]
+    assert "cascade_discretion_rank" in output_keys
+    assert "m9_discretion_rank" in output_keys
+    assert "b3_discretion_rank" in output_keys
+
+    validated = client.post(
+        f"/api/workflows/{created.json()['id']}/validate?workspace_id=QA",
+        headers=auth_headers,
+    )
+    assert validated.status_code == 200
+    assert validated.json()["valid"] is True
+
+
 def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
     templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers).json()
     blank = next(item for item in templates if item["slug"] == "blank")

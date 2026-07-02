@@ -80,6 +80,13 @@ async def lifespan(app: FastAPI):
         logger.error("Failed to clean up stale document statuses on startup: %s", e)
         
     yield
+    
+    # Close global connection pool on shutdown
+    try:
+        from app.core.database import close_postgres_pool
+        close_postgres_pool()
+    except Exception as e:
+        logger.error("Failed to close PostgreSQL pool on shutdown: %s", e)
 
 
 def create_app() -> FastAPI:

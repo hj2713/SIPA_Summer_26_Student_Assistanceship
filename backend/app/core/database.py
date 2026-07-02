@@ -17,13 +17,58 @@ def get_db_path() -> str:
         return "data/test_local_rag.db"
     return "data/local_rag.db"
 
+_pg_pool = None
+
+def get_postgres_pool():
+    """Lazily initialize the connection pool for PostgreSQL."""
+    global _pg_pool
+    if _pg_pool is None:
+        if not settings.DATABASE_URL:
+            raise ValueError("DATABASE_URL is not set but DB_PROVIDER is 'postgres'")
+        
+        from psycopg_pool import ConnectionPool
+        from psycopg.rows import dict_row
+        
+        logger.info("Initializing PostgreSQL Connection Pool in database.py...")
+        _pg_pool = ConnectionPool(
+            conninfo=settings.DATABASE_URL,
+            min_size=1,
+            max_size=20,
+            open=True,
+            # Recycle connections regularly and validate them before checkout so
+            # Render never keeps a half-dead Supavisor connection indefinitely.
+            max_lifetime=300.0,
+            max_idle=60.0,
+            check=ConnectionPool.check_connection,
+            kwargs={
+                "row_factory": dict_row,
+                # Repository writes are individual SQL statements. Autocommit
+                # prevents read requests from pinning a Supabase transaction-pool
+                # connection if request cleanup is delayed or interrupted.
+                "autocommit": True,
+                "application_name": "law-delegation-api",
+                # prepare_threshold=None disables auto-prepared statements entirely.
+                # psycopg3: 0 = prepare immediately (WRONG), None = never prepare (CORRECT)
+                # Required for Supabase pgBouncer Transaction pooler (port 6543).
+                "prepare_threshold": None,
+            }
+        )
+    return _pg_pool
+
+def close_postgres_pool():
+    """Shutdown the PostgreSQL connection pool."""
+    global _pg_pool
+    if _pg_pool is not None:
+        logger.info("Closing PostgreSQL Connection Pool in database.py...")
+        _pg_pool.close()
+        _pg_pool = None
+
 @contextmanager
 def get_db_conn():
     """Context manager for thread-safe database connections, supporting SQLite and Postgres."""
     if settings.DB_PROVIDER == "postgres":
-        import psycopg
-        from psycopg.rows import dict_row
-        conn = psycopg.connect(settings.DATABASE_URL, row_factory=dict_row, prepare_threshold=None)
+        pool = get_postgres_pool()
+        conn = pool.getconn(timeout=2.0)
         try:
             if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
                 from app.tests.base import SafeTestConnection
@@ -31,7 +76,7 @@ def get_db_conn():
             else:
                 yield conn
         finally:
-            conn.close()
+            pool.putconn(conn)
     else:
         db_path = get_db_path()
         os.makedirs(os.path.dirname(db_path), exist_ok=True)

@@ -6,56 +6,10 @@ from app.core.config import settings
 from app.repositories.base import BaseUnitOfWork
 from app.repositories.sqlite import SQLiteUnitOfWork
 from app.repositories.postgres import PostgresUnitOfWork
-from app.core.database import get_db_path
+from app.core.database import get_db_path, get_postgres_pool, close_postgres_pool
 
 logger = logging.getLogger(__name__)
 
-# Global PostgreSQL connection pool
-_pg_pool = None
-
-def get_postgres_pool():
-    """Lazily initialize the connection pool for PostgreSQL."""
-    global _pg_pool
-    if _pg_pool is None:
-        if not settings.DATABASE_URL:
-            raise ValueError("DATABASE_URL is not set but DB_PROVIDER is 'postgres'")
-        
-        from psycopg_pool import ConnectionPool
-        from psycopg.rows import dict_row
-        
-        logger.info("Initializing PostgreSQL Connection Pool with DATABASE_URL...")
-        _pg_pool = ConnectionPool(
-            conninfo=settings.DATABASE_URL,
-            min_size=1,
-            max_size=20,
-            open=True,
-            # Recycle connections regularly and validate them before checkout so
-            # Render never keeps a half-dead Supavisor connection indefinitely.
-            max_lifetime=300.0,
-            max_idle=60.0,
-            check=ConnectionPool.check_connection,
-            kwargs={
-                "row_factory": dict_row,
-                # Repository writes are individual SQL statements. Autocommit
-                # prevents read requests from pinning a Supabase transaction-pool
-                # connection if request cleanup is delayed or interrupted.
-                "autocommit": True,
-                "application_name": "law-delegation-api",
-                # prepare_threshold=None disables auto-prepared statements entirely.
-                # psycopg3: 0 = prepare immediately (WRONG), None = never prepare (CORRECT)
-                # Required for Supabase pgBouncer Transaction pooler (port 6543).
-                "prepare_threshold": None,
-            }
-        )
-    return _pg_pool
-
-def close_postgres_pool():
-    """Shutdown the PostgreSQL connection pool."""
-    global _pg_pool
-    if _pg_pool is not None:
-        logger.info("Closing PostgreSQL Connection Pool...")
-        _pg_pool.close()
-        _pg_pool = None
 
 def get_db_session() -> BaseUnitOfWork:
     """Returns the active Unit of Work according to DB_PROVIDER."""

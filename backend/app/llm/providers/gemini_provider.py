@@ -29,13 +29,31 @@ class GeminiProvider:
     def __init__(
         self,
         *,
-        api_key: str,
+        api_key: str | None,
         model: str,
         name: str = "gemini",
     ) -> None:
-        self._client = genai.Client(api_key=api_key)
         self._model = model
         self._name = name
+
+        import os
+        gcp_project = os.environ.get("GCP_PROJECT")
+        google_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
+        if google_creds and gcp_project:
+            logger.info(
+                "Initializing Gemini GenAI client using Vertex AI (project=%s, location=%s)",
+                gcp_project,
+                os.environ.get("GCP_LOCATION", "us-central1")
+            )
+            self._client = genai.Client(
+                vertexai=True,
+                project=gcp_project,
+                location=os.environ.get("GCP_LOCATION", "us-central1")
+            )
+        else:
+            logger.info("Initializing Gemini GenAI client using AI Studio")
+            self._client = genai.Client(api_key=api_key)
 
     @property
     def model(self) -> str:

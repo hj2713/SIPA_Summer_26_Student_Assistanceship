@@ -409,7 +409,9 @@ def _build_service_for_provider(
 
     if provider == "gemini":
         api_key = _pick_key("gemini", user_creds, settings.GEMINI_API_KEY)
-        if not api_key:
+        import os
+        is_vertex = bool(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and os.environ.get("GCP_PROJECT"))
+        if not api_key and not is_vertex:
             raise ValueError(
                 f"No Gemini API key found for model '{model_name}'. "
                 "Add one in Settings → API Keys → Google Gemini."

@@ -506,6 +506,9 @@ export function ModelEvaluationPage() {
 
   const getModelRunStatus = (doc: CampaignDocument, model: string): string => {
     const run = getModelRun(doc, model);
+    if ((doc.status === "failed") && (run.status === "pending" || run.status === "processing")) {
+      return "failed";
+    }
     if (typeof run.status === "string" && run.status.trim()) return run.status;
     if (doc.status === "processing" || doc.status === "pending") {
       const hasAnyCompleted = Object.values(doc.coded_values || {}).some(

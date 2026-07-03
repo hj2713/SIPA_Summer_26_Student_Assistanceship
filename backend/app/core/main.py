@@ -3,6 +3,7 @@
 Registers CORS, all routers, and logs startup config warnings.
 """
 import logging
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -34,6 +35,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _normalize_dashboard_coded_values_for_restart(
+    coded_values_raw,
+    error_message: str,
+) -> str:
+    """Mark stale per-model dashboard runs as failed after a restart."""
+    try:
+        coded_values = json.loads(coded_values_raw) if isinstance(coded_values_raw, str) else (coded_values_raw or {})
+    except Exception:
+        coded_values = {}
+
+    if not isinstance(coded_values, dict):
+        return "{}"
+
+    updated = False
+    for model_name, model_run in list(coded_values.items()):
+        if not isinstance(model_run, dict):
+            continue
+        if model_run.get("status") not in {"pending", "processing"}:
+            continue
+        model_run["status"] = "failed"
+        model_run["error_message"] = error_message
+        model_run["error_type"] = "API_FAILURE"
+        coded_values[model_name] = model_run
+        updated = True
+
+    if not updated:
+        return json.dumps(coded_values)
+    return json.dumps(coded_values)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.warn_missing()
@@ -61,18 +92,36 @@ async def lifespan(app: FastAPI):
                 )
 
             # Clean up stale dashboard document coding statuses
-            cursor.execute("SELECT dashboard_id, document_id FROM dashboard_documents WHERE status IN ('pending', 'processing');")
+            cursor.execute("SELECT dashboard_id, document_id, coded_values FROM dashboard_documents WHERE status IN ('pending', 'processing');")
             stale_dash_docs = cursor.fetchall()
             if stale_dash_docs:
                 logger.info("Found %d stale pending/processing dashboard document coding jobs. Marking as failed.", len(stale_dash_docs))
                 placeholder = "%s" if settings.DB_PROVIDER == "postgres" else "?"
+                restart_error = "Coding was interrupted due to server restart or reload."
+                for row in stale_dash_docs:
+                    normalized_coded_values = _normalize_dashboard_coded_values_for_restart(
+                        row.get("coded_values") if isinstance(row, dict) else row[2],
+                        restart_error,
+                    )
+                    conn.execute(
+                        f"""
+                        UPDATE dashboard_documents
+                        SET coded_values = {placeholder}
+                        WHERE dashboard_id = {placeholder} AND document_id = {placeholder};
+                        """,
+                        (
+                            normalized_coded_values,
+                            row.get("dashboard_id") if isinstance(row, dict) else row[0],
+                            row.get("document_id") if isinstance(row, dict) else row[1],
+                        ),
+                    )
                 conn.execute(
                     f"""
                     UPDATE dashboard_documents
                     SET status = 'failed', error_message = {placeholder}, error_type = 'API_FAILURE'
                     WHERE status IN ('pending', 'processing');
                     """,
-                    ("Coding was interrupted due to server restart or reload.",)
+                    (restart_error,)
                 )
             
             conn.commit()

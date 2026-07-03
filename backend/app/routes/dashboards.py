@@ -271,8 +271,8 @@ def retry_failed_documents(
 
     doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload, retry_model=model)
     if not doc_ids:
-        return {"message": "No failed documents to retry."}
-    return {"message": f"Successfully queued {len(doc_ids)} documents for retry."}
+        return {"message": "No failed documents to retry.", "queued_count": 0}
+    return {"message": f"Successfully queued {len(doc_ids)} documents for retry.", "queued_count": len(doc_ids)}
 
 
 @router.post("/{id}/raise-token-limit", status_code=status.HTTP_200_OK)

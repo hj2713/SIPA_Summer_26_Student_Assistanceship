@@ -656,7 +656,7 @@ class CampaignService:
                     
                     model_data = coded_val.get(retry_model) or {}
                     model_status = model_data.get("status") or "pending"
-                    if model_status in ["failed", "suspended_limit", "pending"]:
+                    if model_status in ["failed", "suspended_limit", "pending", "processing"]:
                         model_data["status"] = "pending"
                         model_data["error_message"] = None
                         coded_val[retry_model] = model_data

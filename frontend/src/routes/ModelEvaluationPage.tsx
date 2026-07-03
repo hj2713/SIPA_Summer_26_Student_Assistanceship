@@ -378,7 +378,7 @@ export function ModelEvaluationPage() {
     
     documents.forEach((doc) => {
       const run = doc.coded_values?.[model] || {};
-      const status = run.status || (doc.status === "processing" ? "processing" : doc.status === "pending" ? "pending" : "missing");
+      const status = getModelRunStatus(doc, model);
       
       const hasValue = run.values && run.values[colName] !== undefined && run.values[colName] !== null && run.values[colName] !== "";
       
@@ -392,6 +392,34 @@ export function ModelEvaluationPage() {
     });
     
     return { completed, running, failed, total: documents.length };
+  };
+
+  const markModelRetryQueued = (documentIds: string[], modelName?: string) => {
+    const targetIds = new Set(documentIds);
+    setDocuments((prev) =>
+      prev.map((doc) => {
+        if (!targetIds.has(doc.document_id)) return doc;
+        const nextCodedValues = { ...(doc.coded_values || {}) };
+        if (modelName) {
+          const currentRun = nextCodedValues[modelName];
+          if (currentRun && typeof currentRun === "object") {
+            nextCodedValues[modelName] = {
+              ...currentRun,
+              status: "pending",
+              error_message: undefined,
+              error_type: undefined,
+            };
+          }
+        }
+        return {
+          ...doc,
+          status: "pending",
+          error_message: undefined,
+          error_type: undefined,
+          coded_values: nextCodedValues,
+        };
+      })
+    );
   };
 
   const [globalDocs, setGlobalDocs] = useState<WorkspaceDocument[]>([]);
@@ -949,7 +977,20 @@ export function ModelEvaluationPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!res.ok) throw new Error(`Failed to retry model ${modelName}`);
-      toast.success(`Triggered retry for all failed document classifications on ${modelName}`);
+      const body = await res.json();
+      const queuedCount = Number(body?.queued_count || 0);
+      if (queuedCount <= 0) {
+        toast.info(body?.message || `No failed document classifications to retry on ${modelName}`);
+        return;
+      }
+      const targetDocIds = documents
+        .filter((doc) => {
+          const status = getModelRunStatus(doc, modelName);
+          return status === "failed" || status === "suspended_limit";
+        })
+        .map((doc) => doc.document_id);
+      markModelRetryQueued(targetDocIds, modelName);
+      toast.success(body?.message || `Triggered retry for all failed document classifications on ${modelName}`);
       setIsPolling(true);
       void fetchCampaignDetails(campaign.id);
     } catch (err: any) {
@@ -979,7 +1020,14 @@ export function ModelEvaluationPage() {
       if (!res.ok) {
         throw new Error(modelName ? `Failed to retry ${modelName} for this file` : "Failed to retry file");
       }
-      toast.success(modelName ? `Queued ${modelName} to retry on this file.` : "Queued file for retry.");
+      const body = await res.json();
+      const queuedCount = Number(body?.queued_count || 0);
+      if (queuedCount <= 0) {
+        toast.info(body?.message || (modelName ? `No failed run found for ${modelName} on this file.` : "No failed run found for this file."));
+        return;
+      }
+      markModelRetryQueued([documentId], modelName);
+      toast.success(body?.message || (modelName ? `Queued ${modelName} to retry on this file.` : "Queued file for retry."));
       setIsPolling(true);
       void fetchCampaignDetails(campaign.id);
     } catch (err: any) {

@@ -328,10 +328,29 @@ def add_model_to_campaign(
         updated_model_str = ",".join(current_models)
         session.dashboards.update(id, {"model": updated_model_str})
 
-    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload=None, retry_model=new_model)
+    try:
+        doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload=None, retry_model=new_model)
+    except Exception:
+        logger.exception(
+            "dashboard_add_model_queue_failed dashboard_id=%s model=%s user_id=%s",
+            id,
+            new_model,
+            current_user.id,
+        )
+        return {
+            "message": (
+                f"Added {new_model}, but automatic queueing did not start. "
+                "Use Retry All to start processing."
+            ),
+            "model": updated_model_str,
+            "queued_count": 0,
+            "warning": "Model was added, but automatic queueing failed after save.",
+        }
+
     return {
         "message": f"Successfully added {new_model} and queued {len(doc_ids)} documents for evaluation.",
-        "model": updated_model_str
+        "model": updated_model_str,
+        "queued_count": len(doc_ids),
     }
 
 

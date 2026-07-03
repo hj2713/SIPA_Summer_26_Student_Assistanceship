@@ -94,9 +94,10 @@ class OpenAIProvider:
         schema: type[BaseModel],
     ) -> tuple[BaseModel, LLMUsage]:
         base_messages = [_to_openai_message(m) for m in messages]
+        structured_messages = _ensure_json_keyword_for_structured_output(base_messages)
         response = await self._client.chat.completions.create(
             model=self._model,
-            messages=base_messages,
+            messages=structured_messages,
             response_format={"type": "json_object"},
         )
         content = _extract_message_text(response.choices[0].message if getattr(response, "choices", None) else None)
@@ -118,7 +119,7 @@ class OpenAIProvider:
             )
 
             repair_messages = [
-                *base_messages,
+                *structured_messages,
                 {"role": "assistant", "content": cleaned},
                 {
                     "role": "user",
@@ -224,6 +225,23 @@ def _from_openai_chunk(chunk: Any) -> LLMChunk:
         usage=usage,
         finish_reason=finish_reason,
     )
+
+
+def _ensure_json_keyword_for_structured_output(messages: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Some OpenAI-compatible providers reject `json_object` unless the prompt mentions JSON."""
+    normalized = [dict(message) for message in messages]
+    for message in normalized:
+        content = message.get("content")
+        if isinstance(content, str) and "json" in content.lower():
+            return normalized
+
+    return [
+        {
+            "role": "system",
+            "content": "Return a valid JSON object matching the requested schema.",
+        },
+        *normalized,
+    ]
 
 
 def _clean_structured_text(content: str) -> str:

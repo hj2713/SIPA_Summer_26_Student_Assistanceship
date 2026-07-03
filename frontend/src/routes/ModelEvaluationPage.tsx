@@ -1094,10 +1094,16 @@ export function ModelEvaluationPage() {
         throw new Error(await response.text() || "Failed to add model to campaign");
       }
       const data = await response.json();
-      toast.success(data.message || `Successfully added ${newModelToAdd.trim()} to evaluation.`);
+      if (data?.warning) {
+        toast.warning(data.message || data.warning);
+      } else {
+        toast.success(data.message || `Successfully added ${newModelToAdd.trim()} to evaluation.`);
+      }
       setShowAddModelDialog(false);
       setNewModelToAdd("");
-      setIsPolling(true);
+      if (Number(data?.queued_count || 0) > 0) {
+        setIsPolling(true);
+      }
       void fetchCampaignDetails(campaign.id);
     } catch (err: any) {
       console.error(err);

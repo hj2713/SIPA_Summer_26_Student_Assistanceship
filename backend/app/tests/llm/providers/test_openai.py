@@ -194,3 +194,31 @@ async def test_openai_provider_uses_tool_call_arguments_when_content_missing():
     assert parsed.delegation_rationale == "No delegation found."
     assert usage.input_tokens == 4
     assert usage.output_tokens == 6
+
+
+@pytest.mark.asyncio
+async def test_openai_provider_mentions_json_for_structured_output_when_prompt_does_not():
+    tracer = MagicMock()
+    wrapped_client = AsyncMock()
+    tracer.wrap_client.return_value = wrapped_client
+
+    provider = OpenAIProvider(
+        api_key="fake-key",
+        model="test-model",
+        tracer=tracer,
+    )
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = '{"delegate_law": true, "delegation_rationale": "Delegation exists."}'
+    mock_response.usage = MagicMock(prompt_tokens=9, completion_tokens=14)
+    wrapped_client.chat.completions.create.return_value = mock_response
+
+    await provider.parse_structured(
+        messages=[LLMMessage(role="user", content="Classify this law.")],
+        schema=MockStructuredSchema,
+    )
+
+    sent_messages = wrapped_client.chat.completions.create.await_args.kwargs["messages"]
+    assert sent_messages[0]["role"] == "system"
+    assert "json" in sent_messages[0]["content"].lower()

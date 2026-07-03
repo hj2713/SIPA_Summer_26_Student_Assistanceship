@@ -120,7 +120,39 @@ def test_add_model_to_campaign_happy_path(client, auth_headers):
         assert "gpt-4o-mini" in data["model"]
         assert "gemini-3.1-flash-lite" in data["model"]
         assert "queued 2 documents" in data["message"]
+        assert data["queued_count"] == 2
         mock_retry.assert_called_once_with(dashboard_id, '00000000-0000-0000-0000-000000000001', payload=None, retry_model="gpt-4o-mini")
+
+
+def test_add_model_to_campaign_returns_warning_if_queueing_fails_after_save(client, auth_headers):
+    from unittest.mock import AsyncMock, patch
+    with patch("app.routes.dashboards.generate_schema_and_description", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = {
+            "description": "Test",
+            "schema": []
+        }
+        res = client.post("/api/dashboards", json={
+            "name": "Test Add Model Queue Warning",
+            "prompt": "Find delegation",
+            "model": "gemini-3.1-flash-lite",
+            "dashboard_type": "model_comparison",
+            "token_limit": 1000000
+        }, headers=auth_headers)
+        dashboard_id = res.json()["id"]
+
+    with patch("app.services.campaign_service.campaign_service.retry_failed_documents", side_effect=RuntimeError("queue offline")):
+        response = client.post(f"/api/dashboards/{dashboard_id}/add-model?model=gpt-4o-mini", headers=auth_headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "gpt-4o-mini" in data["model"]
+    assert data["queued_count"] == 0
+    assert data["warning"] == "Model was added, but automatic queueing failed after save."
+
+    with get_db_conn() as conn:
+        row = conn.execute("SELECT model FROM dashboards WHERE id = ?;", (dashboard_id,)).fetchone()
+        assert row is not None
+        assert row["model"] == "gemini-3.1-flash-lite,gpt-4o-mini"
 
 
 def test_link_workflow_to_campaign_rejects_mismatched_schema(client, auth_headers):

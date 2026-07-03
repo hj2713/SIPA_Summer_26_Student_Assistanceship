@@ -428,9 +428,19 @@ class WorkflowDashboardService:
                         )
                         return model, model_result
 
-                    model_results = await asyncio.gather(*[run_one_model(model) for model in models_to_run])
+                    tasks_by_model = {
+                        model: asyncio.create_task(run_one_model(model))
+                        for model in models_to_run
+                    }
+                    completed_results: list[tuple[str, dict[str, Any]]] = []
+                    representative_trace: list[dict[str, Any]] = []
+                    representative_context: dict[str, Any] = {}
+                    representative_error: str | None = None
+                    representative_error_type: str | None = None
 
-                    for model, model_result in model_results:
+                    for completed_task in asyncio.as_completed(tasks_by_model.values()):
+                        model, model_result = await completed_task
+                        completed_results.append((model, model_result))
                         all_coded[model] = {
                             "values": model_result["values"],
                             "status": model_result["status"],
@@ -443,22 +453,6 @@ class WorkflowDashboardService:
                             "error_type": model_result.get("error_type"),
                         }
 
-                    statuses = [
-                        all_coded.get(model, {}).get("status", "pending")
-                        for model in models
-                    ]
-                    if statuses and all(status == "completed" for status in statuses):
-                        overall_status = "completed"
-                    elif any(status in {"suspended_limit", "failed"} for status in statuses):
-                        overall_status = "failed"
-                    else:
-                        overall_status = "processing"
-
-                    representative_trace: list[dict[str, Any]] = []
-                    representative_context: dict[str, Any] = {}
-                    representative_error: str | None = None
-                    representative_error_type: str | None = None
-                    for _model, model_result in model_results:
                         if not representative_trace and model_result.get("trace"):
                             representative_trace = model_result.get("trace") or []
                         if not representative_context and model_result.get("context"):
@@ -467,17 +461,28 @@ class WorkflowDashboardService:
                             representative_error = model_result.get("error_message")
                             representative_error_type = model_result.get("error_type") or "API_FAILURE"
 
-                    with self.db_session_factory() as session:
-                        session.dashboard_documents.update_workflow_result(
-                            dashboard_id,
-                            doc_id,
-                            json.dumps(all_coded),
-                            json.dumps(representative_trace),
-                            json.dumps(representative_context),
-                            status=overall_status,
-                            error_message=representative_error if overall_status == "failed" else None,
-                            error_type=(representative_error_type or "API_FAILURE") if overall_status == "failed" and representative_error else None,
-                        )
+                        statuses = [
+                            all_coded.get(model_name, {}).get("status", "pending")
+                            for model_name in models
+                        ]
+                        if statuses and all(status == "completed" for status in statuses):
+                            overall_status = "completed"
+                        elif any(status in {"suspended_limit", "failed"} for status in statuses):
+                            overall_status = "failed"
+                        else:
+                            overall_status = "processing"
+
+                        with self.db_session_factory() as session:
+                            session.dashboard_documents.update_workflow_result(
+                                dashboard_id,
+                                doc_id,
+                                json.dumps(all_coded),
+                                json.dumps(representative_trace),
+                                json.dumps(representative_context),
+                                status=overall_status,
+                                error_message=representative_error if overall_status == "failed" else None,
+                                error_type=(representative_error_type or "API_FAILURE") if overall_status == "failed" and representative_error else None,
+                            )
                 except Exception as exc:
                     logger.exception("Workflow model comparison failed before completion for doc %s", doc_id)
                     error_message = str(exc)

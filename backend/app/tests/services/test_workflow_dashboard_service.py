@@ -244,3 +244,74 @@ def test_run_model_comparison_parallel_propagates_user_context_to_model_runs():
     )
 
     assert observed_user_ids == ["user-anthropic"]
+
+
+def test_run_model_comparison_parallel_persists_partial_results_while_other_models_continue():
+    dashboard_id = "workflow-dash-live-progress"
+    document_id = "workflow-doc-live-progress"
+
+    with get_db_conn() as conn:
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval Live Progress', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
+            (dashboard_id,),
+        )
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            (document_id,),
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, coded_values, status) VALUES (?, ?, '{}', 'processing');",
+            (dashboard_id, document_id),
+        )
+        conn.commit()
+
+    service = WorkflowDashboardService()
+    service._document_text = lambda _doc_id: "Test source text"
+
+    async def fake_run_model_for_document(dash_id, doc_id, definition, model, source_text, schema_fields, token_limit):
+        if "gemini" in model:
+            await asyncio.sleep(0.01)
+        else:
+            await asyncio.sleep(0.08)
+        return {
+            "status": "completed",
+            "values": {"delegate_law": model},
+            "cost": 0.0,
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "trace": [{"node_id": model, "status": "completed"}],
+            "context": {"model": model},
+            "error_message": None,
+            "error_type": None,
+        }
+
+    service._run_model_for_document = fake_run_model_for_document
+
+    async def exercise() -> None:
+        task = asyncio.create_task(
+            service.run_model_comparison_parallel(
+                dashboard_id=dashboard_id,
+                document_ids=[document_id],
+                models=["gemini-3.1-flash-lite", "deepseek-v4-flash"],
+                definition={"nodes": [], "edges": [], "outputs": []},
+                schema_fields=[],
+                token_limit=2500000,
+            )
+        )
+
+        await asyncio.sleep(0.03)
+
+        with get_db_conn() as conn:
+            row = conn.execute(
+                "SELECT coded_values, status FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;",
+                (dashboard_id, document_id),
+            ).fetchone()
+
+        coded = json.loads(row["coded_values"])
+        assert row["status"] == "processing"
+        assert coded["gemini-3.1-flash-lite"]["status"] == "completed"
+        assert coded["deepseek-v4-flash"]["status"] == "processing"
+
+        await task
+
+    asyncio.run(exercise())

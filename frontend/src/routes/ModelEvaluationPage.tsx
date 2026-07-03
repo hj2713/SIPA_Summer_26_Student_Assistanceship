@@ -13,7 +13,7 @@ import {
   Trash2, Plus, Sparkles,
   AlertTriangle, Upload, RefreshCw,
   DollarSign, BarChart2, ShieldAlert,
-  Loader2, Layers, GitBranch, X
+  Loader2, Layers, GitBranch, X, Search, SlidersHorizontal, Check, Eye, EyeOff
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { WorkflowTraceGraph } from "@/features/workflows/WorkflowTraceGraph";
@@ -295,6 +295,12 @@ function matchUsageStat(model: string, stats: ModelStats[]): ModelStats | undefi
   });
 }
 
+function statusLabel(status: string): string {
+  if (status === "pending") return "queued";
+  if (status === "processing") return "processing";
+  return status;
+}
+
 export function ModelEvaluationPage() {
   const { session, activeWorkspace } = useAuthContext();
   const navigate = useNavigate();
@@ -322,6 +328,8 @@ export function ModelEvaluationPage() {
     filename: 260,
   });
   const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [columnPickerQuery, setColumnPickerQuery] = useState("");
 
   const startResize = (e: React.MouseEvent, columnId: string) => {
     e.preventDefault();
@@ -413,6 +421,12 @@ export function ModelEvaluationPage() {
     type: col.type || "string",
   }));
   const basename = (filename: string) => filename.split("/").pop() || filename;
+  const visibleColumnCount = visibleSchemaColumns.length;
+  const filteredSchemaColumns = schemaColumns.filter((col) => {
+    const query = columnPickerQuery.trim().toLowerCase();
+    if (!query) return true;
+    return `${col.name} ${normalizeLabel(col.name)} ${col.type || ""}`.toLowerCase().includes(query);
+  });
 
   const toggleColumnVisibility = (columnName: string) => {
     setHiddenColumns((current) => ({
@@ -422,6 +436,12 @@ export function ModelEvaluationPage() {
   };
 
   const showAllColumns = () => setHiddenColumns({});
+  const hideAllColumns = () => setHiddenColumns(
+    schemaColumns.reduce<Record<string, boolean>>((acc, column) => {
+      acc[column.name] = true;
+      return acc;
+    }, {})
+  );
 
   const workflowStrategies = (() => {
     const outputEntries = Array.isArray(linkedWorkflowDefinition?.outputs) ? linkedWorkflowDefinition.outputs : [];
@@ -1464,36 +1484,6 @@ export function ModelEvaluationPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/40 bg-card/60 p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Column visibility</div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Hide columns you do not need right now. This only changes the UI, not the stored results.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={showAllColumns} className="text-xs">
-                      Show All
-                    </Button>
-                    {schemaColumns.map((col) => {
-                      const isHidden = Boolean(hiddenColumns[col.name]);
-                      return (
-                        <Button
-                          key={col.name}
-                          variant={isHidden ? "secondary" : "outline"}
-                          size="sm"
-                          onClick={() => toggleColumnVisibility(col.name)}
-                          className={`text-xs ${isHidden ? "opacity-70" : ""}`}
-                        >
-                          {isHidden ? `Show ${col.name}` : `Hide ${col.name}`}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
               {parsedBenchmark && benchmarkCoverage && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs">
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -1543,7 +1533,7 @@ export function ModelEvaluationPage() {
                             <div className="font-bold text-xs truncate max-w-[180px]">{model}</div>
                             <div className="mt-1 text-[10px] text-muted-foreground">
                               {processingDocs.length > 0
-                                ? `${processingDocs.length} file${processingDocs.length === 1 ? "" : "s"} active`
+                                ? `${processingDocs.length} file${processingDocs.length === 1 ? "" : "s"} in flight`
                                 : failedDocs.length > 0
                                   ? `${failedDocs.length} failed`
                                   : missingDocs.length > 0
@@ -1585,10 +1575,10 @@ export function ModelEvaluationPage() {
                           <div className="border-t border-border/20 pt-3 space-y-2">
                             {processingDocs.length > 0 && (
                               <div className="space-y-1">
-                                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Processing files</div>
+                                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">In-flight files</div>
                                 {processingDocs.slice(0, 3).map((doc) => (
                                   <div key={`${model}-${doc.document_id}-processing`} className="truncate text-[11px] text-primary">
-                                    {basename(doc.filename)}
+                                    {basename(doc.filename)} · {statusLabel(getModelRunStatus(doc, model))}
                                   </div>
                                 ))}
                                 {processingDocs.length > 3 && (
@@ -1686,6 +1676,19 @@ export function ModelEvaluationPage() {
                 <div className="p-4 border-b border-border/30 bg-muted/10 flex justify-between items-center text-xs text-muted-foreground">
                   <span className="font-medium">{documents.length} evaluation file{documents.length === 1 ? "" : "s"} on this dashboard</span>
                   <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowColumnPicker(true)}
+                      className="h-7 gap-1.5 px-2 text-[10px] font-semibold"
+                    >
+                      <SlidersHorizontal className="h-3 w-3" />
+                      Columns
+                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
+                        {visibleColumnCount}/{schemaColumns.length}
+                      </span>
+                    </Button>
                     {hasAnyFailedRuns && (
                       <Button
                         type="button"
@@ -1706,6 +1709,95 @@ export function ModelEvaluationPage() {
                     )}
                   </div>
                 </div>
+                <Dialog open={showColumnPicker} onOpenChange={setShowColumnPicker}>
+                  <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4 text-primary" />
+                        Select visible columns
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                          Choose the columns you want to inspect. This only affects the current view.
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={showAllColumns} className="h-8 gap-1.5 text-xs">
+                            <Eye className="h-3.5 w-3.5" />
+                            Show all
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={hideAllColumns} className="h-8 gap-1.5 text-xs">
+                            <EyeOff className="h-3.5 w-3.5" />
+                            Hide all
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={columnPickerQuery}
+                          onChange={(event) => setColumnPickerQuery(event.target.value)}
+                          placeholder="Search columns..."
+                          className="h-9 pl-9 text-xs"
+                        />
+                      </div>
+
+                      <div className="max-h-[52vh] overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-3">
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {filteredSchemaColumns.length > 0 ? (
+                            filteredSchemaColumns.map((col) => {
+                              const isHidden = Boolean(hiddenColumns[col.name]);
+                              return (
+                                <button
+                                  key={col.name}
+                                  type="button"
+                                  onClick={() => toggleColumnVisibility(col.name)}
+                                  className={`flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                                    isHidden
+                                      ? "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
+                                      : "border-primary/30 bg-primary/5 text-foreground hover:bg-primary/10"
+                                  }`}
+                                  aria-pressed={!isHidden}
+                                >
+                                  <span
+                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                      isHidden ? "border-input bg-background" : "border-primary bg-primary text-primary-foreground"
+                                    }`}
+                                  >
+                                    {!isHidden && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-xs font-semibold">{normalizeLabel(col.name)}</span>
+                                    <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                                      {col.name}
+                                      {col.type ? ` · ${col.type}` : ""}
+                                    </span>
+                                  </span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="col-span-full rounded-lg border border-dashed border-border/40 px-3 py-6 text-center text-xs text-muted-foreground">
+                              No columns match that search.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-[11px] text-muted-foreground">
+                          {visibleColumnCount} visible, {schemaColumns.length - visibleColumnCount} hidden
+                        </div>
+                        <Button type="button" size="sm" onClick={() => setShowColumnPicker(false)} className="h-8 px-3 text-xs">
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 {documents.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-4 p-10 text-center">
@@ -1913,7 +2005,7 @@ export function ModelEvaluationPage() {
                                     <div className="flex h-[88px] flex-col items-center justify-start overflow-hidden">
                                       {isPending ? (
                                         <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
-                                          <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {runStatus}...
+                                          <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {statusLabel(runStatus)}...
                                         </span>
                                       ) : isFailed ? (
                                         <div className="flex flex-col items-center gap-1.5 justify-center">

@@ -278,6 +278,23 @@ const ALL_PRICING_MODELS = [
   "granite-4.1-8b"
 ];
 
+const MODEL_USAGE_ALIASES: Record<string, string[]> = {
+  "deepseek-chat": ["deepseek-v4-flash"],
+};
+
+function normalizeModelKey(model: string): string {
+  return model.toLowerCase().split("/").pop() || "";
+}
+
+function matchUsageStat(model: string, stats: ModelStats[]): ModelStats | undefined {
+  const targetModel = normalizeModelKey(model);
+  const aliases = MODEL_USAGE_ALIASES[targetModel] || [];
+  return stats.find((entry) => {
+    const dbModel = normalizeModelKey(entry.model);
+    return dbModel === targetModel || aliases.includes(dbModel);
+  });
+}
+
 export function ModelEvaluationPage() {
   const { session, activeWorkspace } = useAuthContext();
   const navigate = useNavigate();
@@ -304,6 +321,7 @@ export function ModelEvaluationPage() {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
     filename: 260,
   });
+  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
 
   const startResize = (e: React.MouseEvent, columnId: string) => {
     e.preventDefault();
@@ -388,12 +406,22 @@ export function ModelEvaluationPage() {
 
   const campaignModels = campaign?.model.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
   const schemaColumns = (campaign?.schema ?? []).filter((col) => col?.name);
+  const visibleSchemaColumns = schemaColumns.filter((col) => !hiddenColumns[col.name]);
   const benchmarkTargetOptions: BenchmarkTargetOption[] = schemaColumns.map((col) => ({
     key: col.name,
     label: normalizeLabel(col.name),
     type: col.type || "string",
   }));
   const basename = (filename: string) => filename.split("/").pop() || filename;
+
+  const toggleColumnVisibility = (columnName: string) => {
+    setHiddenColumns((current) => ({
+      ...current,
+      [columnName]: !current[columnName],
+    }));
+  };
+
+  const showAllColumns = () => setHiddenColumns({});
 
   const workflowStrategies = (() => {
     const outputEntries = Array.isArray(linkedWorkflowDefinition?.outputs) ? linkedWorkflowDefinition.outputs : [];
@@ -1436,6 +1464,36 @@ export function ModelEvaluationPage() {
                 </div>
               </div>
 
+              <div className="rounded-xl border border-border/40 bg-card/60 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Column visibility</div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Hide columns you do not need right now. This only changes the UI, not the stored results.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={showAllColumns} className="text-xs">
+                      Show All
+                    </Button>
+                    {schemaColumns.map((col) => {
+                      const isHidden = Boolean(hiddenColumns[col.name]);
+                      return (
+                        <Button
+                          key={col.name}
+                          variant={isHidden ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => toggleColumnVisibility(col.name)}
+                          className={`text-xs ${isHidden ? "opacity-70" : ""}`}
+                        >
+                          {isHidden ? `Show ${col.name}` : `Hide ${col.name}`}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
               {parsedBenchmark && benchmarkCoverage && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs">
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -1463,17 +1521,7 @@ export function ModelEvaluationPage() {
               {/* Top Cost / Accuracy Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {campaignModels.map(model => {
-                  const stat = usageStats.find(s => {
-                    const dbModel = s.model.toLowerCase().split('/').pop() || "";
-                    const targetModel = model.toLowerCase().split('/').pop() || "";
-                    if (dbModel === targetModel) return true;
-                    // Check if one contains the other (helps with aliases like deepseek-chat mapping to deepseek-v4-flash)
-                    if (targetModel.includes("deepseek") && dbModel.includes("deepseek")) return true;
-                    if (targetModel.includes("kimi") && dbModel.includes("kimi")) return true;
-                    if (targetModel.includes("minimax") && dbModel.includes("minimax")) return true;
-                    if (targetModel.includes("mistral") && dbModel.includes("mistral")) return true;
-                    return false;
-                  });
+                  const stat = matchUsageStat(model, usageStats);
                   const accuracy = benchmarkAccuracy?.[model];
                   const selectedStrategyId = selectedBenchmarkStrategyByModel[model] || workflowStrategies[0]?.id || "";
                   const selectedStrategy = workflowStrategies.find((strategy) => strategy.id === selectedStrategyId) || workflowStrategies[0];
@@ -1698,7 +1746,7 @@ export function ModelEvaluationPage() {
                               className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100 transition-opacity select-none z-30"
                             />
                           </th>
-                          {schemaColumns.map((col) => (
+                          {visibleSchemaColumns.map((col) => (
                             <th key={col.name} className="p-3.5 font-bold border-r border-border/20 text-center bg-card" colSpan={campaignModels.length || 1}>
                               {col.name}
                             </th>
@@ -1715,7 +1763,7 @@ export function ModelEvaluationPage() {
                           >
                             Selected document
                           </td>
-                          {schemaColumns.map((col) => (
+                          {visibleSchemaColumns.map((col) => (
                             campaignModels.map((model) => (
                               <td 
                                 key={`${col.name}-${model}`} 
@@ -1802,7 +1850,7 @@ export function ModelEvaluationPage() {
                                 </Button>
                               </div>
                             </td>
-                            {schemaColumns.map((col) => (
+                            {visibleSchemaColumns.map((col) => (
                               campaignModels.map((model) => {
                                 const run = getModelRun(doc, model);
                                 const vals = run.values || {};

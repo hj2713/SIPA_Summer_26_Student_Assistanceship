@@ -223,6 +223,10 @@ async def test_project_workflow_uses_delegation_details_for_rank_when_true(monke
     assert calls == ["law_delegation", "discretion_inventory", "discretion_decision"]
     assert result["outputs"] == {"delegate_law": True, "discretion_rank": 3}
     assert "delegation_rationale" not in result["outputs"]
+    by_id = {item["node_id"]: item for item in result["trace"]}
+    assert by_id["law_delegation"]["started_at"]
+    assert by_id["law_delegation"]["finished_at"]
+    assert by_id["law_delegation"]["duration_ms"] is not None
 
 
 @pytest.mark.asyncio
@@ -252,3 +256,25 @@ async def test_professor_prompt_suite_sets_all_rank_paths_to_zero_when_no_delega
     assert result["outputs"]["cascade_discretion_rank"] == 0
     assert result["outputs"]["m9_discretion_rank"] == 0
     assert result["outputs"]["b3_discretion_rank"] == 0
+
+
+@pytest.mark.asyncio
+async def test_executor_trace_timing_marks_skipped_nodes_without_fake_durations(monkeypatch):
+    class FakeLlm:
+        async def parse_structured(self, messages, schema, log_context=None):
+            return schema(delegate_law=False)
+
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
+    result = await WorkflowExecutor().execute(
+        delegation_discretion_definition(),
+        "The summary describes a technical filing change and grants no new authority.",
+    )
+
+    by_id = {item["node_id"]: item for item in result["trace"]}
+    assert by_id["delegation_analysis"]["started_at"]
+    assert by_id["delegation_analysis"]["finished_at"]
+    assert by_id["delegation_analysis"]["duration_ms"] is not None
+    assert by_id["discretion_analysis"]["status"] == "skipped"
+    assert by_id["discretion_analysis"]["started_at"] is None
+    assert by_id["discretion_analysis"]["finished_at"] is None
+    assert by_id["discretion_analysis"]["duration_ms"] is None

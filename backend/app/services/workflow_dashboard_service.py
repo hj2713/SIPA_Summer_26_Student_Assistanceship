@@ -2,7 +2,9 @@ import asyncio
 import logging
 import json
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Optional
 from fastapi import HTTPException, UploadFile
 
@@ -232,6 +234,53 @@ class WorkflowDashboardService:
             return str(model_context[reasoning_keys[0]])
         return None
 
+    def _now_iso(self) -> str:
+        return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+    def _duration_ms(self, started: float, finished: float | None = None) -> int:
+        end = finished if finished is not None else perf_counter()
+        return max(0, int(round((end - started) * 1000)))
+
+    def _queue_timing(self, existing_timing: Any = None) -> dict[str, Any]:
+        timing = dict(existing_timing) if isinstance(existing_timing, dict) else {}
+        timing["queued_at"] = timing.get("queued_at") or self._now_iso()
+        timing["started_at"] = None
+        timing["completed_at"] = None
+        timing["queue_wait_ms"] = None
+        timing["total_run_ms"] = None
+        timing["source_text_load_ms"] = None
+        timing["workflow_execute_ms"] = None
+        timing["persist_result_ms"] = None
+        return timing
+
+    def _timing_for_result(
+        self,
+        existing_timing: Any,
+        *,
+        queued_at: Optional[str],
+        started_at: str,
+        completed_at: str,
+        queue_wait_ms: Optional[int],
+        source_text_load_ms: int,
+        workflow_execute_ms: int,
+        total_run_ms: int,
+        persist_result_ms: Optional[int] = None,
+    ) -> dict[str, Any]:
+        timing = dict(existing_timing) if isinstance(existing_timing, dict) else {}
+        timing.update(
+            {
+                "queued_at": queued_at,
+                "started_at": started_at,
+                "completed_at": completed_at,
+                "queue_wait_ms": queue_wait_ms,
+                "source_text_load_ms": source_text_load_ms,
+                "workflow_execute_ms": workflow_execute_ms,
+                "total_run_ms": total_run_ms,
+                "persist_result_ms": persist_result_ms,
+            }
+        )
+        return timing
+
     async def _run_model_for_document(
         self,
         dashboard_id: str,
@@ -267,6 +316,8 @@ class WorkflowDashboardService:
                 "output_tokens": 0,
                 "error_message": f"Token limit of {token_limit} exceeded.",
                 "error_type": "API_FAILURE",
+                "trace": [],
+                "context": {},
             }
 
         try:
@@ -353,6 +404,7 @@ class WorkflowDashboardService:
         user_id: Optional[str] = None,
         retry_model: Optional[str] = None,
         files_concurrency: int = 2,
+        status_models: Optional[list[str]] = None,
     ) -> None:
         """Run all requested models in parallel and persist one merged document update.
 
@@ -361,6 +413,16 @@ class WorkflowDashboardService:
         `coded_values` JSON blob, which could otherwise drop one model's result.
         """
         semaphore = asyncio.Semaphore(files_concurrency)
+        overall_models = status_models or models
+
+        logger.info(
+            "workflow_batch_scheduled dashboard_id=%s document_count=%d models=%s retry_model=%s files_concurrency=%d",
+            dashboard_id,
+            len(document_ids),
+            ",".join(models),
+            retry_model or "",
+            files_concurrency,
+        )
 
         async def process_doc(doc_id: str) -> None:
             async with semaphore:
@@ -369,7 +431,9 @@ class WorkflowDashboardService:
                 all_coded: dict[str, Any] = {}
                 models_to_run: list[str] = []
                 try:
+                    source_load_started = perf_counter()
                     source_text = self._document_text(doc_id)
+                    source_text_load_ms = self._duration_ms(source_load_started)
 
                     with self.db_session_factory() as session:
                         doc_dd = session.dashboard_documents.get(dashboard_id, doc_id)
@@ -406,6 +470,7 @@ class WorkflowDashboardService:
                             "context": existing_model_run.get("context"),
                             "error_message": None,
                             "error_type": None,
+                            "timing": self._queue_timing(existing_model_run.get("timing")),
                         }
 
                     with self.db_session_factory() as session:
@@ -417,6 +482,19 @@ class WorkflowDashboardService:
                         )
 
                     async def run_one_model(model: str) -> tuple[str, dict[str, Any]]:
+                        existing_model_run = all_coded.get(model) if isinstance(all_coded.get(model), dict) else {}
+                        existing_timing = existing_model_run.get("timing") if isinstance(existing_model_run, dict) else {}
+                        queued_at = existing_timing.get("queued_at") if isinstance(existing_timing, dict) else None
+                        model_started_at = self._now_iso()
+                        model_started_perf = perf_counter()
+                        logger.info(
+                            "workflow_model_started dashboard_id=%s document_id=%s model=%s batch_document_count=%d queued_at=%s",
+                            dashboard_id,
+                            doc_id,
+                            model,
+                            len(document_ids),
+                            queued_at or "",
+                        )
                         model_result = await self._run_model_for_document(
                             dashboard_id,
                             doc_id,
@@ -425,6 +503,26 @@ class WorkflowDashboardService:
                             source_text,
                             schema_fields,
                             token_limit,
+                        )
+                        model_completed_at = self._now_iso()
+                        workflow_execute_ms = self._duration_ms(model_started_perf)
+                        queue_wait_ms = None
+                        if queued_at:
+                            try:
+                                queued_dt = datetime.fromisoformat(queued_at.replace("Z", "+00:00"))
+                                started_dt = datetime.fromisoformat(model_started_at.replace("Z", "+00:00"))
+                                queue_wait_ms = max(0, int(round((started_dt - queued_dt).total_seconds() * 1000)))
+                            except ValueError:
+                                queue_wait_ms = None
+                        model_result["timing"] = self._timing_for_result(
+                            existing_timing,
+                            queued_at=queued_at,
+                            started_at=model_started_at,
+                            completed_at=model_completed_at,
+                            queue_wait_ms=queue_wait_ms,
+                            source_text_load_ms=source_text_load_ms,
+                            workflow_execute_ms=workflow_execute_ms,
+                            total_run_ms=self._duration_ms(model_started_perf),
                         )
                         return model, model_result
 
@@ -451,6 +549,7 @@ class WorkflowDashboardService:
                             "context": model_result.get("context"),
                             "error_message": model_result.get("error_message"),
                             "error_type": model_result.get("error_type"),
+                            "timing": model_result.get("timing"),
                         }
 
                         if not representative_trace and model_result.get("trace"):
@@ -463,7 +562,7 @@ class WorkflowDashboardService:
 
                         statuses = [
                             all_coded.get(model_name, {}).get("status", "pending")
-                            for model_name in models
+                            for model_name in overall_models
                         ]
                         if statuses and all(status == "completed" for status in statuses):
                             overall_status = "completed"
@@ -472,6 +571,34 @@ class WorkflowDashboardService:
                         else:
                             overall_status = "processing"
 
+                        persist_started = perf_counter()
+                        with self.db_session_factory() as session:
+                            session.dashboard_documents.update_workflow_result(
+                                dashboard_id,
+                                doc_id,
+                                json.dumps(all_coded),
+                                json.dumps(representative_trace),
+                                json.dumps(representative_context),
+                                status=overall_status,
+                                error_message=representative_error if overall_status == "failed" else None,
+                                error_type=(representative_error_type or "API_FAILURE") if overall_status == "failed" and representative_error else None,
+                            )
+                        persist_ms = self._duration_ms(persist_started)
+                        model_timing = all_coded.get(model, {}).get("timing")
+                        if isinstance(model_timing, dict):
+                            model_timing["persist_result_ms"] = persist_ms
+                        logger.info(
+                            "workflow_model_%s dashboard_id=%s document_id=%s model=%s batch_document_count=%d total_run_ms=%s persist_result_ms=%d",
+                            "completed" if model_result.get("status") == "completed" else "failed",
+                            dashboard_id,
+                            doc_id,
+                            model,
+                            len(document_ids),
+                            (all_coded.get(model, {}).get("timing") or {}).get("total_run_ms"),
+                            persist_ms,
+                        )
+
+                    if completed_results:
                         with self.db_session_factory() as session:
                             session.dashboard_documents.update_workflow_result(
                                 dashboard_id,
@@ -502,6 +629,17 @@ class WorkflowDashboardService:
                             "context": context_data or existing_model_run.get("context"),
                             "error_message": error_message,
                             "error_type": "API_FAILURE",
+                            "timing": self._timing_for_result(
+                                existing_model_run.get("timing"),
+                                queued_at=(existing_model_run.get("timing") or {}).get("queued_at") if isinstance(existing_model_run.get("timing"), dict) else None,
+                                started_at=((existing_model_run.get("timing") or {}).get("started_at") if isinstance(existing_model_run.get("timing"), dict) else None) or self._now_iso(),
+                                completed_at=self._now_iso(),
+                                queue_wait_ms=(existing_model_run.get("timing") or {}).get("queue_wait_ms") if isinstance(existing_model_run.get("timing"), dict) else None,
+                                source_text_load_ms=(existing_model_run.get("timing") or {}).get("source_text_load_ms") if isinstance(existing_model_run.get("timing"), dict) else 0,
+                                workflow_execute_ms=(existing_model_run.get("timing") or {}).get("workflow_execute_ms") if isinstance(existing_model_run.get("timing"), dict) else 0,
+                                total_run_ms=(existing_model_run.get("timing") or {}).get("total_run_ms") if isinstance(existing_model_run.get("timing"), dict) else 0,
+                                persist_result_ms=(existing_model_run.get("timing") or {}).get("persist_result_ms") if isinstance(existing_model_run.get("timing"), dict) else None,
+                            ),
                         }
                     with self.db_session_factory() as session:
                         session.dashboard_documents.update_coded_values(
@@ -517,6 +655,14 @@ class WorkflowDashboardService:
                             error_message=error_message,
                             error_type="API_FAILURE",
                         )
+                    logger.info(
+                        "workflow_model_failed dashboard_id=%s document_id=%s model=%s batch_document_count=%d error=%s",
+                        dashboard_id,
+                        doc_id,
+                        ",".join(models_to_run),
+                        len(document_ids),
+                        error_message,
+                    )
 
         await asyncio.gather(*[process_doc(doc_id) for doc_id in document_ids])
 
@@ -833,6 +979,11 @@ class WorkflowDashboardService:
                 )
 
             definition = json.loads(definition_json) if isinstance(definition_json, str) else (definition_json or {})
+            schema_json = dash_row.get("schema") or "[]"
+            schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
+            model_name = dash_row.get("model") or "gemini-3.1-flash-lite"
+            token_limit = dash_row.get("token_limit") or 5000000
+            dashboard_models = [m.strip() for m in model_name.split(",") if m.strip()]
 
         pending_doc_ids = []
         for doc_id in document_ids:
@@ -857,12 +1008,14 @@ class WorkflowDashboardService:
                         m_data = coded_vals.get(retry_model) or {}
                         m_data["status"] = "pending"
                         m_data["error_message"] = None
+                        m_data["timing"] = self._queue_timing(m_data.get("timing"))
                         coded_vals[retry_model] = m_data
                     else:
                         for model_key, model_run in list(coded_vals.items()):
                             if isinstance(model_run, dict) and model_run.get("status") in ["failed", "suspended_limit", "pending"]:
                                 model_run["status"] = "pending"
                                 model_run["error_message"] = None
+                                model_run["timing"] = self._queue_timing(model_run.get("timing"))
                                 coded_vals[model_key] = model_run
                     coded_vals_str = json.dumps(coded_vals)
 
@@ -875,6 +1028,28 @@ class WorkflowDashboardService:
 
         if pending_doc_ids:
             async def _exec_task():
+                if retry_model:
+                    try:
+                        await self.run_model_comparison_parallel(
+                            dashboard_id=dashboard_id,
+                            document_ids=pending_doc_ids,
+                            models=[retry_model],
+                            definition=definition,
+                            schema_fields=schema_fields,
+                            token_limit=token_limit,
+                            user_id=user_id,
+                            retry_model=retry_model,
+                            files_concurrency=2,
+                            status_models=dashboard_models,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Background batched retry-model execution failed for dashboard %s model %s",
+                            dashboard_id,
+                            retry_model,
+                        )
+                    return
+
                 for doc_id in pending_doc_ids:
                     try:
                         await self._execute_document(

@@ -1,8 +1,10 @@
 import asyncio
 import json
+from typing import Any
 
 from app.core.database import get_db_conn
 from app.core.request_context import get_current_user_id
+from app.services.coding_service import coding_service
 from app.services.workflow_dashboard_service import WorkflowDashboardService
 
 
@@ -65,6 +67,10 @@ def test_run_model_comparison_parallel_persists_all_models():
     assert row["status"] == "completed"
     assert coded["gemini-3.1-flash-lite"]["values"]["delegate_law"] == "gemini-3.1-flash-lite"
     assert coded["deepseek-v4-flash"]["values"]["delegate_law"] == "deepseek-v4-flash"
+    assert coded["gemini-3.1-flash-lite"]["timing"]["started_at"]
+    assert coded["gemini-3.1-flash-lite"]["timing"]["completed_at"]
+    assert coded["gemini-3.1-flash-lite"]["timing"]["workflow_execute_ms"] is not None
+    assert coded["gemini-3.1-flash-lite"]["timing"]["persist_result_ms"] is not None
 
 
 def test_run_model_comparison_parallel_marks_models_failed_when_document_load_crashes():
@@ -111,6 +117,8 @@ def test_run_model_comparison_parallel_marks_models_failed_when_document_load_cr
     assert "storage unavailable" in row["error_message"]
     assert coded["gemini-3.1-flash-lite"]["status"] == "failed"
     assert coded["deepseek-v4-flash"]["status"] == "failed"
+    assert coded["gemini-3.1-flash-lite"]["timing"]["completed_at"]
+    assert coded["deepseek-v4-flash"]["timing"]["completed_at"]
 
 
 def test_run_model_comparison_parallel_retry_model_only_runs_requested_model():
@@ -315,3 +323,74 @@ def test_run_model_comparison_parallel_persists_partial_results_while_other_mode
         await task
 
     asyncio.run(exercise())
+
+
+def test_run_existing_documents_for_dashboard_batches_retry_model_across_documents(monkeypatch):
+    dashboard_id = "workflow-dash-batch-retry"
+    workflow_id = "workflow-1"
+    doc_ids = [
+        "00000000-0000-0000-0000-000000000101",
+        "00000000-0000-0000-0000-000000000102",
+        "00000000-0000-0000-0000-000000000103",
+    ]
+
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO coding_workflows (
+                id, workspace_id, name, description, status, draft_definition, revision, latest_version, created_by
+            ) VALUES (?, 'QA', 'Workflow 1', '', 'draft', '{"nodes":[],"edges":[],"outputs":[]}', 1, 0, 'user-1');
+            """,
+            (workflow_id,),
+        )
+        conn.execute(
+            """
+            INSERT INTO dashboards (
+                id, workspace_id, name, description, prompt, schema, model, dashboard_type,
+                workflow_id, workflow_source, workflow_definition_json
+            ) VALUES (?, 'QA', 'Workflow Eval Batch Retry', '', '', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
+            """,
+            (dashboard_id, workflow_id),
+        )
+        for doc_id in doc_ids:
+            conn.execute(
+                "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', ?, '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+                (doc_id, f"{doc_id[-3:]}.txt"),
+            )
+        conn.commit()
+
+    service = WorkflowDashboardService()
+    scheduled: list = []
+    captured: dict[str, Any] = {}
+
+    async def fake_batch_runner(**kwargs):
+        captured.update(kwargs)
+
+    async def fail_execute(*args, **kwargs):
+        raise AssertionError("_execute_document should not be used for retry_model batching")
+
+    monkeypatch.setattr(service, "run_model_comparison_parallel", fake_batch_runner)
+    monkeypatch.setattr(service, "_execute_document", fail_execute)
+    monkeypatch.setattr(coding_service, "schedule_coroutine", lambda coro: scheduled.append(coro))
+
+    async def exercise() -> None:
+        await service.run_existing_documents_for_dashboard(
+            dashboard_id=dashboard_id,
+            workflow_id=workflow_id,
+            workspace_id="QA",
+            user_id="user-1",
+            document_ids=doc_ids,
+            retry_model="gpt-4o-mini",
+        )
+
+    asyncio.run(exercise())
+
+    assert len(scheduled) == 1
+    asyncio.run(scheduled[0])
+
+    assert captured["dashboard_id"] == dashboard_id
+    assert captured["document_ids"] == doc_ids
+    assert captured["models"] == ["gpt-4o-mini"]
+    assert captured["retry_model"] == "gpt-4o-mini"
+    assert captured["files_concurrency"] == 2
+    assert captured["status_models"] == ["gemini-3.1-flash-lite", "gpt-4o-mini"]

@@ -14,6 +14,7 @@ from typing import Any, get_args, get_origin
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
+from app.core.config import settings
 from app.llm.tracing.base import Tracer
 from app.llm.types import (
     LLMChunk,
@@ -38,15 +39,21 @@ class OpenAIProvider:
         base_url: str | None = None,
         default_headers: dict[str, str] | None = None,
         name: str = "openai",
+        timeout_seconds: float | None = None,
     ) -> None:
+        effective_timeout = timeout_seconds
+        if effective_timeout is None:
+            effective_timeout = max(1.0, float(settings.OPENAI_REQUEST_TIMEOUT_SECONDS))
         raw = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
             default_headers=default_headers,
+            timeout=effective_timeout,
         )
         self._client = tracer.wrap_client(raw, provider=name)
         self._model = model
         self._name = name
+        self._timeout_seconds = effective_timeout
 
     @property
     def model(self) -> str:

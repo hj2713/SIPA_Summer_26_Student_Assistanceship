@@ -1,4 +1,6 @@
 from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from time import perf_counter
 
 from pydantic import Field, create_model
 
@@ -29,6 +31,13 @@ class WorkflowExecutionError(ValueError):
 
 class WorkflowExecutor:
     """Execute a validated workflow draft without coupling it to campaign storage."""
+
+    def _trace_timestamp(self) -> str:
+        return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+    def _trace_duration_ms(self, started: float, finished: float | None = None) -> int:
+        end = finished if finished is not None else perf_counter()
+        return max(0, int(round((end - started) * 1000)))
 
     def _ordered_nodes(self, definition: Dict[str, Any]) -> List[Dict[str, Any]]:
         nodes = definition.get("nodes") or []
@@ -122,7 +131,17 @@ class WorkflowExecutor:
             ]
             active = not control_incoming or any(edge_active.get(e["id"], False) for e in control_incoming)
             if not active:
-                trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "skipped", "outputs": {}, "message": "This branch was not selected."})
+                trace.append({
+                    "node_id": node_id,
+                    "name": node["name"],
+                    "kind": node_kind,
+                    "status": "skipped",
+                    "outputs": {},
+                    "message": "This branch was not selected.",
+                    "started_at": None,
+                    "finished_at": None,
+                    "duration_ms": None,
+                })
                 for edge in outgoing[node_id]:
                     edge_active[edge["id"]] = False
                 continue
@@ -130,6 +149,8 @@ class WorkflowExecutor:
             config = node.get("config") or {}
             outputs: Dict[str, Any] = {}
             message = ""
+            node_started_at = self._trace_timestamp()
+            node_started_perf = perf_counter()
             try:
                 if node_kind == "document_input":
                     outputs = {"text_length": len(source_text), "source_policy": config.get("source_policy", "campaign_source")}
@@ -227,10 +248,30 @@ class WorkflowExecutor:
                 if node_kind != "condition":
                     for edge in outgoing[node_id]:
                         edge_active[edge["id"]] = True
-                trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "completed", "outputs": outputs, "message": message})
+                trace.append({
+                    "node_id": node_id,
+                    "name": node["name"],
+                    "kind": node_kind,
+                    "status": "completed",
+                    "outputs": outputs,
+                    "message": message,
+                    "started_at": node_started_at,
+                    "finished_at": self._trace_timestamp(),
+                    "duration_ms": self._trace_duration_ms(node_started_perf),
+                })
             except Exception as exc:
                 error_msg = str(exc)
-                trace.append({"node_id": node_id, "name": node["name"], "kind": node_kind, "status": "failed", "outputs": {}, "message": error_msg})
+                trace.append({
+                    "node_id": node_id,
+                    "name": node["name"],
+                    "kind": node_kind,
+                    "status": "failed",
+                    "outputs": {},
+                    "message": error_msg,
+                    "started_at": node_started_at,
+                    "finished_at": self._trace_timestamp(),
+                    "duration_ms": self._trace_duration_ms(node_started_perf),
+                })
                 # Add all remaining nodes as skipped in the trace
                 executed_ids = {t["node_id"] for t in trace}
                 for remaining_node in ordered:
@@ -241,7 +282,10 @@ class WorkflowExecutor:
                             "kind": remaining_node["kind"],
                             "status": "skipped",
                             "outputs": {},
-                            "message": "Parent node execution failed."
+                            "message": "Parent node execution failed.",
+                            "started_at": None,
+                            "finished_at": None,
+                            "duration_ms": None,
                         })
                 raise WorkflowExecutionError(error_msg, trace=trace, context=context)
 

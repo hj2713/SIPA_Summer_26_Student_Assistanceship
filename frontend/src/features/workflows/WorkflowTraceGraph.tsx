@@ -13,6 +13,9 @@ type TraceItem = {
   status?: string;
   outputs?: Record<string, unknown>;
   message?: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  duration_ms?: number | null;
 };
 
 type TraceGraphProps = {
@@ -101,6 +104,12 @@ function getNodeInputs(node: WorkflowNodeDefinition, context: Record<string, unk
 function getNodePathState(traceItem?: TraceItem): "active" | "inactive" | "pending" {
   if (!traceItem) return "pending";
   return traceItem.status === "skipped" ? "inactive" : "active";
+}
+
+function formatDuration(durationMs?: number | null): string {
+  if (durationMs === undefined || durationMs === null) return "—";
+  if (durationMs < 1000) return `${durationMs} ms`;
+  return `${(durationMs / 1000).toFixed(durationMs >= 10000 ? 0 : 1)} s`;
 }
 
 function WorkflowTraceGraphInner({ definition, trace, context }: TraceGraphProps) {
@@ -226,6 +235,7 @@ function WorkflowTraceGraphInner({ definition, trace, context }: TraceGraphProps
           <div className="space-y-2 text-[11px] text-muted-foreground">
             <div>Kind: <span className="font-semibold text-foreground">{selectedNode ? (KIND_LABELS[selectedNode.kind] || selectedNode.kind) : "—"}</span></div>
             <div>Description: <span className="text-foreground">{selectedNode?.description || "—"}</span></div>
+            <div>Duration: <span className="font-semibold text-foreground">{formatDuration(selectedTrace?.duration_ms)}</span></div>
             {selectedNode?.kind === "condition" && typeof selectedTrace?.outputs?.result === "boolean" && (
               <div>Branch chosen: <span className="font-semibold text-foreground">{selectedTrace.outputs.result ? "TRUE path" : "FALSE path"}</span></div>
             )}

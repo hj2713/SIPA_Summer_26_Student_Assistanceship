@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     OPEN_ROUTER_MODEL_NAME: str = "openai/gpt-4o-mini"
     OPENAI_MODEL: str = "gpt-4.1-mini"
     OPENAI_VECTOR_STORE_ID: str = ""  # optional — enables file_search tool
+    OPENAI_REQUEST_TIMEOUT_SECONDS: float = 180.0
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"
     ANTHROPIC_API_KEY: str = ""

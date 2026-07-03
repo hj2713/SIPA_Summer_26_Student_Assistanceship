@@ -73,6 +73,18 @@ interface ModelRunRecord {
   context?: Record<string, any>;
   error_message?: string | null;
   error_type?: string | null;
+  timing?: ModelRunTiming;
+}
+
+interface ModelRunTiming {
+  queued_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  queue_wait_ms?: number | null;
+  total_run_ms?: number | null;
+  source_text_load_ms?: number | null;
+  workflow_execute_ms?: number | null;
+  persist_result_ms?: number | null;
 }
 
 interface BenchmarkRow {
@@ -151,6 +163,12 @@ function normalizeLabel(value: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDuration(durationMs?: number | null): string {
+  if (durationMs === undefined || durationMs === null) return "—";
+  if (durationMs < 1000) return `${durationMs} ms`;
+  return `${(durationMs / 1000).toFixed(durationMs >= 10000 ? 0 : 1)} s`;
 }
 
 function parseDelimitedLine(line: string, delimiter: string): string[] {
@@ -1746,7 +1764,7 @@ export function ModelEvaluationPage() {
                       </div>
 
                       <div className="max-h-[52vh] overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-3">
-                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-2">
                           {filteredSchemaColumns.length > 0 ? (
                             filteredSchemaColumns.map((col) => {
                               const isHidden = Boolean(hiddenColumns[col.name]);
@@ -1755,7 +1773,7 @@ export function ModelEvaluationPage() {
                                   key={col.name}
                                   type="button"
                                   onClick={() => toggleColumnVisibility(col.name)}
-                                  className={`flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                                     isHidden
                                       ? "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
                                       : "border-primary/30 bg-primary/5 text-foreground hover:bg-primary/10"
@@ -1770,8 +1788,8 @@ export function ModelEvaluationPage() {
                                     {!isHidden && <Check className="h-2.5 w-2.5 stroke-[3]" />}
                                   </span>
                                   <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-xs font-semibold">{normalizeLabel(col.name)}</span>
-                                    <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                                    <span className="block break-words text-sm font-semibold leading-snug">{normalizeLabel(col.name)}</span>
+                                    <span className="mt-0.5 block break-words text-[11px] text-muted-foreground leading-snug">
                                       {col.name}
                                       {col.type ? ` · ${col.type}` : ""}
                                     </span>
@@ -1780,7 +1798,7 @@ export function ModelEvaluationPage() {
                               );
                             })
                           ) : (
-                            <div className="col-span-full rounded-lg border border-dashed border-border/40 px-3 py-6 text-center text-xs text-muted-foreground">
+                            <div className="rounded-lg border border-dashed border-border/40 px-3 py-6 text-center text-xs text-muted-foreground">
                               No columns match that search.
                             </div>
                           )}
@@ -1990,6 +2008,7 @@ export function ModelEvaluationPage() {
                                         cost: run.cost,
                                         inputTokens: run.input_tokens,
                                         outputTokens: run.output_tokens,
+                                        timing: run.timing || {},
                                       });
                                     }}
                                     className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${
@@ -3072,6 +3091,25 @@ export function ModelEvaluationPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Queue Wait</span>
+                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.queue_wait_ms)}</span>
+                  </div>
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Total Runtime</span>
+                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.total_run_ms)}</span>
+                  </div>
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Source Load</span>
+                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.source_text_load_ms)}</span>
+                  </div>
+                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Workflow Execute</span>
+                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.workflow_execute_ms)}</span>
+                  </div>
+                </div>
+
                 <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Document File</span>
                   <span className="font-semibold text-xs truncate block">{selectedCellView.filename}</span>
@@ -3174,9 +3212,14 @@ export function ModelEvaluationPage() {
                           <div key={idx} className="rounded-lg border bg-muted/20 p-3 text-[11px]">
                             <div className="flex items-center justify-between gap-3 mb-2">
                               <span className="font-bold">{item.name || item.node_id}</span>
-                              <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
-                                {item.status || "completed"}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                  {formatDuration(item.duration_ms)}
+                                </span>
+                                <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
+                                  {item.status || "completed"}
+                                </span>
+                              </div>
                             </div>
                             {item.message ? (
                               <div className="text-muted-foreground mb-2 whitespace-pre-wrap">{item.message}</div>

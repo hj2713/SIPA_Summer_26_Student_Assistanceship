@@ -82,6 +82,156 @@ interface BenchmarkRow {
   [key: string]: any;
 }
 
+interface ParsedBenchmarkFile {
+  headers: string[];
+  rows: BenchmarkRow[];
+}
+
+interface WorkflowStrategy {
+  id: string;
+  label: string;
+  rankKey: string;
+  prefix: string;
+}
+
+interface BenchmarkTargetOption {
+  key: string;
+  label: string;
+  type: string;
+}
+
+interface BenchmarkColumnMapping {
+  csvHeader: string;
+  targetKeys: string[];
+}
+
+interface BenchmarkTargetMetric {
+  key: string;
+  label: string;
+  csvHeader: string;
+  total: number;
+  matches: number;
+  percent: number;
+  meanAbsoluteError: number | null;
+}
+
+interface BenchmarkStrategyMetrics {
+  strategyId: string;
+  total: number;
+  matches: number;
+  percent: number;
+  targets: BenchmarkTargetMetric[];
+}
+
+interface BenchmarkModelMetrics {
+  strategyOrder: string[];
+  strategies: Record<string, BenchmarkStrategyMetrics>;
+}
+
+interface BenchmarkCoverage {
+  matchedDocuments: number;
+  unmatchedDocuments: number;
+}
+
+interface BenchmarkTargetMatch {
+  benchmarkValue: string;
+  mismatch: boolean;
+  mapping?: BenchmarkColumnMapping;
+}
+
+const IDENTIFIER_HEADER_CANDIDATES = ["filename", "document", "documentname", "plnum", "publiclaw"];
+
+function normalizeKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeLabel(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function parseDelimitedLine(line: string, delimiter: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === "\"") {
+      if (inQuotes && line[index + 1] === "\"") {
+        current += "\"";
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (char === delimiter && !inQuotes) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values.map((item) => item.replace(/^["']|["']$/g, ""));
+}
+
+function parseBenchmarkFile(text: string): ParsedBenchmarkFile {
+  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return { headers: [], rows: [] };
+
+  const delimiter = lines[0].includes("\t") ? "\t" : ",";
+  const headers = parseDelimitedLine(lines[0], delimiter);
+  const rows = lines.slice(1).map((line) => {
+    const rowValues = parseDelimitedLine(line, delimiter);
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = rowValues[index] || "";
+    });
+    return row as BenchmarkRow;
+  });
+
+  return { headers, rows };
+}
+
+function getBenchmarkIdentifierCandidates(headers: string[]): string[] {
+  return headers.filter((header) => IDENTIFIER_HEADER_CANDIDATES.includes(normalizeKey(header)));
+}
+
+function getBenchmarkIdentifierHeader(headers: string[]): string | null {
+  return getBenchmarkIdentifierCandidates(headers)[0] || null;
+}
+
+function normalizeValueForType(value: unknown, type?: string): string {
+  if (value === undefined || value === null) return "";
+  const normalized = String(value).trim();
+  if (!normalized) return "";
+
+  if (type === "boolean") {
+    const lowered = normalized.toLowerCase();
+    if (["true", "yes", "y", "1", "t", "-1"].includes(lowered)) return "true";
+    if (["false", "no", "n", "0", "f"].includes(lowered)) return "false";
+  }
+
+  if (type === "number" || type === "integer" || type === "decimal") {
+    const numeric = Number(normalized);
+    if (Number.isFinite(numeric)) return String(numeric);
+  }
+
+  return normalized.toLowerCase();
+}
+
+function numericValue(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  const numeric = Number(String(value).trim());
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 const ALL_PRICING_MODELS = [
   "gemini-3.5-flash",
   "gemini-3.1-pro",
@@ -221,23 +371,63 @@ export function ModelEvaluationPage() {
   const [showLinkWorkflowDialog, setShowLinkWorkflowDialog] = useState(false);
   const [linkingWorkflow, setLinkingWorkflow] = useState(false);
 
-  // Professor Benchmark State
-  const [parsedBenchmark, setParsedBenchmark] = useState<{ headers: string[]; rows: BenchmarkRow[] } | null>(null);
-  const [benchmarkAccuracy, setBenchmarkAccuracy] = useState<Record<string, {
-    delegation_total: number;
-    delegation_matches: number;
-    delegation_percent: number;
-    rank_total: number;
-    rank_matches: number;
-    rank_percent: number;
-    mae: number | null;
-  }> | null>(null);
+  // Benchmark State
+  const [parsedBenchmark, setParsedBenchmark] = useState<ParsedBenchmarkFile | null>(null);
+  const [benchmarkAccuracy, setBenchmarkAccuracy] = useState<Record<string, BenchmarkModelMetrics> | null>(null);
+  const [benchmarkCoverage, setBenchmarkCoverage] = useState<BenchmarkCoverage | null>(null);
+  const [benchmarkIdentifierHeader, setBenchmarkIdentifierHeader] = useState<string | null>(null);
+  const [benchmarkMappings, setBenchmarkMappings] = useState<BenchmarkColumnMapping[]>([]);
+  const [pendingBenchmark, setPendingBenchmark] = useState<ParsedBenchmarkFile | null>(null);
+  const [showBenchmarkMappingDialog, setShowBenchmarkMappingDialog] = useState(false);
+  const [selectedBenchmarkStrategyByModel, setSelectedBenchmarkStrategyByModel] = useState<Record<string, string>>({});
   const benchmarkInputRef = useRef<HTMLInputElement>(null);
 
   const campaignModels = campaign?.model.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
   const schemaColumns = (campaign?.schema ?? []).filter((col) => col?.name);
-  const supportsProfessorBenchmark = schemaColumns.some((col) => col.name === "delegate_law") && schemaColumns.some((col) => col.name === "discretion_rank");
+  const benchmarkTargetOptions: BenchmarkTargetOption[] = schemaColumns.map((col) => ({
+    key: col.name,
+    label: normalizeLabel(col.name),
+    type: col.type || "string",
+  }));
   const basename = (filename: string) => filename.split("/").pop() || filename;
+
+  const workflowStrategies = (() => {
+    const outputEntries = Array.isArray(linkedWorkflowDefinition?.outputs) ? linkedWorkflowDefinition.outputs : [];
+    const groupedOutputs = outputEntries
+      .map((item) => ({
+        key: String(item.key || ""),
+        group: String(item.group || ""),
+      }))
+      .filter((item) => item.key);
+
+    const groupedStrategies = groupedOutputs
+      .filter((item) => /discretion.*rank/i.test(item.key) && item.group && !["delegation", "inventory"].includes(item.group.toLowerCase()))
+      .map((item) => {
+        const rankKey = item.key;
+        const prefix = rankKey.includes("_discretion_rank") ? `${rankKey.split("_discretion_rank")[0]}_` : `${rankKey.split("_rank")[0]}_`;
+        return {
+          id: normalizeKey(item.group),
+          label: item.group,
+          rankKey,
+          prefix,
+        } satisfies WorkflowStrategy;
+      });
+
+    if (groupedStrategies.length > 0) return groupedStrategies;
+
+    const fallbackRankColumns = schemaColumns
+      .map((col) => col.name)
+      .filter((name) => /discretion.*rank/i.test(name) && name !== "discretion_rank")
+      .map((rankKey) => ({
+        id: normalizeKey(rankKey),
+        label: normalizeLabel(rankKey.replace(/_discretion_rank$/i, "")),
+        rankKey,
+        prefix: rankKey.includes("_discretion_rank") ? `${rankKey.split("_discretion_rank")[0]}_` : `${rankKey}_`,
+      }));
+
+    return fallbackRankColumns;
+  })();
+  const supportsWorkflowBenchmark = Boolean(campaign?.workflow_id) && workflowStrategies.length > 0 && benchmarkTargetOptions.length > 0;
 
   const getModelRun = (doc: CampaignDocument, model: string): ModelRunRecord => {
     const run = doc.coded_values?.[model];
@@ -256,6 +446,75 @@ export function ModelEvaluationPage() {
       }
     }
     return "missing";
+  };
+
+  const isSharedBenchmarkTarget = (targetKey: string): boolean =>
+    !workflowStrategies.some((strategy) => targetKey === strategy.rankKey || targetKey.startsWith(strategy.prefix));
+
+  const getStrategyTargets = (strategy: WorkflowStrategy): BenchmarkTargetOption[] =>
+    benchmarkTargetOptions.filter((target) => isSharedBenchmarkTarget(target.key) || target.key === strategy.rankKey || target.key.startsWith(strategy.prefix));
+
+  const createDefaultBenchmarkMappings = (headers: string[], identifierHeader: string | null): BenchmarkColumnMapping[] => {
+    const rankTargets = workflowStrategies.map((strategy) => strategy.rankKey);
+    const normalizedHeaderTargets = new Map<string, string[]>();
+
+    headers.forEach((header) => {
+      const normalized = normalizeKey(header);
+      if (normalized.includes("delegationlaw") || normalized === "delegatelaw" || normalized === "delegatelawyn") {
+        normalizedHeaderTargets.set(header, benchmarkTargetOptions.filter((target) => target.key === "delegate_law").map((target) => target.key));
+        return;
+      }
+      if (normalized.includes("discretionrank") || normalized === "rgdiscretionrank") {
+        normalizedHeaderTargets.set(header, rankTargets);
+      }
+    });
+
+    return headers
+      .filter((header) => header !== identifierHeader)
+      .map((header) => ({
+        csvHeader: header,
+        targetKeys: normalizedHeaderTargets.get(header) || [],
+      }));
+  };
+
+  const getBenchmarkRowForDocument = (doc: CampaignDocument): BenchmarkRow | null => {
+    if (!parsedBenchmark || !benchmarkIdentifierHeader) return null;
+    const identifierIsFilenameLike = ["filename", "document", "documentname"].includes(normalizeKey(benchmarkIdentifierHeader));
+    const documentBase = basename(doc.filename).trim().toLowerCase();
+    const documentIdentifier = normalizeKey(documentBase);
+
+    return (
+      parsedBenchmark.rows.find((row) => {
+        const rawIdentifier = String(row[benchmarkIdentifierHeader] || "").trim();
+        if (!rawIdentifier) return false;
+        if (identifierIsFilenameLike) {
+          return basename(rawIdentifier).trim().toLowerCase() === documentBase;
+        }
+        return normalizeKey(rawIdentifier) === documentIdentifier || documentBase.includes(rawIdentifier.toLowerCase());
+      }) || null
+    );
+  };
+
+  const getBenchmarkTargetMatch = (doc: CampaignDocument, model: string, targetKey: string): BenchmarkTargetMatch | null => {
+    const benchmarkRow = getBenchmarkRowForDocument(doc);
+    if (!benchmarkRow) return null;
+    const mapping = benchmarkMappings.find((entry) => entry.targetKeys.includes(targetKey));
+    if (!mapping) return null;
+
+    const target = benchmarkTargetOptions.find((item) => item.key === targetKey);
+    const benchmarkValue = benchmarkRow[mapping.csvHeader];
+    if (benchmarkValue === undefined || benchmarkValue === null || benchmarkValue === "") return null;
+
+    const modelRun = getModelRun(doc, model);
+    if (modelRun.status !== "completed") return null;
+    const modelValue = modelRun.values?.[targetKey];
+    const mismatch = normalizeValueForType(benchmarkValue, target?.type) !== normalizeValueForType(modelValue, target?.type);
+
+    return {
+      benchmarkValue: String(benchmarkValue),
+      mismatch,
+      mapping,
+    };
   };
 
   const isLongformColumn = (columnName: string): boolean => /rationale|reasoning|evidence/i.test(columnName);
@@ -368,6 +627,10 @@ export function ModelEvaluationPage() {
       setUsageStats([]);
       setParsedBenchmark(null);
       setBenchmarkAccuracy(null);
+      setBenchmarkCoverage(null);
+      setBenchmarkIdentifierHeader(null);
+      setBenchmarkMappings([]);
+      setSelectedBenchmarkStrategyByModel({});
     }
   }, [id, session, activeWorkspace?.id]);
 
@@ -747,7 +1010,18 @@ export function ModelEvaluationPage() {
     }
   };
 
-  // Parse Professor Benchmark CSV
+  const clearBenchmarkState = () => {
+    setParsedBenchmark(null);
+    setPendingBenchmark(null);
+    setBenchmarkIdentifierHeader(null);
+    setBenchmarkMappings([]);
+    setBenchmarkAccuracy(null);
+    setBenchmarkCoverage(null);
+    setShowBenchmarkMappingDialog(false);
+    setSelectedBenchmarkStrategyByModel({});
+  };
+
+  // Parse benchmark CSV and open the mapping flow
   const handleBenchmarkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -755,110 +1029,160 @@ export function ModelEvaluationPage() {
     reader.onload = (event) => {
       const text = event.target?.result as string;
       if (!text) return;
-      const lines = text.split(/\r?\n/);
-      if (lines.length === 0) return;
-      
-      const headers = lines[0].split(",").map(h => h.trim().replace(/^["']|["']$/g, ""));
-      const rows: BenchmarkRow[] = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const vals = line.split(",").map(v => v.trim().replace(/^["']|["']$/g, ""));
-        const rowObj: any = {};
-        headers.forEach((h, idx) => {
-          rowObj[h] = vals[idx] || "";
-        });
-        rows.push(rowObj);
+      const parsed = parseBenchmarkFile(text);
+      if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+        toast.error("The benchmark file is empty or could not be parsed.");
+        return;
       }
-      
-      setParsedBenchmark({ headers, rows });
-      toast.success(`Loaded ${rows.length} professor benchmark rows.`);
+
+      const identifierHeader = getBenchmarkIdentifierHeader(parsed.headers);
+      if (!identifierHeader) {
+        toast.error("Could not detect a filename or document identifier column in the benchmark CSV.");
+        return;
+      }
+
+      setPendingBenchmark(parsed);
+      setBenchmarkIdentifierHeader(identifierHeader);
+      setBenchmarkMappings(createDefaultBenchmarkMappings(parsed.headers, identifierHeader));
+      setShowBenchmarkMappingDialog(true);
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
-  // Helper to normalize values for comparison
-  const normalizeVal = (val: any): string => {
-    if (val === undefined || val === null) return "";
-    const text = String(val).trim().toLowerCase();
-    if (text === "true" || text === "yes" || text === "1" || text === "t" || text === "y") return "yes";
-    if (text === "false" || text === "no" || text === "0" || text === "f" || text === "n") return "no";
-    return text;
+  const handleBenchmarkTargetToggle = (csvHeader: string, targetKey: string) => {
+    setBenchmarkMappings((current) =>
+      current.map((mapping) =>
+        mapping.csvHeader !== csvHeader
+          ? mapping
+          : {
+              ...mapping,
+              targetKeys: mapping.targetKeys.includes(targetKey)
+                ? mapping.targetKeys.filter((item) => item !== targetKey)
+                : [...mapping.targetKeys, targetKey],
+            },
+      ),
+    );
   };
 
-  // Compute accuracy statistics per model dynamically
-  useEffect(() => {
-    if (!parsedBenchmark || documents.length === 0 || !campaign) {
-      setBenchmarkAccuracy(null);
+  const applyBenchmarkMappings = () => {
+    if (!pendingBenchmark || !benchmarkIdentifierHeader) {
+      toast.error("Load a benchmark file first.");
+      return;
+    }
+    const hasMappings = benchmarkMappings.some((mapping) => mapping.targetKeys.length > 0);
+    if (!hasMappings) {
+      toast.error("Map at least one CSV column to a dashboard column before running the benchmark.");
       return;
     }
 
-    const campaignModels = campaign.model.split(",").map(m => m.trim());
-    const stats: Record<string, {
-      delegation_total: number;
-      delegation_matches: number;
-      delegation_percent: number;
-      rank_total: number;
-      rank_matches: number;
-      rank_percent: number;
-      mae: number | null;
-    }> = {};
+    setParsedBenchmark(pendingBenchmark);
+    setShowBenchmarkMappingDialog(false);
+    toast.success(`Loaded ${pendingBenchmark.rows.length} benchmark rows with custom column mappings.`);
+  };
 
-    campaignModels.forEach(model => {
-      let delTotal = 0;
-      let delMatches = 0;
-      let rankTotal = 0;
-      let rankMatches = 0;
-      let rankErrors: number[] = [];
+  // Compute accuracy statistics per model and per workflow strategy dynamically
+  useEffect(() => {
+    if (!parsedBenchmark || documents.length === 0 || !campaign || workflowStrategies.length === 0) {
+      setBenchmarkAccuracy(null);
+      setBenchmarkCoverage(null);
+      return;
+    }
 
-      documents.forEach(doc => {
-        // Match benchmark row by filename
-        const docBase = doc.filename.split("/").pop()?.toLowerCase() || "";
-        const benchRow = parsedBenchmark.rows.find(r => 
-          (r.Filename || "").split("/").pop()?.toLowerCase() === docBase
-        );
-        
-        if (!benchRow) return;
+    const modelStats: Record<string, BenchmarkModelMetrics> = {};
+    let matchedDocuments = 0;
 
-        // Retrieve model nested coded values
-        const modelRun = doc.coded_values?.[model];
-        if (!modelRun || modelRun.status !== "completed") return;
+    campaignModels.forEach((model) => {
+      const strategyMetrics: Record<string, BenchmarkStrategyMetrics> = {};
 
-        const modelVals = modelRun.values || {};
+      workflowStrategies.forEach((strategy) => {
+        const relevantTargets = getStrategyTargets(strategy)
+          .map((target) => ({
+            target,
+            mapping: benchmarkMappings.find((entry) => entry.targetKeys.includes(target.key)),
+          }))
+          .filter((entry) => entry.mapping);
 
-        // 1. Evaluate delegation accuracy
-        const expDel = normalizeVal(benchRow["DelegationLaw (Y/N)"]);
-        const predDel = normalizeVal(modelVals["delegate_law"]);
-        if (expDel) {
-          delTotal++;
-          if (expDel === predDel) delMatches++;
-        }
+        const targets = relevantTargets.map(({ target, mapping }) => {
+          let total = 0;
+          let matches = 0;
+          const numericErrors: number[] = [];
 
-        // 2. Evaluate rank accuracy
-        if (expDel) {
-          const expRank = expDel === "no" ? 0 : parseFloat(benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "0");
-          const predRank = predDel === "no" ? 0 : parseFloat(String(modelVals["discretion_rank"] || "0"));
-          rankTotal++;
-          if (expRank === predRank) rankMatches++;
-          rankErrors.push(Math.abs(predRank - expRank));
-        }
+          documents.forEach((doc) => {
+            const benchmarkRow = getBenchmarkRowForDocument(doc);
+            if (!benchmarkRow) return;
+
+            const run = getModelRun(doc, model);
+            if (run.status !== "completed") return;
+
+            const benchmarkValue = benchmarkRow[mapping!.csvHeader];
+            if (benchmarkValue === undefined || benchmarkValue === null || benchmarkValue === "") return;
+
+            const actualValue = run.values?.[target.key];
+            total += 1;
+
+            const benchmarkNormalized = normalizeValueForType(benchmarkValue, target.type);
+            const actualNormalized = normalizeValueForType(actualValue, target.type);
+            if (benchmarkNormalized === actualNormalized) {
+              matches += 1;
+            }
+
+            const expectedNumber = numericValue(benchmarkValue);
+            const actualNumber = numericValue(actualValue);
+            if (expectedNumber !== null && actualNumber !== null) {
+              numericErrors.push(Math.abs(expectedNumber - actualNumber));
+            }
+          });
+
+          return {
+            key: target.key,
+            label: target.label,
+            csvHeader: mapping!.csvHeader,
+            total,
+            matches,
+            percent: total > 0 ? Math.round((matches / total) * 100) : 0,
+            meanAbsoluteError: numericErrors.length > 0 ? Math.round((numericErrors.reduce((sum, item) => sum + item, 0) / numericErrors.length) * 100) / 100 : null,
+          } satisfies BenchmarkTargetMetric;
+        }).filter((metric) => metric.total > 0);
+
+        const total = targets.reduce((sum, item) => sum + item.total, 0);
+        const matches = targets.reduce((sum, item) => sum + item.matches, 0);
+        strategyMetrics[strategy.id] = {
+          strategyId: strategy.id,
+          total,
+          matches,
+          percent: total > 0 ? Math.round((matches / total) * 100) : 0,
+          targets,
+        };
       });
 
-      stats[model] = {
-        delegation_total: delTotal,
-        delegation_matches: delMatches,
-        delegation_percent: delTotal > 0 ? Math.round((delMatches / delTotal) * 100) : 0,
-        rank_total: rankTotal,
-        rank_matches: rankMatches,
-        rank_percent: rankTotal > 0 ? Math.round((rankMatches / rankTotal) * 100) : 0,
-        mae: rankErrors.length > 0 ? Math.round((rankErrors.reduce((a, b) => a + b, 0) / rankErrors.length) * 100) / 100 : null
+      modelStats[model] = {
+        strategyOrder: workflowStrategies.map((strategy) => strategy.id),
+        strategies: strategyMetrics,
       };
     });
 
-    setBenchmarkAccuracy(stats);
-  }, [parsedBenchmark, documents, campaign]);
+    documents.forEach((doc) => {
+      if (getBenchmarkRowForDocument(doc)) matchedDocuments += 1;
+    });
+
+    setBenchmarkCoverage({
+      matchedDocuments,
+      unmatchedDocuments: Math.max(0, documents.length - matchedDocuments),
+    });
+    setBenchmarkAccuracy(modelStats);
+    setSelectedBenchmarkStrategyByModel((current) => {
+      let changed = false;
+      const next = { ...current };
+      campaignModels.forEach((model) => {
+        if (!next[model] || !workflowStrategies.some((strategy) => strategy.id === next[model])) {
+          next[model] = workflowStrategies[0]?.id || "";
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, [parsedBenchmark, documents, campaign, workflowStrategies, benchmarkMappings, campaignModels]);
 
   // Export spreadsheet matching professor's requirement
   const handleExportComparisonCSV = () => {
@@ -958,7 +1282,7 @@ export function ModelEvaluationPage() {
                 />
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.tsv,.txt"
                   ref={benchmarkInputRef}
                   onChange={handleBenchmarkUpload}
                   className="hidden"
@@ -981,15 +1305,14 @@ export function ModelEvaluationPage() {
                   {uploadingFiles ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                   {uploadingFiles ? "Uploading..." : "Upload Local Files"}
                 </Button>
-                {supportsProfessorBenchmark && (
+                {supportsWorkflowBenchmark && (
                   <Button
                     variant={parsedBenchmark ? "destructive" : "outline"}
                     size="sm"
                     onClick={() => {
                       if (parsedBenchmark) {
-                        setParsedBenchmark(null);
-                        setBenchmarkAccuracy(null);
-                        toast.info("Cleared professor benchmark comparison.");
+                        clearBenchmarkState();
+                        toast.info("Cleared benchmark comparison.");
                       } else {
                         benchmarkInputRef.current?.click();
                       }
@@ -1002,7 +1325,7 @@ export function ModelEvaluationPage() {
                       </>
                     ) : (
                       <>
-                        <Upload size={13} /> Test Against Benchmarks
+                        <Upload size={13} /> Test with Benchmark
                       </>
                     )}
                   </Button>
@@ -1109,6 +1432,30 @@ export function ModelEvaluationPage() {
                 </div>
               </div>
 
+              {parsedBenchmark && benchmarkCoverage && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs">
+                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="font-bold uppercase tracking-wide text-[11px] text-emerald-700">Benchmark mode active</div>
+                      <p className="mt-1 text-muted-foreground">
+                        Comparing {parsedBenchmark.rows.length} benchmark row{parsedBenchmark.rows.length === 1 ? "" : "s"} against {benchmarkCoverage.matchedDocuments} matched dashboard file{benchmarkCoverage.matchedDocuments === 1 ? "" : "s"}.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[11px]">
+                      <span className="rounded-full border border-emerald-200 bg-white/90 px-3 py-1 font-semibold text-emerald-700">
+                        Identifier: {benchmarkIdentifierHeader}
+                      </span>
+                      <span className="rounded-full border border-emerald-200 bg-white/90 px-3 py-1 font-semibold text-emerald-700">
+                        Mapped columns: {benchmarkMappings.filter((mapping) => mapping.targetKeys.length > 0).length}
+                      </span>
+                      <span className="rounded-full border border-emerald-200 bg-white/90 px-3 py-1 font-semibold text-emerald-700">
+                        Unmatched files: {benchmarkCoverage.unmatchedDocuments}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Top Cost / Accuracy Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {campaignModels.map(model => {
@@ -1124,6 +1471,9 @@ export function ModelEvaluationPage() {
                     return false;
                   });
                   const accuracy = benchmarkAccuracy?.[model];
+                  const selectedStrategyId = selectedBenchmarkStrategyByModel[model] || workflowStrategies[0]?.id || "";
+                  const selectedStrategy = workflowStrategies.find((strategy) => strategy.id === selectedStrategyId) || workflowStrategies[0];
+                  const selectedStrategyMetrics = selectedStrategy ? accuracy?.strategies?.[selectedStrategy.id] : null;
                   const processingDocs = documents.filter((doc) => {
                     const status = getModelRunStatus(doc, model);
                     return status === "processing" || status === "pending";
@@ -1209,24 +1559,66 @@ export function ModelEvaluationPage() {
                           </div>
                         )}
 
-                        {accuracy && (
+                        {accuracy && selectedStrategy && (
                           <div className="border-t border-border/20 pt-3 space-y-2">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">Delegation Accuracy</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">
-                                {accuracy.delegation_percent}% ({accuracy.delegation_matches}/{accuracy.delegation_total})
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Benchmark by strategy</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {selectedStrategyMetrics?.total || 0} mapped cells
                               </span>
                             </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">Rank Accuracy (Exact)</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">
-                                {accuracy.rank_percent}% ({accuracy.rank_matches}/{accuracy.rank_total})
-                              </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {workflowStrategies.map((strategy) => {
+                                const strategyMetrics = accuracy.strategies[strategy.id];
+                                const isActive = strategy.id === selectedStrategy.id;
+                                return (
+                                  <button
+                                    key={`${model}-${strategy.id}`}
+                                    type="button"
+                                    onClick={() => setSelectedBenchmarkStrategyByModel((current) => ({ ...current, [model]: strategy.id }))}
+                                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                                      isActive
+                                        ? "border-primary/30 bg-primary/10 text-primary"
+                                        : "border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                                    }`}
+                                  >
+                                    {strategy.label} {strategyMetrics ? `${strategyMetrics.percent}%` : ""}
+                                  </button>
+                                );
+                              })}
                             </div>
-                            {accuracy.mae !== null && (
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-muted-foreground">Mean Abs Error</span>
-                                <span className="font-medium text-amber-500">{accuracy.mae}</span>
+
+                            {selectedStrategyMetrics && selectedStrategyMetrics.targets.length > 0 ? (
+                              <div className="rounded-lg border border-border/30 bg-muted/10 p-2.5 space-y-2">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-muted-foreground">{selectedStrategy.label} overall</span>
+                                  <span className="font-bold text-green-600 dark:text-green-400">
+                                    {selectedStrategyMetrics.percent}% ({selectedStrategyMetrics.matches}/{selectedStrategyMetrics.total})
+                                  </span>
+                                </div>
+                                {selectedStrategyMetrics.targets.map((target) => (
+                                  <div key={`${model}-${selectedStrategy.id}-${target.key}`} className="space-y-1 border-t border-border/20 pt-2 first:border-t-0 first:pt-0">
+                                    <div className="flex justify-between items-center text-xs gap-3">
+                                      <div className="min-w-0">
+                                        <div className="truncate text-foreground">{target.label}</div>
+                                        <div className="text-[10px] text-muted-foreground truncate">CSV: {target.csvHeader}</div>
+                                      </div>
+                                      <span className="font-bold text-green-600 dark:text-green-400 shrink-0">
+                                        {target.percent}% ({target.matches}/{target.total})
+                                      </span>
+                                    </div>
+                                    {target.meanAbsoluteError !== null && (
+                                      <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-muted-foreground">Mean Abs Error</span>
+                                        <span className="font-medium text-amber-500">{target.meanAbsoluteError}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="rounded-lg border border-dashed border-border/40 px-3 py-2 text-[11px] text-muted-foreground">
+                                No mapped benchmark columns are attached to the {selectedStrategy.label} strategy yet.
                               </div>
                             )}
                           </div>
@@ -1418,30 +1810,16 @@ export function ModelEvaluationPage() {
                                 const isFailed = runStatus === "failed" || runStatus === "suspended_limit";
                                 const isMissing = runStatus === "missing";
 
-                                const docBase = doc.filename.split("/").pop()?.toLowerCase() || "";
-                                const benchRow = parsedBenchmark ? parsedBenchmark.rows.find(r => 
-                                  (r.Filename || "").split("/").pop()?.toLowerCase() === docBase
-                                ) : null;
-
-                                let benchVal: string | undefined = undefined;
-                                let isMismatch = false;
-
-                                if (benchRow) {
-                                  if (col.name === "delegate_law") {
-                                    benchVal = benchRow["DelegationLaw (Y/N)"];
-                                    const hasBenchmark = benchVal !== undefined && benchVal !== null && benchVal !== "";
-                                    const expDel = hasBenchmark ? normalizeVal(benchVal) : undefined;
-                                    const predDel = value !== undefined && value !== null ? normalizeVal(String(value)) : undefined;
-                                    isMismatch = hasBenchmark && runStatus === "completed" && expDel !== predDel;
-                                  } else if (col.name === "discretion_rank") {
-                                    const expDel = normalizeVal(benchRow["DelegationLaw (Y/N)"]);
-                                    const predDel = normalizeVal(vals["delegate_law"]);
-                                    const expRank = expDel === "no" ? 0 : parseFloat(benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "0");
-                                    const predRank = predDel === "no" ? 0 : parseFloat(String(value || "0"));
-                                    isMismatch = runStatus === "completed" && expRank !== predRank;
-                                    benchVal = expDel === "no" ? "0" : (benchRow["RG_Discretion_Rank"] || benchRow["Discretion_Rank"] || "0");
-                                  }
-                                }
+                                const activeStrategyId = selectedBenchmarkStrategyByModel[model] || workflowStrategies[0]?.id || "";
+                                const activeStrategy = workflowStrategies.find((strategy) => strategy.id === activeStrategyId) || workflowStrategies[0];
+                                const targetBelongsToStrategy = activeStrategy
+                                  ? isSharedBenchmarkTarget(col.name) || col.name === activeStrategy.rankKey || col.name.startsWith(activeStrategy.prefix)
+                                  : true;
+                                const benchmarkMatch = parsedBenchmark && targetBelongsToStrategy
+                                  ? getBenchmarkTargetMatch(doc, model, col.name)
+                                  : null;
+                                const benchVal = benchmarkMatch?.benchmarkValue;
+                                const isMismatch = benchmarkMatch?.mismatch || false;
 
                                 return (
                                   <td
@@ -1904,6 +2282,131 @@ export function ModelEvaluationPage() {
         </Dialog>
 
         {/* Add Model Modal */}
+        <Dialog
+          open={showBenchmarkMappingDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowBenchmarkMappingDialog(false);
+              if (!parsedBenchmark) {
+                setPendingBenchmark(null);
+              }
+            }
+          }}
+        >
+          <DialogContent className="w-[96vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto p-5">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Upload size={18} /> Map Benchmark Columns
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-5 text-sm">
+              <div className="rounded-xl border border-border/50 bg-muted/10 p-4 space-y-3">
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Benchmark file</div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Pick the identifier column and map each CSV column to one or more dashboard outputs. Shared columns like `delegate_law` can appear in every strategy, and one CSV rank column can feed all three strategy ranks.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Identifier column</label>
+                    <select
+                      value={benchmarkIdentifierHeader || ""}
+                      onChange={(event) => {
+                        const nextIdentifier = event.target.value;
+                        setBenchmarkIdentifierHeader(nextIdentifier);
+                        if (pendingBenchmark) {
+                          setBenchmarkMappings(createDefaultBenchmarkMappings(pendingBenchmark.headers, nextIdentifier));
+                        }
+                      }}
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-xs"
+                    >
+                      {(pendingBenchmark?.headers || []).map((header) => (
+                        <option key={header} value={header}>
+                          {header}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/50 overflow-hidden">
+                <div className="grid grid-cols-[220px_minmax(0,1fr)] border-b bg-muted/20 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <div className="p-3 border-r">CSV Column</div>
+                  <div className="p-3">Map To Dashboard Columns</div>
+                </div>
+                <div className="divide-y">
+                  {benchmarkMappings.map((mapping) => (
+                    <div key={mapping.csvHeader} className="grid grid-cols-[220px_minmax(0,1fr)]">
+                      <div className="border-r bg-muted/10 p-3">
+                        <div className="font-semibold text-xs break-words">{mapping.csvHeader}</div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">
+                          {mapping.targetKeys.length === 0 ? "Not mapped yet" : `${mapping.targetKeys.length} target${mapping.targetKeys.length === 1 ? "" : "s"} selected`}
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {benchmarkTargetOptions.map((target) => (
+                            <label
+                              key={`${mapping.csvHeader}-${target.key}`}
+                              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
+                                mapping.targetKeys.includes(target.key)
+                                  ? "border-primary/30 bg-primary/5"
+                                  : "border-border/50 bg-background hover:bg-muted/20"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={mapping.targetKeys.includes(target.key)}
+                                onChange={() => handleBenchmarkTargetToggle(mapping.csvHeader, target.key)}
+                                className="mt-0.5"
+                              />
+                              <span className="min-w-0">
+                                <span className="block font-semibold">{target.label}</span>
+                                <span className="block text-[10px] text-muted-foreground">{target.key}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {workflowStrategies.length > 0 && (
+                <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Detected workflow strategies</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {workflowStrategies.map((strategy) => (
+                      <span key={strategy.id} className="rounded-full border border-violet-200 bg-white/90 px-3 py-1 text-[11px] font-semibold text-violet-700">
+                        {strategy.label} {"->"} {strategy.rankKey}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowBenchmarkMappingDialog(false);
+                    if (!parsedBenchmark) setPendingBenchmark(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="button" onClick={applyBenchmarkMappings}>
+                  Apply Benchmark Mapping
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={showAddModelDialog} onOpenChange={(open) => !addingModel && setShowAddModelDialog(open)}>
           <DialogContent className="w-[90vw] sm:max-w-md max-h-[85vh] overflow-y-auto p-5">
             <DialogHeader>

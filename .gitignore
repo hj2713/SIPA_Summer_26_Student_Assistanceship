@@ -25,6 +25,7 @@ frontend/.next/
 
 # Backend / Data
 backend/data/
+backend/gcp-key.json
 
 # OS
 .DS_Store

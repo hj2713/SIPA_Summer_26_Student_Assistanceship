@@ -48,6 +48,11 @@ export const workflowApi = {
   get(id: string, jwt: string, workspaceId: string) {
     return request<CodingWorkflow>(`/api/workflows/${id}?${workspaceQuery(workspaceId)}`, jwt);
   },
+  duplicate(id: string, jwt: string, workspaceId: string) {
+    return request<CodingWorkflow>(`/api/workflows/${id}/duplicate?${workspaceQuery(workspaceId)}`, jwt, {
+      method: "POST",
+    });
+  },
   create(payload: { name: string; description: string; template_id?: string; template?: string }, jwt: string, workspaceId: string) {
     return request<CodingWorkflow>(`/api/workflows?${workspaceQuery(workspaceId)}`, jwt, {
       method: "POST",

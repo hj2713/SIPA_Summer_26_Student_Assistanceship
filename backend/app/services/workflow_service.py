@@ -33,6 +33,7 @@ class WorkflowService:
         "blank": 1,
         "law_delegation_discretion_rank": 4,
         "professor_discretion_prompt_suite": 1,
+        "professor_discretion_prompt_suite_detailed": 1,
     }
 
     def _parse_definition(self, raw) -> WorkflowDefinition:
@@ -136,6 +137,14 @@ class WorkflowService:
                 "category": "Project",
                 "seed_version": self.SEED_TEMPLATE_VERSIONS["professor_discretion_prompt_suite"],
                 "definition": self._normalize_definition(WORKFLOW_TEMPLATES["professor_discretion_prompt_suite"]()).model_dump(),
+            },
+            {
+                "slug": "professor_discretion_prompt_suite_detailed",
+                "name": "Professor Discretion Prompt Suite Detailed",
+                "description": "Accuracy-oriented detailed workflow with explicit evidence, constraint, boundary, cascade, M9, and B3 stages.",
+                "category": "Project",
+                "seed_version": self.SEED_TEMPLATE_VERSIONS["professor_discretion_prompt_suite_detailed"],
+                "definition": self._normalize_definition(WORKFLOW_TEMPLATES["professor_discretion_prompt_suite_detailed"]()).model_dump(),
             },
         ]
         with self.db_session_factory() as session:
@@ -277,6 +286,19 @@ class WorkflowService:
     def get(self, workflow_id: str, workspace_id: str) -> WorkflowRow:
         with self.db_session_factory() as session:
             return self._to_row(self._get_owned(session, workflow_id, workspace_id))
+
+    def duplicate(self, workflow_id: str, workspace_id: str, user_id: str) -> WorkflowRow:
+        with self.db_session_factory() as session:
+            source = self._get_owned(session, workflow_id, workspace_id)
+            row = session.workflows.create(
+                str(uuid.uuid4()),
+                workspace_id,
+                f"{source['name']} Copy",
+                source["description"],
+                source["draft_definition"],
+                user_id,
+            )
+        return self._to_row(row)
 
     def update(self, workflow_id: str, payload: WorkflowUpdate, workspace_id: str) -> WorkflowRow:
         with self.db_session_factory() as session:

@@ -8,6 +8,7 @@ from app.workflows.templates import (
     law_delegation_discretion_rank_definition,
     professor_discretion_prompt_suite_definition,
 )
+from app.workflows.professor_discretion_suite_detailed import professor_discretion_prompt_suite_detailed_definition
 from app.workflows.validator import validate_workflow_definition
 
 
@@ -97,6 +98,28 @@ def test_professor_prompt_suite_workflow_is_valid_and_exposes_prompt_family_outp
     assert by_id["b3_finalize"]["kind"] == "llm"
     output_fields = by_id["dashboard_output"]["config"]["fields"]
     output_keys = [field["key"] for field in output_fields]
+    assert "cascade_discretion_rank" in output_keys
+    assert "m9_discretion_rank" in output_keys
+    assert "b3_discretion_rank" in output_keys
+
+
+def test_professor_prompt_suite_detailed_workflow_is_valid_and_exposes_shared_and_branch_outputs():
+    definition = professor_discretion_prompt_suite_detailed_definition()
+    issues = validate_workflow_definition(definition)
+
+    assert [issue for issue in issues if issue.severity == "error"] == []
+    by_id = {node["id"]: node for node in definition["nodes"]}
+    assert by_id["prompt_v8_delegation_gate"]["kind"] == "llm"
+    assert by_id["actor_identification"]["kind"] == "llm"
+    assert by_id["delegated_authority_extraction"]["kind"] == "llm"
+    assert by_id["inventory_synthesis"]["kind"] == "llm"
+    assert by_id["cascade_stage_2_minimal_screen"]["kind"] == "llm"
+    assert by_id["m9_multiclass_rank"]["kind"] == "llm"
+    assert by_id["b3_coarse_band_screen"]["kind"] == "llm"
+    assert "Benchmark Alignment Rules" in by_id["prompt_v8_delegation_gate"]["config"]["instructions"]
+    output_fields = by_id["dashboard_output"]["config"]["fields"]
+    output_keys = [field["key"] for field in output_fields]
+    assert "inventory_rationale" in output_keys
     assert "cascade_discretion_rank" in output_keys
     assert "m9_discretion_rank" in output_keys
     assert "b3_discretion_rank" in output_keys
@@ -252,6 +275,34 @@ async def test_professor_prompt_suite_sets_all_rank_paths_to_zero_when_no_delega
     )
 
     assert calls == ["delegation_gate"]
+    assert result["outputs"]["delegate_law"] is False
+    assert result["outputs"]["cascade_discretion_rank"] == 0
+    assert result["outputs"]["m9_discretion_rank"] == 0
+    assert result["outputs"]["b3_discretion_rank"] == 0
+
+
+@pytest.mark.asyncio
+async def test_professor_prompt_suite_detailed_sets_all_rank_paths_to_zero_when_no_delegation(monkeypatch):
+    calls = []
+
+    class FakeLlm:
+        async def parse_structured(self, messages, schema, log_context=None):
+            calls.append(log_context["workflow_node_id"])
+            if log_context["workflow_node_id"] == "prompt_v8_delegation_gate":
+                return schema(
+                    delegate_law=False,
+                    delegation_rationale="No new delegated authority appears in the law.",
+                    delegation_evidence=[],
+                )
+            raise AssertionError("No downstream LLM should run when delegation is false.")
+
+    monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
+    result = await WorkflowExecutor().execute(
+        professor_discretion_prompt_suite_detailed_definition(),
+        "The law only adjusts a reporting deadline and does not grant new authority.",
+    )
+
+    assert calls == ["prompt_v8_delegation_gate"]
     assert result["outputs"]["delegate_law"] is False
     assert result["outputs"]["cascade_discretion_rank"] == 0
     assert result["outputs"]["m9_discretion_rank"] == 0

@@ -138,6 +138,54 @@ def test_create_professor_prompt_suite_template_and_workflow(client, auth_header
     assert validated.json()["valid"] is True
 
 
+def test_create_professor_prompt_suite_detailed_template_and_workflow(client, auth_headers):
+    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
+    assert templates.status_code == 200
+    suite_template = next(item for item in templates.json() if item["slug"] == "professor_discretion_prompt_suite_detailed")
+    assert suite_template["definition"]["metadata"]["workflow_family"] == "professor_discretion_prompt_suite_detailed"
+    node_ids = {node["id"] for node in suite_template["definition"]["nodes"]}
+    assert {
+        "actor_identification",
+        "delegated_authority_extraction",
+        "affirmative_discretion_signals",
+        "constraint_signals",
+        "scope_and_centrality_assessment",
+        "residual_leeway_assessment",
+        "inventory_synthesis",
+        "cascade_stage_2_minimal_screen",
+        "m9_multiclass_rank",
+        "b3_coarse_band_screen",
+    } <= node_ids
+    gate_node = next(node for node in suite_template["definition"]["nodes"] if node["id"] == "prompt_v8_delegation_gate")
+    assert "Benchmark Alignment Rules" in gate_node["config"]["instructions"]
+    assert gate_node["prompt_provenance"]["source_file"] == "Updates/Prompts/Prompt_v8.txt"
+
+    created = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": "Professor Prompt Suite Detailed",
+            "description": "Detailed workflow version of the professor's prompt family",
+            "template_id": suite_template["id"],
+        },
+    )
+    assert created.status_code == 201
+    definition = created.json()["definition"]
+    output_fields = next(node for node in definition["nodes"] if node["id"] == "dashboard_output")["config"]["fields"]
+    output_keys = [field["key"] for field in output_fields]
+    assert "inventory_rationale" in output_keys
+    assert "cascade_discretion_rank" in output_keys
+    assert "m9_discretion_rank" in output_keys
+    assert "b3_discretion_rank" in output_keys
+
+    validated = client.post(
+        f"/api/workflows/{created.json()['id']}/validate?workspace_id=QA",
+        headers=auth_headers,
+    )
+    assert validated.status_code == 200
+    assert validated.json()["valid"] is True
+
+
 def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
     templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers).json()
     blank = next(item for item in templates if item["slug"] == "blank")
@@ -224,6 +272,45 @@ def test_template_update_does_not_mutate_existing_workflow_draft(client, auth_he
     )
     assert reloaded_workflow.status_code == 200
     assert reloaded_workflow.json()["definition"]["nodes"][0]["name"] == "Document input"
+
+
+def test_workflow_duplicate_creates_independent_draft(client, auth_headers):
+    workflow = client.post(
+        "/api/workflows?workspace_id=QA",
+        headers=auth_headers,
+        json={"name": "Original workflow", "template": "blank"},
+    ).json()
+    original_node_name = workflow["definition"]["nodes"][0]["name"]
+
+    duplicated = client.post(
+        f"/api/workflows/{workflow['id']}/duplicate?workspace_id=QA",
+        headers=auth_headers,
+    )
+    assert duplicated.status_code == 201
+    duplicate = duplicated.json()
+    assert duplicate["name"] == "Original workflow Copy"
+    assert duplicate["id"] != workflow["id"]
+
+    updated_definition = duplicate["definition"]
+    updated_definition["nodes"][0]["name"] = "Duplicated document input"
+    update_response = client.patch(
+        f"/api/workflows/{duplicate['id']}?workspace_id=QA",
+        headers=auth_headers,
+        json={
+            "name": duplicate["name"],
+            "description": duplicate["description"],
+            "definition": updated_definition,
+            "revision": duplicate["revision"],
+        },
+    )
+    assert update_response.status_code == 200
+
+    original_reloaded = client.get(
+        f"/api/workflows/{workflow['id']}?workspace_id=QA",
+        headers=auth_headers,
+    )
+    assert original_reloaded.status_code == 200
+    assert original_reloaded.json()["definition"]["nodes"][0]["name"] == original_node_name
 
 
 def test_workflow_file_test_runs_without_persisting_document(client, auth_headers, monkeypatch):

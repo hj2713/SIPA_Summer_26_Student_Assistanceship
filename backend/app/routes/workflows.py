@@ -69,6 +69,12 @@ def get_workflow(workflow_id: str, current_user: CurrentUserDep, workspace_id: s
     return workflow_service.get(workflow_id, workspace_id)
 
 
+@router.post("/{workflow_id}/duplicate", response_model=WorkflowRow, status_code=status.HTTP_201_CREATED)
+def duplicate_workflow(workflow_id: str, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
+    _require_editor(current_user)
+    return workflow_service.duplicate(workflow_id, workspace_id, current_user.id)
+
+
 @router.patch("/{workflow_id}", response_model=WorkflowRow)
 def update_workflow(workflow_id: str, payload: WorkflowUpdate, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
     _require_editor(current_user)

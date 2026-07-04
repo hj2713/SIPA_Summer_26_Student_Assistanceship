@@ -84,6 +84,17 @@ export function WorkflowLibraryPage() {
     }
   };
 
+  const duplicateWorkflow = async (workflow: CodingWorkflow) => {
+    try {
+      const copy = await workflowApi.duplicate(workflow.id, jwt, workspaceId);
+      setWorkflows((current) => [copy, ...current]);
+      toast.success("Workflow duplicated");
+      navigate(`/workflows/${copy.id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate workflow");
+    }
+  };
+
   const deleteTemplate = async () => {
     if (!deleteTemplateTarget) return;
     try {
@@ -209,7 +220,7 @@ export function WorkflowLibraryPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{workflows.map((workflow) => {
                 const kinds = new Set(workflow.definition.nodes.map((node) => node.kind));
-                return <Card key={workflow.id} className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md" onClick={() => navigate(`/workflows/${workflow.id}`)}><CardHeader className="border-b"><div className="flex items-start justify-between gap-2"><div><CardTitle>{workflow.name}</CardTitle><CardDescription className="mt-1 line-clamp-2 min-h-10 text-xs">{workflow.description || "No description yet."}</CardDescription></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${workflow.status === "published" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{workflow.status}</span></div></CardHeader><CardContent><div className="flex flex-wrap gap-1.5">{Array.from(kinds).map((kind) => <span key={kind} className="rounded bg-muted px-2 py-1 text-[9px] font-medium uppercase text-muted-foreground">{kind.replace("_", " ")}</span>)}</div><div className="mt-4 flex items-center justify-between border-t pt-3 text-[10px] text-muted-foreground"><span>{workflow.definition.nodes.length} nodes · v{workflow.latest_version || "draft"}</span><Button variant="ghost" size="icon-xs" onClick={(event) => { event.stopPropagation(); setDeleteWorkflowTarget(workflow); }}><Trash2 className="text-destructive" size={12} /></Button></div></CardContent></Card>;
+                return <Card key={workflow.id} className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md" onClick={() => navigate(`/workflows/${workflow.id}`)}><CardHeader className="border-b"><div className="flex items-start justify-between gap-2"><div><CardTitle>{workflow.name}</CardTitle><CardDescription className="mt-1 line-clamp-2 min-h-10 text-xs">{workflow.description || "No description yet."}</CardDescription></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${workflow.status === "published" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{workflow.status}</span></div></CardHeader><CardContent><div className="flex flex-wrap gap-1.5">{Array.from(kinds).map((kind) => <span key={kind} className="rounded bg-muted px-2 py-1 text-[9px] font-medium uppercase text-muted-foreground">{kind.replace("_", " ")}</span>)}</div><div className="mt-4 flex items-center justify-between border-t pt-3 text-[10px] text-muted-foreground"><span>{workflow.definition.nodes.length} nodes · v{workflow.latest_version || "draft"}</span><div className="flex gap-1"><Button variant="ghost" size="icon-xs" title="Duplicate" onClick={(event) => { event.stopPropagation(); void duplicateWorkflow(workflow); }}><Copy size={12} /></Button><Button variant="ghost" size="icon-xs" onClick={(event) => { event.stopPropagation(); setDeleteWorkflowTarget(workflow); }}><Trash2 className="text-destructive" size={12} /></Button></div></div></CardContent></Card>;
               })}</div>
             )}
           </section>

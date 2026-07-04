@@ -17,7 +17,7 @@ class WorkflowCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=1000)
     template_id: Optional[str] = None
-    template: Optional[Literal["blank", "delegation_discretion", "law_delegation_discretion_rank", "professor_discretion_prompt_suite"]] = None
+    template: Optional[Literal["blank", "delegation_discretion", "law_delegation_discretion_rank", "professor_discretion_prompt_suite", "professor_discretion_prompt_suite_detailed"]] = None
 
 
 class WorkflowUpdate(BaseModel):

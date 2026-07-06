@@ -76,6 +76,14 @@ interface ModelRunRecord {
   timing?: ModelRunTiming;
 }
 
+interface CampaignStatusSummary {
+  total: number;
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+}
+
 interface ModelRunTiming {
   queued_at?: string | null;
   started_at?: string | null;
@@ -333,6 +341,9 @@ export function ModelEvaluationPage() {
   const [documents, setDocuments] = useState<CampaignDocument[]>([]);
   const [usageStats, setUsageStats] = useState<ModelStats[]>([]);
   const [isPolling, setIsPolling] = useState(false);
+  const statusSummaryRef = useRef<CampaignStatusSummary | null>(null);
+  const lastFullDocumentPollRef = useRef(0);
+  const lastUsagePollRef = useRef(0);
   const [retryingModel, setRetryingModel] = useState<string | null>(null);
   const [retryingAllFailed, setRetryingAllFailed] = useState(false);
   const [retryingDocumentKey, setRetryingDocumentKey] = useState<string | null>(null);
@@ -721,6 +732,14 @@ export function ModelEvaluationPage() {
       if (!resDocs.ok) throw new Error("Failed to load dashboard documents");
       const docsData: CampaignDocument[] = await resDocs.json();
       setDocuments(docsData);
+      lastFullDocumentPollRef.current = Date.now();
+      statusSummaryRef.current = {
+        total: docsData.length,
+        pending: docsData.filter((d) => d.status === "pending").length,
+        processing: docsData.filter((d) => d.status === "processing").length,
+        completed: docsData.filter((d) => d.status === "completed").length,
+        failed: docsData.filter((d) => d.status === "failed").length,
+      };
 
       // 3. Fetch usage breakdown stats
       const resUsage = await fetch(`${API_BASE_URL}/api/usage/stats?timeframe=all&campaign_id=${campaignId}`, {
@@ -777,23 +796,46 @@ export function ModelEvaluationPage() {
     if (!isPolling || !id || !session?.access_token) return;
     const interval = setInterval(async () => {
       try {
-        const resDocs = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents`, {
+        const resStatus = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents/status-summary`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (resDocs.ok) {
-          const docsData: CampaignDocument[] = await resDocs.json();
-          setDocuments(docsData);
-          const stillRunning = docsData.some(d => d.status === "pending" || d.status === "processing");
-          setIsPolling(stillRunning);
+        if (!resStatus.ok) return;
+
+        const summary: CampaignStatusSummary = await resStatus.json();
+        const previous = statusSummaryRef.current;
+        statusSummaryRef.current = summary;
+
+        const stillRunning = summary.pending > 0 || summary.processing > 0;
+        const now = Date.now();
+        const finishedCountChanged =
+          !previous ||
+          previous.completed !== summary.completed ||
+          previous.failed !== summary.failed ||
+          previous.total !== summary.total;
+        const fullRefreshDue = now - lastFullDocumentPollRef.current > 20000;
+
+        if (finishedCountChanged || fullRefreshDue || !stillRunning) {
+          const resDocs = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (resDocs.ok) {
+            const docsData: CampaignDocument[] = await resDocs.json();
+            setDocuments(docsData);
+            lastFullDocumentPollRef.current = now;
+          }
         }
+
+        setIsPolling(stillRunning);
         
-        // Refresh usage stats too
-        const resUsage = await fetch(`${API_BASE_URL}/api/usage/stats?timeframe=all&campaign_id=${id}`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (resUsage.ok) {
-          const usageData = await resUsage.json();
-          setUsageStats(usageData.breakdown || []);
+        if (finishedCountChanged || !stillRunning || now - lastUsagePollRef.current > 30000) {
+          const resUsage = await fetch(`${API_BASE_URL}/api/usage/stats?timeframe=all&campaign_id=${id}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (resUsage.ok) {
+            const usageData = await resUsage.json();
+            setUsageStats(usageData.breakdown || []);
+            lastUsagePollRef.current = now;
+          }
         }
       } catch (err) {
         console.error("Polling sync error", err);
@@ -1078,6 +1120,33 @@ export function ModelEvaluationPage() {
       void fetchCampaignDetails(campaign.id);
     } catch (err: any) {
       toast.error(err.message || "Failed to retry all failed runs");
+    } finally {
+      setRetryingAllFailed(false);
+    }
+  };
+
+  const handleRecoverActiveRuns = async () => {
+    if (!campaign || !session?.access_token) return;
+    setRetryingAllFailed(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/retry?include_active=true`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to recover active runs");
+      }
+      const body = await res.json();
+      const queuedCount = Number(body?.queued_count || 0);
+      if (queuedCount <= 0) {
+        toast.info(body?.message || "No active runs found to recover.");
+        return;
+      }
+      toast.success(body?.message || "Queued active runs for recovery.");
+      setIsPolling(true);
+      void fetchCampaignDetails(campaign.id);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to recover active runs");
     } finally {
       setRetryingAllFailed(false);
     }
@@ -1396,6 +1465,12 @@ export function ModelEvaluationPage() {
     campaignModels.some((model) => {
       const status = getModelRunStatus(doc, model);
       return status === "failed" || status === "suspended_limit";
+    }),
+  );
+  const hasActiveRuns = documents.some((doc) =>
+    campaignModels.some((model) => {
+      const status = getModelRunStatus(doc, model);
+      return status === "pending" || status === "processing";
     }),
   );
 
@@ -1813,6 +1888,19 @@ export function ModelEvaluationPage() {
                       >
                         <RefreshCw className={`h-3 w-3 ${retryingAllFailed ? "animate-spin" : ""}`} />
                         Retry all failed
+                      </Button>
+                    )}
+                    {hasActiveRuns && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRecoverActiveRuns}
+                        disabled={retryingAllFailed}
+                        className="h-7 gap-1.5 px-2 text-[10px] font-semibold"
+                      >
+                        <RefreshCw className={`h-3 w-3 ${retryingAllFailed ? "animate-spin" : ""}`} />
+                        Recover running
                       </Button>
                     )}
                     {isPolling && (

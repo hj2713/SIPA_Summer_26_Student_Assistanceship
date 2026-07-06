@@ -302,6 +302,32 @@ def init_postgres_db():
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS workflow_jobs (
+                    id VARCHAR(255) PRIMARY KEY,
+                    dedupe_key TEXT NOT NULL UNIQUE,
+                    dashboard_id VARCHAR(255) NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+                    document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    workflow_id VARCHAR(255) NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
+                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE CASCADE,
+                    source VARCHAR(50) NOT NULL DEFAULT 'draft',
+                    version INTEGER,
+                    retry_model TEXT,
+                    status VARCHAR(50) NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'processing', 'completed', 'failed', 'canceled')),
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    max_attempts INTEGER NOT NULL DEFAULT 3,
+                    payload_json TEXT NOT NULL DEFAULT '{}',
+                    queued_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    started_at TIMESTAMP WITH TIME ZONE,
+                    completed_at TIMESTAMP WITH TIME ZONE,
+                    heartbeat_at TIMESTAMP WITH TIME ZONE,
+                    locked_by TEXT,
+                    locked_until TIMESTAMP WITH TIME ZONE,
+                    error_message TEXT
+                );
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS llm_usage_logs (
                     id VARCHAR(255) PRIMARY KEY,
                     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -340,6 +366,8 @@ def init_postgres_db():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_status ON workflow_jobs (status, queued_at);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_dashboard ON workflow_jobs (dashboard_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
@@ -581,6 +609,32 @@ def init_sqlite_db():
             );
         """)
 
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS workflow_jobs (
+                id TEXT PRIMARY KEY,
+                dedupe_key TEXT NOT NULL UNIQUE,
+                dashboard_id TEXT NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+                document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                workflow_id TEXT NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
+                workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+                source TEXT NOT NULL DEFAULT 'draft',
+                version INTEGER,
+                retry_model TEXT,
+                status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'processing', 'completed', 'failed', 'canceled')),
+                attempts INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                queued_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                started_at TEXT,
+                completed_at TEXT,
+                heartbeat_at TEXT,
+                locked_by TEXT,
+                locked_until TEXT,
+                error_message TEXT
+            );
+        """)
+
         # --- DB Migrations for existing databases ---
         # Add model/workflow columns to threads and dashboards tables defensively
         try:
@@ -673,6 +727,8 @@ def init_sqlite_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_status ON workflow_jobs (status, queued_at);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_dashboard ON workflow_jobs (dashboard_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")

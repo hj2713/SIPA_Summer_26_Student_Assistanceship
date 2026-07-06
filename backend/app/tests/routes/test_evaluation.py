@@ -155,6 +155,77 @@ def test_add_model_to_campaign_returns_warning_if_queueing_fails_after_save(clie
         assert row["model"] == "gemini-3.1-flash-lite,gpt-4o-mini"
 
 
+def test_retry_documents_can_recover_active_stuck_runs(client, auth_headers):
+    dashboard_id = "test-recover-active-dashboard"
+    doc_ids = ["test-recover-active-doc-1", "test-recover-active-doc-2"]
+    coded_values = {
+        "gpt-4o-mini": {
+            "status": "processing",
+            "values": {},
+            "error_message": None,
+        },
+        "gemini-3.1-flash-lite": {
+            "status": "pending",
+            "values": {},
+            "error_message": None,
+        },
+    }
+
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model)
+            VALUES (?, 'QA', 'Recover Active', 'Desc', 'Prompt', '[]', 'gpt-4o-mini,gemini-3.1-flash-lite');
+            """,
+            (dashboard_id,),
+        )
+        for index, doc_id in enumerate(doc_ids):
+            conn.execute(
+                """
+                INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
+                VALUES (?, ?, 'QA', ?, ?, 10, 'text/plain', 'completed', '{}');
+                """,
+                (doc_id, TEST_USER_ID, f"recover-{index}.txt", f"/tmp/recover-{index}.txt"),
+            )
+            conn.execute(
+                """
+                INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values)
+                VALUES (?, ?, 'processing', ?);
+                """,
+                (dashboard_id, doc_id, json.dumps(coded_values)),
+            )
+        conn.commit()
+
+    with patch("app.services.campaign_service.campaign_service._enqueue_dashboard_execution") as mock_enqueue:
+        response = client.post(
+            f"/api/dashboards/{dashboard_id}/documents/retry?include_active=true",
+            headers=auth_headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["queued_count"] == 2
+    assert "recovery" in body["message"]
+    mock_enqueue.assert_called_once_with(
+        dashboard_id,
+        TEST_USER_ID,
+        doc_ids,
+        retry_model=None,
+    )
+
+    with get_db_conn() as conn:
+        rows = conn.execute(
+            "SELECT status, coded_values FROM dashboard_documents WHERE dashboard_id = ? ORDER BY document_id;",
+            (dashboard_id,),
+        ).fetchall()
+
+    assert [row["status"] for row in rows] == ["pending", "pending"]
+    for row in rows:
+        updated = json.loads(row["coded_values"])
+        assert updated["gpt-4o-mini"]["status"] == "pending"
+        assert updated["gemini-3.1-flash-lite"]["status"] == "pending"
+
+
 def test_link_workflow_to_campaign_rejects_mismatched_schema(client, auth_headers):
     from unittest.mock import AsyncMock, patch
 
@@ -335,11 +406,11 @@ def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, aut
         conn.commit()
 
     with patch(
-        "app.services.workflow_dashboard_service.workflow_dashboard_service.run_existing_documents_for_dashboard",
-    ) as mock_run, patch.object(campaign_service._coding_service, "schedule_coroutine") as mock_schedule:
+        "app.services.workflow_dashboard_service.workflow_dashboard_service.queue_existing_documents_for_dashboard",
+    ) as mock_queue, patch.object(campaign_service._coding_service, "schedule_coroutine") as mock_schedule:
         campaign_service.link_campaign_documents(dashboard_id, [document_id], TEST_USER_ID)
 
-    mock_run.assert_called_once_with(
+    mock_queue.assert_called_once_with(
         dashboard_id=dashboard_id,
         workflow_id=workflow_id,
         workspace_id="QA",
@@ -350,9 +421,7 @@ def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, aut
         rerun_document_ids={document_id},
         retry_model=None,
     )
-    mock_schedule.assert_called_once()
-    scheduled_coro = mock_schedule.call_args.args[0]
-    scheduled_coro.close()
+    mock_schedule.assert_not_called()
 
     with get_db_conn() as conn:
         row = conn.execute(

@@ -516,7 +516,7 @@ class CampaignService:
         if workflow_id:
             from app.services.workflow_dashboard_service import workflow_dashboard_service
 
-            coro = workflow_dashboard_service.run_existing_documents_for_dashboard(
+            workflow_dashboard_service.queue_existing_documents_for_dashboard(
                 dashboard_id=dashboard_id,
                 workflow_id=workflow_id,
                 workspace_id=dash["workspace_id"],
@@ -527,7 +527,6 @@ class CampaignService:
                 rerun_document_ids=set(document_ids),
                 retry_model=retry_model,
             )
-            self._coding_service.schedule_coroutine(coro)
             return
 
         self._coding_service.enqueue_sequential_coding(dashboard_id, document_ids, user_id, retry_model=retry_model)
@@ -637,7 +636,8 @@ class CampaignService:
         id: str,
         user_id: str,
         document_ids: Optional[List[str]] = None,
-        retry_model: Optional[str] = None
+        retry_model: Optional[str] = None,
+        include_active: bool = False,
     ) -> List[str]:
         """Retry coding execution for failed documents in a campaign dashboard."""
         with self.db_session_factory() as session:
@@ -656,20 +656,54 @@ class CampaignService:
                     
                     model_data = coded_val.get(retry_model) or {}
                     model_status = model_data.get("status") or "pending"
-                    if model_status in ["failed", "suspended_limit", "pending", "processing"]:
+                    retryable_statuses = ["failed", "suspended_limit"]
+                    if include_active:
+                        retryable_statuses.extend(["pending", "processing"])
+                    if model_status in retryable_statuses:
                         model_data["status"] = "pending"
                         model_data["error_message"] = None
                         coded_val[retry_model] = model_data
                         session.dashboard_documents.update_coded_values(id, doc_id, json.dumps(coded_val), "pending")
                         doc_ids.append(doc_id)
             else:
-                if document_ids:
-                    doc_ids = session.dashboard_documents.get_linked_document_ids(id, document_ids)
-                else:
-                    doc_ids = session.dashboard_documents.get_failed_document_ids(id)
-                
-                if doc_ids:
-                    session.dashboard_documents.reset_documents_to_pending(id, doc_ids)
+                all_docs = session.dashboard_documents.list_by_dashboard(id)
+                target_document_ids = set(document_ids or [])
+                doc_ids = []
+                retryable_statuses = {"failed", "suspended_limit"}
+                if include_active:
+                    retryable_statuses.update({"pending", "processing"})
+
+                for doc in all_docs:
+                    doc_id = doc["document_id"]
+                    if target_document_ids and doc_id not in target_document_ids:
+                        continue
+
+                    row_status = doc.get("status")
+                    coded_values_str = doc.get("coded_values") or "{}"
+                    try:
+                        coded_val = json.loads(coded_values_str) if isinstance(coded_values_str, str) else (coded_values_str or {})
+                    except Exception:
+                        coded_val = {}
+                    if not isinstance(coded_val, dict):
+                        coded_val = {}
+
+                    should_retry = bool(target_document_ids) or row_status in retryable_statuses
+                    updated = False
+                    for model_key, model_data in list(coded_val.items()):
+                        if not isinstance(model_data, dict):
+                            continue
+                        if model_data.get("status") not in retryable_statuses:
+                            continue
+                        model_data["status"] = "pending"
+                        model_data["error_message"] = None
+                        model_data["error_type"] = None
+                        coded_val[model_key] = model_data
+                        updated = True
+                        should_retry = True
+
+                    if should_retry:
+                        session.dashboard_documents.update_coded_values(id, doc_id, json.dumps(coded_val), "pending")
+                        doc_ids.append(doc_id)
 
             if not doc_ids:
                 return []

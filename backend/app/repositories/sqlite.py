@@ -14,6 +14,7 @@ from app.repositories.base import (
     BaseWorkflowRepository,
     BaseWorkflowTemplateRepository,
     BaseWorkflowVersionRepository,
+    BaseWorkflowJobRepository,
     BaseThreadRepository,
     BaseMessageRepository,
     BaseLlmUsageLogRepository,
@@ -754,6 +755,144 @@ class SQLiteWorkflowVersionRepository(BaseWorkflowVersionRepository):
         return [dict(row) for row in rows]
 
 
+class SQLiteWorkflowJobRepository(BaseWorkflowJobRepository):
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+
+    def enqueue(
+        self,
+        *,
+        dedupe_key: str,
+        dashboard_id: str,
+        document_id: str,
+        user_id: str,
+        workflow_id: str,
+        workspace_id: str,
+        source: str,
+        version: Optional[int],
+        retry_model: Optional[str],
+        payload_json: str,
+    ) -> Dict[str, Any]:
+        import uuid
+
+        self.conn.execute(
+            """
+            INSERT INTO workflow_jobs (
+                id, dedupe_key, dashboard_id, document_id, user_id, workflow_id, workspace_id,
+                source, version, retry_model, status, attempts, payload_json,
+                queued_at, started_at, completed_at, heartbeat_at, locked_by, locked_until, error_message
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), NULL, NULL, NULL, NULL, NULL, NULL)
+            ON CONFLICT(dedupe_key) DO UPDATE SET
+                status = 'queued',
+                attempts = 0,
+                payload_json = excluded.payload_json,
+                user_id = excluded.user_id,
+                workflow_id = excluded.workflow_id,
+                workspace_id = excluded.workspace_id,
+                source = excluded.source,
+                version = excluded.version,
+                retry_model = excluded.retry_model,
+                queued_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                started_at = NULL,
+                completed_at = NULL,
+                heartbeat_at = NULL,
+                locked_by = NULL,
+                locked_until = NULL,
+                error_message = NULL;
+            """,
+            (
+                str(uuid.uuid4()),
+                dedupe_key,
+                str(dashboard_id),
+                str(document_id),
+                str(user_id),
+                str(workflow_id),
+                str(workspace_id),
+                source,
+                version,
+                retry_model,
+                payload_json,
+            ),
+        )
+        row = self.conn.execute("SELECT * FROM workflow_jobs WHERE dedupe_key = ?;", (dedupe_key,)).fetchone()
+        return dict(row)
+
+    def claim_next(self, worker_id: str, lease_seconds: int = 600) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            """
+            SELECT * FROM workflow_jobs
+            WHERE status = 'queued'
+               OR (status = 'processing' AND locked_until IS NOT NULL AND locked_until < strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+            ORDER BY queued_at ASC
+            LIMIT 1;
+            """
+        ).fetchone()
+        if not row:
+            return None
+
+        job = dict(row)
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            UPDATE workflow_jobs
+            SET status = 'processing',
+                attempts = attempts + 1,
+                started_at = COALESCE(started_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                heartbeat_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                locked_by = ?,
+                locked_until = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ? || ' seconds')
+            WHERE id = ? AND (
+                status = 'queued'
+                OR (status = 'processing' AND locked_until IS NOT NULL AND locked_until < strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+            );
+            """,
+            (worker_id, str(lease_seconds), job["id"]),
+        )
+        if cursor.rowcount != 1:
+            return None
+        claimed = self.conn.execute("SELECT * FROM workflow_jobs WHERE id = ?;", (job["id"],)).fetchone()
+        return dict(claimed) if claimed else None
+
+    def heartbeat(self, job_id: str, worker_id: str, lease_seconds: int = 600) -> None:
+        self.conn.execute(
+            """
+            UPDATE workflow_jobs
+            SET heartbeat_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                locked_until = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ? || ' seconds')
+            WHERE id = ? AND locked_by = ? AND status = 'processing';
+            """,
+            (str(lease_seconds), str(job_id), worker_id),
+        )
+
+    def complete(self, job_id: str, worker_id: str) -> None:
+        self.conn.execute(
+            """
+            UPDATE workflow_jobs
+            SET status = 'completed',
+                completed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                locked_by = NULL,
+                locked_until = NULL
+            WHERE id = ? AND locked_by = ?;
+            """,
+            (str(job_id), worker_id),
+        )
+
+    def fail(self, job_id: str, worker_id: str, error_message: str) -> None:
+        self.conn.execute(
+            """
+            UPDATE workflow_jobs
+            SET status = 'failed',
+                completed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                error_message = ?,
+                locked_by = NULL,
+                locked_until = NULL
+            WHERE id = ? AND locked_by = ?;
+            """,
+            (error_message, str(job_id), worker_id),
+        )
+
+
 class SQLiteThreadRepository(BaseThreadRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
@@ -942,6 +1081,7 @@ class SQLiteUnitOfWork(BaseUnitOfWork):
         self._workflows = SQLiteWorkflowRepository(self.conn)
         self._workflow_templates = SQLiteWorkflowTemplateRepository(self.conn)
         self._workflow_versions = SQLiteWorkflowVersionRepository(self.conn)
+        self._workflow_jobs = SQLiteWorkflowJobRepository(self.conn)
         self._threads = SQLiteThreadRepository(self.conn)
         self._messages = SQLiteMessageRepository(self.conn)
         self._usage_logs = SQLiteLlmUsageLogRepository(self.conn)
@@ -981,6 +1121,10 @@ class SQLiteUnitOfWork(BaseUnitOfWork):
     @property
     def workflow_templates(self) -> BaseWorkflowTemplateRepository:
         return self._workflow_templates
+
+    @property
+    def workflow_jobs(self) -> BaseWorkflowJobRepository:
+        return self._workflow_jobs
 
     @property
     def threads(self) -> BaseThreadRepository:

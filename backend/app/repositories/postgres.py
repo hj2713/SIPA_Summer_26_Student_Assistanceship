@@ -13,6 +13,7 @@ from app.repositories.base import (
     BaseWorkflowRepository,
     BaseWorkflowTemplateRepository,
     BaseWorkflowVersionRepository,
+    BaseWorkflowJobRepository,
     BaseThreadRepository,
     BaseMessageRepository,
     BaseLlmUsageLogRepository,
@@ -883,6 +884,139 @@ class PostgresWorkflowVersionRepository(BaseWorkflowVersionRepository):
             return list(cursor.fetchall())
 
 
+class PostgresWorkflowJobRepository(BaseWorkflowJobRepository):
+    def __init__(self, conn: psycopg.Connection):
+        self.conn = conn
+
+    def enqueue(
+        self,
+        *,
+        dedupe_key: str,
+        dashboard_id: str,
+        document_id: str,
+        user_id: str,
+        workflow_id: str,
+        workspace_id: str,
+        source: str,
+        version: Optional[int],
+        retry_model: Optional[str],
+        payload_json: str,
+    ) -> Dict[str, Any]:
+        import uuid
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO workflow_jobs (
+                    id, dedupe_key, dashboard_id, document_id, user_id, workflow_id, workspace_id,
+                    source, version, retry_model, status, attempts, payload_json,
+                    queued_at, started_at, completed_at, heartbeat_at, locked_by, locked_until, error_message
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'queued', 0, %s, CURRENT_TIMESTAMP, NULL, NULL, NULL, NULL, NULL, NULL)
+                ON CONFLICT (dedupe_key) DO UPDATE SET
+                    status = 'queued',
+                    attempts = 0,
+                    payload_json = EXCLUDED.payload_json,
+                    user_id = EXCLUDED.user_id,
+                    workflow_id = EXCLUDED.workflow_id,
+                    workspace_id = EXCLUDED.workspace_id,
+                    source = EXCLUDED.source,
+                    version = EXCLUDED.version,
+                    retry_model = EXCLUDED.retry_model,
+                    queued_at = CURRENT_TIMESTAMP,
+                    started_at = NULL,
+                    completed_at = NULL,
+                    heartbeat_at = NULL,
+                    locked_by = NULL,
+                    locked_until = NULL,
+                    error_message = NULL
+                RETURNING *;
+                """,
+                (
+                    str(uuid.uuid4()),
+                    dedupe_key,
+                    str(dashboard_id),
+                    str(document_id),
+                    str(user_id),
+                    str(workflow_id),
+                    str(workspace_id),
+                    source,
+                    version,
+                    retry_model,
+                    payload_json,
+                ),
+            )
+            return cursor.fetchone()
+
+    def claim_next(self, worker_id: str, lease_seconds: int = 600) -> Optional[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH next_job AS (
+                    SELECT id
+                    FROM workflow_jobs
+                    WHERE status = 'queued'
+                       OR (status = 'processing' AND locked_until IS NOT NULL AND locked_until < CURRENT_TIMESTAMP)
+                    ORDER BY queued_at ASC
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE workflow_jobs
+                SET status = 'processing',
+                    attempts = attempts + 1,
+                    started_at = COALESCE(started_at, CURRENT_TIMESTAMP),
+                    heartbeat_at = CURRENT_TIMESTAMP,
+                    locked_by = %s,
+                    locked_until = CURRENT_TIMESTAMP + (%s * INTERVAL '1 second')
+                WHERE id IN (SELECT id FROM next_job)
+                RETURNING *;
+                """,
+                (worker_id, lease_seconds),
+            )
+            return cursor.fetchone()
+
+    def heartbeat(self, job_id: str, worker_id: str, lease_seconds: int = 600) -> None:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE workflow_jobs
+                SET heartbeat_at = CURRENT_TIMESTAMP,
+                    locked_until = CURRENT_TIMESTAMP + (%s * INTERVAL '1 second')
+                WHERE id = %s AND locked_by = %s AND status = 'processing';
+                """,
+                (lease_seconds, str(job_id), worker_id),
+            )
+
+    def complete(self, job_id: str, worker_id: str) -> None:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE workflow_jobs
+                SET status = 'completed',
+                    completed_at = CURRENT_TIMESTAMP,
+                    locked_by = NULL,
+                    locked_until = NULL
+                WHERE id = %s AND locked_by = %s;
+                """,
+                (str(job_id), worker_id),
+            )
+
+    def fail(self, job_id: str, worker_id: str, error_message: str) -> None:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE workflow_jobs
+                SET status = 'failed',
+                    completed_at = CURRENT_TIMESTAMP,
+                    error_message = %s,
+                    locked_by = NULL,
+                    locked_until = NULL
+                WHERE id = %s AND locked_by = %s;
+                """,
+                (error_message, str(job_id), worker_id),
+            )
+
+
 class PostgresThreadRepository(BaseThreadRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
@@ -1083,6 +1217,7 @@ class PostgresUnitOfWork(BaseUnitOfWork):
         self._workflows = PostgresWorkflowRepository(self.conn)
         self._workflow_templates = PostgresWorkflowTemplateRepository(self.conn)
         self._workflow_versions = PostgresWorkflowVersionRepository(self.conn)
+        self._workflow_jobs = PostgresWorkflowJobRepository(self.conn)
         self._threads = PostgresThreadRepository(self.conn)
         self._messages = PostgresMessageRepository(self.conn)
         self._usage_logs = PostgresLlmUsageLogRepository(self.conn)
@@ -1122,6 +1257,10 @@ class PostgresUnitOfWork(BaseUnitOfWork):
     @property
     def workflow_templates(self) -> BaseWorkflowTemplateRepository:
         return self._workflow_templates
+
+    @property
+    def workflow_jobs(self) -> BaseWorkflowJobRepository:
+        return self._workflow_jobs
 
     @property
     def threads(self) -> BaseThreadRepository:

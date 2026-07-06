@@ -260,7 +260,8 @@ def retry_failed_documents(
     id: str,
     current_user: CurrentUserDep,
     payload: Optional[List[str]] = None,
-    model: Optional[str] = Query(None, description="Model to retry failed runs for specifically")
+    model: Optional[str] = Query(None, description="Model to retry failed runs for specifically"),
+    include_active: bool = Query(False, description="Also requeue pending/processing runs that appear stuck")
 ):
     """Retry coding execution for failed documents in a campaign dashboard."""
     if not current_user.can_add and not current_user.is_admin:
@@ -269,10 +270,18 @@ def retry_failed_documents(
             detail="You do not have permission to modify campaign documents."
         )
 
-    doc_ids = campaign_service.retry_failed_documents(id, current_user.id, payload, retry_model=model)
+    doc_ids = campaign_service.retry_failed_documents(
+        id,
+        current_user.id,
+        payload,
+        retry_model=model,
+        include_active=include_active,
+    )
     if not doc_ids:
-        return {"message": "No failed documents to retry.", "queued_count": 0}
-    return {"message": f"Successfully queued {len(doc_ids)} documents for retry.", "queued_count": len(doc_ids)}
+        message = "No active or failed documents to recover." if include_active else "No failed documents to retry."
+        return {"message": message, "queued_count": 0}
+    action = "recovery" if include_active else "retry"
+    return {"message": f"Successfully queued {len(doc_ids)} documents for {action}.", "queued_count": len(doc_ids)}
 
 
 @router.post("/{id}/raise-token-limit", status_code=status.HTTP_200_OK)

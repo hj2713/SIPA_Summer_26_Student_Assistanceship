@@ -254,6 +254,40 @@ class BaseWorkflowVersionRepository(ABC):
     def list_by_workflow(self, workflow_id: str) -> List[Dict[str, Any]]:
         pass
 
+class BaseWorkflowJobRepository(ABC):
+    @abstractmethod
+    def enqueue(
+        self,
+        *,
+        dedupe_key: str,
+        dashboard_id: str,
+        document_id: str,
+        user_id: str,
+        workflow_id: str,
+        workspace_id: str,
+        source: str,
+        version: Optional[int],
+        retry_model: Optional[str],
+        payload_json: str,
+    ) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def claim_next(self, worker_id: str, lease_seconds: int = 600) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def heartbeat(self, job_id: str, worker_id: str, lease_seconds: int = 600) -> None:
+        pass
+
+    @abstractmethod
+    def complete(self, job_id: str, worker_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def fail(self, job_id: str, worker_id: str, error_message: str) -> None:
+        pass
+
 class BaseThreadRepository(ABC):
     @abstractmethod
     def get_by_id(self, thread_id: str) -> Optional[Dict[str, Any]]:
@@ -341,6 +375,11 @@ class BaseUnitOfWork(ABC):
     @property
     @abstractmethod
     def workflow_templates(self) -> BaseWorkflowTemplateRepository:
+        pass
+
+    @property
+    @abstractmethod
+    def workflow_jobs(self) -> BaseWorkflowJobRepository:
         pass
 
     @property

@@ -29,6 +29,172 @@ class WorkflowDashboardService:
 
     def __init__(self, db_session_factory=get_db_session):
         self.db_session_factory = db_session_factory
+        self._job_worker_active = False
+        self._job_worker_id = f"workflow-worker-{uuid.uuid4()}"
+        self._job_worker_concurrency = 10
+        self._job_lease_seconds = 600
+
+    def _job_dedupe_key(self, dashboard_id: str, document_id: str, model: str) -> str:
+        return f"{dashboard_id}:{document_id}:{model}"
+
+    def _dashboard_models_from_row(self, dash_row: dict[str, Any]) -> list[str]:
+        model_name = dash_row.get("model") or "gemini-3.1-flash-lite"
+        return [m.strip() for m in model_name.split(",") if m.strip()]
+
+    def _mark_models_queued(self, coded_vals: dict[str, Any], models: list[str]) -> dict[str, Any]:
+        for model in models:
+            model_run = coded_vals.get(model) if isinstance(coded_vals.get(model), dict) else {}
+            model_run["status"] = "pending"
+            model_run["error_message"] = None
+            model_run["error_type"] = None
+            model_run["timing"] = self._queue_timing(model_run.get("timing"))
+            coded_vals[model] = model_run
+        return coded_vals
+
+    def _enqueue_workflow_jobs(
+        self,
+        *,
+        dashboard_id: str,
+        document_ids: list[str],
+        user_id: str,
+        workflow_id: str,
+        workspace_id: str,
+        source: WorkflowSource,
+        version: int | None,
+        models: list[str],
+    ) -> None:
+        if not document_ids or not models:
+            return
+
+        payload_json = json.dumps({"kind": "workflow_dashboard_model_run"})
+        with self.db_session_factory() as session:
+            for doc_id in document_ids:
+                for model in models:
+                    session.workflow_jobs.enqueue(
+                        dedupe_key=self._job_dedupe_key(dashboard_id, doc_id, model),
+                        dashboard_id=dashboard_id,
+                        document_id=doc_id,
+                        user_id=user_id,
+                        workflow_id=workflow_id,
+                        workspace_id=workspace_id,
+                        source=source,
+                        version=version,
+                        retry_model=model,
+                        payload_json=payload_json,
+                    )
+
+        logger.info(
+            "workflow_jobs_enqueued dashboard_id=%s document_count=%d model_count=%d models=%s",
+            dashboard_id,
+            len(document_ids),
+            len(models),
+            ",".join(models),
+        )
+        self._schedule_workflow_job_worker()
+
+    def _schedule_workflow_job_worker(self) -> None:
+        if self._job_worker_active:
+            return
+        self._job_worker_active = True
+        from app.services.coding_service import coding_service
+
+        coding_service.schedule_coroutine(self._drain_workflow_jobs())
+
+    def kick_workflow_job_worker(self) -> None:
+        self._schedule_workflow_job_worker()
+
+    async def _drain_workflow_jobs(self) -> None:
+        try:
+            while True:
+                claimed_jobs: list[dict[str, Any]] = []
+                for _ in range(self._job_worker_concurrency):
+                    with self.db_session_factory() as session:
+                        job = session.workflow_jobs.claim_next(self._job_worker_id, self._job_lease_seconds)
+                    if job:
+                        claimed_jobs.append(job)
+
+                if not claimed_jobs:
+                    return
+
+                await asyncio.gather(*(self._process_workflow_job(job) for job in claimed_jobs))
+        finally:
+            self._job_worker_active = False
+
+    async def _process_workflow_job(self, job: dict[str, Any]) -> None:
+        stop_heartbeat = asyncio.Event()
+
+        async def heartbeat_loop() -> None:
+            while not stop_heartbeat.is_set():
+                try:
+                    await asyncio.wait_for(stop_heartbeat.wait(), timeout=30)
+                except asyncio.TimeoutError:
+                    with self.db_session_factory() as session:
+                        session.workflow_jobs.heartbeat(job["id"], self._job_worker_id, self._job_lease_seconds)
+
+        heartbeat_task = asyncio.create_task(heartbeat_loop())
+        try:
+            await self._execute_workflow_job(job)
+            with self.db_session_factory() as session:
+                session.workflow_jobs.complete(job["id"], self._job_worker_id)
+        except Exception as exc:
+            logger.exception("workflow_job_failed job_id=%s dashboard_id=%s document_id=%s model=%s", job.get("id"), job.get("dashboard_id"), job.get("document_id"), job.get("retry_model"))
+            with self.db_session_factory() as session:
+                session.workflow_jobs.fail(job["id"], self._job_worker_id, str(exc))
+        finally:
+            stop_heartbeat.set()
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
+    async def _execute_workflow_job(self, job: dict[str, Any]) -> None:
+        dashboard_id = str(job["dashboard_id"])
+        document_id = str(job["document_id"])
+        model = str(job["retry_model"])
+        user_id = str(job["user_id"])
+        set_current_user_id(user_id)
+
+        with self.db_session_factory() as session:
+            dash_row = session.dashboards.get_by_id(dashboard_id)
+            if not dash_row:
+                raise HTTPException(status_code=404, detail="Dashboard not found.")
+
+            definition_json = dash_row.get("workflow_definition_json")
+            if not definition_json:
+                workflow = session.workflows.get_by_id(job["workflow_id"])
+                if not workflow:
+                    raise HTTPException(status_code=404, detail="Workflow not found.")
+                definition_json = workflow["draft_definition"]
+                session.dashboards.update(
+                    dashboard_id,
+                    {
+                        "workflow_id": job["workflow_id"],
+                        "workflow_source": job.get("source") or "draft",
+                        "workflow_version": job.get("version") if job.get("source") == "published" else None,
+                        "workflow_revision": workflow["revision"],
+                        "workflow_definition_json": definition_json,
+                    },
+                )
+
+            definition = json.loads(definition_json) if isinstance(definition_json, str) else (definition_json or {})
+            schema_json = dash_row.get("schema") or "[]"
+            schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
+            token_limit = dash_row.get("token_limit") or 5000000
+            dashboard_models = self._dashboard_models_from_row(dash_row)
+
+        await self.run_model_comparison_parallel(
+            dashboard_id=dashboard_id,
+            document_ids=[document_id],
+            models=[model],
+            definition=definition,
+            schema_fields=schema_fields,
+            token_limit=token_limit,
+            user_id=user_id,
+            retry_model=model,
+            files_concurrency=1,
+            status_models=dashboard_models,
+        )
 
     def get_or_create_dashboard(
         self,
@@ -822,7 +988,7 @@ class WorkflowDashboardService:
         skipped: list[str] = []
         with self.db_session_factory() as session:
             dash_row = session.dashboards.get_by_id(dashboard.id)
-            definition = json.loads(dash_row["workflow_definition_json"])
+            dashboard_models = self._dashboard_models_from_row(dash_row)
         
         pending_doc_ids = []
         for file in files:
@@ -842,7 +1008,8 @@ class WorkflowDashboardService:
                 if existing and filename not in rerun_filenames:
                     skipped.append(filename)
                     continue
-                session.dashboard_documents.create_or_update(dashboard.id, doc_id, "{}", "pending", current_step=0, total_steps=3)
+                coded_vals = self._mark_models_queued({}, dashboard_models)
+                session.dashboard_documents.create_or_update(dashboard.id, doc_id, json.dumps(coded_vals), "pending", current_step=0, total_steps=3)
                 pending_doc_ids.append(doc_id)
                 
                 row = session.dashboard_documents.get_workflow_result(dashboard.id, doc_id)
@@ -850,15 +1017,16 @@ class WorkflowDashboardService:
                     rows.append(campaign_service._dashboard_document_row(row))
 
         if pending_doc_ids:
-            async def _exec_task():
-                for doc_id in pending_doc_ids:
-                    try:
-                        await self._execute_document(dashboard.id, doc_id, definition, user_id=user_id)
-                    except Exception:
-                        logger.exception("Background execution failed for uploaded file document %s", doc_id)
-
-            from app.services.coding_service import coding_service
-            coding_service.schedule_coroutine(_exec_task())
+            self._enqueue_workflow_jobs(
+                dashboard_id=dashboard.id,
+                document_ids=pending_doc_ids,
+                user_id=user_id,
+                workflow_id=workflow_id,
+                workspace_id=workspace_id,
+                source=source,
+                version=version,
+                models=dashboard_models,
+            )
 
         return dashboard, rows, skipped
 
@@ -879,7 +1047,7 @@ class WorkflowDashboardService:
         skipped: list[str] = []
         with self.db_session_factory() as session:
             dash_row = session.dashboards.get_by_id(dashboard.id)
-            definition = json.loads(dash_row["workflow_definition_json"])
+            dashboard_models = self._dashboard_models_from_row(dash_row)
         
         pending_doc_ids = []
         for doc_id in document_ids:
@@ -900,18 +1068,9 @@ class WorkflowDashboardService:
                         coded_vals = json.loads(coded_vals_str) if isinstance(coded_vals_str, str) else (coded_vals_str or {})
                     except Exception:
                         coded_vals = {}
-                    if retry_model:
-                        m_data = coded_vals.get(retry_model) or {}
-                        m_data["status"] = "pending"
-                        m_data["error_message"] = None
-                        coded_vals[retry_model] = m_data
-                    else:
-                        for model_key, model_run in list(coded_vals.items()):
-                            if isinstance(model_run, dict) and model_run.get("status") in ["failed", "suspended_limit", "pending"]:
-                                model_run["status"] = "pending"
-                                model_run["error_message"] = None
-                                coded_vals[model_key] = model_run
-                    coded_vals_str = json.dumps(coded_vals)
+                models_to_queue = [retry_model] if retry_model else dashboard_models
+                coded_vals = self._mark_models_queued(coded_vals if existing else {}, models_to_queue)
+                coded_vals_str = json.dumps(coded_vals)
 
                 session.dashboard_documents.create_or_update(dashboard.id, doc_id, coded_vals_str, "pending", current_step=0, total_steps=3)
                 pending_doc_ids.append(doc_id)
@@ -921,25 +1080,20 @@ class WorkflowDashboardService:
                     rows.append(campaign_service._dashboard_document_row(row))
 
         if pending_doc_ids:
-            async def _exec_task():
-                for doc_id in pending_doc_ids:
-                    try:
-                        await self._execute_document(
-                            dashboard.id,
-                            doc_id,
-                            definition,
-                            user_id=user_id,
-                            retry_model=retry_model,
-                        )
-                    except Exception:
-                        logger.exception("Background execution failed for existing document %s", doc_id)
-
-            from app.services.coding_service import coding_service
-            coding_service.schedule_coroutine(_exec_task())
+            self._enqueue_workflow_jobs(
+                dashboard_id=dashboard.id,
+                document_ids=pending_doc_ids,
+                user_id=user_id,
+                workflow_id=workflow_id,
+                workspace_id=workspace_id,
+                source=source,
+                version=version,
+                models=[retry_model] if retry_model else dashboard_models,
+            )
 
         return dashboard, rows, skipped
 
-    async def run_existing_documents_for_dashboard(
+    def queue_existing_documents_for_dashboard(
         self,
         dashboard_id: str,
         workflow_id: str,
@@ -951,7 +1105,7 @@ class WorkflowDashboardService:
         rerun_document_ids: set[str] | None = None,
         retry_model: str | None = None,
     ) -> tuple[DashboardRow, list[DashboardDocumentRow], list[str]]:
-        """Run workflow documents while persisting results onto an existing dashboard row."""
+        """Queue workflow documents while persisting jobs onto an existing dashboard row."""
         rerun_document_ids = rerun_document_ids or set()
         rows: list[DashboardDocumentRow] = []
         skipped: list[str] = []
@@ -978,7 +1132,6 @@ class WorkflowDashboardService:
                     },
                 )
 
-            definition = json.loads(definition_json) if isinstance(definition_json, str) else (definition_json or {})
             schema_json = dash_row.get("schema") or "[]"
             schema_fields = json.loads(schema_json) if isinstance(schema_json, str) else (schema_json or [])
             model_name = dash_row.get("model") or "gemini-3.1-flash-lite"
@@ -1004,20 +1157,9 @@ class WorkflowDashboardService:
                         coded_vals = json.loads(coded_vals_str) if isinstance(coded_vals_str, str) else (coded_vals_str or {})
                     except Exception:
                         coded_vals = {}
-                    if retry_model:
-                        m_data = coded_vals.get(retry_model) or {}
-                        m_data["status"] = "pending"
-                        m_data["error_message"] = None
-                        m_data["timing"] = self._queue_timing(m_data.get("timing"))
-                        coded_vals[retry_model] = m_data
-                    else:
-                        for model_key, model_run in list(coded_vals.items()):
-                            if isinstance(model_run, dict) and model_run.get("status") in ["failed", "suspended_limit", "pending"]:
-                                model_run["status"] = "pending"
-                                model_run["error_message"] = None
-                                model_run["timing"] = self._queue_timing(model_run.get("timing"))
-                                coded_vals[model_key] = model_run
-                    coded_vals_str = json.dumps(coded_vals)
+                models_to_queue = [retry_model] if retry_model else dashboard_models
+                coded_vals = self._mark_models_queued(coded_vals if existing else {}, models_to_queue)
+                coded_vals_str = json.dumps(coded_vals)
 
                 session.dashboard_documents.create_or_update(dashboard_id, doc_id, coded_vals_str, "pending", current_step=0, total_steps=3)
                 pending_doc_ids.append(doc_id)
@@ -1027,46 +1169,43 @@ class WorkflowDashboardService:
                     rows.append(campaign_service._dashboard_document_row(row))
 
         if pending_doc_ids:
-            async def _exec_task():
-                if retry_model:
-                    try:
-                        await self.run_model_comparison_parallel(
-                            dashboard_id=dashboard_id,
-                            document_ids=pending_doc_ids,
-                            models=[retry_model],
-                            definition=definition,
-                            schema_fields=schema_fields,
-                            token_limit=token_limit,
-                            user_id=user_id,
-                            retry_model=retry_model,
-                            files_concurrency=2,
-                            status_models=dashboard_models,
-                        )
-                    except Exception:
-                        logger.exception(
-                            "Background batched retry-model execution failed for dashboard %s model %s",
-                            dashboard_id,
-                            retry_model,
-                        )
-                    return
-
-                for doc_id in pending_doc_ids:
-                    try:
-                        await self._execute_document(
-                            dashboard_id,
-                            doc_id,
-                            definition,
-                            user_id=user_id,
-                            retry_model=retry_model,
-                        )
-                    except Exception:
-                        logger.exception("Background execution failed for existing document %s on dashboard %s", doc_id, dashboard_id)
-
-            from app.services.coding_service import coding_service
-            coding_service.schedule_coroutine(_exec_task())
+            self._enqueue_workflow_jobs(
+                dashboard_id=dashboard_id,
+                document_ids=pending_doc_ids,
+                user_id=user_id,
+                workflow_id=workflow_id,
+                workspace_id=workspace_id,
+                source=source,
+                version=version,
+                models=[retry_model] if retry_model else dashboard_models,
+            )
 
         dashboard = campaign_service.get_campaign(dashboard_id)
         return dashboard, rows, skipped
+
+    async def run_existing_documents_for_dashboard(
+        self,
+        dashboard_id: str,
+        workflow_id: str,
+        workspace_id: str,
+        user_id: str,
+        document_ids: list[str],
+        source: WorkflowSource = "draft",
+        version: int | None = None,
+        rerun_document_ids: set[str] | None = None,
+        retry_model: str | None = None,
+    ) -> tuple[DashboardRow, list[DashboardDocumentRow], list[str]]:
+        return self.queue_existing_documents_for_dashboard(
+            dashboard_id=dashboard_id,
+            workflow_id=workflow_id,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            document_ids=document_ids,
+            source=source,
+            version=version,
+            rerun_document_ids=rerun_document_ids,
+            retry_model=retry_model,
+        )
 
     def get_trace(self, dashboard_id: str, document_id: str) -> DashboardDocumentRow:
         with self.db_session_factory() as session:

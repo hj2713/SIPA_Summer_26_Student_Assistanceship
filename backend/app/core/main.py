@@ -91,42 +91,29 @@ async def lifespan(app: FastAPI):
                     ("Ingestion was interrupted due to server restart or reload.",)
                 )
 
-            # Clean up stale dashboard document coding statuses
-            cursor.execute("SELECT dashboard_id, document_id, coded_values FROM dashboard_documents WHERE status IN ('pending', 'processing');")
-            stale_dash_docs = cursor.fetchall()
-            if stale_dash_docs:
-                logger.info("Found %d stale pending/processing dashboard document coding jobs. Marking as failed.", len(stale_dash_docs))
-                placeholder = "%s" if settings.DB_PROVIDER == "postgres" else "?"
-                restart_error = "Coding was interrupted due to server restart or reload."
-                for row in stale_dash_docs:
-                    normalized_coded_values = _normalize_dashboard_coded_values_for_restart(
-                        row.get("coded_values") if isinstance(row, dict) else row[2],
-                        restart_error,
-                    )
-                    conn.execute(
-                        f"""
-                        UPDATE dashboard_documents
-                        SET coded_values = {placeholder}
-                        WHERE dashboard_id = {placeholder} AND document_id = {placeholder};
-                        """,
-                        (
-                            normalized_coded_values,
-                            row.get("dashboard_id") if isinstance(row, dict) else row[0],
-                            row.get("document_id") if isinstance(row, dict) else row[1],
-                        ),
-                    )
+            # Durable workflow jobs survive restarts. Release claimed jobs so the
+            # DB-backed worker can pick them up again on this process.
+            cursor.execute("SELECT id FROM workflow_jobs WHERE status = 'processing';")
+            stale_workflow_jobs = cursor.fetchall()
+            if stale_workflow_jobs:
+                logger.info("Found %d processing workflow jobs on startup. Requeueing them.", len(stale_workflow_jobs))
                 conn.execute(
-                    f"""
-                    UPDATE dashboard_documents
-                    SET status = 'failed', error_message = {placeholder}, error_type = 'API_FAILURE'
-                    WHERE status IN ('pending', 'processing');
-                    """,
-                    (restart_error,)
+                    """
+                    UPDATE workflow_jobs
+                    SET status = 'queued', locked_by = NULL, locked_until = NULL
+                    WHERE status = 'processing';
+                    """
                 )
             
             conn.commit()
     except Exception as e:
         logger.error("Failed to clean up stale document statuses on startup: %s", e)
+
+    try:
+        from app.services.workflow_dashboard_service import workflow_dashboard_service
+        workflow_dashboard_service.kick_workflow_job_worker()
+    except Exception as e:
+        logger.error("Failed to start workflow job worker: %s", e)
         
     yield
     

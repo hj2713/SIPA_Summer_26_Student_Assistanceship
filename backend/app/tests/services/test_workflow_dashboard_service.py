@@ -328,6 +328,7 @@ def test_run_model_comparison_parallel_persists_partial_results_while_other_mode
 def test_run_existing_documents_for_dashboard_batches_retry_model_across_documents(monkeypatch):
     dashboard_id = "workflow-dash-batch-retry"
     workflow_id = "workflow-1"
+    user_id = "00000000-0000-0000-0000-000000000001"
     doc_ids = [
         "00000000-0000-0000-0000-000000000101",
         "00000000-0000-0000-0000-000000000102",
@@ -361,10 +362,10 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
 
     service = WorkflowDashboardService()
     scheduled: list = []
-    captured: dict[str, Any] = {}
+    captured: list[dict[str, Any]] = []
 
     async def fake_batch_runner(**kwargs):
-        captured.update(kwargs)
+        captured.append(kwargs)
 
     async def fail_execute(*args, **kwargs):
         raise AssertionError("_execute_document should not be used for retry_model batching")
@@ -378,7 +379,7 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
             dashboard_id=dashboard_id,
             workflow_id=workflow_id,
             workspace_id="QA",
-            user_id="user-1",
+            user_id=user_id,
             document_ids=doc_ids,
             retry_model="gpt-4o-mini",
         )
@@ -388,9 +389,19 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
     assert len(scheduled) == 1
     asyncio.run(scheduled[0])
 
-    assert captured["dashboard_id"] == dashboard_id
-    assert captured["document_ids"] == doc_ids
-    assert captured["models"] == ["gpt-4o-mini"]
-    assert captured["retry_model"] == "gpt-4o-mini"
-    assert captured["files_concurrency"] == 2
-    assert captured["status_models"] == ["gemini-3.1-flash-lite", "gpt-4o-mini"]
+    assert len(captured) == len(doc_ids)
+    assert {call["document_ids"][0] for call in captured} == set(doc_ids)
+    assert all(call["dashboard_id"] == dashboard_id for call in captured)
+    assert all(call["models"] == ["gpt-4o-mini"] for call in captured)
+    assert all(call["retry_model"] == "gpt-4o-mini" for call in captured)
+    assert all(call["files_concurrency"] == 1 for call in captured)
+    assert all(call["status_models"] == ["gemini-3.1-flash-lite", "gpt-4o-mini"] for call in captured)
+
+    with get_db_conn() as conn:
+        rows = conn.execute(
+            "SELECT status, retry_model FROM workflow_jobs WHERE dashboard_id = ? ORDER BY document_id;",
+            (dashboard_id,),
+        ).fetchall()
+    assert len(rows) == len(doc_ids)
+    assert all(row["status"] == "completed" for row in rows)
+    assert all(row["retry_model"] == "gpt-4o-mini" for row in rows)

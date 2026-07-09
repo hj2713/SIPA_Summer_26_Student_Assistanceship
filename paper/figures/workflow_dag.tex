@@ -1,0 +1,89 @@
+\begin{tikzpicture}[
+  font=\sffamily\tiny,
+  node distance=4mm and 6mm,
+  box/.style={
+    draw=navy,
+    rounded corners=2pt,
+    very thick,
+    align=center,
+    minimum height=8mm,
+    text width=22mm,
+    fill=lightblue
+  },
+  decision/.style={
+    draw=reviewred,
+    diamond,
+    aspect=1.5,
+    very thick,
+    align=center,
+    minimum height=8mm,
+    text width=16mm,
+    fill=reviewfill
+  },
+  extractor/.style={
+    draw=green,
+    rounded corners=2pt,
+    very thick,
+    align=center,
+    minimum height=8mm,
+    text width=22mm,
+    fill=lightgreen
+  },
+  strategy/.style={
+    draw=orange,
+    rounded corners=2pt,
+    very thick,
+    align=center,
+    minimum height=8mm,
+    text width=24mm,
+    fill=lightorange
+  },
+  arrow/.style={-{Latex[length=1.5mm]},very thick,draw=navy},
+  dashedarrow/.style={-{Latex[length=1.5mm]},thick,dashed,draw=navy}
+]
+
+% 1. Input and Gate
+\node[box] (input) {\textbf{Law File Input}\\CQ summary or full-text};
+\node[box,right=of input] (gate) {\textbf{Delegation Screen}\\LLM Gate (v8 Prompt)};
+\node[decision,right=of gate] (decision) {\textbf{Delegation\\Found?}};
+
+% 2. No-delegation branch (bottom)
+\node[box,below=10mm of decision] (nodeleg) {\textbf{Set Default Values}\\Assign Rank 0};
+
+% 3. Extraction Phase (top)
+\node[extractor,above right=4mm and 8mm of decision] (actors) {\textbf{Actor Identification}\\Identify delegees};
+\node[extractor,right=of actors] (auth) {\textbf{Authority Extraction}\\Extract delegated duties};
+\node[extractor,right=of auth] (signals) {\textbf{Feature Assessment}\\Affirmative \& Constraint signals, residual leeway};
+
+% 4. Parallel Strategies
+\node[strategy,below right=6mm and 8mm of signals] (cascade) {\textbf{CASCADE Strategy}\\Sequential screening\\(Ranks 1 $\rightarrow$ 4)};
+\node[strategy,above=3mm of cascade] (m9) {\textbf{M9 Strategy}\\Multiclass ranking \&\\boundary review};
+\node[strategy,below=3mm of cascade] (b3) {\textbf{B3 Strategy}\\Coarse band split\\(Low vs. High)};
+
+% 5. Validation and Output
+\node[box,right=8mm of cascade] (validate) {\textbf{Suite Validation}\\Rules and integrity checks};
+\node[box,right=of validate] (output) {\textbf{Dashboard Output}\\Coded values \& rationales};
+
+% Connections
+\draw[arrow] (input) -- (gate);
+\draw[arrow] (gate) -- (decision);
+\draw[arrow] (decision) -- node[left,pos=0.4] {No} (nodeleg);
+\draw[arrow] (decision) |- node[above,pos=0.7] {Yes} (actors);
+\draw[arrow] (actors) -- (auth);
+\draw[arrow] (auth) -- (signals);
+
+\draw[arrow] (signals) |- (m9);
+\draw[arrow] (signals) -- (cascade);
+\draw[arrow] (signals) |- (b3);
+
+\draw[arrow] (m9) -| (validate);
+\draw[arrow] (cascade) -- (validate);
+\draw[arrow] (b3) -| (validate);
+\draw[arrow] (validate) -- (output);
+\draw[arrow] (nodeleg) -| (output);
+
+% Containers
+\node[draw=green!50!gray,dashed,rounded corners=2pt,fit=(actors)(auth)(signals),label={[font=\sffamily\tiny\bfseries,text=green!40!black]above:LLM Feature Extraction}] {};
+\node[draw=orange!50!gray,dashed,rounded corners=2pt,fit=(m9)(cascade)(b3),label={[font=\sffamily\tiny\bfseries,text=orange!50!black]above:Parallel Ranking Strategies}] {};
+
+\end{tikzpicture}

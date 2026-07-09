@@ -1,0 +1,63 @@
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  node distance=5mm and 5mm,
+  stage/.style={
+    draw=navy,
+    rounded corners=2pt,
+    very thick,
+    align=center,
+    minimum height=13mm,
+    text width=27mm,
+    fill=lightblue
+  },
+  human/.style={
+    draw=green,
+    rounded corners=2pt,
+    very thick,
+    align=center,
+    minimum height=13mm,
+    text width=29mm,
+    fill=lightgreen
+  },
+  output/.style={
+    draw=orange,
+    rounded corners=2pt,
+    very thick,
+    align=center,
+    minimum height=13mm,
+    text width=27mm,
+    fill=lightorange
+  },
+  arrow/.style={-{Latex[length=2.2mm]},very thick,draw=navy},
+  feedback/.style={-{Latex[length=2.2mm]},very thick,draw=green},
+  planned/.style={-{Latex[length=2.2mm]},thick,dashed,draw=orange}
+]
+
+\node[stage] (question) {\textbf{Research question\\and source policy}\\CQ summaries, stable IDs, historical benchmark};
+\node[human,right=of question] (author) {\textbf{Human method authoring}\\Define codebook; edit prompts, nodes, outputs, and dependencies};
+\node[stage,right=of author] (execute) {\textbf{Workflow execution}\\Ordered LLM nodes, deterministic branches, multi-model runs};
+\node[human,right=of execute] (review) {\textbf{Human review}\\Inspect evidence and traces; compare benchmark; select reruns};
+\node[output,right=of review] (variables) {\textbf{Validated variables}\\DelegateLaw, Discretion Rank, rationales, provenance};
+\node[output,right=of variables] (analysis) {\textbf{Quantitative analysis}\\Exported dataset, measurement diagnostics, substantive models};
+
+\draw[arrow] (question) -- (author);
+\draw[arrow] (author) -- (execute);
+\draw[arrow] (execute) -- (review);
+\draw[arrow] (review) -- (variables);
+\draw[arrow] (variables) -- (analysis);
+
+\node[human,below=11mm of review] (case) {\textbf{Case-level intervention}\\Override one law or request targeted re-evaluation; retain history};
+\node[human,below=11mm of author] (method) {\textbf{Method-level intervention}\\Revise general rule, test fixed cases, publish a new workflow version};
+
+\draw[feedback] (review) -- (case);
+\draw[feedback] (case.east) -| (variables.south);
+\draw[feedback] (review.west) -| (method.east);
+\draw[feedback] (method) -- (author);
+\draw[planned] (case.west) -- node[below,align=center,text=orange,font=\sffamily\tiny]{planned deliberate promotion\\of reviewed cases} (method.east);
+
+\node[draw=gray!70,rounded corners=2pt,fit=(question)(analysis)(method)(case),inner sep=3mm,label={[font=\sffamily\scriptsize\bfseries,text=navy]above:Human-in-the-loop legal coding pipeline}] {};
+
+\node[below=2mm of variables,font=\sffamily\tiny,align=left] (legend) {%
+\tikz\draw[feedback] (0,0)--(5mm,0); implemented human action\qquad
+\tikz\draw[planned] (0,0)--(5mm,0); planned governance link};
+\end{tikzpicture}

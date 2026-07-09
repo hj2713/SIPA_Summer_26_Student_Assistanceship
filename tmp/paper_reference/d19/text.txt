@@ -1,0 +1,516 @@
+                                                BillSum: A Corpus for Automatic Summarization of US Legislation
+
+
+                                                          Anastassia Kornilova                                Vlad Eidelman
+                                                           FiscalNote Research                              FiscalNote Research
+                                                             Washington, DC                                   Washington, DC
+                                                     anastassia@fiscalnote.com                           vlad@fiscalnote.com
+
+
+
+
+                                                                  Abstract                             Automatic summarization methods aim to con-
+                                                                                                    dense an input document into a shorter text while
+                                                Automatic summarization methods have been           retaining the salient information of the original.
+                                                studied on a variety of domains, includ-
+
+
+
+
+arXiv:1910.00523v2 [cs.CL] 4 Dec 2019
+                                                                                                    To encourage research into automatic legislative
+                                                ing news and scientific articles. Yet, leg-         summarization, we introduce the BillSum dataset,
+                                                islation has not previously been considered
+                                                                                                    which contains a primary corpus of 22,218 US
+                                                for this task, despite US Congress and state
+                                                governments releasing tens of thousands of          Congressional bills and reference summaries split
+                                                bills every year.      In this paper, we in-        into a train and a test set. Since the motivation
+                                                troduce BillSum, the first dataset for sum-         for this task is to apply models to new legislatures,
+                                                marization of US Congressional and Cali-            the corpus contains an additional test set of 1,237
+                                                fornia state bills (https://github.com/             California bills and reference summaries. We es-
+                                                FiscalNote/BillSum). We explain the                 tablish several benchmarks and show that there is
+                                                properties of the dataset that make it more         ample room for new methods that are better suited
+                                                challenging to process than other domains.
+                                                                                                    to summarize technical legislative language.
+                                                Then, we benchmark extractive methods that
+                                                consider neural sentence representations and
+                                                traditional contextual features. Finally, we        2   Background
+                                                demonstrate that models built on Congres-
+                                                sional bills can be used to summarize Cali-         Research into automatic summarization has been
+                                                fornia bills, thus, showing that methods devel-     conducted in a variety of domains, such as news
+                                                oped on this dataset can transfer to states with-   articles (Hermann et al., 2015), emails (Nenkova
+                                                out human-written summaries.                        and Bagga, 2004), scientific papers (Teufel and
+                                                                                                    Moens, 2002; Collins et al., 2017), and court pro-
+                                        1       Introduction                                        ceedings (Grover et al., 2004; Saravanan et al.,
+                                                                                                    2008; Kim et al., 2013). The later area is most sim-
+                                        The growing number of publicly available docu-              ilar to BillSum in terms of subject matter. How-
+                                        ments produced in the legal domain has led polit-           ever, the studies in that area either apply tradi-
+                                        ical scientists, legal scholars, politicians, lawyers,      tional domain-agnostic techniques or take advan-
+                                        and citizens alike to increasingly adopt computa-           tage of the unique structures that are consistently
+                                        tional tools to discover and digest relevant infor-         present in legal proceedings (e.g precedent, law,
+                                        mation. In the US Congress, over 10,000 bills are           background).2
+                                        introduced each year, with state legislatures intro-           While automatic summarization methods have
+                                        ducing tens of thousands of additional bills. In-           not been applied to legislative text, previous works
+                                        dividuals need to quickly process them, but these           have used the text to automatically predict bill pas-
+                                        documents are often long and technical, making it           sage and legislators’ voting behavior (Gerrish and
+                                        difficult to identify the key details. While each US        Blei, 2011; Yano et al., 2012; Eidelman et al.,
+                                        bill comes with a human-written summary from                2018; Kornilova et al., 2018). However, these
+                                        the Congressional Research Service (CRS),1 sim-             studies treated the document as a “bag-of-words”
+                                        ilar summaries are not available in most state and          and did not consider the importance of individual
+                                        local legislatures.
+                                                                                                       2
+                                                                                                         Kanapala et al. (2017) provide a comprehensive
+                                            1
+                                                http://www.loc.gov/crsinfo/                         overview of the works in legal summarization.
+sentences. Recently, documents from state gov-                      The distribution of both text and summary lengths
+ernments have been subject to syntactic parsing                     is shown in Figure 1. Interestingly, there is little
+for knowledge graph construction (Kalouli et al.,                   correlation between the bill and human summary
+2018) and textual similarity analysis (Linder et al.,               length, with most summaries ranging from 1000
+2018). Yet, to the best of our knowledge, BillSum                   to 2000 characters.
+is the first corpus designed, specifically for sum-                    For a closer comparison to other datasets, Table
+marization of legislation.                                          1 provides statistics on the number of words in the
+                                                                    texts, after we simplify the structure of the texts.
+3       Data
+The BillSum dataset consists of three parts: US
+training bills, US test bills and California test bills.
+The US bills were collected from the Govinfo ser-
+vice provided by the United States Government
+Publishing Office (GPO).3 Our corpus consists of
+bills from the 103rd-115th (1993-2018) sessions                         (a) US Bill Summaries          (b) US Bill Text
+of Congress. The data was split into 18,949 train
+bills and 3,269 test bills. For California, bills from
+the 2015-2016 session were scraped directly from
+the legislature’s website;4 the summaries were
+written by their Legislative Counsel.
+   The BillSum corpus focuses on mid-length leg-
+                                                                        (c) CA Bill Summaries          (d) CA Bill Text
+islation from 5,000 to 20,000 character in length.
+We chose to measure the text length in characters,                                   Figure 1: Bill Lengths
+instead of words or sentences, because the texts
+have complex structure that makes it difficult to                      Stylistically, the BillSum dataset differs from
+consistently measure words. The range was cho-                      other summarization corpora. Figure 2 presents
+sen because on one side, short bills introduce mi-                  an example Congressional bill. The nested, bul-
+nor changes and do not require summaries. While                     leted structure is common to most bills, where
+the CRS produces summaries for them, they of-                       each bullet can represent a sentence or a phrase.
+ten contain most of the text of the bill. On the                    Yet, content-wise, this is a straightforward exam-
+other side, very long legislation is often composed                 ple that states key details about the proposed grant
+of several large sections. The summarization prob-                  in the outer bullets. In more challenging cases,
+lem thus becomes more akin in its formulation to                    the bill may state edits to an existing law, without
+multi-document summarization, a more challeng-                      whose context the change is hard to interpret, such
+ing task that we leave to future work. The resulting                as:
+corpus includes about 20% of all US bills from this                    Section 4 of the Endangered Species Act of 1973
+time period, where a majority of removed bills are                  (16 U.S.C. 1533) is amended in subsection (a)
+either shorter than 5000 characters or identified as                in paragraph (1), by inserting “with the consent
+a near duplicate of a bill in the dataset.5                         of the Governor of each State in which the en-
+   For the summaries, we chose a 2000 character                     dangered species or threatened species is present”
+limit as 90% of summaries are of this length or
+shorter; the limit here is, also, set in characters to                 The average bill will contain both types of lan-
+be consistent with our document length cut-offs.                    guage, encouraging the study of both domain-
+    3
+                                                                    specific and general summarization methods on
+      https://github.com/unitedstates/
+congress                                                            this dataset.
+    4
+      http://leginfo.legislature.ca.gov
+    5
+      Often the same bill is introduced multiple times, either      4    Benchmark Methods
+across chambers or across sessions. To avoid including such
+duplicates, we removed any bill that had a 96% cosine sim-          To establish benchmarks on summarization per-
+ilarity to an existing bill in the dataset. In addition, we en-     formance, we evaluate several extractive summa-
+sured that the remaining bills with duplicate titles were all in
+the train partition. For additional details about this procedure,   rization approaches by first scoring individual sen-
+see Appendix A.                                                     tences, then using a selection strategy to pick
+                                         mean      min    25th      50th      75th       max
+                                  US     1382      245    923       1253      1758       8785
+                     Words
+                                  CA     1684      561    1123      1498      2113       3795
+                                  US     46        3      31        42        58         372
+                     Sentences
+                                  CA     47        12     31        42        59         137
+
+                           Table 1: Text length distributions on preprocessed texts.
+
+
+                                                         the summary (Gillick et al., 2008).6 We compute
+                                                         a Rouge-2 Precision score of a sentence relative to
+                                                         the reference summary and simplify it to a binary
+                                                         value based on whether it is above or below 0.1
+                                                         (Lin, 2004; Zopf et al., 2018). As an example, the
+                                                         sentences in the positive class are highlighted in
+                                                         green in Figure 2.
+                                                            Second, we build several models to predict the
+                                                         label. For the models, we consider two aspects of a
+                                                         sentence: its importance in the context of the doc-
+                                                         ument (4.1) and its general summary-like proper-
+                                                         ties (4.2).
+
+                                                         4.1    Document Context Model (DOC)
+                                                         A good summary sentence contains the main ideas
+                                                         mentioned in the document. Thus, researchers
+                                                         have designed a multitude of features to capture
+                                                         this property. We evaluate how several common
+                                                         ones transfer to our task:
+                                                            The position of the sentence can determine how
+                                                         informative the sentence is (Seki, 2002). We en-
+                                                         code this feature as a fraction of ‘sentence position
+                                                         / total sentence count’, to restrict this feature to the
+                                                         0−1 range regardless of the particular document’s
+                                                         length. In addition, we include a binary feature for
+             Figure 2: Example US Bill                   whether the sentence is near a section header.
+                                                            An informative sentences will contain words
+                                                         that are important to a given document relative
+                                                         to others. Following a large percentage of previ-
+the best subset (Carbonell and Goldstein, 1998).         ous works, we capture this property using TF-IDF
+While we briefly considered abstractive summa-           (Seki, 2002; Ramos et al., 2003). First, we cal-
+rization models (Chopra et al., 2016), we found          culate a document-level TF-IDF weight for each
+that the existing models trained on news and             word, then take the average and the maximum of
+Wikipedia data produced ungrammatical results,           these weights for a sentence as features. To relate
+and that the size of dataset is insufficient for the     language between sentences, “sentence-level” TF-
+necessary retraining. Recent works have success-
+                                                             6
+fully fine-tuned models for other NLP tasks to spe-            As noted in Section 3, it is difficult to define sentence
+cific domains (Lee et al., 2019), but we leave to        boundaries for this task due to the bulleted structure of the
+                                                         documents. We simplify the text with the following heuristic:
+future work the exploration of similar abstractive       if a bullet is shorter than 10 words, we treat it as a part of the
+strategies.                                              previous sentence; otherwise, we treat it as a full sentence.
+                                                         This cut-off was chosen by manually analyzing a sample of
+   The scoring task is framed as a supervised            sentences. A more sophisticated strategy would be to check if
+                                                         each bullet is a sentence fragment with a syntactic parser and
+learning problem. First, we create a binary label        then reconstruct full sentences; however, the former approach
+for each sentence indicating whether it belongs in       is sufficient for most documents.
+IDF features are created using each sentence as a           probability outputs.10
+document for the background corpus; the average                To create the final summary, we apply the Maxi-
+and max of the sentence’s word weights are used             mal Marginal Relevance (MMR) algorithm (Gold-
+as features.                                                stein et al., 2000). MMR iteratively constructs
+   We train a random forest ensemble model                  a summary by including the highest scoring sen-
+over these features with 50 estimators (Breiman,            tence with the following formula:
+2001).7 This method was chosen because it best
+captured the interactions between the small num-            snext =       max      0.7 ∗ f (s) − 0.3 ∗ sim(s, Scur )
+                                                                       s∈D−Scur
+ber of features.
+                                                               where D is the set of all the sentences in the
+4.2    Summary Language Model (SUM)                         document, Scur are the sentences in the summary
+We hypothesize that certain language is more                so far, f (s) is the sentence score from the model,
+common in summaries than in bill texts. Specif-             sim is the cosine similarity of the sentence to Scur ,
+ically, that summaries primarily contain general            and 0.7 and 0.3 are constants chosen experimen-
+effects of the bill (e.g awarding a grant) while            tally to balance the two properties. This method
+language detailing the administrative changes will          allows us to pick relevant sentences while mini-
+only appear in the text (e.g inserting or modifying         mizing redundancies. We repeat this process until
+relatively minor language to an existing statute).          we reach the length limit of 2000 characters.
+Thus, a good summary should contain only the
+major actions.                                              5    Results
+   Hong and Nenkova (2014) quantify this aspect             To estimate the upper bound on our approach, an
+using hand-engineered features based on the the             oracle summarizer is created by using the true
+likelihood of words appearing in summaries as op-           Rouge-2 Precision scores with the MMR selec-
+posed to the text. Later, Cao et al. (2015) built a         tion strategy. In addition, we evaluate the follow-
+Convolutional Neural Network (CNN) to predict               ing unsupervised baselines: SumBasic (Nenkova
+if a sentence belongs in the summary and showed             and Vanderwende, 2005), Latent Semantic Anal-
+that this straightforward network outperforms en-           ysis (LSA) (Gong and Liu, 2001) and TextRank
+gineered features. We follow their approach, using          (Mihalcea and Tarau, 2004). The final results are
+the BERT model as our classifier (Devlin et al.,            shown in Table 2. The Rouge F-Score is used be-
+2018). BERT can be adapted for and has achieved             cause it considers both the completeness and con-
+state-of-the-art performance on a number of NLP             ciseness of the summary method.11,12
+tasks, including binary sentiment classification.8             We evaluated the DOC, SUM, and ensemble
+   To adapt the model to our domain, we pre-                classifiers separately. All three of our models out-
+train the Bert-Large Uncased model on the “next-            perform the other baselines, demonstrating that
+sentence prediction” task using the US training             there is a “summary-like” signal in the language
+dataset for 20,000 steps with a batch size of 32.9          across bills. The SUM model outperforms the
+The pretraining stategy has been successfully ap-           DOC model showing that a strong language model
+plied to tune BERT for tasks in the biomedical              can capture general summary-like features; this re-
+domain (Lee et al., 2019). Using the pretrained             sult is in line with Cao et al. (2015) and Collins
+model, the classification setup for BERT is trained         et al. (2017) sentence level neural network perfor-
+on sentences and binary labels for 3 epochs over            mance. However, in those studies incorporating
+the training data.                                          several contextual features improved the perfor-
+                                                            mance, while DOC+SUM performs similarly to
+4.3    Ensemble and Sentence Selection                      DOC. In future work we plan to incorporate con-
+To combine the signals from the DOC and SUM                 textual features into the neural network directly;
+models, we create an ensemble averaging the two                10
+                                                                  Additional experiments using Linear Regression with the
+                                                            actual Rouge-2 Precision score as the target, but found that
+   7
+     Implemented with scikit-learn.org                      they produced similar results.
+   8                                                           11
+     All code described are used directly from https://           Precision and recall scores are listed in the supplemental
+github.com/google-research/bert                             material for additional context.
+   9                                                           12
+     This is the pretraining procedure recommended by the         Rouge scores calculated using https://github.
+authors of BERT on their github website.                    com/pcyin/PyRouge
+Collins et al. (2017) showed that this strategy is       like. The metrics are calculated by:
+effective for scientific article summarization. In
+addition, we plan to explore additional sentence             1. Calculate the probability of unigrams appear-
+selection strategies instead of always adding sen-              ing in the bill text and in the summaries
+tences up to the 2000 character limit.                          (Pt (w) and Ps (w) respectively).
+   Next, we applied our US model to CA bills.
+Overall, the performance is lower than on US bills           2. Calculate KL scores as : KLw (S|T ) =
+(Table 2b), but all three supervised methods per-               Ps (w) ∗ ln PPst (w)
+                                                                                 (w)
+                                                                                     and the opposite.
+form better than the unsupervised baselines, sug-
+gesting that models built using the language of US          A large value of KL(S|T ) indicates that the
+Bills can transfer to other states. Interestingly, the   word is summary-like and KL(T |S) indicates a
+SUM model performs similarly to the DOC in the           text-like word. Table 3 shows the most summary-
+CA dataset, suggesting that the BERT model may           like and text-like words in bills and resolutions.
+have overfit to the US language. An additional rea-      For both document types, the summary-like words
+son for the similar performance is the difference in     tend to be verbs or department names; the text-like
+the structure of the summaries: In California the        words mostly refer to types of edits or background
+provided summaries state not only the proposed           content (e.g “reporting the rise of..”). This follows
+changes, but the relevant pieces of the existing law,    our intuition about summaries being more action
+as well (see Appendix C.3 for a more in-depth dis-       driven. While a complex model, like BERT, may
+cussion). We hypothesize that a model trained on         capture these signals internally; understanding the
+multi-state data would transfer better, thus we plan     significant language explicitly is important both
+to expand the dataset to include all twenty-three        for interpret ability and for guiding future models.
+states with human-written summaries.
+                                                             Table 3: Examples of summary and text like words
+ Table 2: ROUGE F-scores (%) of different methods.
+                                                             Summary-like     prohibit, DOD, VA, allow,
+                   Rouge-1      Rouge-2    Rouge-L                            penalty, prohibit, EPA, elim-
+ Oracle             45.11        28.74      37.38                             inate, implement, require
+ SumBasic           30.74        14.16      23.92            Text-like        estimate, average, report,
+ LSA                32.64        15.69      26.26                             rise, section, finish, percent,
+ TextRank           34.35        17.77      27.80                             debate
+ DOC                38.51        21.38      31.49
+ SUM                40.69        23.88      33.65
+ DOC + SUM          40.80        23.83      33.73        6     Conclusion
+                (a) Congressional Bills                  In this paper, we introduced BillSum, the first cor-
+                   Rouge-1      Rouge-2    Rouge-L       pus for legislative summarization. This is a chal-
+ Oracle             48.61        32.83      41.94        lenging summarization dataset due to the tech-
+ SumBasic           35.47        16.18      29.98        nical nature and complex structure of the bills.
+ LSA                35.06        16.34      29.93        We have established several baselines and demon-
+ TextRank           35.81        18.10      29.97        strated that there is a large gap in performance rel-
+                                                         ative to the oracle, showing that the problem has
+ DOC                38.35        19.76      32.80
+                                                         ample room for further development. We have
+ SUM                38.90        20.79      33.20
+                                                         also shown that summarization methods trained
+ DOC + SUM          39.65        21.14      34.05
+                                                         on US Bills transfer to California bills - thus, the
+                     (b) CA Bills                        summarization methods developed on this dataset
+                                                         could be used for legislatures without human writ-
+5.1   Summary Language Analysis                          ten summaries.
+The success of the SUM model suggests that cer-
+tain language is more summary-like. Following a
+study by Hong and Nenkova (2014) on news sum-            References
+marization, we apply KL-divergence based met-            Leo Breiman. 2001. Random forests. Mach. Learn.,
+rics to quantify which words were more summary-            45(1):5–32.
+Ziqiang Cao, Furu Wei, Sujian Li, Wenjie Li, Ming          Claire Grover, Ben Hachey, and Ian Hughson. 2004.
+  Zhou, and WANG Houfeng. 2015. Learning sum-                The HOLJ corpus. supporting summarisation of le-
+  mary prior representation for extractive summariza-        gal texts. In COLING 2004 5th International Work-
+  tion. In Proceedings of the 53rd Annual Meet-              shop on Linguistically Interpreted Corpora, pages
+  ing of the Association for Computational Linguistics       47–54, Geneva, Switzerland. COLING.
+  and the 7th International Joint Conference on Natu-
+  ral Language Processing (Volume 2: Short Papers),        Karl Moritz Hermann, Tomas Kocisky, Edward
+  volume 2, pages 829–833.                                   Grefenstette, Lasse Espeholt, Will Kay, Mustafa Su-
+                                                             leyman, and Phil Blunsom. 2015. Teaching ma-
+Jaime Carbonell and Jade Goldstein. 1998. The use of         chines to read and comprehend. In Advances in Neu-
+   mmr, diversity-based reranking for reordering docu-       ral Information Processing Systems, pages 1693–
+   ments and producing summaries. In Proceedings of          1701.
+   the 21st Annual International ACM SIGIR Confer-
+   ence on Research and Development in Information         Kai Hong and Ani Nenkova. 2014. Improving the
+   Retrieval, SIGIR ’98, pages 335–336, New York,            estimation of word importance for news multi-
+   NY, USA. ACM.                                             document summarization. In Proceedings of the
+                                                             14th Conference of the European Chapter of the As-
+Sumit Chopra, Michael Auli, and Alexander M. Rush.           sociation for Computational Linguistics, pages 712–
+  2016. Abstractive sentence summarization with at-          721.
+  tentive recurrent neural networks. In Proceedings of     Aikaterini-Lida Kalouli, Leo Vrana, Vigile Marie Fa-
+  the 2016 Conference of the North American Chap-            bella, Luna Bellani, and Annette Hautli-Janisz.
+  ter of the Association for Computational Linguistics:      2018. Cousbi: A structured and visualized legal cor-
+  Human Language Technologies, pages 93–98. Asso-            pus of us state bills. In LREC 2018, pages 7–14.
+  ciation for Computational Linguistics.
+                                                           Ambedkar Kanapala, Sukomal Pal, and Rajendra Pa-
+Ed Collins, Isabelle Augenstein, and Sebastian Riedel.      mula. 2017. Text summarization from legal doc-
+  2017. A supervised approach to extractive sum-            uments: a survey. Artificial Intelligence Review,
+  marisation of scientific papers. arXiv preprint           pages 1–32.
+  arXiv:1706.03946.
+                                                           Mi-Young Kim, Ying Xu, and Randy Goebel. 2013.
+Jacob Devlin, Ming-Wei Chang, Kenton Lee, and                Summarization of legal texts with high cohesion and
+   Kristina Toutanova. 2018. Bert: Pre-training of deep      automatic compression rate. In New Frontiers in Ar-
+   bidirectional transformers for language understand-       tificial Intelligence, pages 190–204, Berlin, Heidel-
+   ing.                                                      berg. Springer Berlin Heidelberg.
+
+Vlad Eidelman, Anastassia Kornilova, and Daniel Ar-        Anastassia Kornilova, Daniel Argyle, and Vlad Eidel-
+  gyle. 2018. How predictable is your state? lever-          man. 2018. Party matters: Enhancing legislative
+  aging lexical and contextual information for predict-      embeddings with author attributes for vote predic-
+  ing legislative floor action at the state level. arXiv     tion. arXiv preprint arXiv:1805.08182.
+  preprint arXiv:1806.05284.
+                                                           Jinhyuk Lee, Wonjin Yoon, Sungdong Kim,
+Sean Gerrish and David M Blei. 2011. Predicting leg-          Donghyeon Kim, Sunkyu Kim, Chan Ho So,
+  islative roll calls from text. In Proceedings of the        and Jaewoo Kang. 2019. Biobert: a pre-trained
+  28th international conference on machine learning           biomedical language representation model for
+  (icml-11), pages 489–496.                                   biomedical text mining. CoRR, abs/1901.08746.
+
+Daniel Gillick, Benoit Favre, and Dilek Hakkani-Tür.      Chin-Yew Lin. 2004. Rouge: A package for auto-
+  2008. The icsi summarization system at tac 2008.           matic evaluation of summaries. Text Summarization
+  In TAC.                                                    Branches Out.
+                                                           Fridolin Linder, Bruce A. Desmarais, Matthew
+Jade Goldstein, Vibhu Mittal, Jaime Carbonell, and            Burgess, and Eugenia Giraudy. 2018. Text as policy:
+   Mark Kantrowitz. 2000. Multi-document sum-                 Measuring policy similarity through bill text reuse.
+   marization by sentence extraction. In Proceed-             SSRN.
+   ings of the 2000 NAACL-ANLPWorkshop on Auto-
+   matic Summarization - Volume 4, NAACL-ANLP-             Rada Mihalcea and Paul Tarau. 2004. Textrank: Bring-
+   AutoSum ’00, pages 40–48, Stroudsburg, PA, USA.           ing order into text. In Proceedings of the 2004 con-
+   Association for Computational Linguistics.                ference on empirical methods in natural language
+                                                             processing.
+Yihong Gong and Xin Liu. 2001. Generic text summa-
+  rization using relevance measure and latent semantic     Ani Nenkova and Amit Bagga. 2004. Facilitating
+  analysis. In Proceedings of the 24th annual inter-         email thread access by extractive summary gener-
+  national ACM SIGIR conference on Research and              ation. AMSTERDAM STUDIES IN THE THEORY
+  development in information retrieval, pages 19–25.         AND HISTORY OF LINGUISTIC SCIENCE, page
+  ACM.                                                       287.
+Ani Nenkova and Lucy Vanderwende. 2005. The im-               4. Iteratively adding bills to the dataset, skip-
+  pact of frequency on summarization. Microsoft Re-              ping examples that were more than 96% sim-
+  search, Redmond, Washington, Tech. Rep. MSR-TR-
+                                                                 ilar to any bills already added.
+  2005, 101.
+                                                             After this procedure is run, the data still in-
+Juan Ramos et al. 2003. Using tf-idf to determine word
+  relevance in document queries. In Proceedings of        cludes some bills with identical titles. This can
+  the first instructional conference on machine learn-    happen for two reasons: either the title is generic
+  ing, volume 242, pages 133–142.                         and refers to two unrelated bills, or one is a reintro-
+                                                          duction of the other with enough modified content
+Murali Saravanan, Balaraman Ravindran, Assistant
+ Professor, and Dr Raman. 2008. Automatic identi-         to not be considered a duplicate. We put all the
+ fication of rhetorical roles using conditional random    bills with identical titles in the train partition.
+ fields for legal document summarization. J. Artif.
+ Intell. Law.                                             B     Additional ROUGE Scores
+Yohei Seki. 2002. Sentence extraction by tf/idf and po-   As discussed in the Results section, F-Scores
+  sition weighting from newspaper articles.               encourage a balance between comprehensiveness
+Simone Teufel and Marc Moens. 2002. Summariz-             and conciseness. However, as it is useful to an-
+  ing scientific articles: experiments with relevance     alyze the precision and recall scores separately,
+  and rhetorical status. Computational linguistics,       both are presented in Table 4 for US Bills and
+  28(4):409–445.                                          in Table 5 for CA Bills. All tested methods fa-
+Tae Yano, Noah A Smith, and John D Wilkerson. 2012.       vor recall, since they consistently generate a 2000
+  Textual predictors of bill survival in congressional    character summary, instead of stopping early when
+  committees. In Proceedings of the 2012 Conference       a concise summary may be sufficient. For both
+  of the North American Chapter of the Association        datasets, the difference in Recall between the Or-
+  for Computational Linguistics: Human Language
+  Technologies, pages 793–802. Association for Com-
+                                                          acle and DOC+SUM summarizer is a lot smaller
+  putational Linguistics.                                 than for Recall; which suggests that a lot of useful
+                                                          summary content can be found with an extractive
+Markus Zopf, Eneldo Loza Mencı́a, and Johannes            method. In future work, we will focus on extract-
+ Fürnkranz. 2018. Which scores to predict in sen-
+ tence regression for text summarization? In Pro-         ing more granular snippets to improve precision.
+ ceedings of the 2018 Conference of the North Amer-
+ ican Chapter of the Association for Computational             Table 4: ROUGE Scores of Congressional Bills
+ Linguistics: Human Language Technologies, Vol-
+ ume 1 (Long Papers), pages 1782–1791. Association                            Rouge-1      Rouge-2    Rouge-L
+ for Computational Linguistics.                            Oracle              40.94        25.82      38.29
+                                                           SumBasic            24.63        11.71      22.36
+A     Duplicate Removal Procedure                          LSA                 27.34        13.30      24.96
+                                                           TextRank            29.86        15.37      26.99
+There are a number of reasons near duplicate bills
+                                                           DOC                 32.61        17.93      30.10
+are written by Congress, including the introduc-
+                                                           SUM                 34.59        20.15      32.18
+tion of companion bills in the House and Senate
+                                                           DOC + SUM           34.77        20.11      32.21
+during the same session, and the reintroduction
+across sessions of bills that failed to pass during                          (a) Precision Scores
+a previous session. To avoid including duplicate
+examples in the dataset we looked for similar bills                           Rouge-1      Rouge-2    Rouge-L
+by:                                                        Oracle              58.19        39.17      54.52
+                                                           SumBasic            47.37        21.90      42.88
+    1. Vectorizing  the      text      using
+                                                           LSA                 46.53        23.10      42.32
+       scikit-learn’s CountVectorizer.
+                                                           TextRank            46.49        25.36      41.88
+    2. Removing the top 15% of most common                 DOC                 54.16        32.31      49.92
+       words and generic stop words.                       SUM                 56.68        35.56      52.62
+                                                           DOC + SUM           56.69        35.56      52.62
+    3. Computing cosine similarity between the
+                                                                              (b) Recall Scores
+       texts and the summaries for each pair of bills
+       and averaging the two similarities.
+      Table 5: ROUGE Scores of California Bills
+
+                   Rouge-1      Rouge-2   Rouge-L
+ Oracle             45.00        30.85     42.79
+ SumBasic           33.72        16.30     30.41
+ LSA                34.84        17.24     31.69
+ TextRank           36.66        19.28     32.61
+ DOC                38.31        20.49     34.67
+ SUM                41.67        22.10     37.45
+ DOC + SUM          39.86        22.34     36.17
+                  (a) Precision Scores
+
+                   Rouge-1      Rouge-2   Rouge-L
+ Oracle             62.96        43.83     59.58
+ SumBasic           40.47        17.89     36.36
+ LSA                38.23        17.28     34.61
+ TextRank           37.79        18.97     33.50
+ DOC                41.50        21.33     37.42
+ SUM                39.04        21.73     35.25
+ DOC + SUM          42.51        22.82     38.41
+                   (b) Recall Scores
+                                                                  Figure 3: US H.R.1680 (115th)
+
+C     Additional Bill Examples                           (Sec. 4)“Women’s business center” shall mean
+We highlight several example bills to showcase the     a project conducted by any of the following eligi-
+different types of bills found in the dataset.         ble entities:
+
+C.1    Complex Structure Example                         • a private nonprofit organization;
+In the Data section, we discussed some of the chal-
+                                                         • a state, regional, or local economic develop-
+lenges with processing bills: complex formatting
+                                                           ment organization;
+and technical language. Figure 3 is an excerpt
+from a particularly difficult example:
+                                                         • a state-chartered development, credit, or fi-
+                                                           nance corporation;
+    • The text interleaves several layers of bul-
+      lets. Lines 3, 15, 27 represent the same level
+                                                         • a junior or community college; or
+      (points (3) and (4) omitted for space); lines
+      16, 17, 19 and 21 go together, as well. These
+                                                         • any combination of these entities.
+      multiple levels need to be handled carefully,
+      or the summarizer will extract snippets that     The SBA may award up to $250,000 of financial
+      can not be interpreted without context.          assistance to eligible entities per project year to
+                                                       conduct projects designed to provide training and
+    • Lines 22-26 both introduce new language for
+                                                       counseling meeting the needs of women, espe-
+      the law and use the bulleted structure.
+                                                       cially socially and economically disadvantaged
+    • Line 27 states that the existing “subsection     women.
+      (f)” is being removed and replaced. While
+      lines 28 onward state the new text, the mean-       Most of the relevant details are capture in the
+      ing of the change relative to the current text   text between lines 8-14 and 20-24. For examples
+      is not clear.                                    similar to this one, the summary language is ex-
+                                                       tracted almost directly from the text, but, parsing
+    The human-written summary for this bill was:       them correctly from the original structure is a non-
+                                                       trivial task.
+C.2   Paraphrase Example
+For a subset of the bills, the CRS will paraphrase
+the technical language. In these cases, extractive
+summarization methods are particularly limited.
+Consider the example in Figure 4 and its summary:
+   This bill amends the Endangered Species
+Act of 1973 to revise the process by which the
+Department of the Interior or the Department of
+Commerce, as appropriate, reviews petitions to
+list a species on the endangered or threatened
+species list. Specifically, the bill establishes a
+process for the appropriate department to declare
+a petition backlog and discharge the petitions
+when there is a backlog.
+
+
+
+
+          Figure 4: US H.R.6355 (115th)
+
+                                                      Figure 5: California Bill Summary
+  While the bill elaborates of the “‘process”, the
+summary states that one was created. This type of
+summary would be hard to construct by a purely
+extractive method.
+
+C.3   California Example
+The California bills follow the same general pat-
+terns as US bills, but the format of some sum-
+maries is different. In Figure 5: the summary,
+first, explains the existing law, then explains the
+change. The additional context is useful, and in
+the future we may build a system that references
+the existing law to create better summaries.
+

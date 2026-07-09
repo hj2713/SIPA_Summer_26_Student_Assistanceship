@@ -1,0 +1,43 @@
+WP2 develops the Policy Intelligence Agent. Its role is to convert Irish and EU climate, energy, AI,
+infrastructure, and environmental policy documents into structured variables for modelling, scenario
+testing, and policy analysis.
+The policy problem is practical. Ireland has climate and energy targets, but their delivery depends on
+institutions, timelines, legal authority, reporting duties, enforcement mechanisms, infrastructure
+capacity, and the ability to adapt to uncertainty. The agent needs to identify not only formal targets
+but also the governance conditions that affect whether those targets can be implemented.
+Exhibit WP2.1 outlines the human-in-the-loop process for building and validating the policy
+intelligence layer. The PhD student and research support will develop the policy and legal corpus, tag
+documents with metadata, and apply a coding framework developed with guidance from the senior
+policy team. The coding framework will identify policy objectives, responsible actors, legal authority,
+implementation timelines, reporting obligations, review clauses, enforcement mechanisms, data
+requirements, risk flags, and affected sectors.
+
+
+
+
+                  Exhibit WP2.1. Human-in-the-loop policy intelligence pipeline for SEAI
+                  decision support. The pipeline starts with SEAI’s policy problem and uses
+                  expert-guided coding, AI-assisted extraction, and human validation to generate
+                  structured policy variables. These outputs support energy-system modelling,
+                  scenario stress-testing, implementation-gap analysis, and policy-facing
+                  guidance for Ireland’s climate and energy transition.
+
+A manually coded validation sample will be used to evaluate the Policy Intelligence Agent. The agent
+will extract obligations, actors, timelines, targets, risks, and resilience mechanisms from policy and
+legal text. The extracted outputs will be checked against the hand-coded sample. Errors, ambiguous
+classifications, and missing variables will be logged and used to improve the codebook, prompts, and
+extraction schema.
+The policy team will review difficult classifications, especially when legal authority, institutional
+responsibility, accountability, enforcement, or implementation risk is unclear. Incorporating domain
+and policy experts into the evaluation process provides quality assurance and ensures that AI-
+generated outputs are grounded in expert policy analysis.
+The final outputs will be validated policy variables, including policy constraints, implementation
+timelines, governance-risk flags, institutional responsibilities, accountability mechanisms, and
+resilience indicators. These variables will support WP3 energy-system modelling, scenario stress-
+testing, implementation-gap analysis, policy briefs, and stakeholder guidance.
+The policy team’s contribution directly strengthens the proposal’s core objective: integrating policy
+intelligence, emissions analytics, and energy-system optimisation into a decision-support framework
+for Ireland. The aim is to assess whether a decarbonisation pathway is technically feasible and,
+equally important, to evaluate its institutional credibility, resilience to shocks, and usefulness for
+public-sector planning.
+

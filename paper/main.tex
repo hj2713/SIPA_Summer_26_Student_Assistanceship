@@ -49,7 +49,8 @@
 \newcommand{\future}[1]{\textit{#1}}
 
 \title{\vspace{-1.2em}\textbf{Theory-Guided LLM Measurement of Legal Delegation and Administrative Discretion}\\[0.35em]
-\large A Human-in-the-Loop Workflow for Reproducible Legal Coding}
+% \large A Human-in-the-Loop Workflow for Reproducible Legal Coding
+}
 
 % \author{
 % Himanshu Jhawar\\
@@ -168,11 +169,11 @@ Figure~\ref{fig:conceptual} summarizes the theory-to-classification mapping used
 \draw[arrow] (rank) -- (review);
 \node[rankbox, below=0.85cm of constraints, xshift=-1.55cm] (mapping) {
 \textbf{Theory-derived rank mapping:}
-No delegation $\rightarrow$ 0;\quad
-Low authority + strong constraints $\rightarrow$ 1;\quad
-Low authority + weak constraints $\rightarrow$ 2;\quad
-High authority + strong constraints $\rightarrow$ 3;\quad
-High authority + weak constraints $\rightarrow$ 4.
+\\ No delegation $\rightarrow$ 0;\quad
+\\ Low authority + strong constraints $\rightarrow$ 1;\quad
+\\ Low authority + weak constraints $\rightarrow$ 2;\quad
+\\ High authority + strong constraints $\rightarrow$ 3;\quad
+\\ High authority + weak constraints $\rightarrow$ 4.
 };
 \draw[arrow] (gate.south) |- ([yshift=0.18cm]mapping.west);
 \draw[arrow] (authority.south) -- ++(0,-0.38) -| ([xshift=-0.5cm]mapping.north);
@@ -204,12 +205,6 @@ These results do not establish reliability for specialized legal constructs. Leg
 
 Weak supervision provides one model for converting expert heuristics into reusable computational signals \citep{ratner2017snorkel}; technology-assisted review in legal discovery likewise demonstrates iterative human feedback over ranked documents \citep{cormack2014evaluation}. Visual prompt-chaining systems are also important predecessors. AI Chains decomposes LLM tasks into modular, controllable steps \citep{wu2022aichains}, while PromptChainer provides node-edge authoring, per-step testing, intermediate-output inspection, and debugging for chained prompts \citep{wu2022promptchainer}. We therefore do not claim to invent human-in-the-loop annotation or visual prompt chaining. Our contribution is to integrate those ideas with a substantive institutional measurement model.
 
-\section{Theory-Guided Workflow Architecture}
-
-The workflow order is grounded in the substantive theory. It is not merely an engineering strategy to reduce prompt length. A law cannot confer administrative discretion without first transferring authority. Once delegation is established, residual discretion depends jointly on the amount of authority transferred and the constraints on its use. The computational architecture therefore mirrors the conceptual structure of the measurement model.
-
-The system evolved through repeated attempts to make the coding rule both more accurate and more interpretable. Table~\ref{tab:evolution} groups the many prompt files into four methodological phases. The important shift is from treating a prompt as the coding instrument to treating the staged workflow as the coding instrument.
-
 \begin{table*}[t]
 \centering
 \caption{Development from prompt-only classification to a theory-guided workflow research instrument.}
@@ -230,6 +225,12 @@ IV & Versioned workflow & Convert theory stages into typed nodes, upstream depen
 \end{tabularx}
 \end{table*}
 
+\section{Theory-Guided Workflow Architecture}
+
+The workflow order is grounded in the substantive theory. It is not merely an engineering strategy to reduce prompt length. A law cannot confer administrative discretion without first transferring authority. Once delegation is established, residual discretion depends jointly on the amount of authority transferred and the constraints on its use. The computational architecture therefore mirrors the conceptual structure of the measurement model.
+
+The system evolved through repeated attempts to make the coding rule both more accurate and more interpretable. Table~\ref{tab:evolution} groups the many prompt files into four methodological phases. The important shift is from treating a prompt as the coding instrument to treating the staged workflow as the coding instrument.
+
 \subsection{From theory to ordered computational judgments}
 
 The final rank depends on earlier judgments. A model should first determine whether a qualifying delegation exists, then inventory administrative actors and authority, assess the breadth and centrality of that authority, identify constraints, and only then estimate residual leeway. If no delegation exists, the workflow assigns rank 0 deterministically instead of spending another model call on an inapplicable question. If delegation exists, the rank stage receives the earlier values and rationales explicitly.
@@ -246,14 +247,14 @@ A one-shot prediction collapses the relationships among delegation, authority, c
 
 Human expertise enters before, during, and after model execution. Before execution, domain experts define the construct, identify its constituent dimensions, delimit the source universe, specify coding rules, and determine the relationships that the model must preserve. During evaluation, experts distinguish extraction errors from conceptual boundary cases and source-universe mismatches. After evaluation, they decide whether a disagreement warrants a local case correction, a revision of the operational rule, or reconsideration of the historical benchmark.
 
-Human-in-the-loop design is therefore not a substitute for theory-guided inference. It is the mechanism by which the theoretically structured measurement instrument is governed and validated. Figure~\ref{fig:hitl} presents the broader research process. Solid arrows correspond to implemented or directly supported interactions. The dashed arrow denotes a planned governance step in which selected case-level lessons are deliberately promoted into a new workflow version; corrections do not currently retrain or silently alter the method.
-
 \begin{figure*}[t]
 \centering
 \resizebox{\textwidth}{!}{\input{figures/hitl_workflow.tex}}
 \caption{Human-in-the-loop governance around the theory-guided measurement instrument. Human experts define the construct and source universe, validate model outputs, adjudicate cases, and decide when disagreement should trigger a local correction, a new workflow version, or reconsideration of the benchmark.}
 \label{fig:hitl}
 \end{figure*}
+
+Human-in-the-loop design is therefore not a substitute for theory-guided inference. It is the mechanism by which the theoretically structured measurement instrument is governed and validated. Figure~\ref{fig:hitl} presents the broader research process. Solid arrows correspond to implemented or directly supported interactions. The dashed arrow denotes a planned governance step in which selected case-level lessons are deliberately promoted into a new workflow version; corrections do not currently retrain or silently alter the method.
 
 \subsection{Method-level revision}
 
@@ -275,8 +276,9 @@ The source universe is methodologically important. The benchmark labels were pro
 
 The repository currently contains 169 summary files (161 delegation-positive and eight delegation-negative) spanning 1950--2013, which represent the intersection of historical legislative records and available summaries. The broader, unlabeled document database in the prototype extends through 2020 (totaling 412 documents), while the benchmark CSV contains 121 manually coded financial laws spanning 1950--2013.
 
-\subsection{Evaluation levels}
 
+\subsection{Evaluation levels}
+\vspace{-0.5em}
 The empirical evaluation asks whether LLMs can reproduce a theory-based measurement instrument, not merely whether they can generate plausible descriptions of statutes. The evaluation therefore occurs at several levels: whether the model identifies qualifying delegation, correctly characterizes the amount of authority, correctly characterizes the strength of constraints, produces a final rank consistent with those component judgments, and agrees with the historical benchmark.
 
 Where supported by the current dashboard exports, the evaluation reports delegation-screen accuracy, class-specific recall, final-rank exact accuracy, within-one accuracy, mean absolute error (MAE), class distribution, and law-level disagreements. The next revision should add component-level authority classification, component-level constraint classification, linear and quadratic weighted kappa, and updated v8, v8.2, v8.4, and v9 results once those exports are finalized.
@@ -310,7 +312,7 @@ For the ordinal discretion task, the evaluation interface supports exact accurac
 
 \subsection{Binary delegation}
 
-Table~\ref{tab:binary} reconstructs metrics from persisted local dashboard rows. The benchmark is severely imbalanced: 161 positive cases and only eight negative cases. An always-positive classifier would obtain 95.27\% raw accuracy while failing every negative case. Raw accuracy is therefore not an adequate measure of whether prompt refinement improves the underlying coding rule.
+(Table~\ref{tab:binary}) reconstructs metrics from persisted local dashboard rows. The benchmark is severely imbalanced: 161 positive cases and only eight negative cases. An always-positive classifier would obtain 95.27\% raw accuracy while failing every negative case. Raw accuracy is therefore not an adequate measure of whether prompt refinement improves the underlying coding rule.
 
 \begin{table}[H]
 \centering
@@ -362,7 +364,26 @@ Prompt v3.6 & 33.3\% & 73.3\% & 1.000 \\
 \raggedright\footnotesize Metrics were reconstructed from persisted dashboard rows matched to the benchmark CSV by public-law number. Campaigns v3.4, v3.5, and v3.6 share the identical prompt text (Prompt Version 7.2); variance in metrics is due to LLM nondeterminism.
 \end{table}
 
-Table~\ref{tab:multimodel} reports the same 15-law development set across six models and three ranking strategies. CASCADE usually gives the strongest exact accuracy, while M9 often improves within-one-rank accuracy or mean absolute error. Because the sample is small, these results are diagnostic rather than a held-out performance estimate.
+(Table~\ref{tab:multimodel}) reports the same 15-law development set across six models and three ranking strategies. CASCADE usually gives the strongest exact accuracy, while M9 often improves within-one-rank accuracy or mean absolute error. Because the sample is small, these results are diagnostic rather than a held-out performance estimate.
+
+In these exploratory runs, the strongest exact-accuracy result is gemini-3.5-flash with CASCADE (50.0\%), while the lowest MAE is gemini-3.1-flash-lite with M9 (0.800).
+% \FloatBarrier
+
+\section{Discussion}
+
+\subsection{A theory-guided measurement architecture}
+
+The principal contribution is a theory-guided measurement architecture for legal text. The workflow is valuable because it exposes prompts and preserves the substantive structure that links delegation, constraints, and residual discretion. It turns a political-economy theory of regulatory discretion into a reproducible computational instrument.
+
+This design is aligned with a quantitative social-science perspective. The goal is not merely to produce plausible legal interpretations. It is to operationalize a concept consistently, compare predictions with a coded benchmark, diagnose systematic disagreements, and preserve enough provenance for another researcher to reproduce the coding process. In that sense, the workflow plays a role analogous to a versioned coding protocol or measurement instrument.
+
+
+\subsection{What the human contributes}
+
+The human remains responsible for defining constructs, choosing the source universe, approving the codebook in the substantive sense, interpreting benchmark disagreements, correcting known errors, and deciding whether a case-level lesson warrants a method-level revision. The LLM contributes scalable extraction, structured intermediate judgments, and candidate classifications. The system contributes orchestration, provenance, comparison, and versioning.
+
+The two human loops should not be conflated. A local override is appropriate when a researcher knows that one case is wrong. A workflow revision is appropriate when the error reveals a general rule. The latter should create a new version and be evaluated on a controlled set before adoption.
+
 
 \begin{table}[t]
 \centering
@@ -409,30 +430,22 @@ Table~\ref{tab:multimodel} reports the same 15-law development set across six mo
 \raggedright\footnotesize W1 = within one rank. G3.5 = \texttt{gemini-3.5-flash}; G3.1-lite = \texttt{gemini-3.1-flash-lite}; Qwen3 = \texttt{qwen/qwen3-235b-a22b-2507}; GLM-5.2 = \texttt{z-ai/glm-5.2}; DeepSeek = \texttt{deepseek-v4-flash}; Hermes = \texttt{nousresearch/hermes-3-llama-3.1-405b}.
 \end{table}
 
-In these exploratory runs, the strongest exact-accuracy result is gemini-3.5-flash with CASCADE (50.0\%), while the lowest MAE is gemini-3.1-flash-lite with M9 (0.800).
-\FloatBarrier
-
-\section{Discussion}
-
-\subsection{A theory-guided measurement architecture}
-
-The principal contribution is a theory-guided measurement architecture for legal text. The workflow is valuable because it exposes prompts and preserves the substantive structure that links delegation, constraints, and residual discretion. It turns a political-economy theory of regulatory discretion into a reproducible computational instrument.
-
-This design is aligned with a quantitative social-science perspective. The goal is not merely to produce plausible legal interpretations. It is to operationalize a concept consistently, compare predictions with a coded benchmark, diagnose systematic disagreements, and preserve enough provenance for another researcher to reproduce the coding process. In that sense, the workflow plays a role analogous to a versioned coding protocol or measurement instrument.
-
-\subsection{What the human contributes}
-
-The human remains responsible for defining constructs, choosing the source universe, approving the codebook in the substantive sense, interpreting benchmark disagreements, correcting known errors, and deciding whether a case-level lesson warrants a method-level revision. The LLM contributes scalable extraction, structured intermediate judgments, and candidate classifications. The system contributes orchestration, provenance, comparison, and versioning.
-
-The two human loops should not be conflated. A local override is appropriate when a researcher knows that one case is wrong. A workflow revision is appropriate when the error reveals a general rule. The latter should create a new version and be evaluated on a controlled set before adoption.
-
 \subsection{Limitations}
 
 Several limitations bound the current evidence. First, the binary benchmark is extremely imbalanced, and prompt development on the same cases risks overfitting. Second, the benchmark is based on summaries; conclusions do not automatically transfer to full statutes. Third, updated component-level authority and constraint metrics have not yet been incorporated into this draft. Fourth, a single formal run per strategy does not establish statistical stability, even if spot reruns return identical outputs. Fifth, ordinal ranks can propagate errors from earlier stages. Sixth, the current study concerns one policy domain and has no external-dataset validation. Seventh, model and provider versions can drift. Finally, some audit and governance capabilities remain incomplete: validation is diagnostic, actor-attributed override logs are limited, and workflow-version approval and pinning are not yet uniform across the product.
 
+
 \subsection{Novelty claim}
 
 We do not claim to introduce the theory of delegation, the measurement of administrative discretion, human-in-the-loop annotation, or visual prompt chaining. Each has an established literature. The contribution lies in combining them in a specific way: translating a substantive institutional theory into an executable LLM architecture whose intermediate variables and dependencies correspond to the theory's constituent concepts; separating generative judgments from deterministic theoretical mappings; distinguishing correction of an observation from revision of the measurement instrument; and retaining the evidence and provenance needed to diagnose disagreement.
+
+
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/workflow_dag.tex}}
+\caption{Detailed modular architecture of the \systemname{} workflow graph (\texttt{Version 4 - Detailed}). Upstream outputs flow into parallel CASCADE (sequential), M9 (multiclass), and B3 (coarse split) ranking strategies, followed by validation checks and final output serialization.}
+\label{fig:workflow_dag}
+\end{figure*}
 
 \section{Replication Workflow}
 
@@ -469,23 +482,23 @@ The resulting system does not remove judgment from institutional measurement. In
 
 The main text foregrounds the conceptual theory-to-classification architecture. Figure~\ref{fig:workflow_dag} records the more detailed workflow graph used in the prototype, including the delegation screen, feature extraction nodes, parallel CASCADE/M9/B3 ranking strategies, validation checks, and final output serialization.
 
-\begin{figure*}[t]
-\centering
-\resizebox{\textwidth}{!}{\input{figures/workflow_dag.tex}}
-\caption{Detailed modular architecture of the \systemname{} workflow graph (\texttt{Version 4 - Detailed}). Upstream outputs flow into parallel CASCADE (sequential), M9 (multiclass), and B3 (coarse split) ranking strategies, followed by validation checks and final output serialization.}
-\label{fig:workflow_dag}
-\end{figure*}
+% \begin{figure*}[t]
+% \centering
+% \resizebox{\textwidth}{!}{\input{figures/workflow_dag.tex}}
+% \caption{Detailed modular architecture of the \systemname{} workflow graph (\texttt{Version 4 - Detailed}). Upstream outputs flow into parallel CASCADE (sequential), M9 (multiclass), and B3 (coarse split) ranking strategies, followed by validation checks and final output serialization.}
+% \label{fig:workflow_dag}
+% \end{figure*}
 
 \subsection{Workflow authoring interface}
 
 The Stage Builder exposes source-text policy, evaluation mode, calibration settings, each stage's purpose and prompt, typed output fields, and whether a field is final or retained only for audit. A live preview shows the compiled prompt. The more general graph editor exposes upstream-field selection, conditional routing, deterministic assignments, validations, and rank-specific criteria. This lets a domain expert revise the operational codebook without editing application source code.
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.96\textwidth]{figures/Workflow.png}
-\caption{Product view of the workflow graph, showing how the discretion-rank task is decomposed into explicit LLM analysis nodes, condition nodes, deterministic set-value nodes, validation nodes, and connected branches.}
-\label{fig:workflow_product}
-\end{figure*}
+% \begin{figure*}[t]
+% \centering
+% \includegraphics[width=0.96\textwidth]{figures/Workflow.png}
+% \caption{Product view of the workflow graph, showing how the discretion-rank task is decomposed into explicit LLM analysis nodes, condition nodes, deterministic set-value nodes, validation nodes, and connected branches.}
+% \label{fig:workflow_product}
+% \end{figure*}
 
 Researchers can create a workflow from a template, duplicate it, import or export its JSON representation, edit its draft, validate it, test it, and publish a numbered snapshot with a changelog and definition hash. Publishing creates an immutable numbered definition snapshot, but the current prototype does not implement a separate professor-approval request or sign-off state. Any authorized editor can publish. Similarly, the current user interface does not yet provide a complete published-version comparison and pinning workflow for all campaign types. We therefore describe publishing as a reproducibility primitive, not as a completed governance protocol.
 

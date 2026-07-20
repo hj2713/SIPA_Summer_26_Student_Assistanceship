@@ -1,0 +1,927 @@
+
+% ============================================================
+% HANDOFF FOR HIMANSHU
+% Resolve the mismatch between the theoretical rank mapping
+% and the three implemented ranking strategies.
+%
+% INSERTION INSTRUCTIONS
+%
+% 1. Replace the current Section II.D, "Problem Formulation,"
+%    in full with the section below.
+%
+% 2. In Section IV.B, "Workflow Primitives," replace the current
+%    Table I with the revised table below.
+%
+% 3. Immediately after the revised Table I, insert the short
+%    validation paragraph below.
+%
+% 4. Use the following implementation rule throughout the paper:
+%    retain each strategy-specific prediction for evaluation,
+%    compute the deterministic theory-implied rank separately,
+%    and flag any disagreement. Do not silently overwrite the
+%    strategy-specific prediction.
+% ============================================================
+
+
+% ============================================================
+% SUBMISSION PRIORITY-- JULY 21, 2026 DUE DATE
+%
+% First: replace Section II.D and Table I; insert the revised figure.
+% Second: reconcile sample sizes and populate or remove all TBD tables.
+% Third: apply the Priority A language changes and anonymize the paper.
+% Apply Priority B terminology changes only after those tasks are complete.
+% ============================================================
+
+
+% ============================================================
+% ADD THIS POSITIONING NOTE NEAR THE TOP OF THE HANDOFF
+% ============================================================
+%
+% POSITIONING HIERARCHY
+%
+% Keep "theory-guided" in the paper and title, but make
+% replicability the primary contribution.
+%
+% Primary contribution:
+% A replicable LLM-based measurement workflow.
+%
+% Distinctive design principle:
+% The established theory of delegation and discretion determines
+% the workflow variables, stage ordering, and consistency rules.
+%
+% Theory-guided should not be presented as a separate new theory
+% contribution. It explains why the workflow is substantively
+% structured rather than an arbitrary chain of prompts.
+% ============================================================
+
+
+% ============================================================
+% RECOMMENDED TITLE
+% ============================================================
+%
+% A Replicable Theory-Guided LLM Workflow for Measuring Legal
+% Delegation and Administrative Discretion
+% ============================================================
+
+
+% ============================================================
+% ADD OR REPLACE THE CENTRAL CONTRIBUTION SENTENCE IN THE
+% INTRODUCTION
+% ============================================================
+
+This paper develops a replicable LLM-based measurement instrument
+in which an established theory of delegation and discretion
+determines the workflow's variables, ordering, and consistency rules.
+
+
+% ============================================================
+% ADD THIS SHORT CLARIFICATION AT THE END OF THE INTRODUCTION,
+% IMMEDIATELY BEFORE THE CONTRIBUTION LIST
+% ============================================================
+
+The principal contribution is replicability. The theory-guided
+design makes the workflow substantively meaningful by ensuring that 
+its stages and dependencies align with the established measurement
+model rather than with an arbitrary sequence of prompts.
+
+
+% ============================================================
+% REVISE THE CONTRIBUTION LANGUAGE SO THAT REPLICABILITY COMES
+% FIRST AND THEORY-GUIDED DESIGN EXPLAINS THE ARCHITECTURE
+% ============================================================
+
+\begin{enumerate}
+    \item The paper develops a replicable LLM-based measurement
+    instrument for legal delegation and administrative discretion.
+    The complete workflow, rather than an isolated prompt, is
+    archived, versioned, and auditable.
+
+    \item The workflow is theory-guided: the established measurement
+    model determines the variables, stage ordering, conditional
+    dependencies, and permitted relationships between the component
+    classifications and the final rank.
+
+    \item The system separates generative LLM judgments from
+    deterministic theoretical mappings and preserves the intermediate
+    evidence needed to diagnose disagreements.
+
+    \item The prototype enables domain researchers to apply and inspect
+    the measurement process without directly managing prompts, APIs,
+    model orchestration, or structured-output parsing.
+\end{enumerate}
+
+
+% ============================================================
+% ADD THIS LANGUAGE TO THE DISCUSSION SECTION
+% ============================================================
+
+Our principal contribution is replicability. The theory-guided design
+makes the replicable workflow substantively meaningful by ensuring
+that its stages and dependencies align with the established
+measurement of a discretion model \citep{epstein1999delegating}. 
+The theoretical framework provides the formal structure that the workflow implements and preserves.
+
+
+% ============================================================
+% ADD THIS LANGUAGE TO THE NOVELTY STATEMENT
+% ============================================================
+
+The paper relies on well-established theories of delegation or
+administrative discretion. Our contribution is a replicable LLM
+measurement architecture that implements a theoretical model through
+explicit variables, ordered stages, deterministic consistency rules,
+and preserved execution records.
+
+
+% ============================================================
+% ADD THIS LANGUAGE TO THE CONCLUSION
+% ============================================================
+
+The resulting system is best understood as a replicable measurement
+instrument, with its computational structure guided by an established
+theory of delegation and discretion. Replicability is the primary
+contribution; theory-guided design explains why the workflow's stages,
+dependencies, and validation rules are substantively meaningful.
+
+
+% ============================================================
+% REPLACEMENT FOR SECTION II.D
+% ============================================================
+
+\subsection{Problem Formulation}
+
+Let \(x_i\) denote the legal text for law \(i\). The theoretical
+measurement model contains three component variables. Let
+
+\[
+d_i \in \{0,1\}
+\]
+
+indicate whether the law delegates qualifying policymaking authority,
+
+\[
+a_i \in \{\mathrm{Low},\mathrm{High}\}
+\]
+
+denote the amount of delegated authority, and
+
+\[
+c_i \in \{\mathrm{Strong},\mathrm{Weak}\}
+\]
+
+denote the strength of statutory constraints.
+
+The substantive theory defines a deterministic mapping from these
+components to the discretion rank:
+
+\[
+y_i = m(d_i,a_i,c_i),
+\]
+
+where
+
+\[
+m(d_i,a_i,c_i)=
+\begin{cases}
+0, & d_i=0,\\
+1, & d_i=1,\ a_i=\mathrm{Low},\ c_i=\mathrm{Strong},\\
+2, & d_i=1,\ a_i=\mathrm{Low},\ c_i=\mathrm{Weak},\\
+3, & d_i=1,\ a_i=\mathrm{High},\ c_i=\mathrm{Strong},\\
+4, & d_i=1,\ a_i=\mathrm{High},\ c_i=\mathrm{Weak}.
+\end{cases}
+\]
+
+This mapping defines the substantive meaning of the five discretion
+ranks. It is part of the measurement model rather than a learned
+relationship.
+
+The workflow uses versioned LLM stages to estimate the component
+variables:
+
+\[
+\hat d_i = g_D(x_i),
+\]
+
+\[
+\hat a_i = g_A(x_i,\hat d_i),
+\]
+
+\[
+\hat c_i = g_C(x_i,\hat d_i,\hat a_i).
+\]
+
+The component stages also return structured evidence and rationales,
+denoted collectively by \(r_i\). Their prompts, inputs, outputs,
+evidence, and model settings are retained in the execution trace.
+
+The system then applies one of three rank-classification strategies.
+Let
+
+\[
+\mathcal{S}
+=
+\{\mathrm{Cascade},\mathrm{Multiclass},\mathrm{TwoBand}\}
+\]
+
+denote the Sequential Ordinal Cascade, Direct Multiclass Rank
+Prediction, and Two-Band Rank Classification strategies, respectively. For strategy
+\(s \in \mathcal{S}\),
+
+\[
+\tilde y_i^{(s)}
+=
+h_s(x_i,\hat d_i,\hat a_i,\hat c_i,r_i).
+\]
+
+The Sequential Ordinal Cascade exploits the outcome's ordered structure. The delegation gate first separates Rank \(0\) from Ranks \(1\)--\(4\). Conditional on delegation, the cascade proceeds in stages, with the first separating Rank \(1\) from Ranks \(2\)--\(4\), the second separating Rank \(2\) from Ranks \(3\)--\(4\), and the final stage separating Rank \(3\) from Rank \(4\). Each positive decision produces an early exit, while each negative decision routes the case to the next stage.
+
+The Direct Multiclass strategy predicts one of Ranks \(1\)--\(4\) in
+a single ranking step using the stored component outputs and
+rationales. The Two-Band strategy first separates the lower-rank band
+\(\{1,2\}\) from the higher-rank band \(\{3,4\}\), then classifies
+within the selected band.
+
+The theoretical mapping and the ranking strategies, therefore, perform
+different functions. The mapping \(m(d_i,a_i,c_i)\) defines the
+construct, whereas the functions \(h_s(\cdot)\) estimate the final
+rank under alternative computational strategies.
+
+For each law, the system also computes the theory-implied rank; that is, the rank is determined by the estimated component classifications,
+
+\[
+y_i^{\mathrm{map}}
+=
+m(\hat d_i,\hat a_i,\hat c_i)
+\]
+
+and compares it with the strategy-specific prediction. Define the
+consistency indicator
+
+\[
+q_i^{(s)}
+=
+\mathbf{1}
+\left[
+\tilde y_i^{(s)}
+=
+y_i^{\mathrm{map}}
+\right].
+\]
+
+A value of \(q_i^{(s)}=1\) indicates that the rank predicted by
+strategy \(s\) agrees with the rank implied by the model's own
+delegation, authority, and constraint classifications. A disagreement
+is retained and flagged for review rather than silently overwritten.
+This design allows the evaluation to distinguish benchmark agreement
+from internal theoretical consistency.
+
+
+% ============================================================
+% REPLACEMENT FOR TABLE I IN SECTION IV.B
+% ============================================================
+
+\begin{table}[t]
+\caption{Algorithmic execution of the theory-guided discretion workflow.}
+\label{tab:algorithm}
+\centering
+\footnotesize
+\begin{tabular}{p{0.06\columnwidth}p{0.88\columnwidth}}
+\hline
+\textbf{Step} & \textbf{Operation and Logic} \\
+\hline
+
+1 &
+\textbf{Load Source Text:}
+Read the legislative summary or statutory text \(x_i\) and attach
+stable identifiers. \\
+
+2 &
+\textbf{Delegation Gate (LLM):}
+Estimate
+\(\hat d_i=g_D(x_i)\in\{0,1\}\)
+and retain the supporting evidence and rationale. \\
+
+3 &
+\textbf{Early Exit (Deterministic):}
+If \(\hat d_i=0\), set the theory-implied rank
+\(y_i^{\mathrm{map}}=0\), assign the required default values, and stop
+the delegated-discretion branch. \\
+
+4 &
+\textbf{Component Classification (LLM):}
+Conditional on \(\hat d_i=1\), identify the relevant administrative
+actors, classify delegated authority
+\(\hat a_i\in\{\mathrm{Low},\mathrm{High}\}\), classify statutory
+constraints
+\(\hat c_i\in\{\mathrm{Strong},\mathrm{Weak}\}\), and retain the
+supporting evidence and rationales \(r_i\). \\
+
+5 &
+\textbf{Strategy-Specific Rank Prediction (LLM):}
+Apply the selected rank-classification strategy. The Sequential
+Ordinal Cascade uses
+successive early-exit binary decisions; Direct Multiclass predicts
+Ranks \(1\)--\(4\) in one step; and Two-Band first predicts a
+lower/higher rank band and then classifies within the selected band. \\
+
+6 &
+\textbf{Theoretical Consistency Validation (Deterministic):}
+Compute
+\(y_i^{\mathrm{map}}=m(\hat d_i,\hat a_i,\hat c_i)\)
+and compare it with the strategy-specific prediction
+\(\tilde y_i^{(s)}\). Record the consistency indicator
+\(q_i^{(s)}\) and flag any disagreement. \\
+
+7 &
+\textbf{Output Serialization:}
+Store the component classifications, theory-implied rank,
+strategy-specific rank, consistency flag, evidence, prompts, model
+settings, execution trace, runtimes, token use, cost, and final
+reported output. \\
+
+\hline
+\end{tabular}
+\end{table}
+
+
+% ============================================================
+% INSERT IMMEDIATELY AFTER TABLE I
+% ============================================================
+
+The workflow retains both the strategy-specific prediction
+\(\tilde y_i^{(s)}\) and the theory-implied rank
+\(y_i^{\mathrm{map}}\). Strategy-specific predictions are used for
+comparative evaluation and are not silently replaced when they conflict
+with the deterministic component mapping. Instead, the validation node
+records the disagreement with an inconsistency flag. This separation allows 
+researchers to evaluate both agreement with the expert-coded benchmark and 
+consistency with the rules used to construct the discretion rank.
+
+
+% ============================================================
+% ONE GLOBAL TERMINOLOGY CHANGE
+% ============================================================
+%
+% Replace statements saying that "the final rank is deterministic"
+% with:
+%
+% "The theoretical rank mapping is deterministic, while the final
+% strategy-specific rank is produced by one of three alternative
+% rank-classification strategies and validated against the theory-implied rank."
+%
+% This distinction should be reflected in the Abstract, Introduction,
+% Figure captions, and Conclusion where necessary.
+
+
+% ============================================================
+% FIGURE 1: Four-stage theory-guided classification workflow
+%
+% Required preamble packages/libraries:
+%   \usepackage{tikz}
+%   \usetikzlibrary{arrows.meta,positioning,calc}
+%   \usepackage{tabularx}
+%   \usepackage{array}
+%
+% IEEEtran should control caption formatting. Do not load the
+% caption package solely for this figure.
+% ============================================================
+
+\begin{figure*}[t]
+\centering
+
+% ---- Four-step overview ----
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  stage/.style={
+    draw,
+    rounded corners,
+    very thick,
+    align=center,
+    minimum height=1.05cm,
+    text width=3.25cm,
+    inner sep=5pt
+  },
+  stagearrow/.style={-{Latex[length=3mm,width=2mm]}, very thick},
+  node distance=0.52cm
+]
+
+\node[stage] (s1) {\textbf{Step 1}\\Input};
+\node[stage, right=of s1] (s2) {\textbf{Step 2}\\Delegation Gate};
+\node[stage, right=of s2, text width=4.35cm] (s3)
+{\textbf{Step 3}\\Component Classification and Rank Assignment};
+\node[stage, right=of s3] (s4) {\textbf{Step 4}\\Validation and Storage};
+
+\draw[stagearrow] (s1) -- (s2);
+\draw[stagearrow] (s2) -- (s3);
+\draw[stagearrow] (s3) -- (s4);
+
+\end{tikzpicture}
+
+\vspace{0.7em}
+
+% ---- Detailed workflow ----
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  box/.style={
+    draw,
+    rounded corners,
+    thick,
+    align=center,
+    minimum height=0.95cm,
+    text width=2.45cm,
+    inner sep=4pt
+  },
+  branchbox/.style={
+    draw,
+    rounded corners,
+    thick,
+    align=center,
+    minimum height=1.0cm,
+    text width=2.75cm,
+    inner sep=4pt
+  },
+  arrow/.style={-{Latex[length=2.2mm]}, thick},
+  node distance=0.72cm and 0.82cm
+]
+
+\node[box] (text) {Legal Text};
+\node[box, right=of text] (gate) {Delegation Gate};
+\node[box, below=0.85cm of gate] (exit) {Deterministic Exit\\Rank 0};
+\node[box, right=of gate] (components) {Component Classification};
+
+\node[branchbox, above right=0.62cm and 0.72cm of components] (mapping)
+{Theory-Based Rank\\Mapping};
+\node[branchbox, below right=0.62cm and 0.72cm of components] (strategy)
+{Rank-Classification\\Strategy};
+
+\node[box, right=1.0cm of components] (check) {Consistency Check};
+\node[box, right=of check] (output) {Coded Output};
+
+\draw[arrow] (text) -- (gate);
+\draw[arrow] (gate) -- node[above, font=\footnotesize\sffamily] {Yes} (components);
+\draw[arrow] (gate) -- node[right, font=\footnotesize\sffamily] {No} (exit);
+\draw[arrow] (components) -- (mapping);
+\draw[arrow] (components) -- (strategy);
+\draw[arrow] (mapping) -- (check);
+\draw[arrow] (strategy) -- (check);
+\draw[arrow] (check) -- (output);
+
+\end{tikzpicture}
+
+\vspace{0.55em}
+
+% ---- Variables and records by step ----
+\begin{minipage}{0.97\textwidth}
+\centering
+\footnotesize
+\textbf{Variables and records by step}
+
+\vspace{0.35em}
+
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}X@{\hspace{1.2em}}>{\raggedright\arraybackslash}X@{}}
+
+\textbf{Step 1. Input:}
+A legislative summary or statutory text, together with a stable law identifier.
+&
+\textbf{Step 2. Delegation Gate:}
+$\hat d_i\in\{0,1\}$, indicating whether the law contains a qualifying delegation.
+\\[0.55em]
+
+\textbf{Step 3. Component Classification and Rank Assignment:}
+$\hat a_i\in\{\mathrm{Low},\mathrm{High}\}$,
+$\hat c_i\in\{\mathrm{Strong},\mathrm{Weak}\}$, and $r_i$, containing supporting evidence and rationale. The workflow records both
+$y_i^{\mathrm{map}}=m(\hat d_i,\hat a_i,\hat c_i)$, the rank implied by the component classifications, and $\tilde y_i^{(s)}$, the rank predicted by strategy $s$.
+&
+\textbf{Step 4. Validation and Storage:}
+$q_i^{(s)}=\mathbf{1}[\tilde y_i^{(s)}=y_i^{\mathrm{map}}]$, together with the final rank, component values, evidence, model settings, and execution trace.
+\\
+
+\end{tabularx}
+\end{minipage}
+
+\caption{Four-step theory-guided classification workflow. Step 1 ingests a legislative summary or statutory text and a stable law identifier. Step 2 determines whether the law contains a qualifying delegation and assigns Rank 0 when delegation is absent. Step 3 classifies authority and constraints and produces both the theory-based and strategy-predicted ranks. Step 4 compares the two rank outputs and stores the coded variables, evidence, settings, and execution trace.}
+\label{fig:theory_guided_workflow}
+\end{figure*}
+
+
+% ============================================================
+% OPTIONAL SENTENCE TO ADD IMMEDIATELY BEFORE THE FIGURE
+% ============================================================
+%
+% Figure~\ref{fig:theory_strategy_separation} separates the
+% deterministic theoretical mapping from the three implemented
+% rank-classification strategies and shows how the workflow records internal
+% consistency without silently overwriting strategy-specific
+% predictions.
+% ============================================================
+
+
+% ============================================================
+% PAPER-WIDE LANGUAGE AND TERMINOLOGY REVIEW
+% Apply this as a focused consistency pass after inserting the
+% formal-model replacement above. These are not optional stylistic
+% preferences: they remove overclaims, undefined terms, and internal
+% inconsistencies that technical reviewers are likely to notice.
+% ============================================================
+
+% ============================================================
+% PRIORITY A: REQUIRED BEFORE SUBMISSION
+% ============================================================
+
+% ------------------------------------------------------------
+% TITLE
+% ------------------------------------------------------------
+% KEEP:
+% A Replicable Theory-Guided LLM Workflow for Measuring Legal
+% Delegation and Administrative Discretion
+%
+% RATIONALE:
+% Replicability is the primary contribution. Theory-guided describes
+% the design principle that determines the variables, ordering, and
+% consistency rules. Do not present theory-guided AI as a new theory.
+
+
+% ------------------------------------------------------------
+% ABSTRACT, PAGE 1
+% ------------------------------------------------------------
+% 1. Replace "large-language-model" with "large language model."
+%
+% 2. Replace the sentence that currently states that all three ranking
+%    strategies are evaluated across six models against a benchmark of
+%    N=169. The delegation and discretion tasks may have different
+%    samples, and the final counts must match the completed runs.
+%
+% USE AFTER THE SAMPLE AUDIT AND RUNS ARE COMPLETE:
+
+We evaluate the Delegation Gate on the full delegation benchmark and
+compare three rank-classification strategies across multiple language
+models on the subset with complete expert-coded discretion ranks.
+
+% Add the exact sample sizes and headline results only after Tables IV--
+% VIII have been populated and checked.
+%
+% 3. Replace "ensures logical consistency and strict reproducibility."
+%
+% USE:
+
+By separating generative judgments from deterministic theoretical
+mappings and preserving the execution record, the system enforces
+specified consistency rules and supports reproducible auditing and
+rerunning.
+
+% 4. Replace or revise the Index Terms so that they identify the NLP
+%    contribution directly.
+%
+% SUGGESTED INDEX TERMS:
+% legal natural language processing, large language models,
+% legislative delegation, administrative discretion, reproducible
+% workflows, quantitative legal coding
+
+
+% ------------------------------------------------------------
+% INTRODUCTION, PAGE 1
+% ------------------------------------------------------------
+% 1. The current statement that one-shot prompt classification is
+%    "insufficient" is too absolute.
+%
+% REPLACE WITH:
+
+Although one-shot LLM classification provides a simple baseline, it
+can obscure the intermediate judgments underlying a final rank and can
+produce outputs that are inconsistent with the measurement model.
+
+% 2. Replace "Standard prompt-engineering approaches also remain
+%    difficult to audit" with the more precise phrase below.
+
+Single-prompt approaches are also difficult to audit because the
+relationships among delegation, authority, constraints, and the final
+classification remain embedded in one generative output.
+
+% 3. Replace language saying that the prototype "renders" prompts and
+%    settings as a graph.
+%
+% USE:
+
+We implement the approach in Delegation Workflow Studio, a research
+prototype that represents and executes prompts, settings, intermediate
+outputs, and validation rules as a versioned and auditable workflow
+graph.
+
+% 4. The dashboard footnote appears twice on page 1. Retain it once
+%    only. For the double-blind submission, remove or anonymize the
+%    dashboard link, author names, affiliations, email addresses, and
+%    identifying PDF metadata.
+%
+% 5. Replace the existing contribution list with the contribution list
+%    provided earlier in this handoff. Replicability must appear first.
+
+
+% ------------------------------------------------------------
+% SECTION II.C, THEORY-GUIDED COMPUTATIONAL INFERENCE, PAGE 2
+% ------------------------------------------------------------
+% The current arrow chain implies that authority is evaluated before
+% constraints and that the two are not parallel components.
+%
+% REPLACE:
+% Delegation -> Authority -> Constraints -> Residual discretion
+%
+% WITH:
+
+% Delegation -> {Authority, Constraints} -> Discretion rank
+
+% Suggested prose:
+
+Delegation is logically prior to discretion. Conditional on a
+qualifying delegation, the workflow evaluates authority and constraints
+as separate components and then uses their relationship to interpret or
+validate the final discretion rank.
+
+
+% ------------------------------------------------------------
+% SECTION II.D, PROBLEM FORMULATION, PAGE 2
+% ------------------------------------------------------------
+% Replace this subsection in full with the formal-model section earlier
+% in this handoff. This resolves the conflict between the deterministic
+% theoretical mapping and the three rank-classification strategies.
+
+
+% ------------------------------------------------------------
+% SECTION IV AND TABLE I, PAGES 2--3
+% ------------------------------------------------------------
+% 1. Insert the revised architecture diagram supplied in this handoff.
+%    It must visually separate:
+%      (a) the deterministic theory-based mapping;
+%      (b) the selected rank-classification strategy; and
+%      (c) the consistency comparison.
+%
+% 2. Replace Table I with the revised table supplied earlier.
+%
+% 3. Replace "the workflow makes the measurement assumptions
+%    falsifiable" with:
+
+The workflow makes the measurement assumptions inspectable and
+testable because researchers can locate a disagreement at the
+Delegation Gate, authority classification, constraint classification,
+rank-classification strategy, or consistency check.
+
+% "Falsifiable" is too strong and is not the right description of an
+% execution trace.
+%
+% 4. In the Validation-node definition, replace "throw errors" with:
+%    "record validation flags" or "raise validation errors," depending
+%    on what the software actually does.
+%
+% 5. Use "rank-classification strategy" everywhere. Do not use
+%    "ranking head," which can imply a trained neural-network layer.
+
+
+% ------------------------------------------------------------
+% SECTION VI.A--B, BENCHMARK AND EVALUATION LEVELS, PAGES 4--5
+% ------------------------------------------------------------
+% 1. Audit and reconcile every sample count before submission.
+%    Confirm separately:
+%      - number of laws with delegation labels;
+%      - number of delegation-positive laws;
+%      - number of laws with complete expert-coded discretion ranks;
+%      - number actually run for each model and strategy;
+%      - number retained after failures.
+%
+% 2. Do not call the 15-law sample a test set. It is a development set
+%    because it was used iteratively to revise the workflow.
+%
+% 3. Replace "full available discretionary corpus" throughout with:
+%    "expert-coded discretion sample" or "delegated-law subset with
+%    complete discretion labels," whichever is accurate.
+%
+% 4. Use N=169 only for analyses that actually use all 169 laws. Do not
+%    label rank-classification tables N=169 if Rank 0 cases are excluded
+%    or discretion labels are missing.
+
+
+% ------------------------------------------------------------
+% SECTION VI.D, EXPERIMENTAL PROTOCOL, PAGE 5
+% ------------------------------------------------------------
+% 1. Verify every provider name and exact API model identifier against
+%    the execution logs. Report stable API identifiers, not only product
+%    or marketing names.
+%
+% 2. Replace the temperature statement. Temperature zero reduces
+%    sampling variation but does not guarantee identical outputs.
+%
+% REPLACE WITH:
+
+The system uses a temperature of 0.0 to reduce sampling variation.
+Because commercial APIs may still exhibit nondeterminism or provider-
+side changes, output stability is evaluated through repeated runs and
+the exact model identifiers and execution timestamps are retained.
+
+% 3. Replace "If a node fails to compile or times out" with:
+
+If a model call fails, returns an invalid structured output, or times
+out, the system retries the call up to three times. Persistent failures
+are recorded in the execution log and excluded or reported according to
+the stated evaluation protocol.
+
+% 4. State whether retries reuse the identical prompt and settings.
+%    State how failed laws affect N in each table.
+
+
+% ------------------------------------------------------------
+% SECTION VI.E, METRICS, PAGE 5
+% ------------------------------------------------------------
+% The current binary-metric sentence repeats recall measures.
+%
+% REPLACE WITH:
+
+For the binary delegation task, we report accuracy, balanced accuracy,
+class-specific precision and recall, macro-F1, and the confusion matrix.
+For the ordinal discretion task, we report exact-match accuracy,
+within-one accuracy, mean absolute error, linear weighted kappa,
+quadratic weighted kappa, and the ordinal confusion matrix.
+
+% Use distinct notation for linear and quadratic weighted kappa in the
+% equations or table headings if notation is shown.
+
+
+% ------------------------------------------------------------
+% SECTION VII AND TABLES IV--VIII, PAGES 5--7
+% ------------------------------------------------------------
+% 1. Define the comparison system currently called "Looser Screening."
+%    The label is informal and unclear. Use a descriptive name based on
+%    the actual prompt design, such as "Broad Delegation Screen" or
+%    "High-Recall Delegation Screen," and define it once. Do not rename
+%    it unless that description accurately reflects the implementation.
+%
+% 2. Table V: define "Logical Consistency" explicitly as agreement
+%    between the strategy-specific rank and the rank implied by the
+%    component classifications. Define "Invalid Output Rate" as the
+%    percentage of runs that fail schema validation after the permitted
+%    retries.
+%
+% 3. Table VI: use the actual rank-evaluation N for every model and
+%    strategy. If N differs because of failures, show N in the table or
+%    footnote rather than presenting one universal N.
+%
+% 4. Table VII: define repeat-run agreement. Recommended definition:
+%    the share of cases for which all three runs return the same value.
+%    State whether agreement is calculated only among completed runs.
+%
+% Suggested definition:
+
+% \[
+% \mathrm{Agreement}(z)=\frac{1}{N}\sum_{i=1}^{N}
+% \mathbf{1}\left[z_i^{(1)}=z_i^{(2)}=z_i^{(3)}\right].
+% \]
+
+% 5. Table VIII: define runtime, token, cost, completion, and retry
+%    measures in the text. State the currency and date of API pricing.
+%
+% 6. Remove every "TBD" before submission. If a planned analysis cannot
+%    be completed, remove the table and narrow the empirical claim rather
+%    than leaving an empty result structure.
+
+
+% ------------------------------------------------------------
+% SECTION VII.B, DIAGNOSING DISAGREEMENT, PAGE 5
+% ------------------------------------------------------------
+% The PL83-577 example is useful. Clarify that it is a diagnostic case,
+% not evidence that the historical benchmark is wrong.
+%
+% SUGGESTED FINAL SENTENCE:
+
+The trace does not by itself determine which label is correct; it makes
+the source of the disagreement visible for expert adjudication.
+
+
+% ------------------------------------------------------------
+% SECTION VII.G, LIMITATIONS, PAGE 5
+% ------------------------------------------------------------
+% Replace "raw statutory text blocks" with "full statutory text."
+%
+% Replace "the modular workflow enforcing hard logical constraints"
+% with:
+
+Although deterministic validation enforces specified consistency rules,
+the underlying LLM classifications remain sensitive to model choice,
+prompt wording, nondeterministic API behavior, and provider-side model
+updates.
+
+
+% ------------------------------------------------------------
+% SECTION VII.H, NOVELTY CLAIM, PAGE 5
+% ------------------------------------------------------------
+% Retain this subsection, but use the shorter novelty statement supplied
+% earlier in this handoff. Do not frame human-in-the-loop annotation or
+% theory-guided AI as independent new contributions.
+
+
+% ------------------------------------------------------------
+% SECTION VIII, REPLICATION WORKFLOW, PAGE 6
+% ------------------------------------------------------------
+% 1. Keep this section, but shorten it if space is needed.
+%
+% 2. Replace product-specific wording such as:
+%    "Linking a campaign copies the workflow's definition and revision
+%    directly to the dashboard."
+%
+% USE:
+
+Before an evaluation run, the workflow definition, prompts, model
+settings, and source set are frozen and assigned a version identifier.
+Subsequent edits create a new workflow version and do not alter the
+record of prior runs.
+
+% 3. In Step 7, replace "rerun the fixed development set" with wording
+%    that distinguishes development and evaluation data:
+
+If a disagreement reveals a general coding-rule problem, revise the
+workflow as a new version, rerun the development set, and evaluate the
+revised version on data not used to make that change when such data are
+available.
+
+
+% ------------------------------------------------------------
+% SECTION IX, FUTURE WORK, PAGE 6
+% ------------------------------------------------------------
+% Remove internal prompt-version labels (v8, v8.2, v8.4, and v9) from
+% the main paper. They are appropriate for the replication materials,
+% not for the conference narrative.
+%
+% Also remove any future-work sentence promising analyses that the
+% abstract or results section already claims have been completed.
+%
+% REPLACEMENT PARAGRAPH:
+
+Future work will evaluate the workflow on a held-out set of laws,
+measure component-level authority and constraint performance, and test
+external validity in an additional policy domain. Further system work
+will strengthen workflow-version comparison, approval controls, and
+case-adjudication interfaces. Independent expert recoding would also
+permit direct estimation of intercoder reliability and clarify the
+upper bound on model-benchmark agreement.
+
+
+% ------------------------------------------------------------
+% SECTION X, CONCLUSION, PAGES 6--7
+% ------------------------------------------------------------
+% Retain the final sentence that the system makes judgment explicit,
+% structured, inspectable, and reproducible. Precede it with the
+% positioning language supplied earlier:
+
+The resulting system is a replicable measurement instrument whose
+computational structure is guided by an established theory of
+delegation and discretion. Replicability is the primary contribution;
+theory-guided design explains why the workflow's stages, dependencies,
+and validation rules are substantively meaningful.
+
+
+% ------------------------------------------------------------
+% REFERENCES, PAGES 7--8
+% ------------------------------------------------------------
+% 1. Remove every phrase saying "bibliographic details to be verified."
+%    Verify and complete each citation before submission.
+%
+% 2. Check author lists, titles, venue names, years, page ranges, and DOI
+%    information against the original publication records.
+%
+% 3. Ensure that self-citations do not reveal authorship in a double-
+%    blind submission through phrases such as "our prior work." Cite
+%    them in the third person in the manuscript.
+
+
+% ============================================================
+% PRIORITY B: GLOBAL TERMINOLOGY CONSISTENCY
+% ============================================================
+%
+% Use consistently:
+%   Delegation Gate
+%   authority classification
+%   constraint classification
+%   rank-classification strategy
+%   Sequential Ordinal Cascade
+%   Direct Multiclass Rank Prediction
+%   Two-Band Rank Classification
+%   theory-based mapping or theoretical mapping
+%   rank implied by the component classifications
+%   consistency indicator or inconsistency flag
+%   execution trace
+%   workflow version
+%   expert-coded benchmark
+%
+% Avoid or replace:
+%   ranking head
+%   strict reproducibility
+%   ensures identical output
+%   fails to compile
+%   falsifiable workflow
+%   looser screening (unless explicitly defined)
+%   full available discretionary corpus
+%   raw statutory text blocks
+%   admissible rank relationships
+%   internal-consistency failure
+%   strategy acronyms unless the paper genuinely needs them
+%
+% Use "replicable" for the measurement instrument and "reproducible"
+% for the preserved computational execution record. Define this usage
+% once if both terms remain in the manuscript.
+% ============================================================

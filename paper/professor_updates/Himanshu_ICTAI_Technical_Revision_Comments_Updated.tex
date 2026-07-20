@@ -1,0 +1,584 @@
+
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.8em}
+
+\title{\textbf{Technical Revisions for the ICTAI Paper}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+
+The next draft should read like a computer science tools paper. Please focus less on polishing the prose and more on specifying, testing, and documenting the system.
+
+\section*{1. Reframe the paper around the prototype}
+
+Please change the title to:
+
+\begin{quote}
+\textbf{A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion}
+\end{quote}
+
+The central contribution should be:
+
+\begin{quote}
+This paper develops a replicable LLM-based measurement instrument that translates an established theory and hand-coded measure of administrative discretion into a versioned, auditable, and scalable workflow.
+\end{quote}
+
+Human review remains necessary, but it is not the novelty claim.
+
+\section*{2. Add a formal problem definition}
+
+Add a short subsection titled:
+
+\begin{quote}
+\textbf{Problem Formulation}
+\end{quote}
+
+Define the input law as \(x_i\).
+
+Define the delegation prediction:
+
+\[
+\hat d_i = g_D(x_i),
+\qquad
+\hat d_i \in \{0,1\}.
+\]
+
+If there is no delegation:
+
+\[
+\hat d_i = 0
+\quad \Rightarrow \quad
+\hat y_i = 0.
+\]
+
+Conditional on delegation, define authority and constraints:
+
+\[
+\hat a_i = g_A(x_i),
+\qquad
+\hat a_i \in \{\text{Low},\text{High}\},
+\]
+
+\[
+\hat c_i = g_C(x_i),
+\qquad
+\hat c_i \in \{\text{Strong},\text{Weak}\}.
+\]
+
+Then define the deterministic rank mapping:
+
+\[
+\hat y_i =
+\begin{cases}
+0, & \hat d_i=0,\\
+1, & \hat d_i=1,\ \hat a_i=\text{Low},\ \hat c_i=\text{Strong},\\
+2, & \hat d_i=1,\ \hat a_i=\text{Low},\ \hat c_i=\text{Weak},\\
+3, & \hat d_i=1,\ \hat a_i=\text{High},\ \hat c_i=\text{Strong},\\
+4, & \hat d_i=1,\ \hat a_i=\text{High},\ \hat c_i=\text{Weak}.
+\end{cases}
+\]
+
+State clearly:
+
+\begin{quote}
+The functions \(g_D\), \(g_A\), and \(g_C\) are implemented as versioned LLM stages. The final mapping to \(\hat y_i\) is deterministic.
+\end{quote}
+
+\section*{3. Add an algorithm box}
+
+Include a compact algorithm that shows exactly what the system does:
+
+\begin{enumerate}
+    \item Read the legal summary.
+    \item Run the delegation stage.
+    \item If no delegation exists, assign rank 0 and stop.
+    \item If delegation exists, run the authority and constraint stages.
+    \item Apply the selected ranking strategy.
+    \item Validate required fields and logical consistency.
+    \item Store the prompts, model settings, intermediate outputs, evidence, final label, and execution record.
+\end{enumerate}
+
+The algorithm should identify which operations use an LLM and which are deterministic.
+
+\section*{4. Clarify the workflow architecture}
+
+Please revise Figure 1 so that it shows the branch explicitly:
+
+\begin{itemize}
+    \item No delegation \(\rightarrow\) Rank 0.
+    \item Delegation \(\rightarrow\) Authority and constraints \(\rightarrow\) Rank 1--4.
+\end{itemize}
+
+The current figure is conceptually sound, but the rank-0 branch should appear in the main flow rather than only in the mapping box.
+
+Add a second technical figure that shows:
+
+\begin{itemize}
+    \item source documents and stable identifiers;
+    \item workflow version;
+    \item prompts;
+    \item model and settings;
+    \item LLM nodes;
+    \item conditional nodes;
+    \item deterministic nodes;
+    \item intermediate outputs;
+    \item execution trace;
+    \item benchmark comparison;
+    \item final dataset.
+\end{itemize}
+
+This figure should show what the system stores and why the run can be reconstructed.
+
+Keep only one product screenshot in the main paper. Move the others to supplemental material or an appendix.
+
+\section*{5. Relabel all prompts and strategies by function}
+
+The paper should not rely on internal labels such as \texttt{v8}, \texttt{v9}, \texttt{M9}, \texttt{B3}, or \texttt{CASCADE} without explanation. These names are useful for the development record, but they are not informative to a reader.
+
+Please use descriptive names in the main text and retain the internal names in a crosswalk table and replication package.
+
+Suggested labels are:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Internal label} & \textbf{Manuscript label} \\
+\midrule
+\texttt{v8 delegation prompt} & Delegation Gate \\
+\texttt{authority prompt} & Authority Classification \\
+\texttt{constraint prompt} & Constraint Classification \\
+\texttt{CASCADE} & Sequential Ordinal Cascade \\
+\texttt{M9} & Direct Multiclass Rank Prediction \\
+\texttt{B3} & Two-Band Rank Classification \\
+\texttt{final mapping} & Deterministic Rank Mapping \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Use the descriptive label in the paper and place the internal identifier in parentheses at first mention, for example:
+
+\begin{quote}
+Sequential Ordinal Cascade (\texttt{CASCADE}, internal implementation label)
+\end{quote}
+
+The replication package should preserve the original prompt names and version numbers so that each reported result can be traced to the exact implementation.
+
+\section*{6. Implement and describe a true ordinal cascade}
+
+The current manuscript should distinguish the actual ordinal cascade from a simple cell-by-cell screening rule.
+
+After the delegation gate, the Sequential Ordinal Cascade should operate as follows:
+
+\[
+1 \quad \text{vs.} \quad \{2,3,4\},
+\]
+
+followed, for cases not assigned Rank 1, by:
+
+\[
+2 \quad \text{vs.} \quad \{3,4\},
+\]
+
+followed, for the remaining cases, by:
+
+\[
+3 \quad \text{vs.} \quad 4.
+\]
+
+Rank 0 is handled separately by the delegation gate:
+
+\[
+0 \quad \text{vs.} \quad \{1,2,3,4\}.
+\]
+
+Please use language such as:
+
+\begin{quote}
+The Sequential Ordinal Cascade exploits the ordered structure of the discretion measure. The delegation gate first separates Rank 0 from Ranks 1--4. Conditional on delegation, the first cascade stage separates Rank 1 from Ranks 2--4. Cases not assigned Rank 1 proceed to a second stage that separates Rank 2 from Ranks 3--4. The remaining cases proceed to a final Rank 3 versus Rank 4 decision.
+\end{quote}
+
+Each positive decision produces an early exit. Each negative decision routes the case to the next stage.
+
+Please revise the workflow diagram and pseudocode so that this sequence is visible.
+
+\section*{7. Define the comparison strategies precisely}
+
+Please add a table such as:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Strategy} & \textbf{Inputs} & \textbf{Decision process} & \textbf{Output} \\
+\midrule
+One-shot baseline & Law text & Single LLM prediction & Rank 0--4 \\
+Sequential Ordinal Cascade & Stage outputs & \(1\) vs.\ \(\{2,3,4\}\), then \(2\) vs.\ \(\{3,4\}\), then \(3\) vs.\ \(4\) & Rank 1--4 \\
+Direct Multiclass Rank Prediction & Stage outputs & Single multiclass rank decision with boundary review & Rank 1--4 \\
+Two-Band Rank Classification & Stage outputs & Low-rank versus high-rank band decision, followed by within-band classification & Rank 1--4 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+State which strategy is the proposed method and which strategies are baselines or comparisons.
+
+\section*{8. Include a simple baseline}
+
+The paper needs a direct answer to:
+
+\begin{quote}
+What does the staged workflow add beyond asking the model for the final rank in one prompt?
+\end{quote}
+
+At minimum, compare:
+
+\begin{itemize}
+    \item one-shot rank prediction;
+    \item the staged theory-guided workflow.
+\end{itemize}
+
+Compare them on:
+
+\begin{itemize}
+    \item exact accuracy;
+    \item within-one accuracy;
+    \item mean absolute error;
+    \item logical consistency;
+    \item invalid-output rate;
+    \item ability to identify the stage at which an error occurred.
+\end{itemize}
+
+The staged workflow does not have to dominate on every accuracy metric. Its advantages may include consistency, auditability, and error diagnosis.
+
+\section*{9. Describe the experimental protocol exactly}
+
+Please specify:
+
+\begin{itemize}
+    \item the source corpus;
+    \item the benchmark corpus;
+    \item how laws were matched across files;
+    \item how the 15 development laws were selected;
+    \item which laws were used to revise prompts;
+    \item which workflow version produced each result;
+    \item the exact source text supplied to the model;
+    \item the model provider and model identifier;
+    \item model settings, including temperature where available;
+    \item output format;
+    \item retry rules;
+    \item invalid-output handling;
+    \item run dates;
+    \item missing observations;
+    \item failure handling.
+\end{itemize}
+
+A technical reviewer should be able to reconstruct the experiment from this section.
+
+\section*{10. Keep the 15 laws as a development set}
+
+Use:
+
+\begin{quote}
+The prototype was developed and evaluated on a fixed 15-law development set, representing approximately 10 percent of the manually coded financial-regulation laws. The same cases were used to inspect errors, revise prompts, and compare workflow strategies. The results therefore measure development-stage performance, not held-out test accuracy.
+\end{quote}
+
+Do not call these results:
+
+\begin{itemize}
+    \item test accuracy;
+    \item held-out performance;
+    \item out-of-sample accuracy;
+    \item generalization performance.
+\end{itemize}
+
+Replace the claim that the two negative cases produce a ``class-balanced evaluation.'' The set is not balanced.
+
+Use:
+
+\begin{quote}
+The two negative cases ensure that both branches of the delegation gate are represented in the development set.
+\end{quote}
+
+\section*{11. Audit and reconcile all sample counts}
+
+The current draft refers to:
+
+\begin{itemize}
+    \item 169 summary files;
+    \item 121 manually coded financial laws;
+    \item 15 development laws.
+\end{itemize}
+
+We have also discussed a larger corpus of approximately 151 laws.
+
+Please audit these numbers and provide one table that explains:
+
+\begin{itemize}
+    \item total manually coded laws;
+    \item laws with usable CQ summaries;
+    \item laws with delegation labels;
+    \item laws with discretion ranks;
+    \item laws in the 15-case development set;
+    \item laws excluded and the reasons for exclusion.
+\end{itemize}
+
+The paper cannot contain unexplained or inconsistent sample counts.
+
+\section*{12. Separate the two prediction tasks in the results}
+
+Report three distinct results:
+
+\begin{enumerate}
+    \item Delegation prediction on the full available delegation benchmark.
+    \item Residual-discretion prediction among delegation-positive laws.
+    \item End-to-end rank prediction, where useful.
+\end{enumerate}
+
+Use this language:
+
+\begin{quote}
+The workflow separates a binary delegation decision from a conditional residual-discretion decision. Residual discretion is evaluated only when qualifying delegation exists.
+\end{quote}
+
+\section*{13. Add the missing evaluation metrics}
+
+\subsection*{Delegation stage}
+
+Report:
+
+\begin{itemize}
+    \item confusion counts;
+    \item accuracy;
+    \item balanced accuracy;
+    \item precision by class;
+    \item recall by class;
+    \item macro-F1.
+\end{itemize}
+
+\subsection*{Residual discretion}
+
+Report:
+
+\begin{itemize}
+    \item exact count and accuracy;
+    \item within-one count and accuracy;
+    \item mean absolute error;
+    \item linear weighted kappa;
+    \item quadratic weighted kappa;
+    \item ordinal confusion matrix.
+\end{itemize}
+
+Report both counts and percentages for the 15-law development set.
+
+\subsection*{Component-level performance}
+
+Where possible, report:
+
+\begin{itemize}
+    \item low versus high authority accuracy;
+    \item strong versus weak constraint accuracy;
+    \item delegation-stage errors;
+    \item authority-stage errors;
+    \item constraint-stage errors;
+    \item final-rank consistency.
+\end{itemize}
+
+The final rank should always agree with the authority and constraint classifications if the mapping is deterministic.
+
+\section*{14. Add system metrics}
+
+Because this is an AI tools paper, report:
+
+\begin{itemize}
+    \item completion rate;
+    \item invalid or malformed output rate;
+    \item retry rate;
+    \item average runtime per law;
+    \item input and output tokens per law;
+    \item API cost per law;
+    \item failed calls;
+    \item missing outputs;
+    \item deterministic validation failures.
+\end{itemize}
+
+The current dashboard appears to retain some cost, token, and timing information. Please export and report it.
+
+\section*{15. Test repeated-run stability}
+
+Freeze one workflow and model configuration. Run the same 15 laws at least three times under the same available conditions.
+
+Report:
+
+\begin{itemize}
+    \item delegation agreement across runs;
+    \item authority agreement across runs;
+    \item constraint agreement across runs;
+    \item final-rank agreement across runs;
+    \item mean and range of accuracy;
+    \item mean and range of MAE;
+    \item number of laws whose prediction changed.
+\end{itemize}
+
+A simple measure is:
+
+\[
+\mathrm{RepeatAgreement}
+=
+\frac{\text{laws with the same label across runs}}
+{\text{laws rerun}}.
+\]
+
+This test is important because replicability is the paper's central claim.
+
+\section*{16. Define replicability carefully}
+
+Use:
+
+\begin{quote}
+We use replicability to mean that an independent researcher can rerun the same measurement procedure on the same source documents, using the archived workflow, prompts, model configuration, and decision rules, and recover the same coded dataset under the same execution conditions.
+\end{quote}
+
+Then qualify the commercial API limitation:
+
+\begin{quote}
+Exact reruns require access to the same model version and inference conditions. If a provider updates or retires a model, the archived execution trace and original outputs preserve the original result. A later run under a changed model constitutes a new replication.
+\end{quote}
+
+Do not promise identical outputs unless the repeated-run results support that claim.
+
+\section*{17. Add an implementation-status table}
+
+Please distinguish what is implemented, evaluated, partial, and planned.
+
+For example:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}Xccc@{}}
+\toprule
+\textbf{Capability} & \textbf{Implemented} & \textbf{Evaluated} & \textbf{Planned} \\
+\midrule
+Versioned workflow definitions & Yes & Yes & \\
+Conditional branching & Yes & Yes & \\
+Deterministic rank mapping & Yes & Yes & \\
+Prompt and output logging & Yes & Yes & \\
+Workflow hash & Yes & Yes & \\
+Case-level override & Yes & Partial & \\
+Version-comparison interface & Partial & Partial & \\
+Formal approval workflow & & & Yes \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Only include claims that can be verified.
+
+\section*{18. Explain the missing Gemini observation}
+
+Table 5 reports \(N=14\) for Gemini 3.5 and \(N=15\) for the other models.
+
+Please either:
+
+\begin{itemize}
+    \item rerun the missing law; or
+    \item explain why it failed and how the failure was handled.
+\end{itemize}
+
+Do not compare percentages based on different sample sizes without noting the difference.
+
+\section*{19. Specify the replication package}
+
+State exactly what will accompany the paper:
+
+\begin{itemize}
+    \item source documents or stable identifiers;
+    \item benchmark labels;
+    \item workflow JSON;
+    \item prompt files;
+    \item workflow version and hash;
+    \item model identifiers and settings;
+    \item raw API outputs;
+    \item parsed outputs;
+    \item execution logs;
+    \item evaluation scripts;
+    \item final coded dataset;
+    \item README with rerun instructions.
+\end{itemize}
+
+If any source material cannot be shared, explain how another researcher can retrieve it.
+
+\section*{20. Remove manuscript notes and provisional claims}
+
+Remove sentences such as:
+
+\begin{quote}
+The next revision should add \ldots
+\end{quote}
+
+Either provide the analysis or move it to Future Work.
+
+Verify all references. Remove every ``bibliographic details to be verified'' note before submission.
+
+\section*{21. Reduce material that is not central to the tools paper}
+
+To fit the IEEE page limit:
+
+\begin{itemize}
+    \item shorten the theory discussion without removing the measurement logic;
+    \item shorten the human-validation section;
+    \item compress the prompt-development history;
+    \item move detailed interface screenshots to supplemental material;
+    \item retain the task definition, algorithm, architecture, experimental protocol, metrics, and results.
+\end{itemize}
+
+The technical sections should receive more space than the governance discussion.
+
+\section*{22. Convert the paper to the official IEEE format}
+
+Please:
+
+\begin{itemize}
+    \item use the official ICTAI IEEE template;
+    \item prepare an anonymized submission;
+    \item keep within the conference page limit;
+    \item check that figures and tables remain readable in two columns;
+    \item remove author-identifying metadata for review;
+    \item ensure the references follow IEEE formatting.
+\end{itemize}
+
+\section*{Minimum technical package}
+
+If time is limited, the six essential additions are:
+
+\begin{enumerate}
+    \item formal task definition and deterministic mapping;
+    \item algorithm and exact workflow specification;
+    \item descriptive prompt labels and a prompt crosswalk;
+    \item a true Sequential Ordinal Cascade;
+    \item one-shot baseline versus staged workflow;
+    \item complete experimental protocol, stability test, and replication package.
+\end{enumerate}
+
+Those changes will determine whether the paper passes the computer-science ``sniff test.''
+
+
+
+\end{document}

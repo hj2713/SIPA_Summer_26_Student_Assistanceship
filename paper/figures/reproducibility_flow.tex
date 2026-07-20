@@ -1,0 +1,54 @@
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  node distance=4mm and 6mm,
+  header/.style={font=\sffamily\bfseries\color{navy}, align=center},
+  layer/.style={draw=navy!30, rounded corners=4pt, dashed, inner sep=6pt},
+  box/.style={draw=navy, rounded corners=2pt, thick, align=center, fill=lightblue, minimum height=8mm, text width=26mm},
+  greenbox/.style={draw=green!60!black, rounded corners=2pt, thick, align=center, fill=lightgreen, minimum height=8mm, text width=26mm},
+  orangebox/.style={draw=orange, rounded corners=2pt, thick, align=center, fill=lightorange, minimum height=8mm, text width=26mm},
+  database/.style={draw=navy, rounded corners=2pt, thick, align=center, fill=lightblue, minimum height=8mm, text width=26mm},
+  arrow/.style={-{Latex[length=1.8mm]}, thick, draw=navy}
+]
+
+% Headers
+\node[header] (h1) {1. Input Space};
+\node[header, right=1.6cm of h1] (h2) {2. Versioned Instrument};
+\node[header, right=1.6cm of h2] (h3) {3. Executable Engine};
+\node[header, right=1.6cm of h3] (h4) {4. Trace \& Audit};
+
+% 1. Input Space Nodes
+\node[database, below=4mm of h1] (docs) {Source\\Corpus};
+\node[box, below=5mm of docs] (stableid) {Stable Document ID\\{\tiny e.g., PL-number, year}};
+
+% 2. Instrument Nodes
+\node[box, below=4mm of h2] (definition) {Workflow JSON\\{\tiny Nodes, Edges, Outputs}};
+\node[greenbox, below=4mm of definition] (prompts) {Prompt Files\\{\tiny Versioned Instructions}};
+\node[box, below=4mm of prompts] (hash) {Definition Hash\\{\tiny SHA-256 codebook signature}};
+
+% 3. Engine Nodes
+\node[orangebox, below=4mm of h3] (config) {Model Settings\\{\tiny Provider, ID, Temp, Retry}};
+\node[box, below=4mm of config] (execution) {Workflow Executor\\{\tiny LLM, Cond, Det nodes}};
+
+% 4. Trace & Audit Nodes
+\node[greenbox, below=4mm of h4] (trace) {Execution Trace\\{\tiny Node inputs, outputs, time}};
+\node[box, below=4mm of trace] (dbdocs) {Coded Database\\{\tiny Values, Rationales, Cost}};
+\node[orangebox, below=4mm of dbdocs] (bench) {Benchmark Comparison\\{\tiny Expected vs. Predicted}};
+
+% Layout Containers
+\node[layer, fit=(h1) (docs) (stableid)] (l1) {};
+\node[layer, fit=(h2) (definition) (prompts) (hash)] (l2) {};
+\node[layer, fit=(h3) (config) (execution)] (l3) {};
+\node[layer, fit=(h4) (trace) (dbdocs) (bench)] (l4) {};
+
+% Connections
+\draw[arrow] (docs) -- (stableid);
+\draw[arrow] (stableid) -- (execution);
+\draw[arrow] (definition) -- (execution);
+\draw[arrow] (prompts) -- (definition);
+\draw[arrow] (hash) -- (definition);
+\draw[arrow] (config) -- (execution);
+\draw[arrow] (execution) -- (trace);
+\draw[arrow] (trace) -- (dbdocs);
+\draw[arrow] (dbdocs) -- (bench);
+
+\end{tikzpicture}

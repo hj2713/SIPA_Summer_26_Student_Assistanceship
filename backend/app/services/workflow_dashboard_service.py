@@ -268,31 +268,47 @@ class WorkflowDashboardService:
         workspace_id: str,
         replace_existing: bool = False,
     ) -> str:
-        """Create doc and ingest text."""
+        """Create doc, upload raw text to storage, and ingest chunks for RAG."""
         with self.db_session_factory() as session:
             existing = session.documents.get_by_filename(workspace_id, filename)
-            if replace_existing:
-                if existing:
-                    # Clear existing document chunks
-                    session.chunks.delete_chunks_by_document(existing["id"])
-                    chunks = chunk_text(text)
-                    session.chunks.create_chunks([
-                        {
-                            "id": str(uuid.uuid4()),
-                            "document_id": existing["id"],
-                            "user_id": user_id,
-                            "workspace_id": workspace_id,
-                            "content": chunk_content,
-                            "embedding": None,
-                            "metadata": json.dumps({"chunk_index": index}),
-                        }
-                        for index, chunk_content in enumerate(chunks)
-                    ])
-                    session.documents.update(existing["id"], {
-                        "status": DocumentStatus.completed.value,
-                        "error_message": None,
-                    })
-                    return existing["id"]
+            file_bytes = text.encode("utf-8")
+            if replace_existing and existing:
+                doc_id_str = existing["id"]
+                storage_path = ""
+                try:
+                    storage_path = document_service.upload_file_to_storage(
+                        client=None,
+                        user_id=user_id,
+                        doc_id=doc_id_str,
+                        filename=filename,
+                        content=file_bytes,
+                        content_type="text/plain",
+                    )
+                except Exception as e:
+                    logger.warning("Failed to store raw document text to storage for %s: %s", doc_id_str, e)
+
+                session.chunks.delete_chunks_by_document(doc_id_str)
+                chunks = chunk_text(text)
+                session.chunks.create_chunks([
+                    {
+                        "id": str(uuid.uuid4()),
+                        "document_id": doc_id_str,
+                        "user_id": user_id,
+                        "workspace_id": workspace_id,
+                        "content": chunk_content,
+                        "embedding": None,
+                        "metadata": json.dumps({"chunk_index": index}),
+                    }
+                    for index, chunk_content in enumerate(chunks)
+                ])
+                updates = {
+                    "status": DocumentStatus.completed.value,
+                    "error_message": None,
+                }
+                if storage_path:
+                    updates["file_path"] = storage_path
+                session.documents.update(doc_id_str, updates)
+                return doc_id_str
             elif existing:
                 return existing["id"]
 
@@ -305,11 +321,25 @@ class WorkflowDashboardService:
                 file_size=len(text),
                 content_type="text/plain",
             )
+            doc_id_str = str(doc_id.id)
+            storage_path = ""
+            try:
+                storage_path = document_service.upload_file_to_storage(
+                    client=None,
+                    user_id=user_id,
+                    doc_id=doc_id_str,
+                    filename=filename,
+                    content=file_bytes,
+                    content_type="text/plain",
+                )
+            except Exception as e:
+                logger.warning("Failed to store raw document text to storage for %s: %s", doc_id_str, e)
+
             chunks = chunk_text(text)
             session.chunks.create_chunks([
                 {
                     "id": str(uuid.uuid4()),
-                    "document_id": str(doc_id.id),
+                    "document_id": doc_id_str,
                     "user_id": user_id,
                     "workspace_id": workspace_id,
                     "content": chunk_content,
@@ -318,11 +348,14 @@ class WorkflowDashboardService:
                 }
                 for index, chunk_content in enumerate(chunks)
             ])
-            session.documents.update(str(doc_id.id), {
+            updates = {
                 "status": DocumentStatus.completed.value,
                 "error_message": None,
-            })
-            return str(doc_id.id)
+            }
+            if storage_path:
+                updates["file_path"] = storage_path
+            session.documents.update(doc_id_str, updates)
+            return doc_id_str
 
     def _document_text(self, document_id: str) -> str:
         """Retrieve full raw document text directly from storage, with chunk fallback for legacy records."""
@@ -823,6 +856,7 @@ class WorkflowDashboardService:
         definition: dict[str, Any],
         user_id: Optional[str] = None,
         retry_model: Optional[str] = None,
+        source_text: Optional[str] = None,
     ) -> DashboardDocumentRow:
         if user_id:
             set_current_user_id(user_id)
@@ -849,7 +883,8 @@ class WorkflowDashboardService:
                 coded_vals_str = json.dumps(coded_vals)
             session.dashboard_documents.create_or_update(dashboard_id, document_id, coded_vals_str, "processing", current_step=1, total_steps=3)
         try:
-            source_text = self._document_text(document_id)
+            if source_text is None:
+                source_text = self._document_text(document_id)
             with self.db_session_factory() as session:
                 session.dashboard_documents.update_progress(dashboard_id, document_id, 2, 3)
 
@@ -949,7 +984,7 @@ class WorkflowDashboardService:
             dash_row = session.dashboards.get_by_id(dashboard.id)
             definition = json.loads(dash_row["workflow_definition_json"])
 
-        row = await self._execute_document(dashboard.id, doc_id, definition, user_id=user_id)
+        row = await self._execute_document(dashboard.id, doc_id, definition, user_id=user_id, source_text=source_text)
         return dashboard, row
 
     async def run_uploaded_files(

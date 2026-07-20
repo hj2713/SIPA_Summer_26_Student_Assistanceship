@@ -1,4 +1,5 @@
 import asyncio
+import os
 import logging
 import json
 import uuid
@@ -358,34 +359,36 @@ class WorkflowDashboardService:
             return doc_id_str
 
     def _document_text(self, document_id: str) -> str:
-        """Retrieve full raw document text directly from storage, with chunk fallback for legacy records."""
+        """Retrieve full raw document text directly from Supabase Storage."""
         with self.db_session_factory() as session:
             doc = session.documents.get_by_id(document_id)
-            if doc and doc.get("file_path"):
-                try:
-                    file_bytes = document_service.download_file_from_storage(None, doc["file_path"])
-                    if file_bytes:
-                        return file_bytes.decode("utf-8", errors="replace")
-                except Exception as e:
-                    logger.warning("Failed to fetch raw file from storage for document_id=%s: %s", document_id, e)
+            if doc:
+                file_path = doc.get("file_path")
+                filename = doc.get("filename") or ""
+                user_id = doc.get("user_id") or "00000000-0000-0000-0000-000000000001"
 
-            # Fallback to document chunks if raw storage file is unavailable
-            chunks = session.chunks.get_chunks_by_document(document_id)
-            if chunks:
-                chunks_with_idx = []
-                for ch in chunks:
-                    meta = ch.get("metadata") or {}
-                    if isinstance(meta, str):
+                # 1. Primary Supabase storage path
+                if file_path:
+                    try:
+                        file_bytes = document_service.download_file_from_storage(None, file_path)
+                        if file_bytes:
+                            return file_bytes.decode("utf-8", errors="replace")
+                    except Exception as e:
+                        logger.warning("Failed to fetch raw file from storage for document_id=%s: %s", document_id, e)
+
+                # 2. Clean Supabase storage path fallback
+                if filename:
+                    base_name = os.path.basename(filename)
+                    clean_path = f"{user_id}/{document_id}/{base_name}"
+                    if clean_path != file_path:
                         try:
-                            meta = json.loads(meta)
-                        except Exception:
-                            meta = {}
-                    idx = meta.get("chunk_index", 0) if isinstance(meta, dict) else 0
-                    chunks_with_idx.append((idx, ch.get("content", "")))
-                chunks_with_idx.sort(key=lambda x: x[0])
-                return "\n\n".join(c[1] for c in chunks_with_idx)
+                            file_bytes = document_service.download_file_from_storage(None, clean_path)
+                            if file_bytes:
+                                return file_bytes.decode("utf-8", errors="replace")
+                        except Exception as e:
+                            logger.warning("Failed clean path fallback for document_id=%s: %s", document_id, e)
 
-            logger.exception("Could not read workflow source text for document_id=%s", document_id)
+            logger.exception("Could not read workflow source text from storage for document_id=%s", document_id)
         raise HTTPException(status_code=400, detail=f"Document text content could not be retrieved for document_id={document_id}.")
 
     # -------------------------------------------------------------------------

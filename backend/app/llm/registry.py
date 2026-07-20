@@ -253,12 +253,12 @@ _OPENROUTER_MODEL_MAP: dict[str, str] = {
 def _classify_model(model: str) -> str:
     """Return the provider name for any model name string."""
     m = model.lower().strip()
+    # Gemini family
+    if m.startswith("gemini-") or m.startswith("models/gemini-"):
+        return "gemini"
     # Already a namespaced OpenRouter ID (e.g. "deepseek/deepseek-chat")
     if "/" in m:
         return "openrouter"
-    # Gemini family
-    if m.startswith("gemini-"):
-        return "gemini"
     # Everything else → OpenRouter
     return "openrouter"
 

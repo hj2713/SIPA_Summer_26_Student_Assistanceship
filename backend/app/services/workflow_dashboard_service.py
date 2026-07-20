@@ -325,8 +325,18 @@ class WorkflowDashboardService:
             return str(doc_id.id)
 
     def _document_text(self, document_id: str) -> str:
-        """Gather all document chunks into a consolidated string."""
+        """Retrieve full raw document text directly from storage, with chunk fallback for legacy records."""
         with self.db_session_factory() as session:
+            doc = session.documents.get_by_id(document_id)
+            if doc and doc.get("file_path"):
+                try:
+                    file_bytes = document_service.download_file_from_storage(None, doc["file_path"])
+                    if file_bytes:
+                        return file_bytes.decode("utf-8", errors="replace")
+                except Exception as e:
+                    logger.warning("Failed to fetch raw file from storage for document_id=%s: %s", document_id, e)
+
+            # Fallback to document chunks if raw storage file is unavailable
             chunks = session.chunks.get_chunks_by_document(document_id)
             if chunks:
                 chunks_with_idx = []
@@ -342,15 +352,8 @@ class WorkflowDashboardService:
                 chunks_with_idx.sort(key=lambda x: x[0])
                 return "\n\n".join(c[1] for c in chunks_with_idx)
 
-            # Fallback to local raw text if chunks aren't written yet
-            doc = session.documents.get(document_id)
-            if doc and doc.get("status") == "completed":
-                # Check file content
-                logger.warning("No chunks found in DB for completed document_id=%s. Attempting raw text lookup.", document_id)
-                # If you have a local filepath store, read from it here.
-            else:
-                logger.exception("Could not read workflow source text for document_id=%s", document_id)
-        raise HTTPException(status_code=400, detail="Document text content could not be retrieved.")
+            logger.exception("Could not read workflow source text for document_id=%s", document_id)
+        raise HTTPException(status_code=400, detail=f"Document text content could not be retrieved for document_id={document_id}.")
 
     # -------------------------------------------------------------------------
     # Core per-model, per-document runner
@@ -632,8 +635,6 @@ class WorkflowDashboardService:
                             "cost": existing_model_run.get("cost"),
                             "input_tokens": existing_model_run.get("input_tokens"),
                             "output_tokens": existing_model_run.get("output_tokens"),
-                            "trace": existing_model_run.get("trace"),
-                            "context": existing_model_run.get("context"),
                             "error_message": None,
                             "error_type": None,
                             "timing": self._queue_timing(existing_model_run.get("timing")),
@@ -711,8 +712,6 @@ class WorkflowDashboardService:
                             "cost": model_result.get("cost"),
                             "input_tokens": model_result.get("input_tokens"),
                             "output_tokens": model_result.get("output_tokens"),
-                            "trace": model_result.get("trace"),
-                            "context": model_result.get("context"),
                             "error_message": model_result.get("error_message"),
                             "error_type": model_result.get("error_type"),
                             "timing": model_result.get("timing"),
@@ -737,31 +736,14 @@ class WorkflowDashboardService:
                         else:
                             overall_status = "processing"
 
-                        persist_started = perf_counter()
-                        with self.db_session_factory() as session:
-                            session.dashboard_documents.update_workflow_result(
-                                dashboard_id,
-                                doc_id,
-                                json.dumps(all_coded),
-                                json.dumps(representative_trace),
-                                json.dumps(representative_context),
-                                status=overall_status,
-                                error_message=representative_error if overall_status == "failed" else None,
-                                error_type=(representative_error_type or "API_FAILURE") if overall_status == "failed" and representative_error else None,
-                            )
-                        persist_ms = self._duration_ms(persist_started)
-                        model_timing = all_coded.get(model, {}).get("timing")
-                        if isinstance(model_timing, dict):
-                            model_timing["persist_result_ms"] = persist_ms
                         logger.info(
-                            "workflow_model_%s dashboard_id=%s document_id=%s model=%s batch_document_count=%d total_run_ms=%s persist_result_ms=%d",
+                            "workflow_model_%s dashboard_id=%s document_id=%s model=%s batch_document_count=%d total_run_ms=%s",
                             "completed" if model_result.get("status") == "completed" else "failed",
                             dashboard_id,
                             doc_id,
                             model,
                             len(document_ids),
                             (all_coded.get(model, {}).get("timing") or {}).get("total_run_ms"),
-                            persist_ms,
                         )
 
                     if completed_results:
@@ -791,8 +773,6 @@ class WorkflowDashboardService:
                             "cost": existing_model_run.get("cost", 0.0),
                             "input_tokens": existing_model_run.get("input_tokens", 0),
                             "output_tokens": existing_model_run.get("output_tokens", 0),
-                            "trace": trace_data or existing_model_run.get("trace"),
-                            "context": context_data or existing_model_run.get("context"),
                             "error_message": error_message,
                             "error_type": "API_FAILURE",
                             "timing": self._timing_for_result(

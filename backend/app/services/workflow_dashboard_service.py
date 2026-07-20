@@ -359,15 +359,17 @@ class WorkflowDashboardService:
             return doc_id_str
 
     def _document_text(self, document_id: str) -> str:
-        """Retrieve full raw document text directly from Supabase Storage."""
+        """Retrieve full raw document text directly from Supabase PostgreSQL database or storage."""
         with self.db_session_factory() as session:
             doc = session.documents.get_by_id(document_id)
             if doc:
-                file_path = doc.get("file_path")
-                filename = doc.get("filename") or ""
-                user_id = doc.get("user_id") or "00000000-0000-0000-0000-000000000001"
+                # 1. Primary: Read full raw text directly from documents.source_text column in database
+                source_text = doc.get("source_text") if isinstance(doc, dict) else getattr(doc, "source_text", None)
+                if source_text and len(source_text.strip()) > 0:
+                    return source_text
 
-                # 1. Primary Supabase storage path
+                # 2. Storage fallback
+                file_path = doc.get("file_path") if isinstance(doc, dict) else getattr(doc, "file_path", None)
                 if file_path:
                     try:
                         file_bytes = document_service.download_file_from_storage(None, file_path)
@@ -376,19 +378,7 @@ class WorkflowDashboardService:
                     except Exception as e:
                         logger.warning("Failed to fetch raw file from storage for document_id=%s: %s", document_id, e)
 
-                # 2. Clean Supabase storage path fallback
-                if filename:
-                    base_name = os.path.basename(filename)
-                    clean_path = f"{user_id}/{document_id}/{base_name}"
-                    if clean_path != file_path:
-                        try:
-                            file_bytes = document_service.download_file_from_storage(None, clean_path)
-                            if file_bytes:
-                                return file_bytes.decode("utf-8", errors="replace")
-                        except Exception as e:
-                            logger.warning("Failed clean path fallback for document_id=%s: %s", document_id, e)
-
-            logger.exception("Could not read workflow source text from storage for document_id=%s", document_id)
+            logger.exception("Could not read workflow source text from database/storage for document_id=%s", document_id)
         raise HTTPException(status_code=400, detail=f"Document text content could not be retrieved for document_id={document_id}.")
 
     # -------------------------------------------------------------------------

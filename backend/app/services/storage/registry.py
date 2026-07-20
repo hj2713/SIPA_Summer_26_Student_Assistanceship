@@ -38,10 +38,15 @@ def get_storage() -> StorageService:
     """Return the process-wide StorageService singleton."""
     global _storage_singleton
     if _storage_singleton is None:
-        # Default provider is LocalStorageProvider
-        provider = LocalStorageProvider()
+        from app.core.config import settings
+        if settings.STORAGE_PROVIDER == "supabase" or (settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY):
+            from app.services.storage.providers.supabase_provider import SupabaseStorageProvider
+            provider = SupabaseStorageProvider()
+            logger.info("StorageService initialized with SupabaseStorageProvider")
+        else:
+            provider = LocalStorageProvider()
+            logger.info("StorageService initialized with LocalStorageProvider")
         _storage_singleton = StorageService(provider)
-        logger.info("StorageService initialized with LocalStorageProvider")
     return _storage_singleton
 
 

@@ -37,10 +37,12 @@ class Settings(BaseSettings):
     DB_PROVIDER: str = "sqlite"  # 'sqlite' or 'postgres'
     DATABASE_URL: str = ""       # postgresql connection URI
 
-    # Supabase settings (optional, for future cloud authentication / storage migrations)
+    # Supabase settings
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
+    STORAGE_PROVIDER: str = "local"  # 'local' or 'supabase'
+    STORAGE_BUCKET_NAME: str = "documents"
 
 
     # LLM provider selection

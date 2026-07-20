@@ -164,6 +164,25 @@ export function useDocuments(options: { pageSize?: number } = {}) {
     }
   };
 
+  const bulkDeleteDocuments = async (documentIds: string[]) => {
+    if (!session?.access_token || !documentIds.length) return;
+    try {
+      await apiFetch<{ deleted_count: number; deleted_ids: string[] }>(
+        "/api/documents/bulk-delete",
+        session.access_token,
+        {
+          method: "POST",
+          body: JSON.stringify({ document_ids: documentIds }),
+        }
+      );
+      const idSet = new Set(documentIds);
+      setDocuments((prev) => prev.filter((d) => !idSet.has(d.id)));
+    } catch (err) {
+      console.error("Failed to bulk delete documents", err);
+      throw err;
+    }
+  };
+
   const updateDocumentTags = async (id: string, tags: string[]) => {
     if (!session?.access_token) return;
     try {
@@ -317,6 +336,7 @@ export function useDocuments(options: { pageSize?: number } = {}) {
     uploadDocument,
     uploadMultipleFiles,
     deleteDocument,
+    bulkDeleteDocuments,
     updateDocumentTags,
     moveDocument,
     retryDocument,

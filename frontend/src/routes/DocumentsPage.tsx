@@ -29,6 +29,7 @@ export function DocumentsPage() {
     uploading, 
     uploadMultipleFiles, 
     deleteDocument,
+    bulkDeleteDocuments,
     retryDocument,
     retryDocumentsBatch
   } = useDocuments();
@@ -479,22 +480,12 @@ export function DocumentsPage() {
     if (!confirmed) return;
 
     const toastId = toast.loading(`Deleting folder "${folderNode.name}" and nested files...`);
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const doc of docs) {
-      try {
-        await deleteDocument(doc.id);
-        successCount++;
-      } catch (err) {
-        failCount++;
-      }
-    }
-    
-    if (failCount > 0) {
-      toast.error(`Deleted ${successCount} files, but failed to delete ${failCount}.`, { id: toastId });
-    } else {
+    const docIds = docs.map(d => d.id);
+    try {
+      await bulkDeleteDocuments(docIds);
       toast.success(`Successfully deleted folder "${folderNode.name}" and all its files!`, { id: toastId });
+    } catch (err) {
+      toast.error(`Failed to delete folder "${folderNode.name}".`, { id: toastId });
     }
   };
 

@@ -36,6 +36,7 @@ export function DashboardPage() {
     uploading, 
     uploadMultipleFiles, 
     deleteDocument,
+    bulkDeleteDocuments,
     updateDocumentTags,
     moveDocument,
     refetch,
@@ -666,6 +667,116 @@ export function DashboardPage() {
     return docs;
   };
 
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedDocIds);
+    if (ids.length === 0) return;
+
+    const confirmed = window.confirm(`Are you sure you want to delete ${ids.length} selected file(s)?`);
+    if (!confirmed) return;
+
+    const toastId = toast.loading(`Deleting ${ids.length} file(s)...`);
+    try {
+      await bulkDeleteDocuments(ids);
+      setSelectedDocIds(new Set());
+      toast.success(`Successfully deleted ${ids.length} file(s)!`, { id: toastId });
+    } catch (err) {
+      toast.error("Failed to bulk delete selected file(s).", { id: toastId });
+    }
+  };
+
+  const handleCreateFolderWithSelected = async () => {
+    const ids = Array.from(selectedDocIds);
+    if (ids.length === 0) return;
+
+    const folderName = prompt("Enter new folder path (e.g. 'archive' or 'finance/invoices'):");
+    if (!folderName) return;
+
+    const cleanFolder = folderName.trim().replace(/^\/+|\/+$/g, "");
+    if (!cleanFolder) return;
+
+    const toastId = toast.loading(`Moving ${ids.length} file(s) into "${cleanFolder}"...`);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const docId of ids) {
+      const doc = documents.find(d => d.id === docId);
+      if (!doc) continue;
+
+      const baseName = doc.filename.split("/").pop() || doc.filename;
+      const newPath = `${cleanFolder}/${baseName}`;
+
+      try {
+        await moveDocument(docId, newPath);
+        successCount++;
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    setSelectedDocIds(new Set());
+    if (failCount > 0) {
+      toast.error(`Moved ${successCount} file(s), failed to move ${failCount}.`, { id: toastId });
+    } else {
+      toast.success(`Successfully moved ${successCount} file(s) to "${cleanFolder}"!`, { id: toastId });
+    }
+  };
+
+  const handleBulkMoveToFolder = async () => {
+    const ids = Array.from(selectedDocIds);
+    if (ids.length === 0) return;
+
+    if (virtualFolders.length === 0) {
+      toast.error("No virtual folders exist yet. Create a folder first.");
+      return;
+    }
+
+    const chosenFolder = prompt(`Enter destination folder path:\nAvailable: ${virtualFolders.join(", ")}`);
+    if (!chosenFolder) return;
+
+    const cleanFolder = chosenFolder.trim().replace(/^\/+|\/+$/g, "");
+    const toastId = toast.loading(`Moving ${ids.length} file(s) to "${cleanFolder}"...`);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const docId of ids) {
+      const doc = documents.find(d => d.id === docId);
+      if (!doc) continue;
+
+      const baseName = doc.filename.split("/").pop() || doc.filename;
+      const newPath = `${cleanFolder}/${baseName}`;
+
+      try {
+        await moveDocument(docId, newPath);
+        successCount++;
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    setSelectedDocIds(new Set());
+    if (failCount > 0) {
+      toast.error(`Moved ${successCount} file(s), failed to move ${failCount}.`, { id: toastId });
+    } else {
+      toast.success(`Successfully moved ${successCount} file(s) to "${cleanFolder}"!`, { id: toastId });
+    }
+  };
+
+  const handleCreateNewFolder = () => {
+    const name = prompt("Enter new folder name (e.g., 'invoices' or 'reports/2024'):");
+    if (!name) return;
+
+    const cleanName = name.trim().replace(/^\/+|\/+$/g, "");
+    if (!cleanName) return;
+
+    if (virtualFolders.includes(cleanName)) {
+      toast.error("Folder already exists.");
+      return;
+    }
+
+    setVirtualFolders((prev) => [...prev, cleanName]);
+    toast.success(`Created folder "${cleanName}". Drag or move files into it.`);
+  };
+
   const handleDeleteFolder = async (folderNode: FolderNode) => {
     const docs = getDocsInFolder(folderNode);
     if (docs.length === 0) {
@@ -680,24 +791,13 @@ export function DashboardPage() {
     if (!confirmed) return;
 
     const toastId = toast.loading(`Deleting folder "${folderNode.name}"...`);
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const doc of docs) {
-      try {
-        await deleteDocument(doc.id);
-        successCount++;
-      } catch (err) {
-        failCount++;
-      }
-    }
-    
-    setVirtualFolders(prev => prev.filter(f => f !== folderNode.path && !f.startsWith(folderNode.path + "/")));
-    
-    if (failCount > 0) {
-      toast.error(`Deleted ${successCount} files, but failed to delete ${failCount}.`, { id: toastId });
-    } else {
-      toast.success(`Successfully deleted folder and its ${successCount} files!`, { id: toastId });
+    const docIds = docs.map(d => d.id);
+    try {
+      await bulkDeleteDocuments(docIds);
+      setVirtualFolders(prev => prev.filter(f => f !== folderNode.path && !f.startsWith(folderNode.path + "/")));
+      toast.success(`Successfully deleted folder and its ${docs.length} files!`, { id: toastId });
+    } catch (err) {
+      toast.error(`Failed to delete folder "${folderNode.name}".`, { id: toastId });
     }
   };
 

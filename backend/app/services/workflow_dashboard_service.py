@@ -723,6 +723,7 @@ class WorkflowDashboardService:
                             source_text_load_ms=source_text_load_ms,
                             workflow_execute_ms=workflow_execute_ms,
                             total_run_ms=self._duration_ms(model_started_perf),
+                            persist_result_ms=self._duration_ms(model_started_perf),
                         )
                         return model, model_result
 
@@ -749,6 +750,13 @@ class WorkflowDashboardService:
                             "error_type": model_result.get("error_type"),
                             "timing": model_result.get("timing"),
                         }
+                        with self.db_session_factory() as session:
+                            session.dashboard_documents.update_coded_values(
+                                dashboard_id,
+                                doc_id,
+                                json.dumps(all_coded),
+                                status="processing",
+                            )
 
                         if not representative_trace and model_result.get("trace"):
                             representative_trace = model_result.get("trace") or []

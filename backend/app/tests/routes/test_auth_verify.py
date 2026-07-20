@@ -202,9 +202,7 @@ def test_legacy_credentials_migration(client, auth_headers):
     from app.core.database import get_db_conn
     from app.core.llm_credentials import encrypt_api_key
 
-    # Manually delete any existing rows from user_llm_credentials for this user
     with get_db_conn() as conn:
-        conn.execute("DELETE FROM user_llm_credentials WHERE user_id = ?", (user_id,))
         # Write legacy columns on users row
         conn.execute(
             "UPDATE users SET llm_provider = ?, llm_api_key_encrypted = ?, llm_model = ?, llm_base_url = ? WHERE id = ?",

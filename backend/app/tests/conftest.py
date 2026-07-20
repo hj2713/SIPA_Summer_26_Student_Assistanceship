@@ -125,43 +125,25 @@ def run_init_db():
     
     try:
         if settings.DB_PROVIDER == "postgres":
-            # Obtain psycopg connection directly to run deletions safely
             import psycopg
-            # prepare_threshold=None is needed for Supabase Transaction mode
             with psycopg.connect(settings.DATABASE_URL, prepare_threshold=None) as conn:
                 from app.tests.base import SafeTestConnection
-                # Wrap with SafeTestConnection so cleanup itself is validated
                 safe_conn = SafeTestConnection(conn)
                 with safe_conn.cursor() as cur:
-                    # Cascade deletes via deleting test user documents and test workspace dashboards
-                    cur.execute("DELETE FROM document_chunks WHERE user_id = %s;", (TEST_USER_ID,))
-                    cur.execute("DELETE FROM documents WHERE user_id = %s;", (TEST_USER_ID,))
-                    cur.execute("DELETE FROM messages WHERE user_id = %s;", (TEST_USER_ID,))
-                    cur.execute("DELETE FROM threads WHERE user_id = %s;", (TEST_USER_ID,))
-                    cur.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
-                    cur.execute("DELETE FROM workspaces WHERE id IN ('QA', 'PRODUCTION');")
                     cur.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
                     cur.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
-                    cur.execute("DELETE FROM users WHERE id = %s OR email = %s;", (TEST_USER_ID, "test@test.com"))
                     cur.execute(
-                        "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
+                        "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1) ON CONFLICT DO NOTHING;",
                         (TEST_USER_ID, "test@test.com", "mock_hash")
                     )
                 safe_conn.commit()
         else:
             from app.core.database import get_db_conn
             with get_db_conn() as conn:
-                # Direct SQL deletes of test-specific records
-                conn.execute("DELETE FROM document_chunks WHERE user_id = ?;", (TEST_USER_ID,))
-                conn.execute("DELETE FROM documents WHERE user_id = ?;", (TEST_USER_ID,))
-                conn.execute("DELETE FROM messages WHERE user_id = ?;", (TEST_USER_ID,))
-                conn.execute("DELETE FROM threads WHERE user_id = ?;", (TEST_USER_ID,))
-                conn.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
                 conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
                 conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
-                conn.execute("DELETE FROM users WHERE id = ? OR email = ?;", (TEST_USER_ID, "test@test.com"))
                 conn.execute(
-                    "INSERT OR REPLACE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
+                    "INSERT OR IGNORE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
                     (TEST_USER_ID, "test@test.com", "mock_hash")
                 )
                 conn.commit()

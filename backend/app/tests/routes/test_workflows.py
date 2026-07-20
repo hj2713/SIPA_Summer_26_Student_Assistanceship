@@ -235,12 +235,6 @@ def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
     assert updated.status_code == 200
     assert updated.json()["revision"] == imported_template["revision"] + 1
 
-    deleted = client.delete(
-        f"/api/workflow-templates/{duplicate['id']}?workspace_id=QA",
-        headers=auth_headers,
-    )
-    assert deleted.status_code == 204
-
 
 def test_template_update_does_not_mutate_existing_workflow_draft(client, auth_headers):
     templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers).json()

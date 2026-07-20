@@ -302,6 +302,31 @@ def get_document_content(document_id: str, current_user: CurrentUserDep):
 
 
 
+from pydantic import BaseModel, Field
+from typing import List
+
+
+class BulkDeleteDocumentsRequest(BaseModel):
+    document_ids: List[str] = Field(..., description="List of document IDs to delete in bulk.")
+
+
+@router.post("/bulk-delete")
+def bulk_delete_documents(payload: BulkDeleteDocumentsRequest, current_user: CurrentUserDep):
+    """Delete multiple documents in a single bulk operation."""
+    if not current_user.can_delete and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete documents."
+        )
+
+    if not payload.document_ids:
+        return {"deleted_count": 0, "deleted_ids": []}
+
+    client = get_user_client(current_user.jwt)
+    deleted_ids = document_service.bulk_delete_documents(client, payload.document_ids)
+    return {"deleted_count": len(deleted_ids), "deleted_ids": deleted_ids}
+
+
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: str, current_user: CurrentUserDep):
     """Delete a document, cascade delete its vector chunks, and remove it from storage."""

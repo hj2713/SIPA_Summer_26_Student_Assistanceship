@@ -123,15 +123,10 @@ class SafeTestCursor:
                 ALLOWED_TEST_IDS.add(lit)
             return
 
-        # 3. Validate UPDATE/DELETE
-        if is_update or is_delete:
-            action = "UPDATE" if is_update else "DELETE"
-            perm_key = "allow_update" if is_update else "allow_delete"
-            
-            if not perms.get(perm_key):
-                raise RuntimeError(
-                    f"CRITICAL SAFETY VIOLATION: {action} executed without database permission inside test! Query: {query}"
-                )
+        if is_delete:
+            raise RuntimeError(
+                f"CRITICAL SAFETY VIOLATION: DELETE queries are strictly forbidden in tests! Query: {query}"
+            )
                 
             if "WHERE" not in query_upper:
                 raise RuntimeError(

@@ -99,6 +99,17 @@ class CampaignService:
             parsed_schema = schema_list if schema_list is not None else json.loads(row["schema"]) if isinstance(row["schema"], str) else (row["schema"] or [])
         except Exception:
             parsed_schema = []
+
+        if isinstance(parsed_schema, dict):
+            if "schema" in parsed_schema and isinstance(parsed_schema["schema"], list):
+                parsed_schema = parsed_schema["schema"]
+            elif "outputs" in parsed_schema and isinstance(parsed_schema["outputs"], list):
+                parsed_schema = parsed_schema["outputs"]
+            else:
+                parsed_schema = []
+
+        if not isinstance(parsed_schema, list):
+            parsed_schema = []
         return DashboardRow(
             id=row["id"],
             workspace_id=row["workspace_id"],

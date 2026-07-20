@@ -5,6 +5,7 @@ from typing import Any
 from app.core.database import get_db_conn
 from app.core.request_context import get_current_user_id
 from app.services.coding_service import coding_service
+from app.services.document_service import document_service
 from app.services.workflow_dashboard_service import WorkflowDashboardService
 
 
@@ -405,3 +406,147 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
     assert len(rows) == len(doc_ids)
     assert all(row["status"] == "completed" for row in rows)
     assert all(row["retry_model"] == "gpt-4o-mini" for row in rows)
+
+
+def test_document_text_direct_raw_storage_lookup(monkeypatch):
+    """Option A Test: Ensure _document_text fetches raw text directly from StorageService when file_path exists."""
+    doc_id = "doc-raw-storage-test"
+    workspace_id = "QA"
+    file_path = "storage/law_delegation.txt"
+    user_id = "00000000-0000-0000-0000-000000000001"
+
+    with get_db_conn() as conn:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES (?, ?);", (workspace_id, workspace_id))
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, 'law_raw_storage_test.txt', ?, 100, 'text/plain', 'completed', '{}');",
+            (doc_id, user_id, workspace_id, file_path),
+        )
+        conn.commit()
+
+    monkeypatch.setattr(
+        document_service,
+        "download_file_from_storage",
+        lambda client, path: b"Direct Raw File Storage Content" if path == file_path else b"",
+    )
+
+    service = WorkflowDashboardService()
+    text = service._document_text(doc_id)
+    assert text == "Direct Raw File Storage Content"
+
+
+def test_document_text_chunk_fallback_when_raw_storage_missing(monkeypatch):
+    """Option A Test: Ensure _document_text falls back to chunk reassembly when raw file storage lookup fails."""
+    doc_id = "doc-chunk-fallback-test"
+    workspace_id = "QA"
+    user_id = "00000000-0000-0000-0000-000000000001"
+
+    with get_db_conn() as conn:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES (?, ?);", (workspace_id, workspace_id))
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, 'law_legacy_fallback.txt', '', 100, 'text/plain', 'completed', '{}');",
+            (doc_id, user_id, workspace_id),
+        )
+        conn.execute(
+            "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, metadata) VALUES ('c1', ?, ?, ?, 'Chunk 0 text', '{\"chunk_index\": 0}');",
+            (doc_id, user_id, workspace_id),
+        )
+        conn.execute(
+            "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, metadata) VALUES ('c2', ?, ?, ?, 'Chunk 1 text', '{\"chunk_index\": 1}');",
+            (doc_id, user_id, workspace_id),
+        )
+        conn.commit()
+
+    service = WorkflowDashboardService()
+    text = service._document_text(doc_id)
+    assert text == "Chunk 0 text\n\nChunk 1 text"
+
+
+def test_create_text_document_stores_raw_text_to_storage(monkeypatch):
+    """Option A Test: Ensure _create_text_document uploads raw text to StorageService and updates file_path on document row."""
+    uploaded_files = {}
+    user_id = "00000000-0000-0000-0000-000000000001"
+
+    with get_db_conn() as conn:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+        conn.commit()
+
+    def mock_upload(client, uid, doc_id, filename, content, content_type):
+        path = f"storage/user_{uid}/{filename}"
+        uploaded_files[doc_id] = content
+        return path
+
+    monkeypatch.setattr(document_service, "upload_file_to_storage", mock_upload)
+
+    service = WorkflowDashboardService()
+    doc_id = service._create_text_document(
+        filename="custom_law_storage.txt",
+        text="Whole Law Document Content for Storage",
+        user_id=user_id,
+        workspace_id="QA",
+    )
+
+    assert doc_id in uploaded_files
+    assert uploaded_files[doc_id] == b"Whole Law Document Content for Storage"
+
+    with get_db_conn() as conn:
+        row = conn.execute("SELECT file_path FROM documents WHERE id = ?;", (doc_id,)).fetchone()
+    assert row["file_path"] == f"storage/user_{user_id}/custom_law_storage.txt"
+
+
+def test_execute_document_uses_provided_source_text_ram(monkeypatch):
+    """Option B Test: Ensure _execute_document reuses in-memory source_text without calling _document_text."""
+    dashboard_id = "dash-ram-test"
+    doc_id = "doc-ram-test"
+    user_id = "00000000-0000-0000-0000-000000000001"
+
+    with get_db_conn() as conn:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+        conn.execute(
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'RAM Test', '', '', '[]', 'gemini-3.1-flash-lite', 'campaign');",
+            (dashboard_id,),
+        )
+        conn.execute(
+            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, 'QA', 'law_ram_test.txt', '', 100, 'text/plain', 'completed', '{}');",
+            (doc_id, user_id),
+        )
+        conn.execute(
+            "INSERT INTO dashboard_documents (dashboard_id, document_id, coded_values, status) VALUES (?, ?, '{}', 'pending');",
+            (dashboard_id, doc_id),
+        )
+        conn.commit()
+
+    service = WorkflowDashboardService()
+
+    def forbidden_document_text(document_id):
+        raise AssertionError("_document_text should NOT be called when in-memory source_text is provided")
+
+    monkeypatch.setattr(service, "_document_text", forbidden_document_text)
+
+    from app.workflows.executor import workflow_executor
+
+    executed_text = []
+
+    async def fake_executor(definition, source_text, **kwargs):
+        executed_text.append(source_text)
+        return {"outputs": {"result": "ok"}, "context": {}}
+
+    monkeypatch.setattr(workflow_executor, "execute", fake_executor)
+
+    definition = {"nodes": [], "edges": [], "outputs": []}
+
+    asyncio.run(
+        service._execute_document(
+            dashboard_id=dashboard_id,
+            document_id=doc_id,
+            definition=definition,
+            user_id=user_id,
+            source_text="Pre-loaded RAM Text String",
+        )
+    )
+
+    assert executed_text == ["Pre-loaded RAM Text String"]
+

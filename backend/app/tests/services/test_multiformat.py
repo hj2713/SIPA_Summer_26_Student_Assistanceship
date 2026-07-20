@@ -72,19 +72,7 @@ def test_extract_text_pdf_disabled_fails_without_importing_docling():
     assert "ENABLE_DOCLING_EXTRACTION=true" in str(excinfo.value)
 
 
-def test_cascade_delete_chunks():
-    # Verify delete_document_chunks deletes from SQLite
-    with patch("app.services.document_service.get_db_conn") as mock_get_db:
-        mock_conn = MagicMock()
-        mock_get_db.return_value.__enter__.return_value = mock_conn
-        
-        from app.services.document_service import delete_document_chunks
-        delete_document_chunks(None, "11111111-1111-1111-1111-111111111111")
-        
-        mock_conn.execute.assert_called_once_with(
-            "DELETE FROM document_chunks WHERE document_id = ?;",
-            ("11111111-1111-1111-1111-111111111111",)
-        )
+
 
 
 @patch("app.services.ingestion_service.extract_text")

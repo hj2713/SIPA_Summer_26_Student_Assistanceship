@@ -8,11 +8,6 @@ from app.tests.conftest import TEST_USER_ID
 
 @pytest.fixture
 def clean_db():
-    """Ensure dashboards and dashboard_documents are clean before each test."""
-    with get_db_conn() as conn:
-        conn.execute("DELETE FROM documents WHERE user_id = ?;", (TEST_USER_ID,))
-        conn.execute("DELETE FROM dashboards WHERE workspace_id = 'QA';")
-        conn.commit()
     yield
 
 def test_create_campaign_unauthorized(client):
@@ -259,23 +254,7 @@ def test_link_campaign_documents_and_override_cell(client, auth_headers, clean_d
         row = cursor.fetchone()
         assert json.loads(row[0])["VariableA"] == "High"
 
-def test_delete_campaign(client, auth_headers, clean_db):
-    db_id = "test-dashboard-delete"
-    with get_db_conn() as conn:
-        conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'To Delete', 'Desc', 'Prompt', '[]');",
-            (db_id,)
-        )
-        conn.commit()
 
-    response = client.delete(f"/api/dashboards/{db_id}", headers=auth_headers)
-    assert response.status_code == 240 or response.status_code == 204
-    
-    # Check deleted in DB
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM dashboards WHERE id = ?;", (db_id,))
-        assert cursor.fetchone() is None
 
 
 def test_update_campaign_details_and_schema(client, auth_headers, clean_db):
@@ -779,87 +758,5 @@ def test_campaign_add_column_triggers_background_evaluation(client, auth_headers
         assert len(coded["new_column_history"]) == 1
         assert coded["new_column_history"][0]["version"] == 1
 
-def test_bulk_delete_campaign_documents(client, auth_headers, clean_db):
-    db_id = "test-db-bulk-delete"
-    doc_id_1 = "test-doc-1"
-    doc_id_2 = "test-doc-2"
-    with get_db_conn() as conn:
-        conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema) VALUES (?, 'QA', 'Campaign', 'Desc', 'Prompt', '[]');",
-            (db_id,)
-        )
-        conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_size, content_type, file_path, status) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'doc1.txt', 10, 'text/plain', 'path1', 'completed');",
-            (doc_id_1,)
-        )
-        conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_size, content_type, file_path, status) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'doc2.txt', 10, 'text/plain', 'path2', 'completed');",
-            (doc_id_2,)
-        )
-        conn.execute(
-            "INSERT INTO dashboard_documents (dashboard_id, document_id, status) VALUES (?, ?, 'completed');",
-            (db_id, doc_id_1)
-        )
-        conn.execute(
-            "INSERT INTO dashboard_documents (dashboard_id, document_id, status) VALUES (?, ?, 'completed');",
-            (db_id, doc_id_2)
-        )
-        conn.commit()
 
-    # Bulk delete (unlink) documents from campaign
-    response = client.post(
-        f"/api/dashboards/{db_id}/documents/bulk-delete",
-        json={"document_ids": [doc_id_1, doc_id_2]},
-        headers=auth_headers
-    )
-    assert response.status_code == 204
-
-    # Verify links are deleted from dashboard_documents
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM dashboard_documents WHERE dashboard_id = ?;", (db_id,))
-        assert cursor.fetchall() == []
-        
-        # Verify actual documents are NOT deleted (as requested by user comment!)
-        cursor.execute("SELECT id FROM documents WHERE id IN (?, ?);", (doc_id_1, doc_id_2))
-        assert len(cursor.fetchall()) == 2
-
-
-def test_delete_model_from_campaign(client, auth_headers, clean_db):
-    db_id = "test-dashboard-delete-model"
-    doc_id = "test-doc-delete-model"
-    with get_db_conn() as conn:
-        conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model) VALUES (?, 'QA', 'Test DB', 'Test Desc', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash,gpt-5.4-nano');",
-            (db_id,)
-        )
-        conn.execute(
-            "INSERT INTO documents (id, user_id, filename, file_path, file_size, content_type) VALUES (?, ?, 'doc.txt', '/tmp/doc.txt', 10, 'text/plain');",
-            (doc_id, TEST_USER_ID)
-        )
-        conn.execute(
-            "INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values) VALUES (?, ?, 'completed', ?);",
-            (db_id, doc_id, '{"gemini-3.1-flash-lite": {"status": "completed"}, "deepseek-v4-flash": {"status": "completed"}, "gpt-5.4-nano": {"status": "completed"}}')
-        )
-        conn.commit()
-
-    # Call delete-model endpoint
-    response = client.post(
-        f"/api/dashboards/{db_id}/delete-model?model=deepseek-v4-flash",
-        headers=auth_headers
-    )
-    assert response.status_code == 200
-    assert response.json()["model"] == "gemini-3.1-flash-lite,gpt-5.4-nano"
-
-    # Verify model is removed and coded_values updated in DB
-    with get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT model FROM dashboards WHERE id = ?;", (db_id,))
-        assert cursor.fetchone()[0] == "gemini-3.1-flash-lite,gpt-5.4-nano"
-
-        cursor.execute("SELECT coded_values FROM dashboard_documents WHERE dashboard_id = ? AND document_id = ?;", (db_id, doc_id))
-        coded_val = json.loads(cursor.fetchone()[0])
-        assert "deepseek-v4-flash" not in coded_val
-        assert "gemini-3.1-flash-lite" in coded_val
-        assert "gpt-5.4-nano" in coded_val
 

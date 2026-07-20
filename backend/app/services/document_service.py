@@ -182,6 +182,45 @@ class DocumentService:
             session.chunks.delete_by_document(doc_id)
             logger.info("Deleted all document chunks for document %s", doc_id)
 
+    def bulk_delete_documents(self, client: Any, doc_ids: list[str]) -> list[str]:
+        """Delete multiple documents, their vector chunks, and storage files in a single batch operation."""
+        if not doc_ids:
+            return []
+
+        deleted_ids = []
+        storage_paths_to_delete = []
+
+        with self.db_session_factory() as session:
+            for doc_id in doc_ids:
+                row = session.documents.get_by_id(doc_id)
+                if row:
+                    deleted_ids.append(doc_id)
+                    file_path = row.get("file_path") if isinstance(row, dict) else getattr(row, "file_path", None)
+                    if file_path:
+                        storage_paths_to_delete.append(file_path)
+
+            if not deleted_ids:
+                return []
+
+            for doc_id in deleted_ids:
+                try:
+                    session.chunks.delete_by_document(doc_id)
+                except Exception as e:
+                    logger.error("Failed to delete chunks for doc %s: %s", doc_id, e)
+
+                try:
+                    session.documents.delete(doc_id)
+                except Exception as e:
+                    logger.error("Failed to delete document row %s: %s", doc_id, e)
+
+        for path in storage_paths_to_delete:
+            try:
+                self.storage_service.delete_file(path)
+            except Exception as e:
+                logger.error("Failed to delete storage file %s: %s", path, e)
+
+        return deleted_ids
+
     def get_document_by_id_no_user(self, client: Any, doc_id: str) -> DocumentRow | None:
         """Fetch a document by ID only."""
         return self.get_document(client, doc_id)
@@ -346,6 +385,10 @@ def delete_document(client: Any, doc_id: str, user_id: str = None) -> bool:
 
 def delete_document_chunks(client: Any, doc_id: str) -> None:
     document_service.delete_document_chunks(client, doc_id)
+
+
+def bulk_delete_documents(client: Any, doc_ids: list[str]) -> list[str]:
+    return document_service.bulk_delete_documents(client, doc_ids)
 
 
 def get_document_by_id_no_user(client: Any, doc_id: str) -> DocumentRow | None:

@@ -2275,7 +2275,7 @@ export function ModelEvaluationPage() {
                                         history,
                                         status: runStatus,
                                         errorMessage: run.error_message || "",
-                                        trace: run.trace || [],
+                                        trace: run.trace?.length ? run.trace : (doc.workflow_trace || []),
                                         context: run.context || {},
                                         cost: run.cost,
                                         inputTokens: run.input_tokens,

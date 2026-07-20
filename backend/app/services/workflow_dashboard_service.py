@@ -742,6 +742,8 @@ class WorkflowDashboardService:
                             "error_message": model_result.get("error_message"),
                             "error_type": model_result.get("error_type"),
                             "timing": model_result.get("timing"),
+                            "trace": model_result.get("trace") or [],
+                            "context": model_result.get("context") or {},
                         }
                         with self.db_session_factory() as session:
                             session.dashboard_documents.update_coded_values(

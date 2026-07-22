@@ -1,0 +1,58 @@
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  header/.style={font=\sffamily\bfseries\color{navy}, align=center},
+  layer/.style={draw=navy!30, rounded corners=5pt, dashed, inner sep=6pt},
+  box/.style={draw=navy, rounded corners=3pt, thick, align=center, fill=lightblue, minimum height=8.5mm, text width=2.6cm},
+  greenbox/.style={draw=green!60!black, rounded corners=3pt, thick, align=center, fill=lightgreen, minimum height=8.5mm, text width=2.7cm},
+  orangebox/.style={draw=orange, rounded corners=3pt, thick, align=center, fill=lightorange, minimum height=8.5mm, text width=2.6cm},
+  redbox/.style={draw=reviewred, rounded corners=3pt, thick, align=center, fill=reviewfill!40, minimum height=7.5mm, text width=2.4cm},
+  arrow/.style={-{Latex[length=2.0mm, width=1.5mm]}, thick, draw=navy},
+  redarrow/.style={-{Latex[length=2.0mm, width=1.5mm]}, thick, draw=reviewred}
+]
+
+% ==================== HEADERS ====================
+\node[header] (h1) at (1.5, 3.6) {Step 1\\Input Space};
+\node[header] (h2) at (5.2, 3.6) {Step 2\\Delegation Gate};
+\node[header] (h3) at (10.6, 3.6) {Step 3\\Component Classification \& Rank Assignment};
+\node[header] (h4) at (16.2, 3.6) {Step 4\\Validation \& Storage};
+
+% ==================== STAGE 1: INPUT ====================
+\node[box] (legal) at (1.5, 2.0) {\textbf{Legal Text}\\Statutory / Summary};
+\node[box] (idnode) at (1.5, 0.4) {\textbf{Law Identifier}\\Stable ID $i$};
+
+% ==================== STAGE 2: DELEGATION GATE ====================
+\node[orangebox] (gate) at (5.2, 2.0) {\textbf{Delegation Gate}\\$\hat{d}_i \in \{0,1\}$};
+\node[redbox] (exit) at (5.2, -0.2) {\textbf{Deterministic Exit}\\Rank 0 ($\hat{d}_i=0$)};
+
+% ==================== STAGE 3: COMPONENT CLASSIFICATION ====================
+\node[greenbox] (comp) at (8.7, 1.2) {\textbf{Component Class.}\\$\hat{a}_i \in \{\text{Low, High}\}$\\$\hat{c}_i \in \{\text{Strong, Weak}\}$\\Evidence $r_i$};
+\node[box] (theory) at (12.5, 2.4) {\textbf{Theory Mapping}\\$y_i^{\text{map}} = m(\hat{d}_i, \hat{a}_i, \hat{c}_i)$};
+\node[box] (strat) at (12.5, 0.0) {\textbf{Rank Strategy}\\Prediction $\tilde{y}_i^{(s)}$};
+
+% ==================== STAGE 4: VALIDATION & STORAGE ====================
+\node[greenbox] (check) at (16.2, 1.2) {\textbf{Consistency Check}\\$q_i^{(s)} = \mathbf{1}[\tilde{y}_i^{(s)} = y_i^{\text{map}}]$};
+\node[box] (storage) at (16.2, -0.6) {\textbf{Coded Output \& Trace}\\Variables, Evidence,\\Settings \& Trace};
+
+% ==================== CONNECTIONS ====================
+\draw[arrow] (legal) -- (gate);
+\draw[arrow] (idnode) -- (gate);
+\draw[arrow] (gate) -- node[above, font=\sffamily\tiny\bfseries, color=navy] {Yes ($\hat{d}_i=1$)} (comp);
+\draw[redarrow] (gate) -- node[right, font=\sffamily\tiny\bfseries, color=reviewred] {No} (exit);
+
+% 3 Outward arrows from Component Classification
+\draw[arrow] (comp.north east) -- node[above left, font=\sffamily\tiny] {Map} (theory.west);
+\draw[arrow] (comp.east) -- node[above, font=\sffamily\tiny] {Components} (check.west);
+\draw[arrow] (comp.south east) -- node[below left, font=\sffamily\tiny] {Strategy} (strat.west);
+
+% Incoming arrows to Consistency Check
+\draw[arrow] (theory.east) -| (check.north);
+\draw[arrow] (strat.east) -| (check.south);
+\draw[arrow] (check) -- (storage);
+
+% ==================== STAGE CONTAINERS ====================
+\node[layer, fit=(h1) (legal) (idnode)] (l1) {};
+\node[layer, fit=(h2) (gate) (exit)] (l2) {};
+\node[layer, fit=(h3) (comp) (theory) (strat)] (l3) {};
+\node[layer, fit=(h4) (check) (storage)] (l4) {};
+
+\end{tikzpicture}

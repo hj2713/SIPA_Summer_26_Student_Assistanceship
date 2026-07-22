@@ -1,0 +1,152 @@
+ICTAI 2026 FINAL REVISION HANDOFF
+Baseline draft: ReplicableAI_DiscretionTool_main3_2026_07_20.pdf
+Target category: Natural Language Processing/Understanding
+Secondary category, if allowed: Large Language Models
+
+The paper is at conference-submission level. The items below are the critical fixes to be made before upload.
+
+============================================================
+MUST COMPLETE BEFORE SUBMISSION
+============================================================
+
+1. TABLE V: SAMPLE SIZES AND COMPARABILITY
+
+The current table title says N = 169, but the paper states that the residual-discretion task is evaluated on the delegated subset, and the percentages suggest that completed N varies across model-strategy combinations.
+
+Required actions:
+- Verify the completed sample size for every model-strategy row from the execution logs.
+- Add an N column to Table V.
+- Change the title to:
+
+"Cross-model evaluation on the expert-coded delegated-law subset. Completed N varies by model and strategy; the maximum benchmark size is 161."
+
+- Report persistent failures or incomplete runs in the text or a table note.
+- Do not claim that one strategy improves on another unless the comparison uses the same completed cases. If common-case results are available, report them. If not, qualify the comparison.
+
+
+Suggested table columns:
+Model | Strategy | N | Exact | W1 | MAE | Linear kappa | Quadratic kappa
+
+Suggested table qualifying note:
+"Metrics are calculated on completed runs. Because the number of completed cases varies across model-strategy combinations, cross-row comparisons should be interpreted cautiously."
+
+
+2. REPLACE THE RESULTS INTERPRETATION IN SECTION VII.C
+
+Delete or revise the statement that the Sequential Ordinal Cascade and Direct Multiclass strategies “consistently outperform” the One-Shot Baseline across models. The One-Shot Baseline is reported only for Gemini 3.5.
+
+Replace it with:
+
+"For Gemini 3.5, Direct Multiclass Rank Prediction reports the strongest aggregate results among the reported configurations. Exact-match accuracy increases from 28.6% for the unconstrained One-Shot Baseline to 41.9%, while within-one accuracy rises from 62.1% to 76.9% and mean absolute error falls from 1.250 to 0.915."
+
+
+Delete the paragraph claiming that more than 85% of errors are off by one rank and fewer than 15% are multi-rank errors. The percentages reported in Table V do not support those claims.
+
+Replace it with:
+
+"Within-one accuracy exceeds exact-match accuracy across all configurations, indicating that many errors are adjacent. However, errors of two or more ranks remain non-de minimis for several model-strategy combinations, and weighted kappa remains low. Overall, the models show partial ordinal agreement with the historical expert-coded benchmark."
+
+
+3. DOUBLE-BLIND ANONYMITY
+
+The visible author block is anonymized, but the PDF metadata must also be anonymous.
+
+In the LaTeX preamble, use:
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=navy,
+  citecolor=navy,
+  urlcolor=blue,
+  pdfauthor={Anonymous},
+  pdftitle={A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion}
+}
+
+Also:
+- remove author names, affiliations, emails, acknowledgments, and identifying URLs;
+- check the PDF properties after recompiling;
+- consider replacing "Delegation Workflow Studio" with "an anonymized research prototype" in the review version if the product name identifies the authors.
+
+See the conference submission page: https://ictai.computer.org/2026/submissions/
+
+4. ABSTRACT TYPO AND WORDING
+
+Current text:
+"We implement this measurement instrument in, a research prototype..."
+
+Replace with:
+
+"We implement this measurement instrument in an anonymized research prototype that displays prompts, settings, outputs, and validation rules within a versioned and auditable workflow."
+
+5. REFERENCES
+
+Delete every phrase:
+"bibliographic details to be verified against final publication record."
+
+No editorial placeholders can remain in the submitted paper.
+
+At minimum:
+- verify References 3, 5, 7, 8, and 9;
+- ensure titles, venues, years, page ranges, and capitalization are complete;
+- use one consistent IEEE reference style.
+
+============================================================
+HIGH PRIORITY IF QUICK
+============================================================
+
+6. FIGURE 1 LOWER PANEL ORDER
+
+The variable panel currently appears visually as:
+Step 1 | Step 3
+Step 2 | Step 4
+
+Change it to:
+Step 1 | Step 2
+Step 3 | Step 4
+
+Do not spend substantial time on this if it destabilizes the figure. The figure is otherwise clear and acceptable.  I tried replacing Step 2 with Step 3, and the table failed to format correctly.
+
+7. TERMINOLOGY
+
+Use consistently:
+- Delegation Gate
+- Component Classification
+- Theory-Based Rank Mapping
+- Rank-Classification Strategy
+- Consistency Check
+- Coded Output
+
+Change:
+"The paper relies on well-established theories of delegation or administrative discretion."
+
+To:
+"The paper relies on well-established theories of delegation and administrative discretion."
+
+Define or rename "Looser Screening." Preferred label:
+"Earlier High-Recall Delegation Screen"
+
+8. REPLICATION SECTION
+
+Current wording still says:
+"Upload CQ summaries..."
+
+For the general workflow description, replace with:
+"Upload legislative summaries or corresponding statutory text and retain stable law identifiers."
+
+The benchmark-specific discussion may still state that the historical labels were based on CQ summaries.
+
+============================================================
+FINAL SUBMISSION CHECK
+============================================================
+
+- Recompile from a clean build.
+- Confirm the PDF is 8 pages but no more than 10 pages.
+- Confirm all tables fit without overflow or unreadably small type.
+- Confirm Table V includes N.
+- Confirm no unsupported numerical claims remain.
+- Confirm no TBDs, notes-to-self, or verification placeholders remain.
+- Confirm references are complete.
+- Confirm PDF metadata is anonymous.
+- Confirm the submission category:
+  Primary: Natural Language Processing/Understanding
+  Secondary, if allowed: Large Language Models

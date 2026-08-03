@@ -79,10 +79,12 @@ def get_current_user(
                 is_admin = bool(row["is_admin"])
                 can_add = bool(row["can_add"])
                 can_delete = bool(row["can_delete"])
+                email = row.get("email") or payload.get("email")
                     
         set_current_user_id(user_id)
         return CurrentUser(
             id=user_id,
+            email=email or payload.get("email"),
             jwt=token,
             is_admin=is_admin,
             can_add=can_add,

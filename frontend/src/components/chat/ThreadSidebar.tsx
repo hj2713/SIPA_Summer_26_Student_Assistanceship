@@ -288,7 +288,7 @@ export function ThreadSidebar() {
             <path d="M9 21V9" />
             <line x1="18" y1="20" x2="18" y2="14" />
           </svg>
-          Campaigns & Model Evaluation
+          Prompt & Workflow Campaigns
         </Button>
 
         <Button

@@ -146,18 +146,8 @@ export function useAuth(): AuthContextValue {
   };
 
   const signInWithGoogle = async (): Promise<void> => {
-    // Check if Supabase URL is available
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://nqgufodcrkzpeikiudga.supabase.co";
-    
-    // Attempt standard Supabase OAuth redirect if configured
-    if (supabaseUrl && !window.location.hostname.includes("localhost")) {
-      const redirectUri = encodeURIComponent(window.location.origin + "/login");
-      window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}`;
-      return;
-    }
-
-    // Interactive / direct Google login for development and linking
-    const googleEmail = window.prompt("Enter your Google Account email to sign in:", user?.email || "test@test.com");
+    // Direct Google login using backend endpoint linked with Supabase DB
+    const googleEmail = window.prompt("Enter your Google Account email to sign in:", user?.email || "hj2713@columbia.edu");
     if (!googleEmail || !googleEmail.trim()) return;
 
     const response = await fetch(`${BASE_URL}/api/auth/google-login`, {

@@ -32,9 +32,9 @@ export function HeaderBar({ title, description }: { title?: string; description?
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Workspace Pill */}
+        {/* Workspace Chip */}
         {activeWorkspace && (
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary shadow-xs">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>{activeWorkspace.name}</span>
           </div>

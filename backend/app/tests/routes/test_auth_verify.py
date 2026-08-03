@@ -225,3 +225,17 @@ def test_legacy_credentials_migration(client, auth_headers):
     assert anthropic_key["has_api_key"] is True
     assert anthropic_key["model"] == "claude-opus-4.8"
 
+
+def test_link_google_endpoint_success(client, auth_headers):
+    response = client.post(
+        "/api/auth/link-google",
+        json={"google_email": "hj2713@columbia.edu"},
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["google_email"] == "hj2713@columbia.edu"
+    assert "successfully linked" in data["message"]
+
+

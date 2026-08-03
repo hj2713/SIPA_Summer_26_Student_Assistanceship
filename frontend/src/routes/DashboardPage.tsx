@@ -894,7 +894,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
             </td>
             <td className="px-4 py-3">
               {doc.metadata?.category ? (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${getCategoryColor(doc.metadata.category)}`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border capitalize ${getCategoryColor(doc.metadata.category)}`}>
                   {doc.metadata.category}
                 </span>
               ) : <span className="text-muted-foreground">-</span>}
@@ -930,14 +930,14 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
                   const campInfo = (campaignDocumentMapping[doc.id] || []).find((c: any) => c.campaignId === selectedCampaignFilter);
                   if (!campInfo) {
                     return (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-muted text-muted-foreground">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md border bg-muted text-muted-foreground">
                         Not Linked
                       </span>
                     );
                   }
                   return (
                     <div className="inline-flex items-center gap-1.5 relative group cursor-help">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                         campInfo.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                         campInfo.status === 'failed' ? 'bg-destructive/10 text-destructive border-destructive/20 font-bold' :
                         'bg-blue-500/10 text-blue-500 border-blue-500/20 animate-pulse'
@@ -967,7 +967,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
                   );
                 })()
               ) : (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                   doc.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                   doc.status === 'failed' ? 'bg-destructive/10 text-destructive border-destructive/20' :
                   'bg-blue-500/10 text-blue-500 border-blue-500/20 animate-pulse'
@@ -1142,11 +1142,11 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-extrabold text-sm text-foreground">Campaign: {activeCampaignObj.name}</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1 shadow-2xs">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                       Flow: {activeCampaignObj.campaign_flow || (activeCampaignObj.workflow_id ? `Workflow (${activeCampaignObj.workflow_id})` : "RAG Structured Extraction Flow")}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-2xs">
                       🔒 Structure Frozen
                     </span>
                   </div>

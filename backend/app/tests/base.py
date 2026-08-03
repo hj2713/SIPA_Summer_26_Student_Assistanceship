@@ -81,7 +81,7 @@ class SafeTestCursor:
                     elif "DASHBOARDS" in query_upper:
                         query = query.rstrip().rstrip(";") + " ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, prompt=EXCLUDED.prompt, schema=EXCLUDED.schema;"
                     elif "DOCUMENTS" in query_upper:
-                        query = query.rstrip().rstrip(";") + " ON CONFLICT (id) DO UPDATE SET filename=EXCLUDED.filename, file_path=EXCLUDED.file_path, file_size=EXCLUDED.file_size, content_type=EXCLUDED.content_type, status=EXCLUDED.status, error_message=EXCLUDED.error_message, content_hash=EXCLUDED.content_hash, metadata=EXCLUDED.metadata;"
+                        query = query.rstrip().rstrip(";") + " ON CONFLICT (workspace_id, filename) DO UPDATE SET file_path=EXCLUDED.file_path, file_size=EXCLUDED.file_size, content_type=EXCLUDED.content_type, status=EXCLUDED.status, error_message=EXCLUDED.error_message, content_hash=EXCLUDED.content_hash, metadata=EXCLUDED.metadata;"
                         
         return query
 

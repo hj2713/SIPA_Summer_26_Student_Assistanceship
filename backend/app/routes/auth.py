@@ -434,9 +434,28 @@ def link_google(payload: LinkGoogleRequest, current_user: CurrentUserDep):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Google email cannot be empty"
         )
+
+    user_email = current_user.email or "test@test.com"
+
+    with get_db_session() as session:
+        # Check if Google email is already claimed by a dummy user row
+        existing_user = session.users.get_by_email(google_email)
+        if existing_user and existing_user["id"] != current_user.id:
+            try:
+                # Re-assign or archive dummy user email
+                session.users.update(existing_user["id"], {"email": f"linked_{existing_user['id']}@archived.local"})
+            except Exception as e:
+                logger.warning("Could not reassign dummy user email: %s", e)
+
+        # Ensure current user row exists and update email alias
+        try:
+            session.users.update(current_user.id, {"email": google_email})
+        except Exception as e:
+            logger.warning("Could not update primary user email: %s", e)
+
     return {
         "status": "success",
-        "message": f"Account {current_user.email} successfully linked with Google account ({google_email}).",
+        "message": f"Account {user_email} successfully linked with Google account ({google_email}).",
         "user_id": current_user.id,
         "google_email": google_email,
     }

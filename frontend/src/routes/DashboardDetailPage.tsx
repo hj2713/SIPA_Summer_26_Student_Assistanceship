@@ -17,6 +17,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { ColumnDependencySelector } from "@/components/dashboard/ColumnDependencySelector";
+import { useAvailableModels } from "@/hooks/useAvailableModels";
 
 interface Campaign {
   id: string;
@@ -175,6 +176,7 @@ export function DashboardDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { session } = useAuthContext();
+  const { availableModels, loading: modelsLoading } = useAvailableModels();
   const jwt = session?.access_token ?? "";
 
   // Data States
@@ -1867,15 +1869,21 @@ export function DashboardDetailPage() {
                 <div className="flex items-center gap-1.5 border rounded-md px-2 bg-background h-9 text-xs">
                   <span className="text-muted-foreground font-medium">Coding Model:</span>
                   <select
-                    value={campaign?.model || "gemini-3.1-flash-lite-preview"}
+                    value={campaign?.model || (availableModels[0]?.value || "")}
                     onChange={(e) => handleUpdateModel(e.target.value)}
-                    className="bg-transparent border-none focus:outline-none pr-4 text-xs font-semibold cursor-pointer"
+                    className="bg-transparent border-none focus:outline-none pr-4 text-xs font-semibold cursor-pointer text-foreground"
                   >
-                    <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                    <option value="gpt-4o">GPT-4o</option>
+                    {availableModels.length > 0 ? (
+                      availableModels.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {modelsLoading ? "Loading models..." : "No Saved API Keys (Add in Settings)"}
+                      </option>
+                    )}
                   </select>
                 </div>
 

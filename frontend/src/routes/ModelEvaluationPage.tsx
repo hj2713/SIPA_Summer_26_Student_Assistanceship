@@ -18,6 +18,7 @@ import {
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { WorkflowTraceGraph } from "@/features/workflows/WorkflowTraceGraph";
 import { workflowApi } from "@/lib/workflowApi";
+import { useAvailableModels } from "@/hooks/useAvailableModels";
 import type { WorkflowDefinition } from "@/types/workflow";
 
 interface Campaign {
@@ -258,52 +259,6 @@ function numericValue(value: unknown): number | null {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-const ALL_PRICING_MODELS = [
-  "gemini-3.5-flash",
-  "gemini-3.1-pro",
-  "gemini-3.1-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-  "gpt-4o-mini",
-  "gpt-4o",
-  "gpt-5.5-pro",
-  "gpt-5.5",
-  "gpt-5.4",
-  "gpt-5.4-mini",
-  "gpt-5.4-nano",
-  "o3-mini",
-  "o1-preview",
-  "o1-mini",
-  "o1",
-  "claude-3-5-sonnet",
-  "claude-opus-4.8",
-  "claude-sonnet-5",
-  "claude-sonnet-4.6",
-  "claude-haiku-4.5",
-  "deepseek-v4-pro",
-  "deepseek-v4-flash",
-  "deepseek-r1",
-  "deepseek-chat",
-  "nousresearch/hermes-3-llama-3.1-405b",
-  "qwen/qwen3-235b-a22b-2507",
-  "deepseek/deepseek-v4-pro",
-  "z-ai/glm-5.2",
-  "kimi-k2.7-code",
-  "kimi-k2.6",
-  "kimi-k2.5",
-  "kimi",
-  "moonshot",
-  "mistral-large",
-  "mistral-codestral",
-  "mistral-nemo",
-  "minimax-01",
-  "mistral-small-2603",
-  "qwen3.7-plus",
-  "granite-4.1-8b"
-];
-
 const MODEL_USAGE_ALIASES: Record<string, string[]> = {
   "deepseek-chat": ["deepseek-v4-flash"],
 };
@@ -444,11 +399,19 @@ export function ModelEvaluationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Create Campaign State
+  const { availableModels, hasSavedKeys } = useAvailableModels();
+  const selectableModels = availableModels.map((m) => m.value);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [createWorkflowId, setCreateWorkflowId] = useState("");
-  const [selectedModels, setSelectedModels] = useState<string[]>(["gemini-1.5-flash", "gpt-4o-mini"]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectableModels.length > 0 && selectedModels.length === 0) {
+      setSelectedModels([selectableModels[0]]);
+    }
+  }, [selectableModels]);
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
   const [searchModelQuery, setSearchModelQuery] = useState("");
@@ -2406,7 +2369,7 @@ export function ModelEvaluationPage() {
             <div className="flex justify-between items-center mb-8 border-b pb-6 border-border/40">
               <div>
                 <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  Model Evaluation Dashboard
+                  Workflow Evaluation Dashboard
                 </h1>
                 <p className="text-muted-foreground mt-1.5 text-sm">
                   Test and compare document classification accuracy and API costs across multiple LLMs side-by-side.
@@ -2603,7 +2566,7 @@ export function ModelEvaluationPage() {
                         Close
                       </button>
                     </div>
-                    {ALL_PRICING_MODELS
+                    {selectableModels
                       .filter(m => m.toLowerCase().includes(searchModelQuery.toLowerCase()))
                       .map(model => {
                         const isSelected = selectedModels.includes(model);
@@ -2621,9 +2584,9 @@ export function ModelEvaluationPage() {
                           </div>
                         );
                       })}
-                    {ALL_PRICING_MODELS.filter(m => m.toLowerCase().includes(searchModelQuery.toLowerCase())).length === 0 && (
+                    {selectableModels.filter(m => m.toLowerCase().includes(searchModelQuery.toLowerCase())).length === 0 && (
                       <div className="px-3 py-4 text-xs text-muted-foreground italic text-center">
-                        No matches found. Press Enter or click "Add Custom" to use "{searchModelQuery}".
+                        {hasSavedKeys ? "No matches found." : "No saved API Keys found. Please configure provider keys in Settings."}
                       </div>
                     )}
                   </div>
@@ -2886,7 +2849,7 @@ export function ModelEvaluationPage() {
                         Close
                       </button>
                     </div>
-                    {ALL_PRICING_MODELS
+                    {selectableModels
                       .filter(m => m.toLowerCase().includes(newModelToAdd.toLowerCase()))
                       .map(model => {
                         const isAlreadyPresent = campaign?.model.split(",").map(m => m.trim()).includes(model);

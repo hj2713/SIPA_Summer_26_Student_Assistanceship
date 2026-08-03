@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class CurrentUser(BaseModel):
     """Decoded JWT payload, passed through FastAPI Depends."""
     id: str
+    email: str | None = None
     jwt: str  # raw token
     is_admin: bool = False
     can_add: bool = False

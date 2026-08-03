@@ -8,19 +8,13 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { useChat } from "@/hooks/useChat";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useThreads } from "@/hooks/useThreads";
+import { useAvailableModels } from "@/hooks/useAvailableModels";
 import type { Document } from "@/types/document";
-
-const AVAILABLE_MODELS = [
-  { value: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite" },
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-  { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-  { value: "gpt-4o", label: "GPT-4o" },
-];
 
 export function ChatPage() {
   const { id: threadId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { availableModels, loading: modelsLoading } = useAvailableModels();
   const { messages, streaming, draftContent, activeTool, sendMessage, stopGeneration } = useChat(
     threadId ?? null
   );
@@ -29,7 +23,7 @@ export function ChatPage() {
   const [pinnedDocuments, setPinnedDocuments] = useState<Document[]>([]);
 
   const activeThread = threads.find((t) => t.id === threadId);
-  const currentModel = activeThread?.model || "gemini-3.1-flash-lite-preview";
+  const currentModel = activeThread?.model || (availableModels[0]?.value || "");
 
   const handleSend = async (text: string) => {
     try {
@@ -109,11 +103,17 @@ export function ChatPage() {
                     }}
                     className="rounded-xl border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                   >
-                    {AVAILABLE_MODELS.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
+                    {availableModels.length > 0 ? (
+                      availableModels.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {modelsLoading ? "Loading models..." : "No Saved API Keys (Add in Settings)"}
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
                 <ThemeToggle />

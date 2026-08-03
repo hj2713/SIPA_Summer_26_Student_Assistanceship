@@ -120,6 +120,10 @@ def get_workspace_id(workspace_id: str = None) -> str:
     else:
         resolved = get_active_workspace()
 
+    if resolved in ("QA", "TEST"):
+        resolved = "PRODUCTION"
+        set_active_workspace("PRODUCTION")
+
     # Ensure each workspace exists once per process. Rechecking the same row on
     # every request adds an avoidable database round trip to all paginated calls.
     from app.repositories import get_db_session

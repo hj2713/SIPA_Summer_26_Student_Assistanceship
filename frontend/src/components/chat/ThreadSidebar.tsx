@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useThreads } from "@/hooks/useThreads";
 import { useAuthContext } from "@/context/AuthContext";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { Thread } from "@/types/thread";
 import { cn } from "@/lib/utils";
 
@@ -78,30 +79,39 @@ export function ThreadSidebar() {
   };
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-muted/30">
-      {/* Workspace Selector */}
-      <div className="p-3 pb-2 border-b border-muted/50">
-        <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block mb-1">
-          Active Workspace
-        </label>
+    <aside className="flex h-full w-64 flex-col border-r border-border/50 bg-card/40 backdrop-blur-md">
+      {/* Workspace & Theme Header */}
+      <div className="p-3 border-b border-border/50 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+            Active Workspace
+          </label>
+          <ThemeToggle />
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-between font-semibold border-muted-foreground/20 hover:bg-muted px-2.5"
+                className="w-full justify-between font-semibold border-border/60 hover:bg-muted/80 px-2.5 h-9 rounded-xl text-xs"
               >
-                <span className="truncate">{activeWorkspace?.name ?? "Select Workspace"}</span>
+                <span className="truncate flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  {activeWorkspace?.name ?? "Select Workspace"}
+                </span>
                 <span className="text-[10px] text-muted-foreground ml-1">▼</span>
               </Button>
             }
           />
-          <DropdownMenuContent className="w-56" align="start">
-            {workspaces.map((w) => (
+          <DropdownMenuContent className="w-56 rounded-xl" align="start">
+            {workspaces.filter(w => w.id !== "QA" && w.id !== "TEST").map((w) => (
               <DropdownMenuItem
                 key={w.id}
-                className={cn(activeWorkspace?.id === w.id && "bg-muted font-bold")}
+                className={cn(
+                  "rounded-lg cursor-pointer text-xs font-medium",
+                  activeWorkspace?.id === w.id && "bg-primary/10 text-primary font-bold"
+                )}
                 onClick={() => setActiveWorkspace(w)}
               >
                 {w.name}
@@ -109,7 +119,7 @@ export function ThreadSidebar() {
             ))}
             <Separator className="my-1" />
             <DropdownMenuItem
-              className="text-primary font-medium focus:text-primary cursor-pointer"
+              className="text-primary font-semibold text-xs cursor-pointer focus:text-primary"
               onClick={() => setShowWorkspaceModal(true)}
             >
               + Create Workspace
@@ -119,24 +129,24 @@ export function ThreadSidebar() {
       </div>
 
       <div className="p-3">
-        <Button onClick={handleNewThread} className="w-full" size="sm">
-          + New chat
+        <Button onClick={handleNewThread} className="w-full h-9 rounded-xl font-semibold text-xs gap-1.5 shadow-sm" size="sm">
+          + New Chat
         </Button>
       </div>
-      <Separator />
+      <Separator className="opacity-50" />
 
       {/* Inline Workspace Creation Modal */}
       {showWorkspaceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowWorkspaceModal(false)}>
-          <div className="w-full max-w-sm rounded-lg border bg-background p-6 shadow-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-2">Create Workspace</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setShowWorkspaceModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-foreground mb-1">Create Workspace</h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Enter a name for the new workspace. Files and search queries will be isolated within this workspace.
+              Enter a unique workspace identifier (e.g., LEGAL, FINANCE).
             </p>
             <input
               type="text"
-              placeholder="e.g. TEST, MARKETING"
-              className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mb-4 uppercase"
+              placeholder="e.g. LEGAL, MARKETING"
+              className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary mb-4 uppercase"
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
               onKeyDown={(e) => {
@@ -267,72 +277,24 @@ export function ThreadSidebar() {
         </Button>
 
         <Button
-          variant={pathname.startsWith("/campaigns") ? "secondary" : "outline"}
+          variant={(pathname.startsWith("/campaigns") || pathname.startsWith("/evaluation")) ? "secondary" : "outline"}
           size="sm"
-          className="w-full gap-2"
+          className="w-full gap-2 font-medium text-xs"
           onClick={() => navigate("/campaigns")}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M3 9h18" />
             <path d="M9 21V9" />
+            <line x1="18" y1="20" x2="18" y2="14" />
           </svg>
-          Research Campaigns
+          Campaigns & Model Evaluation
         </Button>
 
         <Button
-          variant={pathname.startsWith("/evaluation") ? "secondary" : "outline"}
+          variant={(pathname.startsWith("/documents") || pathname.startsWith("/dashboard")) ? "secondary" : "outline"}
           size="sm"
-          className="w-full gap-2"
-          onClick={() => navigate("/evaluation")}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10" />
-            <line x1="12" y1="20" x2="12" y2="4" />
-            <line x1="6" y1="20" x2="6" y2="14" />
-          </svg>
-          Model Evaluation
-        </Button>
-
-        <Button
-          variant={pathname.startsWith("/dashboard") ? "secondary" : "outline"}
-          size="sm"
-          className="w-full gap-2"
-          onClick={() => navigate("/dashboard")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect width="7" height="9" x="3" y="3" rx="1" />
-            <rect width="7" height="5" x="14" y="3" rx="1" />
-            <rect width="7" height="9" x="14" y="12" rx="1" />
-            <rect width="7" height="5" x="3" y="16" rx="1" />
-          </svg>
-          Document Dashboard
-        </Button>
-
-        <Button
-          variant={pathname.startsWith("/documents") ? "secondary" : "outline"}
-          size="sm"
-          className="w-full gap-2"
+          className="w-full gap-2 font-medium text-xs"
           onClick={() => navigate("/documents")}
         >
           <svg
@@ -346,11 +308,13 @@ export function ThreadSidebar() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <ellipse cx="12" cy="5" rx="9" ry="3" />
-            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-            <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <line x1="10" y1="9" x2="8" y2="9"/>
           </svg>
-          Manage Documents
+          Documents & Dashboards
         </Button>
 
         <Button

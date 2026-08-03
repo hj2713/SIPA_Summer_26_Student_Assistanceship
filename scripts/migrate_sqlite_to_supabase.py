@@ -97,7 +97,6 @@ def migrate():
 
     # Always ensure system default workspace and user exist first
     pg_cur.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT (id) DO NOTHING;")
-    pg_cur.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT (id) DO NOTHING;")
     pg_cur.execute("""
         INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete)
         VALUES ('00000000-0000-0000-0000-000000000001', 'test@test.com', 'hash', 1, 1, 1)

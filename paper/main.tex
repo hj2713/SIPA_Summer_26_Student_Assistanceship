@@ -20,6 +20,7 @@
 \usepackage{subcaption}
 \usepackage{placeins}
 \usepackage{float}
+\usepackage{threeparttable}
 
 \definecolor{navy}{HTML}{17365D}
 \definecolor{blue}{HTML}{2F75B5}
@@ -76,13 +77,10 @@ Researchers studying political institutions routinely convert complex legal text
 Large language models offer a scalable approach to legal coding. However, one-shot classification collapses these linked judgments into a single output. A model may assign the correct rank for the wrong reason, produce a rank inconsistent with its stated assessment of delegation or constraints, or make errors that cannot be traced to a specific coding decision. Single-prompt approaches are therefore difficult to audit, revise, and reproduce across models and runs. A replicable measurement system must instead decompose the construct into ordered judgments, preserve the evidence and intermediate outputs, and apply the coding rules consistently.
 
 We address this problem with a theory-guided workflow that turns the measurement model into an executable sequence of decisions. First, the workflow determines whether a law delegates qualifying authority. If it does, the system separately classifies the amount of authority and the strength of statutory constraints before combining those judgments to assign a discretion rank. We implement the workflow in \systemname{}, a research prototype that executes and records prompts, settings, intermediate outputs, and validation rules within a versioned, auditable framework. This paper makes four principal contributions:
-\begin{enumerate}
+\begin{enumerate}[nosep]
     \item \textbf{Replicable measurement instrument.} We develop an LLM-based instrument for measuring legal delegation and administrative discretion. The complete workflow, rather than an isolated prompt, is archived, versioned, and auditable.
-
     \item \textbf{Theory-guided workflow.} We translate an established formal model of delegation and discretion into an executable measurement workflow. The model identifies the concepts and relationships that define the variables used in empirical tests.
-    
     \item \textbf{Transparent validation.} We separate generative LLM judgments from deterministic theoretical mappings and preserve the intermediate evidence needed to diagnose disagreements.
-    
     \item \textbf{Research-facing prototype.} We enable domain researchers to apply and inspect the measurement process without directly managing prompts, APIs, model orchestration, or structured-output parsing.
 \end{enumerate}
 
@@ -287,7 +285,7 @@ This dependency structure addresses a recurrent failure of independent-column co
 \subsection{Workflow primitives}
 
 The implemented engine supports several node types:
-\begin{enumerate}
+\begin{enumerate}[nosep]
   \item \textbf{Document Input nodes} ingest the source text and attach stable metadata (such as public law numbers and publication years) to define a unique document instance.
   \item \textbf{LLM nodes} send natural language prompts and source texts to the selected model provider, parsing the structured JSON output into typed fields (booleans, strings, enums, lists).
   \item \textbf{Condition nodes} evaluate boolean expressions (e.g., matching the output of a prior delegation gate) and route the execution path to the appropriate successor branch.
@@ -404,22 +402,22 @@ Formal approval workflow & & & Yes \\
 
 Human expertise enters before, during, and after model execution. Before execution, domain experts define the construct, identify its constituent dimensions, delimit the source universe, specify coding rules, and determine the relationships that the model must preserve. During evaluation, experts distinguish extraction errors from conceptual boundary cases. After evaluation, they decide whether a disagreement warrants a local case correction, a revision of the operational rule, or reconsideration of the historical benchmark.
 
-Human-in-the-loop design is the mechanism by which the theoretically structured measurement instrument is governed and validated. Case corrections are local and do not silently alter subsequent classifications; general codebook adjustments are promoted explicitly through versioned workflow releases.
+Human-in-the-loop design is the mechanism by which the theoretically structured measurement instrument is governed and validated.
 
 \subsection{Method-level revision}
 
-At the method level, researchers revise the codebook, source policy, stage prompts, dependencies, output definitions, and deterministic mappings. A method-level revision changes the general measurement rule and should therefore create a new version and controlled rerun before adoption. This protects the comparability of coded observations across documents and model runs.
+At the method level, researchers revise the codebook, source policy, stage prompts, dependencies, output definitions, and deterministic mappings. A method-level revision changes the general measurement rule and creates a new version to protect comparability across model runs.
 \subsection{Case-level adjudication}
 
 For an individual coded law, a researcher can inspect final values and node-by-node execution traces, manually override a selected value and rationale, or request AI re-evaluation with corrective feedback. History distinguishes initial AI output, manual override, and AI re-evaluation. A manual correction is local to that law; it does not automatically change the codebook, the prompt, or other cases.
 
-This separation is scientifically useful. Case correction protects the dataset from a known error, whereas method revision changes the coding rule. The prototype therefore avoids an opaque ``learning'' process in which corrections silently alter subsequent classifications.
+Case correction protects the dataset from a known error without altering the underlying coding rule, avoiding opaque automated learning processes.
 
 \section{Benchmark and Experimental Design}
 
 \subsection{Benchmark and source discipline}
 
-The benchmark consists of U.S. financial-regulation laws previously published and adjudicated under a consistent coding protocol. The evaluation corpus contains $N=169$ statutory summaries covering the period 1950--2013, consisting of 161 delegation-positive and 8 delegation-negative laws. We treat these observations as the operational benchmark for replicating measurements, not as infallible legal truth. The source universe is methodologically important: the benchmark labels were produced from CQ summaries, so benchmark runs use the same summary-level information set to maintain consistency.
+The benchmark consists of U.S. financial-regulation laws previously published and adjudicated under a consistent coding protocol. The evaluation corpus contains $N=169$ statutory summaries covering the period 1950--2013, consisting of 161 delegation-positive and 8 delegation-negative laws. We treat these observations as an operational benchmark for replicating measurements and not as an infallible legal truth. The source universe is methodologically important: the benchmark labels were derived from legislative summaries, so benchmark runs use the same set of summary-level information to maintain consistency.
 
 \subsection{Evaluation levels}
 
@@ -428,7 +426,7 @@ The empirical evaluation asks whether LLMs can reproduce a theory-based measurem
 We separate the evaluation into two distinct prediction tasks:
 \begin{enumerate}
     \item \textbf{Delegation Stage}: Binary delegation classification evaluated on the full available delegation benchmark ($N=169$).
-    \item \textbf{Residual Discretion Stage}: Ordinal rank classification ($1$--$4$) evaluated only when a qualifying delegation exists.
+    \item \textbf{Residual Discretion Stage}: Ordinal rank classification ($1$--$4$) is evaluated only when a qualifying delegation exists.
 \end{enumerate}
 
 
@@ -470,7 +468,7 @@ The experimental protocol is specified as follows:
 
 \subsection{Metrics}
 
-For the binary delegation task, we report accuracy, balanced accuracy, class-specific precision and recall, macro-F1. For the ordinal discretion task, we report exact-match accuracy, within-one accuracy, mean absolute error, linear weighted kappa, quadratic weighted kappa, and the ordinal confusion matrix.
+For the binary delegation task, we report accuracy, balanced accuracy, class-specific precision and recall, macro-F1. For the ordinal discretion task, we report exact-match accuracy, within-one accuracy, mean absolute error, linear weighted kappa, and quadratic weighted kappa.
 
 \section{Experimental Findings}
 
@@ -501,8 +499,7 @@ TP / FN / TN / FP & 156 / 5 / 4 / 4 & 148 / 13 / 7 / 1 \\
 \end{tabular}
 \end{table}
 
-While the High-Recall Screen baseline yields slightly higher raw accuracy due to the extreme class imbalance, the conservative Delegation Gate detects seven of the eight rare negative cases, producing a substantially higher balanced accuracy and macro-F1.
-
+While the High-Recall Screen baseline yields slightly higher raw accuracy because of the extreme class imbalance, the conservative Delegation Gate detects seven of the eight rare negative cases, producing substantially higher balanced accuracy and slightly higher macro-F1.
 
 \subsection{Diagnosing disagreement}
 
@@ -562,7 +559,7 @@ Table~\ref{tab:multimodel_large} reports the cross-model evaluation of the three
 
 For Gemini 3.5, Direct Multiclass Rank Prediction reports the strongest aggregate results among the reported configurations. Exact-match accuracy increases from 28.6\% for the unconstrained One-Shot Baseline to 41.9\%, while within-one accuracy rises from 62.1\% to 76.9\% and mean absolute error falls from 1.250 to 0.915. Here, the One-Shot Baseline serves as an illustrative comparison for Gemini 3.5, demonstrating workflow gains rather than a universal empirical result across all models.
 
-Within-one accuracy exceeds exact-match accuracy across all configurations, indicating that many errors are adjacent. However, errors of two or more ranks remain non-de minimis for several model-strategy combinations, and weighted kappa remains low. Overall, the models show partial ordinal agreement with the historical expert-coded benchmark.
+% Within-one accuracy exceeds exact-match accuracy across all configurations, indicating that many errors are adjacent. However, errors of two or more ranks remain non-de minimis for several model-strategy combinations, and weighted kappa remains low. Overall, the models show partial ordinal agreement with the historical expert-coded benchmark.
 
 
 \subsection{Limitations}
@@ -590,7 +587,8 @@ The current prototype can be replicated through the following research-facing se
 
 \section{Future Work}
 
-Future work will evaluate the workflow on a held-out set of laws, measure component-level authority and constraint performance, and test external validity in an additional policy domain. We will also expand the one-shot baseline evaluation across all open and commercial LLM backends to further demonstrate replicability across diverse legal corpora and evolving models. Further system work will strengthen workflow-version comparison, approval controls, and case-adjudication interfaces. Independent expert recoding would also permit direct estimation of intercoder reliability and clarify the upper bound on model-benchmark agreement.
+Future work will evaluate the workflow on a held-out set of laws, measure component-level authority and constraint performance, and test external validity in an additional policy domain. We will also expand the one-shot baseline evaluation across all open and commercial LLM backends to further demonstrate replicability across diverse legal corpora and evolving models. Independent expert recoding would also permit direct estimation of intercoder reliability and clarify the upper bound on model-benchmark agreement.
+
 
 \section{Conclusion}
 
@@ -600,6 +598,7 @@ The methodological challenge is to make that theory executable at scale without 
 
 The resulting system is a replicable measurement instrument whose computational structure is guided by an established theory of delegation and discretion. Replicability is the primary contribution; theory-guided design explains why the workflow's stages, dependencies, and validation rules are substantively meaningful. The system does not remove judgment from institutional measurement; instead, it makes judgment explicit, structured, inspectable, and reproducible.
 
+\IEEEtriggeratref{10}
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 

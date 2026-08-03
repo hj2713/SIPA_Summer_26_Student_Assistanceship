@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthContext } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { LoginPage } from "@/routes/LoginPage";
@@ -21,33 +22,35 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<Navigate to="/login" replace />} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<Navigate to="/login" replace />} />
 
-          {/* Protected routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/chat/:id" element={<ChatPage />} />
-            <Route path="/documents" element={<DocumentsPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/campaigns" element={<DashboardListPage />} />
-            <Route path="/campaigns/:id" element={<DashboardDetailPage />} />
-            <Route path="/evaluation" element={<ModelEvaluationPage />} />
-            <Route path="/evaluation/:id" element={<ModelEvaluationPage />} />
-            <Route path="/workflows" element={<WorkflowLibraryPage />} />
-            <Route path="/workflows/:id" element={<WorkflowBuilderPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/chat/:id" element={<ChatPage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/campaigns" element={<DashboardListPage />} />
+              <Route path="/campaigns/:id" element={<DashboardDetailPage />} />
+              <Route path="/evaluation" element={<ModelEvaluationPage />} />
+              <Route path="/evaluation/:id" element={<ModelEvaluationPage />} />
+              <Route path="/workflows" element={<WorkflowLibraryPage />} />
+              <Route path="/workflows/:id" element={<WorkflowBuilderPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/chat" replace />} />
-        </Routes>
-        <Toaster richColors position="top-right" />
-      </AuthProvider>
-    </BrowserRouter>
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/chat" replace />} />
+          </Routes>
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

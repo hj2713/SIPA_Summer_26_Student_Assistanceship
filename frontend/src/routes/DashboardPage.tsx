@@ -23,7 +23,7 @@ interface FolderNode {
   children: { [key: string]: FileNode | FolderNode };
 }
 
-export function DashboardPage() {
+export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }) {
   const navigate = useNavigate();
   const { user, session, activeWorkspace } = useAuthContext();
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -46,6 +46,10 @@ export function DashboardPage() {
     totalDocuments,
   } = useDocuments({ pageSize: 50 });
   const visibleDocumentIdsKey = useMemo(() => documents.map((doc) => doc.id).join(","), [documents]);
+  const activeCampaignObj = useMemo(() => {
+    if (!selectedCampaignFilter) return null;
+    return campaigns.find((c) => c.id === selectedCampaignFilter) || null;
+  }, [selectedCampaignFilter, campaigns]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
@@ -1020,7 +1024,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground">
-      <ThreadSidebar />
+      {!hideSidebar && <ThreadSidebar />}
       <div ref={containerRef} className="flex-1 flex h-full relative overflow-hidden">
         {/* Transparent Overlay during resizing to block iframe focus capture */}
         {isResizing && (
@@ -1132,6 +1136,36 @@ export function DashboardPage() {
                 ))}
               </select>
             </div>
+
+            {activeCampaignObj && (
+              <div className="p-4 rounded-2xl border border-border/60 bg-card/40 flex flex-wrap items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-extrabold text-sm text-foreground">Campaign: {activeCampaignObj.name}</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                      Flow: {activeCampaignObj.campaign_flow || (activeCampaignObj.workflow_id ? `Workflow (${activeCampaignObj.workflow_id})` : "RAG Structured Extraction Flow")}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                      🔒 Structure Frozen
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Created by: <strong className="text-foreground">{activeCampaignObj.created_by || "test@test.com"}</strong> • Engine Model: <span className="font-mono">{activeCampaignObj.model || "gemini-3.1-flash-lite"}</span>
+                  </p>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/evaluation?dashboard_id=${activeCampaignObj.id}`)}
+                  className="text-xs gap-1.5 font-semibold rounded-xl border-border/80 hover:bg-muted/50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  Run Model Evaluation Benchmark
+                </Button>
+              </div>
+            )}
 
             {selectedDocIds.size > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-200">
@@ -1521,3 +1555,8 @@ export function DashboardPage() {
     </div>
   );
 }
+
+export function DashboardPage() {
+  return <DashboardView hideSidebar={false} />;
+}
+

@@ -125,6 +125,9 @@ class CampaignService:
             workflow_revision=row.get("workflow_revision"),
             created_at=row["created_at"],
             token_limit=row.get("token_limit"),
+            created_by=row.get("created_by") or row.get("created_by_email") or "test@test.com",
+            campaign_flow=row.get("campaign_flow") or (f"Workflow Engine ({row.get('workflow_id')})" if row.get("workflow_id") else "RAG Structured Extraction Flow"),
+            is_frozen=bool(row.get("is_frozen", 1)),
         )
 
     def _parse_workflow_json(self, raw: Any, fallback: Any) -> Any:
@@ -215,7 +218,10 @@ class CampaignService:
             "workflow_version": workflow_version,
             "workflow_revision": workflow_revision,
             "workflow_definition_json": workflow_definition_json,
-            "token_limit": payload.token_limit
+            "token_limit": payload.token_limit,
+            "created_by": payload.created_by or "test@test.com",
+            "campaign_flow": payload.campaign_flow or (f"Workflow Engine ({workflow_id})" if workflow_id else "RAG Structured Extraction Flow"),
+            "is_frozen": 1
         }
 
         with self.db_session_factory() as session:
@@ -280,6 +286,12 @@ class CampaignService:
             model = payload.model if payload.model is not None else row.get("model")
 
             if payload.schema_fields is not None:
+                if bool(row.get("is_frozen", 1)):
+                    from fastapi import HTTPException, status
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Dashboard schema structure is frozen once created and cannot be modified."
+                    )
                 try:
                     old_schema = json.loads(row["schema"]) if isinstance(row["schema"], str) else (row["schema"] or [])
                 except Exception:

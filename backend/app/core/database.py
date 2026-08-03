@@ -717,6 +717,12 @@ def init_sqlite_db():
             except sqlite3.OperationalError:
                 pass
 
+        for col, col_type in [("created_by", "TEXT DEFAULT 'test@test.com'"), ("campaign_flow", "TEXT DEFAULT 'RAG Structured Extraction Flow'"), ("is_frozen", "INTEGER DEFAULT 1")]:
+            try:
+                conn.execute(f"ALTER TABLE dashboards ADD COLUMN {col} {col_type};")
+            except sqlite3.OperationalError:
+                pass
+
         # Create indexes
         conn.execute("CREATE INDEX IF NOT EXISTS idx_threads_user_updated ON threads (user_id, updated_at DESC);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, created_at ASC);")

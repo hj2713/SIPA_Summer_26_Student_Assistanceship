@@ -32,6 +32,9 @@ async def create_campaign(
             detail="You do not have permission to create campaigns."
         )
 
+    if not payload.created_by:
+        payload.created_by = current_user.email
+
     # Skip prompt schema generation if this campaign is linked to a workflow
     if payload.workflow_id:
         generated = {"description": payload.description or "Workflow evaluation campaign.", "schema": []}

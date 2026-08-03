@@ -29,6 +29,8 @@ export interface AuthContextValue {
   workspaces: Workspace[];
   activeWorkspace: Workspace | null;
   setActiveWorkspace: (workspace: Workspace) => void;
+  linkGoogleAccount: (googleEmail: string) => Promise<void>;
+  inviteMember: (email: string) => Promise<void>;
   createWorkspace: (name: string) => Promise<Workspace>;
   refreshWorkspaces: () => Promise<void>;
 }

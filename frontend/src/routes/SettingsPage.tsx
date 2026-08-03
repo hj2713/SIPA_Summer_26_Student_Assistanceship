@@ -4,9 +4,10 @@ import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, TrendingUp, Cpu, Coins, KeyRound, Save, ShieldCheck } from "lucide-react";
+import { Loader2, TrendingUp, Cpu, Coins, KeyRound, ShieldCheck, Users, UserPlus } from "lucide-react";
 import { API_BASE_URL } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
+import { HeaderBar } from "@/components/ui/HeaderBar";
 
 interface UsageSummary {
   input_tokens: number;
@@ -58,36 +59,93 @@ const DEFAULT_MODEL_BY_PROVIDER: Record<LLMCredentialsSettings["provider"], stri
   anthropic: "claude-3-5-sonnet-latest",
 };
 
-const UI_PROVIDER_DEFAULTS = {
-  google: { provider: "gemini", model: "gemini-3.1-flash-lite-preview", base_url: "" },
-  anthropic: { provider: "anthropic", model: "claude-3-5-sonnet-latest", base_url: "" },
-  openai: { provider: "openai", model: "gpt-4o-mini", base_url: "" },
-  openrouter: { provider: "openrouter", model: "openai/gpt-4o-mini", base_url: "https://openrouter.ai/api/v1" },
-  deepseek: { provider: "openrouter", model: "deepseek/deepseek-chat", base_url: "https://openrouter.ai/api/v1" },
-  kimi: { provider: "openrouter", model: "moonshotai/kimi-latest", base_url: "https://openrouter.ai/api/v1" },
-} as const;
-
 export function SettingsPage() {
-  const { session } = useAuthContext();
+  const { session, user, activeWorkspace, linkGoogleAccount, inviteMember } = useAuthContext();
   const jwt = session?.access_token ?? "";
 
   const [timeframe, setTimeframe] = useState<"last_hour" | "last_day" | "last_7_days" | "all">("last_day");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UsageStatsResponse | null>(null);
   const [credentialsLoading, setCredentialsLoading] = useState(true);
-  const [credentialsSaving, setCredentialsSaving] = useState(false);
   const [credentials, setCredentials] = useState<LLMCredentialsSettings>({
     provider: "gemini",
     model: DEFAULT_MODEL_BY_PROVIDER.gemini,
     base_url: "",
     has_api_key: false,
   });
-  const [apiKeyInput, setApiKeyInput] = useState("");
 
-  const [uiProvider, setUiProvider] = useState<"google" | "anthropic" | "openai" | "openrouter" | "deepseek" | "kimi">("google");
-  const [verifiedModels, setVerifiedModels] = useState<string[]>([]);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [useCustomModelInput, setUseCustomModelInput] = useState(false);
+  const [googleEmailInput, setGoogleEmailInput] = useState("");
+  const [providerKeysInput, setProviderKeysInput] = useState<Record<string, string>>({});
+  const [verifyingProvider, setVerifyingProvider] = useState<Record<string, boolean>>({});
+
+  const handleVerifyAndSaveProviderKey = async (providerId: string, apiKey: string) => {
+    if (!apiKey.trim()) {
+      toast.error(`Please enter an API key for ${providerId.toUpperCase()}`);
+      return;
+    }
+    setVerifyingProvider((prev) => ({ ...prev, [providerId]: true }));
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          provider: providerId,
+          api_key: apiKey.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `API Key test call failed for ${providerId.toUpperCase()}`);
+      }
+      toast.success(`API Key verified & safely encrypted in DB for ${providerId.toUpperCase()}! Loaded ${data.models.length} models.`);
+      setProviderKeysInput((prev) => ({ ...prev, [providerId]: "" }));
+      await fetchCredentials();
+    } catch (err: any) {
+      toast.error(err.message || `Test call failed for ${providerId}`);
+    } finally {
+      setVerifyingProvider((prev) => ({ ...prev, [providerId]: false }));
+    }
+  };
+  const [linkingLoading, setLinkingLoading] = useState(false);
+  const [inviteEmailInput, setInviteEmailInput] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  const handleLinkGoogle = async () => {
+    if (!googleEmailInput.trim()) {
+      toast.error("Please enter a Google email address");
+      return;
+    }
+    setLinkingLoading(true);
+    try {
+      await linkGoogleAccount(googleEmailInput.trim());
+      toast.success(`Linked ${user?.email} with Google account (${googleEmailInput.trim()})!`);
+      setGoogleEmailInput("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to link Google account");
+    } finally {
+      setLinkingLoading(false);
+    }
+  };
+
+  const handleInviteMember = async () => {
+    if (!inviteEmailInput.trim()) {
+      toast.error("Please enter an email to invite");
+      return;
+    }
+    setInviteLoading(true);
+    try {
+      await inviteMember(inviteEmailInput.trim());
+      toast.success(`Invitation sent to ${inviteEmailInput.trim()} for workspace ${activeWorkspace?.name}!`);
+      setInviteEmailInput("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send invitation");
+    } finally {
+      setInviteLoading(false);
+    }
+  };
 
   const fetchStats = async () => {
     if (!jwt) return;
@@ -117,26 +175,6 @@ export function SettingsPage() {
       if (!res.ok) throw new Error("Failed to load LLM credentials");
       const data = await res.json();
       setCredentials(data);
-      setApiKeyInput("");
-
-      // Map backend provider/model to UI option
-      if (data.provider === "gemini") {
-        setUiProvider("google");
-      } else if (data.provider === "anthropic") {
-        setUiProvider("anthropic");
-      } else if (data.provider === "openai") {
-        setUiProvider("openai");
-      } else if (data.provider === "openrouter") {
-        if (data.model.includes("deepseek")) {
-          setUiProvider("deepseek");
-        } else if (data.model.includes("kimi") || data.model.includes("moonshot")) {
-          setUiProvider("kimi");
-        } else {
-          setUiProvider("openrouter");
-        }
-      }
-      setVerifiedModels([]);
-      setUseCustomModelInput(false);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to load LLM credentials");
@@ -145,67 +183,11 @@ export function SettingsPage() {
     }
   };
 
-  const handleUiProviderChange = (newUiProvider: "google" | "anthropic" | "openai" | "openrouter" | "deepseek" | "kimi") => {
-    setUiProvider(newUiProvider);
-    const defaults = UI_PROVIDER_DEFAULTS[newUiProvider];
-    setCredentials(prev => ({
-      ...prev,
-      provider: defaults.provider as any,
-      model: defaults.model,
-      base_url: defaults.base_url,
-    }));
-    setVerifiedModels([]);
-    setUseCustomModelInput(false);
-  };
-
-  const handleVerifyKey = async () => {
-    if (!jwt) return;
-    if (!apiKeyInput.trim()) {
-      toast.error("Please enter an API Key to verify.");
-      return;
-    }
-    setIsVerifying(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials/verify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          provider: uiProvider,
-          api_key: apiKeyInput.trim(),
-          base_url: uiProvider === "openai" ? (credentials.base_url || null) : null
-        })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Key verification failed.");
-      }
-      setVerifiedModels(data.models);
-      if (data.models.length > 0) {
-        if (!data.models.includes(credentials.model)) {
-          setCredentials(prev => ({ ...prev, model: data.models[0] }));
-        }
-        toast.success(`Key verified! Loaded ${data.models.length} models.`);
-      } else {
-        toast.success("Key verified successfully!");
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to verify API key.");
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  const handleDeleteKey = async (targetProvider?: string) => {
-    const prov = targetProvider ?? credentials.provider;
-    if (!window.confirm(`Are you sure you want to delete your saved ${prov.toUpperCase()} API key?`)) {
+  const handleDeleteKey = async (targetProvider: string) => {
+    if (!window.confirm(`Are you sure you want to delete your saved ${targetProvider.toUpperCase()} API key?`)) {
       return;
     }
     if (!jwt) return;
-    setCredentialsSaving(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
         method: "PUT",
@@ -214,111 +196,20 @@ export function SettingsPage() {
           Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
-          provider: prov,
-          model: credentials.model,
-          base_url: credentials.base_url,
-          api_key: null,
+          provider: targetProvider,
           clear_api_key: true,
         }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `Failed to clear ${prov} API key`);
+        throw new Error(body.detail || `Failed to clear ${targetProvider} API key`);
       }
       const data = await res.json();
       setCredentials(data);
-      setApiKeyInput("");
-      setVerifiedModels([]);
-      toast.success(`${prov.toUpperCase()} API key deleted successfully`);
+      toast.success(`${targetProvider.toUpperCase()} API key deleted successfully`);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to delete API key");
-    } finally {
-      setCredentialsSaving(false);
-    }
-  };
-
-  const handleActivateProvider = async (prov: SavedProviderKey) => {
-    if (!jwt) return;
-    setCredentialsSaving(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          provider: prov.provider,
-          model: prov.model,
-          base_url: prov.base_url,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `Failed to activate ${prov.provider}`);
-      }
-      const data = await res.json();
-      setCredentials(data);
-      setApiKeyInput("");
-      
-      // Update uiProvider selection to match activated provider
-      if (data.provider === "gemini") {
-        setUiProvider("google");
-      } else if (data.provider === "anthropic") {
-        setUiProvider("anthropic");
-      } else if (data.provider === "openai") {
-        setUiProvider("openai");
-      } else if (data.provider === "openrouter") {
-        if (data.model.includes("deepseek")) {
-          setUiProvider("deepseek");
-        } else if (data.model.includes("kimi") || data.model.includes("moonshot")) {
-          setUiProvider("kimi");
-        } else {
-          setUiProvider("openrouter");
-        }
-      }
-
-      setVerifiedModels([]);
-      toast.success(`${prov.provider.toUpperCase()} activated as default provider`);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to activate provider");
-    } finally {
-      setCredentialsSaving(false);
-    }
-  };
-
-  const saveCredentials = async () => {
-    if (!jwt) return;
-    setCredentialsSaving(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          provider: credentials.provider,
-          model: credentials.model,
-          base_url: credentials.base_url,
-          api_key: apiKeyInput.trim() || null,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || "Failed to save LLM credentials");
-      }
-      const data = await res.json();
-      setCredentials(data);
-      setApiKeyInput("");
-      toast.success("LLM settings saved");
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to save LLM credentials");
-    } finally {
-      setCredentialsSaving(false);
     }
   };
 
@@ -339,32 +230,94 @@ export function SettingsPage() {
     <div className="flex h-screen bg-background">
       <ThreadSidebar />
       
-      <div className="flex-1 flex flex-col overflow-y-auto p-8 max-w-6xl mx-auto w-full">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8 border-b pb-4">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-              Usage & Settings
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Track token counts, billing costs, and model configuration options.
-            </p>
+      <div className="flex-1 flex flex-col overflow-y-auto w-full">
+        <HeaderBar title="Usage & Settings" description="Manage Google Auth linking, team workspace invitations, and LLM credentials." />
+
+        <div className="p-8 max-w-6xl mx-auto w-full space-y-8">
+          {/* Header Controls */}
+          <div className="flex justify-between items-center border-b pb-4 border-border/50">
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                Platform Overview
+              </h1>
+              <p className="text-muted-foreground text-xs mt-0.5">
+                Workspace: <strong className="text-foreground">{activeWorkspace?.name}</strong> • User: <strong className="text-foreground">{user?.email}</strong>
+              </p>
+            </div>
+
+            <div className="flex gap-1.5 border border-border/60 rounded-xl p-1 bg-muted/40">
+              {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
+                <Button
+                  key={t}
+                  variant={timeframe === t ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setTimeframe(t)}
+                  className="text-xs h-7 rounded-lg"
+                >
+                  {t.replace(/_/g, " ")}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex gap-1.5 border rounded-lg p-1 bg-muted/40">
-            {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
-              <Button
-                key={t}
-                variant={timeframe === t ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setTimeframe(t)}
-                className="text-xs capitalize h-8 px-3"
-              >
-                {t === "all" ? "Lifetime" : t.replace("_", " ")}
-              </Button>
-            ))}
-          </div>
-        </div>
+          {/* Google Auth & Workspace Team Card */}
+          <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-foreground">Google Auth & Workspace Collaboration</h2>
+                <p className="text-xs text-muted-foreground">Link your account to Google and invite team members to your active workspace.</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 pt-2">
+              {/* Account Link Box */}
+              <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  Link Account ({user?.email})
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Link your primary <code className="px-1.5 py-0.5 rounded bg-muted text-primary font-mono text-[11px] font-semibold">{user?.email}</code> account to your Google email address for one-click Google Sign-In.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    placeholder="e.g. yourname@gmail.com"
+                    value={googleEmailInput}
+                    onChange={(e) => setGoogleEmailInput(e.target.value)}
+                    className="h-9 text-xs rounded-xl bg-background border-border/80"
+                  />
+                  <Button size="sm" onClick={handleLinkGoogle} disabled={linkingLoading} className="h-9 text-xs font-semibold rounded-xl whitespace-nowrap shadow-sm">
+                    {linkingLoading ? "Linking..." : "Link Google Account"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Invite Workspace Members Box */}
+              <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                  <UserPlus className="w-4 h-4 text-indigo-500" />
+                  Invite to {activeWorkspace?.name || "Workspace"}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Invite teammates or additional Google accounts to join your active workspace <strong className="text-foreground">{activeWorkspace?.name}</strong>.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    placeholder="teammate@gmail.com"
+                    value={inviteEmailInput}
+                    onChange={(e) => setInviteEmailInput(e.target.value)}
+                    className="h-9 text-xs rounded-xl bg-background border-border/80"
+                  />
+                  <Button size="sm" onClick={handleInviteMember} disabled={inviteLoading} className="h-9 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap shadow-sm">
+                    {inviteLoading ? "Sending..." : "Send Workspace Invite"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center min-h-[400px]">
@@ -372,150 +325,95 @@ export function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-300">
-            <Card className="p-6">
-              <div className="flex items-start justify-between gap-4 mb-6">
+            <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <KeyRound className="h-4 w-4 text-emerald-600" />
-                    <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
-                      LLM Credentials
+                    <KeyRound className="h-5 w-5 text-indigo-500" />
+                    <h3 className="font-bold text-base text-foreground tracking-tight">
+                      LLM Provider Credentials & Key Verification
                     </h3>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Saved per user and encrypted on the backend.
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter API keys for your preferred LLM providers. Each key is tested with a live test call and securely encrypted in the database.
                   </p>
                 </div>
-                {credentials.has_api_key && (
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                    <ShieldCheck className="h-4 w-4" />
-                    Key saved
-                  </div>
-                )}
               </div>
 
               {credentialsLoading ? (
                 <div className="flex items-center justify-center py-10">
-                  <Loader2 className="animate-spin text-primary h-5 w-5" />
+                  <Loader2 className="animate-spin text-primary h-6 w-6" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Provider
-                    <select
-                      value={uiProvider}
-                      onChange={(event) => {
-                        const val = event.target.value as any;
-                        handleUiProviderChange(val);
-                      }}
-                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 py-1 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    >
-                      <option value="google">Google Gemini</option>
-                      <option value="anthropic">Anthropic / Claude</option>
-                      <option value="openai">OpenAI</option>
-                      <option value="deepseek">Deepseek (via OpenRouter)</option>
-                      <option value="kimi">Kimi (via OpenRouter)</option>
-                      <option value="openrouter">OpenRouter (Custom / General)</option>
-                    </select>
-                  </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { id: "openai", name: "OpenAI API Key", defaultModel: "gpt-4o-mini", placeholder: "sk-proj-...", icon: "🤖", color: "border-emerald-500/30 text-emerald-500 bg-emerald-500/10" },
+                    { id: "openrouter", name: "OpenRouter API Key", defaultModel: "openai/gpt-4o-mini", placeholder: "sk-or-v1-...", icon: "🌐", color: "border-cyan-500/30 text-cyan-500 bg-cyan-500/10" },
+                    { id: "google", name: "Gemini API Key", defaultModel: "gemini-3.1-flash-lite-preview", placeholder: "AIzaSy...", icon: "✨", color: "border-blue-500/30 text-blue-500 bg-blue-500/10" },
+                    { id: "anthropic", name: "Anthropic API Key", defaultModel: "claude-3-5-sonnet-latest", placeholder: "sk-ant-...", icon: "🧠", color: "border-amber-500/30 text-amber-500 bg-amber-500/10" },
+                  ].map((provider) => {
+                    const normProvName = provider.id === "google" ? "gemini" : provider.id;
+                    const savedItem = credentials.saved_keys?.find((k) => k.provider === normProvName);
+                    const isSaved = !!savedItem || (credentials.provider === normProvName && credentials.has_api_key);
+                    const currentInput = providerKeysInput[provider.id] || "";
+                    const isTesting = verifyingProvider[provider.id] || false;
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block">
-                      Default Model
-                    </label>
-                    {verifiedModels.length > 0 && !useCustomModelInput ? (
-                      <div className="flex gap-2">
-                        <select
-                          value={credentials.model}
-                          onChange={(event) => setCredentials((prev) => ({ ...prev, model: event.target.value }))}
-                          className="h-8 flex-1 rounded-lg border border-input bg-background px-2.5 py-1 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        >
-                          {verifiedModels.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </select>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setUseCustomModelInput(true)}
-                          className="text-[10px] uppercase font-bold"
-                        >
-                          Custom
-                        </Button>
+                    return (
+                      <div key={provider.id} className="p-5 rounded-2xl border border-border/60 bg-muted/20 space-y-4 shadow-sm hover:border-border transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <span className={`text-base p-1.5 rounded-xl border ${provider.color}`}>{provider.icon}</span>
+                            <div>
+                              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{provider.name}</h4>
+                              <p className="text-[10px] text-muted-foreground">Default: {savedItem?.model || provider.defaultModel}</p>
+                            </div>
+                          </div>
+                          {isSaved ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3" />
+                              Verified & Saved
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border/60">
+                              Not Configured
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Input
+                            type="password"
+                            placeholder={isSaved ? "•••••••••••••••••••• (Encrypted in DB)" : provider.placeholder}
+                            value={currentInput}
+                            onChange={(e) => setProviderKeysInput((prev) => ({ ...prev, [provider.id]: e.target.value }))}
+                            className="h-9 text-xs rounded-xl bg-background border-border/80"
+                          />
+                          <div className="flex items-center justify-between gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={isTesting || !currentInput.trim()}
+                              onClick={() => handleVerifyAndSaveProviderKey(provider.id, currentInput)}
+                              className="h-8 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-95 shadow-sm"
+                            >
+                              {isTesting ? "Testing API Call..." : "Test & Save API Key"}
+                            </Button>
+                            {isSaved && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteKey(normProvName)}
+                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                              >
+                                Delete Key
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={credentials.model}
-                          onChange={(event) => setCredentials((prev) => ({ ...prev, model: event.target.value }))}
-                          placeholder={DEFAULT_MODEL_BY_PROVIDER[credentials.provider]}
-                          className="flex-1"
-                        />
-                        {verifiedModels.length > 0 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUseCustomModelInput(false)}
-                            className="text-[10px] uppercase font-bold"
-                          >
-                            List
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block">
-                      API Key
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="password"
-                        value={apiKeyInput}
-                        onChange={(event) => setApiKeyInput(event.target.value)}
-                        placeholder={credentials.has_api_key ? "Leave blank to keep existing key" : "Paste your provider API key"}
-                        autoComplete="off"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleVerifyKey}
-                        disabled={isVerifying || !apiKeyInput.trim()}
-                        className="gap-1.5 shrink-0"
-                      >
-                        {isVerifying && <Loader2 className="h-3 w-3 animate-spin" />}
-                        Verify & Load Models
-                      </Button>
-                    </div>
-                  </div>
-
-                  {(uiProvider === "openai" || uiProvider === "openrouter") && (
-                    <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
-                      Base URL
-                      <Input
-                        value={credentials.base_url}
-                        onChange={(event) => setCredentials((prev) => ({ ...prev, base_url: event.target.value }))}
-                        placeholder={uiProvider === "openrouter" ? "https://openrouter.ai/api/v1" : "Optional OpenAI-compatible endpoint"}
-                      />
-                    </label>
-                  )}
-
-                  <div className="md:col-span-2 flex justify-end">
-                    <Button
-                      type="button"
-                      onClick={saveCredentials}
-                      disabled={credentialsSaving}
-                      className="gap-2"
-                    >
-                      {credentialsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      Save Settings
-                    </Button>
-                  </div>
+                    );
+                  })}
                 </div>
               )}
             </Card>
@@ -624,104 +522,7 @@ export function SettingsPage() {
                 </p>
               </div>
 
-              {/* API Credentials & Provider Settings Table */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Saved Provider Credentials
-                </h4>
-                <div className="overflow-x-auto rounded-lg border bg-muted/20">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b bg-muted/50 text-muted-foreground uppercase font-bold tracking-wider">
-                        <th className="p-3">Provider</th>
-                        <th className="p-3">Default Model</th>
-                        <th className="p-3">API Key Status</th>
-                        <th className="p-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(["gemini", "anthropic", "openai", "openrouter"] as const).map((prov) => {
-                        const saved = credentials.saved_keys?.find(k => k.provider === prov);
-                        const isActive = credentials.provider === prov;
-                        
-                        const providerLabels: Record<string, string> = {
-                          gemini: "Google Gemini",
-                          anthropic: "Anthropic / Claude",
-                          openai: "OpenAI",
-                          openrouter: "OpenRouter",
-                        };
 
-                        return (
-                          <tr key={prov} className="border-b last:border-0 hover:bg-muted/30">
-                            <td className="p-3 font-semibold text-foreground">
-                              {providerLabels[prov]}
-                            </td>
-                            <td className="p-3 font-mono text-muted-foreground">
-                              {saved?.model || "-"}
-                            </td>
-                            <td className="p-3">
-                              {saved?.has_api_key ? (
-                                <span className="font-mono text-emerald-600 font-medium">
-                                  Saved (••••••••)
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground/60 italic">Not Configured</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-right flex justify-end gap-2 items-center">
-                              {saved?.has_api_key ? (
-                                <>
-                                  {isActive ? (
-                                    <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
-                                      Active Default
-                                    </span>
-                                  ) : (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleActivateProvider(saved)}
-                                      className="text-[10px] font-bold px-2.5 py-0.5 h-7"
-                                    >
-                                      Activate
-                                    </Button>
-                                  )}
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteKey(prov)}
-                                    className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:bg-red-500/10 px-2 py-0.5 h-7 rounded"
-                                  >
-                                    Delete Key
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (prov === "gemini") setUiProvider("google");
-                                    else if (prov === "anthropic") setUiProvider("anthropic");
-                                    else if (prov === "openai") setUiProvider("openai");
-                                    else if (prov === "openrouter") setUiProvider("openrouter");
-                                    toast.info(`Enter and verify your key for ${providerLabels[prov]} above.`);
-                                    window.scrollTo({ top: 0, behavior: "smooth" });
-                                  }}
-                                  className="text-[10px] font-semibold text-primary hover:underline px-2 py-0.5 h-7"
-                                >
-                                  Configure Key
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
 
               {/* Divider */}
               <div className="border-t pt-6">
@@ -768,5 +569,6 @@ export function SettingsPage() {
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

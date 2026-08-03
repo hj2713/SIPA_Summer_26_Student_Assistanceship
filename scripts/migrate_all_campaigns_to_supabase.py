@@ -23,7 +23,7 @@ def migrate_all():
 
     # 1. Always seed all workspaces and default users into Supabase first
     print("Ensuring workspaces & system users exist in Supabase...")
-    for ws_id in ["PRODUCTION", "QA", "TEST"]:
+    for ws_id in ["PRODUCTION"]:
         try:
             pg_cur.execute("INSERT INTO workspaces (id, name) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING;", (ws_id, ws_id))
         except Exception:

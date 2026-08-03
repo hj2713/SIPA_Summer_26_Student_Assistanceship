@@ -36,6 +36,8 @@ class DashboardCreate(BaseModel):
     token_limit: Optional[int] = Field(default=5000000, description="The safety limit on cumulative token usage for LLM calls")
     workflow_id: Optional[str] = Field(default=None, description="Optional workflow ID to run evaluations via workflow nodes")
     workflow_source: Optional[str] = Field(default=None, description="Optional workflow source representation")
+    campaign_flow: Optional[str] = Field(default=None, description="Flow designation from which campaign was created")
+    created_by: Optional[str] = Field(default=None, description="Creator email or ID")
 
 
 class LinkWorkflowPayload(BaseModel):
@@ -57,6 +59,9 @@ class DashboardRow(BaseModel):
     workflow_revision: Optional[int] = None
     created_at: datetime
     token_limit: Optional[int] = 5000000
+    created_by: Optional[str] = Field(default="test@test.com", description="User email who created the campaign dashboard")
+    campaign_flow: Optional[str] = Field(default="RAG Structured Extraction Flow", description="Flow from which campaign was created")
+    is_frozen: bool = Field(default=True, description="Whether the dashboard schema structure is frozen once created")
 
     model_config = ConfigDict(populate_by_name=True)
 

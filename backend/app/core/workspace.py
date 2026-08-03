@@ -15,6 +15,9 @@ def set_active_workspace(workspace_id: str):
     global _active_workspace_id
     if workspace_id:
         cleaned = workspace_id.strip().upper()
+        if cleaned in ("QA", "TEST"):
+            cleaned = "PRODUCTION"
         if cleaned:
             _active_workspace_id = cleaned
             logger.info(f"Active workspace updated in RAM to: {_active_workspace_id}")
+

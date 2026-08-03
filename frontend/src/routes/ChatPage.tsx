@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { MessageList } from "@/components/chat/MessageList";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { useChat } from "@/hooks/useChat";
@@ -92,27 +93,30 @@ export function ChatPage() {
                   Agentic RAG Conversation
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground font-medium">Model:</label>
-                <select
-                  value={currentModel}
-                  onChange={async (e) => {
-                    const selectedModel = e.target.value;
-                    try {
-                      await updateThreadModel(threadId, selectedModel);
-                      toast.success(`Model updated to ${selectedModel}`);
-                    } catch {
-                      toast.error("Failed to update thread model");
-                    }
-                  }}
-                  className="rounded-md border border-input bg-background px-3 py-1.5 text-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  {AVAILABLE_MODELS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground font-medium">Model:</label>
+                  <select
+                    value={currentModel}
+                    onChange={async (e) => {
+                      const selectedModel = e.target.value;
+                      try {
+                        await updateThreadModel(threadId, selectedModel);
+                        toast.success(`Model updated to ${selectedModel}`);
+                      } catch {
+                        toast.error("Failed to update thread model");
+                      }
+                    }}
+                    className="rounded-xl border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  >
+                    {AVAILABLE_MODELS.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <ThemeToggle />
               </div>
             </div>
 

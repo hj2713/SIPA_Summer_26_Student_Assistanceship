@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
+import { HeaderBar } from "@/components/ui/HeaderBar";
+import { DashboardView } from "@/routes/DashboardPage";
 import { useDocuments } from "@/hooks/useDocuments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +26,12 @@ interface FolderNode {
 
 export function DocumentsPage() {
   const { user, session } = useAuthContext();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "dashboard" ? "dashboard" : "files";
+
+  const setTab = (tab: "files" | "dashboard") => {
+    setSearchParams({ tab });
+  };
   const { 
     documents, 
     loading, 
@@ -857,14 +866,48 @@ export function DocumentsPage() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <ThreadSidebar />
-      <main className="flex-1 overflow-y-auto p-8 flex justify-center">
-        <div className="w-full max-w-4xl space-y-8 pb-16">
-          <header className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Document Ingestion</h1>
-            <p className="text-muted-foreground">
-              Ingest PDF, DOCX, HTML, Markdown, or plain text documents and folders into your local RAG pipeline. Files are split, embedded using OpenAI, and stored locally in SQLite.
-            </p>
-          </header>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <HeaderBar title="Documents & Dashboards" description="Ingest files, explore directory trees, and analyze metadata dashboards." />
+        
+        {/* Tab Switcher Header Bar */}
+        <div className="px-8 pt-3 border-b border-border/50 bg-card/30 flex items-center gap-4 shrink-0">
+          <button
+            onClick={() => setTab("files")}
+            type="button"
+            className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 ${
+              activeTab === "files"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            📄 Manage & Ingest Files
+          </button>
+          <button
+            onClick={() => setTab("dashboard")}
+            type="button"
+            className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 ${
+              activeTab === "dashboard"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            📊 Dashboards & Analytics
+          </button>
+        </div>
+
+        {activeTab === "dashboard" ? (
+          <div className="flex-1 h-full overflow-hidden">
+            <DashboardView hideSidebar={true} />
+          </div>
+        ) : (
+          <main className="flex-1 overflow-y-auto p-8 flex justify-center">
+            <div className="w-full max-w-4xl space-y-8 pb-16">
+              <header className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight">Document Ingestion</h1>
+                <p className="text-muted-foreground">
+                  Ingest PDF, DOCX, HTML, Markdown, or plain text documents and folders into your RAG pipeline. Files are processed, split, and embedded for search.
+                </p>
+              </header>
 
           {/* Conditional Dropzone Rendering */}
           {!user?.can_add && !user?.is_admin ? (
@@ -1163,6 +1206,8 @@ export function DocumentsPage() {
           )}
         </div>
       </main>
-    </div>
-  );
+    )}
+  </div>
+</div>
+);
 }

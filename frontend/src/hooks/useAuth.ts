@@ -29,6 +29,7 @@ export function useAuth(): AuthContextValue {
   }, []);
 
   const setActiveWorkspace = (workspace: Workspace) => {
+    if (workspace.id === "QA" || workspace.id === "TEST") return;
     localStorage.setItem("active_workspace_id", workspace.id);
     setActiveWorkspaceState(workspace);
   };
@@ -41,18 +42,19 @@ export function useAuth(): AuthContextValue {
         headers: { Authorization: `Bearer ${activeToken}` },
       });
       if (response.ok) {
-        const list = (await response.json()) as Workspace[];
+        const rawList = (await response.json()) as Workspace[];
+        const list = rawList.filter((w) => w.id !== "QA" && w.id !== "TEST");
         setWorkspaces(list);
         
-        // Restore active workspace or fallback to first one / TEST
+        // Restore active workspace or fallback to PRODUCTION / first one
         const storedId = localStorage.getItem("active_workspace_id");
-        const found = list.find((w) => w.id === storedId);
+        const found = list.find((w) => w.id === storedId && w.id !== "QA" && w.id !== "TEST");
         if (found) {
           setActiveWorkspaceState(found);
         } else if (list.length > 0) {
-          const testWorkspace = list.find((w) => w.id === "TEST") ?? list[0];
-          setActiveWorkspaceState(testWorkspace);
-          localStorage.setItem("active_workspace_id", testWorkspace.id);
+          const prod = list.find((w) => w.id === "PRODUCTION") ?? list[0];
+          setActiveWorkspaceState(prod);
+          localStorage.setItem("active_workspace_id", prod.id);
         }
       }
     } catch (err) {
@@ -124,7 +126,6 @@ export function useAuth(): AuthContextValue {
 
     const data = await response.json();
     
-    // If the admin is creating a user, do NOT update local session / log the admin out!
     if (session?.access_token) {
       return;
     }
@@ -142,6 +143,94 @@ export function useAuth(): AuthContextValue {
     localStorage.setItem("local_session", JSON.stringify(newSession));
     setSession(newSession);
     setUser(newSession.user);
+  };
+
+  const signInWithGoogle = async (): Promise<void> => {
+    // Check if Supabase URL is available
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://nqgufodcrkzpeikiudga.supabase.co";
+    
+    // Attempt standard Supabase OAuth redirect if configured
+    if (supabaseUrl && !window.location.hostname.includes("localhost")) {
+      const redirectUri = encodeURIComponent(window.location.origin + "/login");
+      window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}`;
+      return;
+    }
+
+    // Interactive / direct Google login for development and linking
+    const googleEmail = window.prompt("Enter your Google Account email to sign in:", user?.email || "test@test.com");
+    if (!googleEmail || !googleEmail.trim()) return;
+
+    const response = await fetch(`${BASE_URL}/api/auth/google-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: googleEmail.trim() }),
+    });
+
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        msg = body.detail ?? body.message ?? msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const data = await response.json();
+    const newSession = {
+      access_token: data.session.access_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        is_admin: !!data.user.is_admin,
+        can_add: !!data.user.can_add,
+        can_delete: !!data.user.can_delete,
+      },
+    };
+    localStorage.setItem("local_session", JSON.stringify(newSession));
+    setSession(newSession);
+    setUser(newSession.user);
+  };
+
+  const linkGoogleAccount = async (googleEmail: string): Promise<void> => {
+    if (!session?.access_token) throw new Error("Unauthorized");
+    const response = await fetch(`${BASE_URL}/api/auth/link-google`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ google_email: googleEmail }),
+    });
+
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        msg = body.detail ?? body.message ?? msg;
+      } catch {}
+      throw new Error(msg);
+    }
+  };
+
+  const inviteMember = async (email: string): Promise<void> => {
+    if (!session?.access_token || !activeWorkspace) throw new Error("No active workspace");
+    const response = await fetch(`${BASE_URL}/api/auth/workspaces/${activeWorkspace.id}/invite`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        msg = body.detail ?? body.message ?? msg;
+      } catch {}
+      throw new Error(msg);
+    }
   };
 
   const createWorkspace = async (name: string): Promise<Workspace> => {
@@ -170,10 +259,6 @@ export function useAuth(): AuthContextValue {
     return newWorkspace;
   };
 
-  const signInWithGoogle = async (): Promise<void> => {
-    alert("OAuth is disabled in local-only mode.");
-  };
-
   const signOut = async (): Promise<void> => {
     localStorage.removeItem("local_session");
     localStorage.removeItem("active_workspace_id");
@@ -190,6 +275,8 @@ export function useAuth(): AuthContextValue {
     signIn,
     signUp,
     signInWithGoogle,
+    linkGoogleAccount,
+    inviteMember,
     signOut,
     workspaces,
     activeWorkspace,

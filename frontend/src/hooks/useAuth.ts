@@ -193,7 +193,40 @@ export function useAuth(): AuthContextValue {
     setUser(newSession.user);
   };
 
-  const signInWithGoogle = async (): Promise<void> => {
+  const signInWithGoogle = async (googleEmail?: string): Promise<void> => {
+    if (googleEmail && googleEmail.trim()) {
+      const response = await fetch(`${BASE_URL}/api/auth/google-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: googleEmail.trim() }),
+      });
+
+      if (!response.ok) {
+        let msg = `HTTP ${response.status}`;
+        try {
+          const body = await response.json();
+          msg = body.detail ?? body.message ?? msg;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const data = await response.json();
+      const newSession = {
+        access_token: data.session.access_token,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          is_admin: !!data.user.is_admin,
+          can_add: !!data.user.can_add,
+          can_delete: !!data.user.can_delete,
+        },
+      };
+      localStorage.setItem("local_session", JSON.stringify(newSession));
+      setSession(newSession);
+      setUser(newSession.user);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

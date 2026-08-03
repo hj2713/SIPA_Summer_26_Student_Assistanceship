@@ -196,22 +196,24 @@ def test_multiple_llm_credentials_flow(client, auth_headers):
     assert gemini_key2["has_api_key"] is False
 
 
-def test_legacy_credentials_migration(client, auth_headers):
-    user_id = "00000000-0000-0000-0000-000000000001"
+def test_legacy_credentials_migration(client):
+    import uuid
+    from app.tests.conftest import make_jwt
+    legacy_user_id = str(uuid.uuid4())
+    legacy_headers = {"Authorization": f"Bearer {make_jwt(legacy_user_id)}"}
 
     from app.core.database import get_db_conn
     from app.core.llm_credentials import encrypt_api_key
 
     with get_db_conn() as conn:
-        # Write legacy columns on users row
         conn.execute(
-            "UPDATE users SET llm_provider = ?, llm_api_key_encrypted = ?, llm_model = ?, llm_base_url = ? WHERE id = ?",
-            ("anthropic", encrypt_api_key("legacy_anthropic_key"), "claude-opus-4.8", "https://legacy.url", user_id)
+            "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete, llm_provider, llm_api_key_encrypted, llm_model, llm_base_url) VALUES (?, ?, 'hash', 1, 1, 1, 'anthropic', ?, 'claude-opus-4.8', 'https://legacy.url')",
+            (legacy_user_id, f"legacy_{legacy_user_id[:8]}@test.com", encrypt_api_key("legacy_anthropic_key"))
         )
         conn.commit()
 
     # GET credentials summary to trigger migration check
-    res_get = client.get("/api/auth/llm-credentials", headers=auth_headers)
+    res_get = client.get("/api/auth/llm-credentials", headers=legacy_headers)
     assert res_get.status_code == 200
     summary = res_get.json()
 

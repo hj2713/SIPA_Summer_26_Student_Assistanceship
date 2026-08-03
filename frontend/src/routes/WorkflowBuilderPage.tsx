@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, MarkerType, MiniMap, ReactFlow, ReactFlowProvider, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowLeft, Bot, Braces, Check, CheckCircle2, FileInput, FlaskConical, GitBranch, ListOrdered, Loader2, Play, Save, Send, TableProperties, TriangleAlert, Upload } from "lucide-react";
+import { ArrowLeft, Bot, Braces, Check, CheckCircle2, Copy, FileInput, FlaskConical, GitBranch, ListOrdered, Loader2, Play, Save, Send, TableProperties, TriangleAlert, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -193,6 +193,19 @@ function WorkflowBuilderInner() {
     }
   };
 
+  const duplicateCurrentWorkflow = async () => {
+    if (!workflow) return;
+    try {
+      const copy = isTemplate
+        ? await workflowApi.duplicateTemplate(workflow.id, jwt, workspaceId)
+        : await workflowApi.duplicate(workflow.id, jwt, workspaceId);
+      toast.success(isTemplate ? "Template duplicated" : "Workflow duplicated as unpublished draft");
+      navigate(isTemplate ? `/workflows/${copy.id}?type=template` : `/workflows/${copy.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Duplication failed");
+    }
+  };
+
   const validate = async () => {
     if (dirty && !(await save())) return;
     try { const result = await workflowApi.validate(id, jwt, workspaceId); setValidation(result); setShowValidation(true); if (result.valid) toast.success("Workflow is valid"); }
@@ -375,6 +388,9 @@ function WorkflowBuilderInner() {
           </Button>
           <Button variant="outline" onClick={() => void validate()}>
             <Check size={14} /> Validate
+          </Button>
+          <Button variant="outline" onClick={() => void duplicateCurrentWorkflow()} title="Duplicate as a new unpublished draft">
+            <Copy size={14} /> Duplicate
           </Button>
           <Button variant="outline" disabled={saving || !dirty} onClick={() => void save()}>
             {saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} 

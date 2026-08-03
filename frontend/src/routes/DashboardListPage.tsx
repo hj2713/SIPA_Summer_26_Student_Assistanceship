@@ -749,11 +749,13 @@ export function DashboardListPage() {
                     className="w-full flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">No workflow attached (Direct LLM Comparison)</option>
-                    {workflows.map((wf) => (
-                      <option key={wf.id} value={wf.id}>
-                        {wf.name}
-                      </option>
-                    ))}
+                    {workflows
+                      .filter((wf) => wf.status === "published")
+                      .map((wf) => (
+                        <option key={wf.id} value={wf.id}>
+                          {wf.name} {wf.latest_version ? `(v${wf.latest_version})` : "(Published)"}
+                        </option>
+                      ))}
                   </select>
                 </div>
 

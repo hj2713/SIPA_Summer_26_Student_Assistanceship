@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Session, User, Workspace, AuthContextValue } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -11,6 +12,35 @@ export function useAuth(): AuthContextValue {
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null);
 
   useEffect(() => {
+    // Sync Supabase Google OAuth session with backend
+    const syncSupabaseGoogleUser = async (email: string) => {
+      try {
+        const response = await fetch(`${BASE_URL}/api/auth/google-login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const newSession = {
+            access_token: data.session.access_token,
+            user: {
+              id: data.user.id,
+              email: data.user.email,
+              is_admin: !!data.user.is_admin,
+              can_add: !!data.user.can_add,
+              can_delete: !!data.user.can_delete,
+            },
+          };
+          localStorage.setItem("local_session", JSON.stringify(newSession));
+          setSession(newSession);
+          setUser(newSession.user);
+        }
+      } catch (err) {
+        console.error("Failed to sync Supabase Google login:", err);
+      }
+    };
+
     // Hydrate immediately from local storage
     const stored = localStorage.getItem("local_session");
     if (stored) {
@@ -25,7 +55,25 @@ export function useAuth(): AuthContextValue {
         localStorage.removeItem("local_session");
       }
     }
+
+    // Check existing Supabase session or OAuth redirect callback
+    supabase.auth.getSession().then(({ data: { session: sbSession } }) => {
+      if (sbSession?.user?.email) {
+        void syncSupabaseGoogleUser(sbSession.user.email);
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, sbSession) => {
+      if (sbSession?.user?.email) {
+        void syncSupabaseGoogleUser(sbSession.user.email);
+      }
+    });
+
     setLoading(false);
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const setActiveWorkspace = (workspace: Workspace) => {
@@ -146,39 +194,16 @@ export function useAuth(): AuthContextValue {
   };
 
   const signInWithGoogle = async (): Promise<void> => {
-    // Direct Google login using backend endpoint linked with Supabase DB
-    const googleEmail = window.prompt("Enter your Google Account email to sign in:", user?.email || "hj2713@columbia.edu");
-    if (!googleEmail || !googleEmail.trim()) return;
-
-    const response = await fetch(`${BASE_URL}/api/auth/google-login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: googleEmail.trim() }),
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
 
-    if (!response.ok) {
-      let msg = `HTTP ${response.status}`;
-      try {
-        const body = await response.json();
-        msg = body.detail ?? body.message ?? msg;
-      } catch {}
-      throw new Error(msg);
+    if (error) {
+      throw new Error(error.message);
     }
-
-    const data = await response.json();
-    const newSession = {
-      access_token: data.session.access_token,
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        is_admin: !!data.user.is_admin,
-        can_add: !!data.user.can_add,
-        can_delete: !!data.user.can_delete,
-      },
-    };
-    localStorage.setItem("local_session", JSON.stringify(newSession));
-    setSession(newSession);
-    setUser(newSession.user);
   };
 
   const linkGoogleAccount = async (googleEmail: string): Promise<void> => {

@@ -2603,7 +2603,7 @@ export function ModelEvaluationPage() {
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-56 overflow-y-auto rounded-lg border p-2">
-                    {workflows.map((wf: any) => {
+                    {workflows.filter((wf: any) => wf.status === "published").map((wf: any) => {
                       const isSelected = createWorkflowId === wf.id;
                       return (
                         <button
@@ -2943,7 +2943,7 @@ export function ModelEvaluationPage() {
                   </div>
                 ) : (
                   <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                    {workflows.map((wf: any) => (
+                    {workflows.filter((wf: any) => wf.status === "published").map((wf: any) => (
                       <div
                         key={wf.id}
                         onClick={() => setSelectedWorkflowId(selectedWorkflowId === wf.id ? "" : wf.id)}

@@ -166,9 +166,43 @@ export function WorkflowLibraryPage() {
           </header>
 
           <div className="mb-7 grid gap-4 md:grid-cols-3">
-            <div className="rounded-xl border bg-card p-4"><BookOpenCheck className="mb-3 text-violet-600" size={20} /><p className="text-sm font-semibold">DB-managed templates</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Workflow definitions can be edited, imported, exported, and reused from the database.</p></div>
-            <div className="rounded-xl border bg-card p-4"><GitBranch className="mb-3 text-amber-600" size={20} /><p className="text-sm font-semibold">Deterministic + AI logic</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Conditions can skip unnecessary LLM calls and set exact values.</p></div>
-            <div className="rounded-xl border bg-card p-4"><Layers3 className="mb-3 text-cyan-600" size={20} /><p className="text-sm font-semibold">Immutable published versions</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Drafts can change freely; published workflow versions stay auditable.</p></div>
+            <div 
+              onClick={() => setShowImport(true)}
+              className="rounded-xl border bg-card p-4 cursor-pointer hover:border-violet-500/40 hover:shadow-md transition-all group"
+            >
+              <BookOpenCheck className="mb-3 text-violet-600 group-hover:scale-110 transition-transform" size={20} />
+              <p className="text-sm font-semibold group-hover:text-primary transition-colors">DB-managed templates</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Workflow definitions can be edited, imported, exported, and reused from the database.</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-400 group-hover:underline">
+                Import JSON Template →
+              </span>
+            </div>
+
+            <div 
+              onClick={() => setShowCreate(true)}
+              className="rounded-xl border bg-card p-4 cursor-pointer hover:border-amber-500/40 hover:shadow-md transition-all group"
+            >
+              <GitBranch className="mb-3 text-amber-600 group-hover:scale-110 transition-transform" size={20} />
+              <p className="text-sm font-semibold group-hover:text-primary transition-colors">Deterministic + AI logic</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Conditions can skip unnecessary LLM calls and set exact values.</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 group-hover:underline">
+                Create New Workflow →
+              </span>
+            </div>
+
+            <div 
+              onClick={() => {
+                document.getElementById('workflow-drafts-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="rounded-xl border bg-card p-4 cursor-pointer hover:border-cyan-500/40 hover:shadow-md transition-all group"
+            >
+              <Layers3 className="mb-3 text-cyan-600 group-hover:scale-110 transition-transform" size={20} />
+              <p className="text-sm font-semibold group-hover:text-primary transition-colors">Immutable published versions</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Drafts can change freely; published workflow versions stay auditable.</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 group-hover:underline">
+                Browse Workflow Drafts →
+              </span>
+            </div>
           </div>
 
           <section className="mb-10">
@@ -213,7 +247,7 @@ export function WorkflowLibraryPage() {
             )}
           </section>
 
-          <section>
+          <section id="workflow-drafts-section">
             <h2 className="mb-3 text-lg font-bold">Workflow Drafts</h2>
             {loading ? <div className="py-20 text-center text-sm text-muted-foreground">Loading workflows…</div> : workflows.length === 0 ? (
               <div className="rounded-2xl border border-dashed py-20 text-center"><Sparkles className="mx-auto mb-4 text-muted-foreground" size={30} /><h2 className="font-semibold">Create your first reusable coding method</h2><p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">Start from a DB template, then edit and test the copied draft freely.</p><Button className="mt-5" onClick={() => setShowCreate(true)}><Plus size={14} /> Create workflow</Button></div>

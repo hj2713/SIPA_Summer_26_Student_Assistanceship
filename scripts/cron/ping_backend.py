@@ -25,7 +25,8 @@ def main():
             health_url, 
             headers={"User-Agent": "Law-Delegation-KeepAlive/1.0"}
         )
-        with urllib.request.urlopen(req, timeout=15) as response:
+        # Timeout set to 60s to accommodate Render cold starts (which can take 20-30s when asleep)
+        with urllib.request.urlopen(req, timeout=60) as response:
             status = response.getcode()
             body = response.read().decode("utf-8")
             print(f"Success! Status code: {status}, Response: {body}")

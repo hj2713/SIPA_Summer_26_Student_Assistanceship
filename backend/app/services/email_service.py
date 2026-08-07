@@ -84,7 +84,7 @@ def send_workspace_invite_email(to_email: str, workspace_id: str, inviter_email:
     # 2. Try SMTP if SMTP_HOST is configured
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_user = os.environ.get("SMTP_USER")
-    smtp_pass = os.environ.get("SMTP_PASSWORD")
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "").replace(" ", "").strip()
     smtp_port = int(os.environ.get("SMTP_PORT", 587))
     smtp_from = os.environ.get("SMTP_FROM", smtp_user or "no-reply@lawdelegation.com")
 

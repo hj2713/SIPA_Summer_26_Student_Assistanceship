@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import type { Document } from "@/types/document";
@@ -303,22 +303,33 @@ export function useDocuments(options: { pageSize?: number } = {}) {
   }, [activeWorkspace?.id]);
 
   useEffect(() => {
-    if (session?.access_token) {
+    if (session?.access_token && activeWorkspace?.id) {
       void fetchDocuments();
     } else {
       setDocuments([]);
       setLoading(false);
     }
-  }, [session, activeWorkspace, page, pageSize]);
+  }, [session?.access_token, activeWorkspace?.id, page, pageSize]);
 
   const hasActiveJob = documents.some(
     (d) => d.status === "pending" || d.status === "processing"
   );
 
+  const pollCountRef = useRef(0);
+
   useEffect(() => {
-    if (!session || !user || !hasActiveJob) return;
+    if (!session || !user || !hasActiveJob) {
+      pollCountRef.current = 0;
+      return;
+    }
+
+    // Cap status polling at 8 attempts (32s) to prevent infinite loops if a job is stuck
+    if (pollCountRef.current >= 8) {
+      return;
+    }
 
     const interval = setInterval(() => {
+      pollCountRef.current += 1;
       void fetchDocuments();
     }, 4000);
 

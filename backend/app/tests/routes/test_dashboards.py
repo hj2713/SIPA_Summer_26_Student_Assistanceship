@@ -277,7 +277,7 @@ def test_update_campaign_details_and_schema(client, auth_headers, clean_db):
     db_id = "test-dashboard-update-settings"
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO dashboards (id, workspace_id, name, description, prompt, schema, dashboard_type) VALUES (?, 'TEST', 'Old Name', 'Old Desc', 'Old Prompt', '[]', 'campaign');",
+            "INSERT OR REPLACE INTO dashboards (id, workspace_id, name, description, prompt, schema, dashboard_type, is_frozen) VALUES (?, 'TEST', 'Old Name', 'Old Desc', 'Old Prompt', '[]', 'campaign', 0);",
             (db_id,)
         )
         conn.commit()
@@ -681,7 +681,7 @@ def test_campaign_add_column_triggers_background_evaluation(client, auth_headers
     
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Campaign', 'Desc', 'Prompt', '[]', 'gemini-3.1-flash', 'campaign');",
+            "INSERT OR REPLACE INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type, is_frozen) VALUES (?, 'TEST', 'Campaign', 'Desc', 'Prompt', '[]', 'gemini-3.1-flash', 'campaign', 0);",
             (db_id,)
         )
         conn.execute(

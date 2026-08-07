@@ -451,10 +451,12 @@ def init_postgres_db():
             )
 
 
-            # Requirement 4: Reset hj2713@columbia.edu so it starts in uninvited state for testing
-            cursor.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = %s;", ("hj2713@columbia.edu",))
+            # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing when not in TEST_MODE
             if not os.environ.get("TEST_MODE"):
+                cursor.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = %s;", ("hj2713@columbia.edu",))
                 cursor.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = %s;", ("hj2713@columbia.edu",))
+            else:
+                cursor.execute("UPDATE users SET is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;", ("hj2713@columbia.edu",))
 
     finally:
         conn.close()
@@ -888,10 +890,12 @@ def init_sqlite_db():
         conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'TEST', 'test@test.com');", (str(uuid.uuid4()),))
 
 
-        # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing
-        conn.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = ?;", ("hj2713@columbia.edu",))
+        # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing when not in TEST_MODE
         if not os.environ.get("TEST_MODE"):
+            conn.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = ?;", ("hj2713@columbia.edu",))
             conn.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = ?;", ("hj2713@columbia.edu",))
+        else:
+            conn.execute("UPDATE users SET is_admin = 1, can_add = 1, can_delete = 1 WHERE email = ?;", ("hj2713@columbia.edu",))
 
 
         conn.commit()

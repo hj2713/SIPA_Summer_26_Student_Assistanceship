@@ -9,16 +9,17 @@ from app.workflows.validator import validate_workflow_definition
 def test_structured_law_summarizer_template_validity():
     template = WORKFLOW_TEMPLATES["structured_law_summarizer"]()
     assert template["schema_version"] == 1
-    assert len(template["nodes"]) == 5
-    assert len(template["edges"]) == 4
-    assert len(template["outputs"]) == 7
+    assert len(template["nodes"]) == 6
+    assert len(template["edges"]) == 5
+    assert len(template["outputs"]) == 9
 
     node_ids = [node["id"] for node in template["nodes"]]
     assert node_ids == [
         "document_input",
-        "executive_purpose_analysis",
-        "key_provisions_analysis",
-        "summary_assembly",
+        "section_breakdown_analysis",
+        "crs_provisions_analysis",
+        "administrative_delegation_analysis",
+        "executive_crs_synthesis",
         "dashboard_output",
     ]
 
@@ -35,8 +36,7 @@ def test_structured_law_summarizer_db_seeding():
         assert row is not None
         assert row["name"] == "Structured Law Summarizer"
         definition = json.loads(row["definition_json"])
-        assert len(definition["nodes"]) == 5
-
+        assert len(definition["nodes"]) == 6
 
 
 @pytest.mark.asyncio
@@ -55,21 +55,27 @@ async def test_structured_law_summarizer_dry_run_execution():
     class DummyLLM:
         async def parse_structured(self, messages, schema=None, log_context=None, temperature=0.0):
             schema_name = schema.__name__ if schema else ""
-            if "executive_purpose" in schema_name or "WorkflowNode_executive_purpose" in schema_name:
+            if "section_breakdown" in schema_name or "WorkflowNode_section_breakdown" in schema_name:
                 return schema(
-                    executive_summary="The bill amends the Securities Exchange Act of 1934 to permit earlier prospectus distribution by underwriters and reduce delivery waiting periods.",
-                    primary_policy_objectives=["Facilitate securities information distribution", "Modernize SEC registration procedures"]
+                    major_statutory_sections=["Section 1: Prospectus Filing in Waiting Period", "Section 2: Delivery Window Reduction", "Section 3: Investment Company Rulemaking"],
+                    legal_taxonomy_categories=["Statutory Amendments", "Regulatory Mandates", "Administrative Rulemaking"]
                 )
-            elif "key_provisions" in schema_name or "WorkflowNode_key_provisions" in schema_name:
+            elif "crs_provisions" in schema_name or "WorkflowNode_crs_provisions" in schema_name:
+                return schema(
+                    short_title_and_purpose="Securities Exchange Act Amendments of 1954 - Permit earlier prospectus delivery and authorize SEC rulemaking for continuous offerings.",
+                    amended_us_code_sections=["15 U.S.C. 77e", "15 U.S.C. 78j"],
+                    effective_timeline="Immediate upon enactment",
+                    penalties_and_enforcement=["SEC administrative injunctions", "Prospectus non-delivery civil liability"]
+                )
+            elif "administrative_delegation" in schema_name or "WorkflowNode_administrative_delegation" in schema_name:
                 return schema(
                     administrative_actors=["Securities and Exchange Commission (SEC)"],
-                    key_provisions=["Permits offers via prospectus during waiting period", "Reduces prospectus delivery window from 1 year to 40 days", "Authorizes SEC rulemaking for continuous offerings"],
-                    statutory_constraints=["Rulemaking bounded by Securities Exchange Act of 1934"]
+                    delegated_rulemaking_powers=["Issue rules and regulations governing investment companies engaging in continuous share offerings"],
+                    statutory_constraints=["Bounded by Securities Exchange Act of 1934 statutory guidelines"]
                 )
-            elif "summary_assembly" in schema_name or "WorkflowNode_summary_assembly" in schema_name:
+            elif "executive_crs" in schema_name or "WorkflowNode_executive_crs" in schema_name:
                 return schema(
-                    structured_summary_markdown="# PL 83-577 Executive Summary\nAmends Securities Exchange Act of 1934.\n\n## Key Provisions\n- Reduces waiting period to 40 days.\n- Grants SEC rulemaking power.",
-                    amended_statutes_or_context="Securities Exchange Act of 1934"
+                    structured_crs_summary_markdown="# Public Law 83-577 Executive Summary\nAmends Securities Exchange Act of 1934.\n\n## Core Provisions\n- Reduces delivery window to 40 days.\n- Grants SEC rulemaking authority."
                 )
             return schema()
 
@@ -81,11 +87,11 @@ async def test_structured_law_summarizer_dry_run_execution():
     try:
         results = await executor.execute(template, source_text=sample_law_text)
         outputs = results["outputs"]
-        assert outputs["executive_summary"].startswith("The bill amends")
+        assert outputs["short_title_and_purpose"].startswith("Securities Exchange Act Amendments of 1954")
         assert "Securities and Exchange Commission (SEC)" in outputs["administrative_actors"]
-        assert len(outputs["key_provisions"]) == 3
-        assert "# PL 83-577 Executive Summary" in outputs["structured_summary_markdown"]
-        assert len(results["trace"]) == 5
+        assert len(outputs["major_statutory_sections"]) == 3
+        assert "# Public Law 83-577 Executive Summary" in outputs["structured_crs_summary_markdown"]
+        assert len(results["trace"]) == 6
     finally:
         exec_module.get_llm_for_model = original_get_llm
         exec_module.get_llm = original_get_llm

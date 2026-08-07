@@ -18,7 +18,7 @@ const NODE_META: Record<WorkflowNodeKind, { label: string; color: string; icon: 
   condition: { label: "Condition", color: "text-amber-600 bg-amber-500/10 border-amber-500/25", icon: GitBranch },
   set_value: { label: "Set value", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/25", icon: Braces },
   validation: { label: "Validation", color: "text-rose-600 bg-rose-500/10 border-rose-500/25", icon: CheckCircle2 },
-  output: { label: "Output", color: "text-cyan-600 bg-cyan-500/10 border-cyan-500/25", icon: TableProperties },
+  output: { label: "DB Storage & Output", color: "text-cyan-600 bg-cyan-500/10 border-cyan-500/25", icon: TableProperties },
   rank_descriptor: { label: "Rank descriptor", color: "text-orange-600 bg-orange-500/10 border-orange-500/25", icon: ListOrdered },
 };
 
@@ -51,6 +51,11 @@ export function WorkflowNodeCard({ data, selected }: NodeProps) {
             <Icon size={12} /> {meta.label}
           </span>
           {definition.kind === "llm" && <span className="text-[9px] text-muted-foreground">{outputCount} outputs</span>}
+          {definition.kind === "output" && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+              💾 Auto-Saved DB
+            </span>
+          )}
           {definition.kind === "rank_descriptor" && (
             <span className="text-[9px] font-bold text-orange-600">Rank {String(definition.config.rank ?? "?")}</span>
           )}

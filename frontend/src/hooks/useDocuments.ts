@@ -311,23 +311,21 @@ export function useDocuments(options: { pageSize?: number } = {}) {
     }
   }, [session, activeWorkspace, page, pageSize]);
 
+  const hasActiveJob = documents.some(
+    (d) => d.status === "pending" || d.status === "processing"
+  );
+
   useEffect(() => {
-    if (!session || !user) return;
-
-    const hasActiveJob = documents.some(
-      (d) => d.status === "pending" || d.status === "processing"
-    );
-
-    if (!hasActiveJob) return;
+    if (!session || !user || !hasActiveJob) return;
 
     const interval = setInterval(() => {
       void fetchDocuments();
-    }, 2000);
+    }, 4000);
 
     return () => {
       clearInterval(interval);
     };
-  }, [session, user, documents]);
+  }, [session?.access_token, user?.id, hasActiveJob]);
 
   return {
     documents,

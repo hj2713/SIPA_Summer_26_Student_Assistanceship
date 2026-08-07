@@ -433,8 +433,10 @@ def init_postgres_db():
                     (test_pwd_hash, "test@test.com")
                 )
 
-            # Ensure PRODUCTION workspace exists
+            # Ensure PRODUCTION & QA workspaces exist
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
+
 
             # Seed test@gmail.com & test@test.com as members of PRODUCTION
             for email in ["test@gmail.com", "test@test.com"]:
@@ -445,7 +447,9 @@ def init_postgres_db():
 
             # Requirement 4: Reset hj2713@columbia.edu so it starts in uninvited state for testing
             cursor.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = %s;", ("hj2713@columbia.edu",))
-            cursor.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = %s;", ("hj2713@columbia.edu",))
+            if not os.environ.get("TEST_MODE"):
+                cursor.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = %s;", ("hj2713@columbia.edu",))
+
     finally:
         conn.close()
 
@@ -851,14 +855,18 @@ def init_sqlite_db():
                 (test_pwd_hash, "test@test.com")
             )
 
-        # Seed PRODUCTION workspace & memberships
+        # Seed PRODUCTION & QA workspaces & memberships
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+
         for email in ["test@gmail.com", "test@test.com"]:
             conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'PRODUCTION', ?);", (str(uuid.uuid4()), email))
 
         # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing
         conn.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = ?;", ("hj2713@columbia.edu",))
-        conn.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = ?;", ("hj2713@columbia.edu",))
+        if not os.environ.get("TEST_MODE"):
+            conn.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = ?;", ("hj2713@columbia.edu",))
+
 
         conn.commit()
 

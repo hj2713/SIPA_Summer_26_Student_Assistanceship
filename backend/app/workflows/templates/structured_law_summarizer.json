@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {
+      "id": "document_input",
+      "kind": "document_input",
+      "name": "Law document input",
+      "description": "The statutory text file or full law text to be summarized.",
+      "position": {
+        "x": 40,
+        "y": 200
+      },
+      "config": {
+        "source_policy": "campaign_source"
+      }
+    },
+    {
+      "id": "executive_purpose_analysis",
+      "kind": "llm",
+      "name": "1. Executive purpose analysis",
+      "description": "Extract overall policy purpose, core intent, and primary objectives.",
+      "position": {
+        "x": 350,
+        "y": 200
+      },
+      "config": {
+        "document_context": "source_text",
+        "instructions": "Analyze the statutory law text to extract its core policy intent. Identify what policy changes the bill makes overall, its high-level objectives, and its main legislative focus. Return a concise 2-3 sentence executive summary and a list of primary policy objectives.",
+        "input_fields": [],
+        "outputs": [
+          {
+            "key": "executive_summary",
+            "label": "Executive summary",
+            "type": "string",
+            "required": true
+          },
+          {
+            "key": "primary_policy_objectives",
+            "label": "Primary policy objectives",
+            "type": "list[string]",
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "key_provisions_analysis",
+      "kind": "llm",
+      "name": "2. Key provisions analysis",
+      "description": "Extract specific statutory powers, administrative actors, and restrictions.",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "config": {
+        "document_context": "source_text",
+        "instructions": "Identify the key statutory provisions and specific administrative powers granted or modified by this law. Focus on: 1) Federal/executive actors receiving authority, 2) Specific powers, grants, fee adjustments, or standards created, 3) Statutory limits, reporting deadlines, oversight, and restrictions.",
+        "input_fields": [
+          "executive_purpose_analysis.executive_summary"
+        ],
+        "outputs": [
+          {
+            "key": "administrative_actors",
+            "label": "Administrative actors",
+            "type": "list[string]",
+            "required": false
+          },
+          {
+            "key": "key_provisions",
+            "label": "Key provisions & powers",
+            "type": "list[string]",
+            "required": true
+          },
+          {
+            "key": "statutory_constraints",
+            "label": "Statutory constraints & oversight",
+            "type": "list[string]",
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "summary_assembly",
+      "kind": "llm",
+      "name": "3. Structured CQ-style summary assembly",
+      "description": "Synthesize executive purpose and key provisions into a CQ-Almanac style markdown digest.",
+      "position": {
+        "x": 1050,
+        "y": 200
+      },
+      "config": {
+        "document_context": "source_text",
+        "instructions": "Synthesize the extracted executive summary, policy objectives, key provisions, and statutory constraints into a standardized CQ-Almanac style structured summary markdown. Format the output clearly with sections: # Executive Summary, ## Key Provisions & Granted Authorities, ## Statutory Constraints & Background.",
+        "input_fields": [
+          "executive_purpose_analysis.executive_summary",
+          "executive_purpose_analysis.primary_policy_objectives",
+          "key_provisions_analysis.administrative_actors",
+          "key_provisions_analysis.key_provisions",
+          "key_provisions_analysis.statutory_constraints"
+        ],
+        "outputs": [
+          {
+            "key": "structured_summary_markdown",
+            "label": "Structured summary markdown",
+            "type": "string",
+            "required": true
+          },
+          {
+            "key": "amended_statutes_or_context",
+            "label": "Amended statutes or context",
+            "type": "string",
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "dashboard_output",
+      "kind": "output",
+      "name": "Dashboard output",
+      "description": "Fields made available to campaigns and auto-saved to database.",
+      "position": {
+        "x": 1400,
+        "y": 200
+      },
+      "config": {
+        "fields": [
+          {
+            "key": "executive_summary",
+            "field": "executive_purpose_analysis.executive_summary"
+          },
+          {
+            "key": "primary_policy_objectives",
+            "field": "executive_purpose_analysis.primary_policy_objectives"
+          },
+          {
+            "key": "administrative_actors",
+            "field": "key_provisions_analysis.administrative_actors"
+          },
+          {
+            "key": "key_provisions",
+            "field": "key_provisions_analysis.key_provisions"
+          },
+          {
+            "key": "statutory_constraints",
+            "field": "key_provisions_analysis.statutory_constraints"
+          },
+          {
+            "key": "structured_summary_markdown",
+            "field": "summary_assembly.structured_summary_markdown"
+          },
+          {
+            "key": "amended_statutes_or_context",
+            "field": "summary_assembly.amended_statutes_or_context"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "document_input",
+      "target": "executive_purpose_analysis"
+    },
+    {
+      "id": "e2",
+      "source": "executive_purpose_analysis",
+      "target": "key_provisions_analysis"
+    },
+    {
+      "id": "e3",
+      "source": "key_provisions_analysis",
+      "target": "summary_assembly"
+    },
+    {
+      "id": "e4",
+      "source": "summary_assembly",
+      "target": "dashboard_output"
+    }
+  ],
+  "outputs": [
+    {
+      "key": "executive_summary",
+      "source": "executive_purpose_analysis.executive_summary",
+      "group": "Summary"
+    },
+    {
+      "key": "primary_policy_objectives",
+      "source": "executive_purpose_analysis.primary_policy_objectives",
+      "group": "Summary"
+    },
+    {
+      "key": "administrative_actors",
+      "source": "key_provisions_analysis.administrative_actors",
+      "group": "Provisions"
+    },
+    {
+      "key": "key_provisions",
+      "source": "key_provisions_analysis.key_provisions",
+      "group": "Provisions"
+    },
+    {
+      "key": "statutory_constraints",
+      "source": "key_provisions_analysis.statutory_constraints",
+      "group": "Provisions"
+    },
+    {
+      "key": "structured_summary_markdown",
+      "source": "summary_assembly.structured_summary_markdown",
+      "group": "Assembly"
+    },
+    {
+      "key": "amended_statutes_or_context",
+      "source": "summary_assembly.amended_statutes_or_context",
+      "group": "Assembly"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 0.75
+  }
+}

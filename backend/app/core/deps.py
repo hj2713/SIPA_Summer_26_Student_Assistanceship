@@ -52,6 +52,7 @@ def get_current_user(
         can_add = False
         can_delete = False
         
+        email = payload.get("email")
         from app.repositories import get_db_session
         with get_db_session() as session:
             row = session.users.get_by_id(user_id)
@@ -60,9 +61,18 @@ def get_current_user(
                     is_admin = True
                     can_add = True
                     can_delete = True
+                    email = email or f"{user_id}@test.local"
+                    session.users.create(
+                        user_id=user_id,
+                        email=email,
+                        password_hash="TEST_AUTH_NO_PASSWORD",
+                        is_admin=1,
+                        can_add=1,
+                        can_delete=1
+                    )
                 else:
                     # Automatically register verified external user in local cache
-                    email = payload.get("email") or f"{user_id}@auth.external"
+                    email = email or f"{user_id}@auth.external"
                     is_admin = False
                     can_add = True
                     can_delete = False
@@ -75,6 +85,7 @@ def get_current_user(
                         can_delete=int(can_delete)
                     )
                     logger.info("Automatically registered external user %s (%s) in local cache.", user_id, email)
+
             else:
                 is_admin = bool(row["is_admin"])
                 can_add = bool(row["can_add"])

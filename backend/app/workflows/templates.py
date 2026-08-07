@@ -232,10 +232,20 @@ def law_delegation_discretion_rank_definition() -> Dict[str, Any]:
     )
 
 
+def structured_law_summarizer_definition() -> Dict[str, Any]:
+    import os
+    import json
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "structured_law_summarizer.json")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 WORKFLOW_TEMPLATES = {
     "blank": blank_workflow_definition,
     "delegation_discretion": delegation_discretion_definition,
     "law_delegation_discretion_rank": law_delegation_discretion_rank_definition,
     "professor_discretion_prompt_suite": professor_discretion_prompt_suite_definition,
     "professor_discretion_prompt_suite_detailed": professor_discretion_prompt_suite_detailed_definition,
+    "structured_law_summarizer": structured_law_summarizer_definition,
 }
+

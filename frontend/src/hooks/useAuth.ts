@@ -100,11 +100,21 @@ export function useAuth(): AuthContextValue {
 
     void initAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, sbSession) => {
-      if (sbSession?.user?.email) {
-        void syncSupabaseGoogleUser(sbSession.user.email);
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, sbSession) => {
+      if (event === "SIGNED_OUT") {
+        localStorage.removeItem("local_session");
+        localStorage.removeItem("active_workspace_id");
+        setSession(null);
+        setUser(null);
+        setWorkspaces([]);
+        setActiveWorkspaceState(null);
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        if (sbSession?.user?.email) {
+          void syncSupabaseGoogleUser(sbSession.user.email);
+        }
       }
     });
+
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -343,6 +353,11 @@ export function useAuth(): AuthContextValue {
   };
 
   const signOut = async (): Promise<void> => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Failed to sign out of Supabase OAuth:", err);
+    }
     localStorage.removeItem("local_session");
     localStorage.removeItem("active_workspace_id");
     setSession(null);
@@ -350,6 +365,7 @@ export function useAuth(): AuthContextValue {
     setWorkspaces([]);
     setActiveWorkspaceState(null);
   };
+
 
   return {
     session,

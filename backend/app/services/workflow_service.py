@@ -34,7 +34,9 @@ class WorkflowService:
         "law_delegation_discretion_rank": 4,
         "professor_discretion_prompt_suite": 1,
         "professor_discretion_prompt_suite_detailed": 1,
+        "structured_law_summarizer": 1,
     }
+
 
     def _parse_definition(self, raw) -> WorkflowDefinition:
         data = json.loads(raw) if isinstance(raw, str) else (raw or {})
@@ -145,6 +147,14 @@ class WorkflowService:
                 "category": "Project",
                 "seed_version": self.SEED_TEMPLATE_VERSIONS["professor_discretion_prompt_suite_detailed"],
                 "definition": self._normalize_definition(WORKFLOW_TEMPLATES["professor_discretion_prompt_suite_detailed"]()).model_dump(),
+            },
+            {
+                "slug": "structured_law_summarizer",
+                "name": "Structured Law Summarizer",
+                "description": "Multi-step workflow that digests law documents into high-level purpose, key provisions, statutory constraints, and CQ-Almanac style summaries.",
+                "category": "Project",
+                "seed_version": self.SEED_TEMPLATE_VERSIONS["structured_law_summarizer"],
+                "definition": self._normalize_definition(WORKFLOW_TEMPLATES["structured_law_summarizer"]()).model_dump(),
             },
         ]
         with self.db_session_factory() as session:

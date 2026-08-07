@@ -1,7 +1,7 @@
 """Constants used across the backend application."""
 
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
-DEFAULT_WORKSPACE_ID = "PRODUCTION"
+DEFAULT_WORKSPACE_ID = "ws_prod_00000001"
 
 # Supported mime types and extensions for ingestion
 MIME_TO_EXT = {

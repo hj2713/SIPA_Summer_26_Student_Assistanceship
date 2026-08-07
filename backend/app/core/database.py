@@ -434,8 +434,8 @@ def init_postgres_db():
                     (test_pwd_hash, "test@test.com")
                 )
 
-            # Ensure PRODUCTION, QA & TEST workspaces exist
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
+            # Ensure ws_prod_00000001, QA & TEST workspaces exist
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('ws_prod_00000001', 'PRODUCTION') ON CONFLICT DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
 
@@ -443,7 +443,7 @@ def init_postgres_db():
             for email in ["test@gmail.com", "test@test.com"]:
                 cursor.execute(
                     "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
-                    (str(uuid.uuid4()), "PRODUCTION", email)
+                    (str(uuid.uuid4()), "ws_prod_00000001", email)
                 )
             cursor.execute(
                 "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, 'TEST', 'test@test.com') ON CONFLICT DO NOTHING;",
@@ -880,13 +880,13 @@ def init_sqlite_db():
                 (test_pwd_hash, "test@test.com")
             )
 
-        # Seed PRODUCTION, QA & TEST workspaces & memberships
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
+        # Seed ws_prod_00000001, QA & TEST workspaces & memberships
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('ws_prod_00000001', 'PRODUCTION');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
 
         for email in ["test@gmail.com", "test@test.com"]:
-            conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'PRODUCTION', ?);", (str(uuid.uuid4()), email))
+            conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'ws_prod_00000001', ?);", (str(uuid.uuid4()), email))
         conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'TEST', 'test@test.com');", (str(uuid.uuid4()),))
 
 

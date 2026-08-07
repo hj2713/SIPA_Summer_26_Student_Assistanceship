@@ -474,11 +474,11 @@ def list_workspaces(current_user: CurrentUserDep):
     with get_db_session() as session:
         rows = session.workspaces.list_all()
         valid_rows = [r for r in rows if r["id"] not in ("QA", "TEST") and r["name"] not in ("QA", "TEST")]
-        if not valid_rows or not any(r["id"] == "PRODUCTION" for r in valid_rows):
+        if not valid_rows or not any(r["id"] == "ws_prod_00000001" for r in valid_rows):
             try:
-                session.workspaces.create(workspace_id="PRODUCTION", name="PRODUCTION")
-                if not any(r["id"] == "PRODUCTION" for r in valid_rows):
-                    valid_rows.append({"id": "PRODUCTION", "name": "PRODUCTION"})
+                session.workspaces.create(workspace_id="ws_prod_00000001", name="PRODUCTION")
+                if not any(r["id"] == "ws_prod_00000001" for r in valid_rows):
+                    valid_rows.append({"id": "ws_prod_00000001", "name": "PRODUCTION"})
             except Exception:
                 pass
         

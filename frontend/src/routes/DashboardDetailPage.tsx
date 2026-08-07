@@ -386,7 +386,7 @@ export function DashboardDetailPage() {
   const [pinnedDocIds, setPinnedDocIds] = useState<string[]>([]);
   const { messages, streaming, draftContent, sendMessage, stopGeneration } = useChat(chatThreadId);
   const isWorkflowDashboard = campaign?.dashboard_type === "workflow";
-  const dashboardWorkspaceId = campaign?.workspace_id || "TEST";
+  const dashboardWorkspaceId = campaign?.workspace_id || "PRODUCTION";
 
   // Drag and Drop Upload State
   const [uploadingFiles, setUploadingFiles] = useState(false);

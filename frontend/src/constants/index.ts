@@ -4,7 +4,7 @@
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-export const DEFAULT_WORKSPACE_ID = "TEST";
+export const DEFAULT_WORKSPACE_ID = "PRODUCTION";
 
 export const ALLOWED_EXTENSIONS = ["txt", "md", "html", "pdf", "docx"];
 

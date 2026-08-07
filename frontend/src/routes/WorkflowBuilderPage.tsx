@@ -62,7 +62,7 @@ function WorkflowBuilderInner() {
   const isTemplate = searchParams.get("type") === "template";
   const { session, activeWorkspace } = useAuthContext();
   const jwt = session?.access_token || "";
-  const workspaceId = activeWorkspace?.id || "TEST";
+  const workspaceId = activeWorkspace?.id || "PRODUCTION";
   const [workflow, setWorkflow] = useState<CodingWorkflow | null>(null);
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);

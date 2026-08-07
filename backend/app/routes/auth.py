@@ -532,7 +532,13 @@ def list_workspaces(current_user: CurrentUserDep):
             except Exception as e:
                 logger.error(f"Failed to auto-create personal workspace: {e}")
 
-        return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in member_rows]
+        final_workspaces = []
+        for row in member_rows:
+            if row["id"] in ("QA", "TEST") and current_user.email.lower() != "test@test.com":
+                continue
+            final_workspaces.append(row)
+
+        return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in final_workspaces]
 
 
 @router.post("/workspaces", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)

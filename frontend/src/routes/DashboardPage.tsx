@@ -157,7 +157,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
   const fetchCampaigns = async () => {
     if (!session?.access_token) return;
     try {
-      const workspaceId = activeWorkspace?.id ?? "TEST";
+      const workspaceId = activeWorkspace?.id ?? "PRODUCTION";
       const headers = { Authorization: `Bearer ${session.access_token}` };
       const campaignResponse = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${workspaceId}`, { headers });
       if (campaignResponse.ok) setCampaigns(await campaignResponse.json());
@@ -173,7 +173,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
       return;
     }
     try {
-      const workspaceId = activeWorkspace?.id ?? "TEST";
+      const workspaceId = activeWorkspace?.id ?? "PRODUCTION";
       const mappingResponse = await fetch(`${API_BASE_URL}/api/dashboards/document-mapping?workspace_id=${workspaceId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
@@ -235,7 +235,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
           if (tags.length > 0) {
             formData.append("tags", tags.join(","));
           }
-          formData.append("workspace_id", activeWorkspace?.id ?? "TEST");
+          formData.append("workspace_id", activeWorkspace?.id ?? "PRODUCTION");
           
           try {
             const res = await fetch(`${API_BASE_URL}/api/dashboards/${selectedUploadCampaign}/documents/upload`, {

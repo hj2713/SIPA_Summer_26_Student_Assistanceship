@@ -138,7 +138,7 @@ export function useChat(threadId: string | null): UseChatReturn {
           { 
             thread_id: targetThreadId, 
             message: text,
-            workspace_id: activeWorkspace?.id ?? "TEST",
+            workspace_id: activeWorkspace?.id ?? "PRODUCTION",
             pinned_document_ids: pinnedDocumentIds,
             dashboard_id: dashboardId
           },

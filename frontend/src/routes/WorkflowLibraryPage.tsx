@@ -26,7 +26,7 @@ export function WorkflowLibraryPage() {
   const navigate = useNavigate();
   const { session, activeWorkspace } = useAuthContext();
   const jwt = session?.access_token || "";
-  const workspaceId = activeWorkspace?.id || "TEST";
+  const workspaceId = activeWorkspace?.id || "PRODUCTION";
   const [workflows, setWorkflows] = useState<CodingWorkflow[]>([]);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [loading, setLoading] = useState(true);

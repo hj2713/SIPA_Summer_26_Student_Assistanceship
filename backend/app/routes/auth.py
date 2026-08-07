@@ -457,7 +457,7 @@ def link_google(payload: LinkGoogleRequest, current_user: CurrentUserDep):
 
 @router.get("/workspaces", response_model=list[WorkspaceResponse])
 def list_workspaces(current_user: CurrentUserDep):
-    """List all available workspaces (excluding legacy QA & TEST)."""
+    """List available workspaces for the current user based on membership."""
     with get_db_session() as session:
         rows = session.workspaces.list_all()
         valid_rows = [r for r in rows if r["id"] not in ("QA", "TEST") and r["name"] not in ("QA", "TEST")]
@@ -468,12 +468,66 @@ def list_workspaces(current_user: CurrentUserDep):
                     valid_rows.append({"id": "PRODUCTION", "name": "PRODUCTION"})
             except Exception:
                 pass
-        return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in valid_rows]
+        
+        # If user is admin (e.g. test@test.com), show all valid workspaces
+        if current_user.is_admin:
+            return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in valid_rows]
+        
+        # Non-admin user: check workspace_memberships table
+        allowed_ids = set()
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                    cursor.execute(
+                        "SELECT workspace_id FROM workspace_memberships WHERE LOWER(user_email) = %s;",
+                        (current_user.email.lower(),)
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT workspace_id FROM workspace_memberships WHERE LOWER(user_email) = ?;",
+                        (current_user.email.lower(),)
+                    )
+                for r in cursor.fetchall():
+                    email_ws = r[0] if isinstance(r, (list, tuple)) else r["workspace_id"]
+                    allowed_ids.add(email_ws)
+        except Exception as e:
+            logger.warning(f"Error checking workspace memberships: {e}")
+
+        member_rows = [r for r in valid_rows if r["id"] in allowed_ids]
+
+        # If user has no workspaces assigned, auto-provision a personal workspace for them
+        if not member_rows:
+            user_prefix = current_user.email.split("@")[0].upper()
+            personal_ws_id = f"WS-{current_user.id[:8].upper()}"
+            personal_ws_name = f"{user_prefix}'S WORKSPACE"
+            try:
+                if not session.workspaces.get_by_id(personal_ws_id):
+                    session.workspaces.create(workspace_id=personal_ws_id, name=personal_ws_name)
+                
+                if hasattr(session, "conn") and session.conn:
+                    cursor = session.conn.cursor()
+                    m_id = str(uuid.uuid4())
+                    if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                        cursor.execute(
+                            "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                            (m_id, personal_ws_id, current_user.email.lower())
+                        )
+                    else:
+                        cursor.execute(
+                            "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, ?, ?);",
+                            (m_id, personal_ws_id, current_user.email.lower())
+                        )
+                return [WorkspaceResponse(id=personal_ws_id, name=personal_ws_name)]
+            except Exception as e:
+                logger.error(f"Failed to auto-create personal workspace: {e}")
+
+        return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in member_rows]
 
 
 @router.post("/workspaces", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
-    """Create a new workspace."""
+    """Create a new workspace and add creator as member."""
     name = payload.name.strip().upper()
     if not name or name in ("QA", "TEST"):
         raise HTTPException(
@@ -489,6 +543,23 @@ def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
                 detail="Workspace already exists"
             )
         session.workspaces.create(workspace_id=workspace_id, name=name)
+
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                m_id = str(uuid.uuid4())
+                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                    cursor.execute(
+                        "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                        (m_id, workspace_id, current_user.email.lower())
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, ?, ?);",
+                        (m_id, workspace_id, current_user.email.lower())
+                    )
+        except Exception as e:
+            logger.error(f"Failed to save workspace membership: {e}")
 
     return WorkspaceResponse(id=workspace_id, name=name)
 
@@ -525,33 +596,136 @@ def set_active_workspace_endpoint(payload: WorkspaceCreate, current_user: Curren
 @router.get("/workspaces/{workspace_id}/members")
 def list_workspace_members(workspace_id: str, current_user: CurrentUserDep):
     """List members and invited accounts for a workspace."""
+    ws_id = workspace_id.strip().upper()
     with get_db_session() as session:
-        users = session.users.list_all()
-        return [
-            {
-                "id": u["id"],
-                "email": u["email"],
-                "role": "Owner" if u["email"] == current_user.email else "Member",
-                "status": "Active"
-            }
-            for u in users
-        ]
+        member_emails = set()
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                    cursor.execute("SELECT user_email FROM workspace_memberships WHERE workspace_id = %s;", (ws_id,))
+                else:
+                    cursor.execute("SELECT user_email FROM workspace_memberships WHERE workspace_id = ?;", (ws_id,))
+                for r in cursor.fetchall():
+                    email_val = r[0] if isinstance(r, (list, tuple)) else r["user_email"]
+                    member_emails.add(email_val.lower())
+        except Exception as e:
+            logger.warning(f"Error reading workspace members: {e}")
+
+        all_users = session.users.list_all()
+        for u in all_users:
+            if u.get("is_admin"):
+                member_emails.add(u["email"].lower())
+
+        members = []
+        for u in all_users:
+            if u["email"].lower() in member_emails:
+                members.append({
+                    "id": u["id"],
+                    "email": u["email"],
+                    "is_admin": bool(u.get("is_admin", 0)),
+                    "can_add": bool(u.get("can_add", 0)),
+                    "can_delete": bool(u.get("can_delete", 0)),
+                    "role": "Owner/Admin" if u.get("is_admin") else "Member",
+                    "status": "Active"
+                })
+        return members
 
 
 @router.post("/workspaces/{workspace_id}/invite")
 def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current_user: CurrentUserDep):
-    """Invite a Google / team email to join a workspace."""
+    """Invite a Google / team email to join a workspace (Admin only)."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only workspace administrators can invite team members."
+        )
     invite_email = payload.email.strip().lower()
+    ws_id = workspace_id.strip().upper()
     if not invite_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email cannot be empty"
         )
+    
+    with get_db_session() as session:
+        # Add to workspace_memberships
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                m_id = str(uuid.uuid4())
+                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                    cursor.execute(
+                        "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                        (m_id, ws_id, invite_email)
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, ?, ?);",
+                        (m_id, ws_id, invite_email)
+                    )
+        except Exception as e:
+            logger.error(f"Failed to save workspace membership: {e}")
+
+        # Ensure user account exists (with non-admin default flags)
+        user_row = session.users.get_by_email(invite_email)
+        if not user_row:
+            u_id = str(uuid.uuid4())
+            pwd_hash = hash_password(str(uuid.uuid4()))
+            session.users.create(
+                user_id=u_id,
+                email=invite_email,
+                password_hash=pwd_hash,
+                is_admin=0,
+                can_add=0,
+                can_delete=0
+            )
+
     return {
         "status": "success",
-        "message": f"Invitation sent to {invite_email} to join workspace {workspace_id.upper()}.",
-        "workspace_id": workspace_id.upper(),
+        "message": f"Successfully invited {invite_email} to join workspace {ws_id}.",
+        "workspace_id": ws_id,
         "invited_email": invite_email,
     }
+
+
+class UpdateUserPermissionsRequest(BaseModel):
+    can_add: bool
+    can_delete: bool
+
+
+@router.put("/users/{user_id}/permissions")
+def update_user_permissions(user_id: str, payload: UpdateUserPermissionsRequest, current_user: CurrentUserDep):
+    """Update can_add and can_delete permissions for a user (Admin only)."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only workspace admins can update user permissions."
+        )
+    with get_db_session() as session:
+        u = session.users.get_by_id(user_id)
+        if not u:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                    cursor.execute(
+                        "UPDATE users SET can_add = %s, can_delete = %s WHERE id = %s;",
+                        (1 if payload.can_add else 0, 1 if payload.can_delete else 0, user_id)
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE users SET can_add = ?, can_delete = ? WHERE id = ?;",
+                        (1 if payload.can_add else 0, 1 if payload.can_delete else 0, user_id)
+                    )
+        except Exception as e:
+            logger.error(f"Failed to update user permissions: {e}")
+            raise HTTPException(status_code=500, detail="Failed to update permissions")
+
+    return {"status": "success", "message": "User permissions updated successfully"}
 
 

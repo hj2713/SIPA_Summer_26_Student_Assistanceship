@@ -260,64 +260,66 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* Google Auth & Workspace Team Card */}
-          <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-foreground">Google Auth & Workspace Collaboration</h2>
-                <p className="text-xs text-muted-foreground">Link your account to Google and invite team members to your active workspace.</p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6 pt-2">
-              {/* Account Link Box */}
-              <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
-                <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  Link Account ({user?.email})
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Link your primary <code className="px-1.5 py-0.5 rounded bg-muted text-primary font-mono text-[11px] font-semibold">{user?.email}</code> account to your Google email address for one-click Google Sign-In.
-                </p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Input
-                    placeholder="e.g. yourname@gmail.com"
-                    value={googleEmailInput}
-                    onChange={(e) => setGoogleEmailInput(e.target.value)}
-                    className="h-9 text-xs rounded-xl bg-background border-border/80"
-                  />
-                  <Button size="sm" onClick={handleLinkGoogle} disabled={linkingLoading} className="h-9 text-xs font-semibold rounded-xl whitespace-nowrap shadow-sm">
-                    {linkingLoading ? "Linking..." : "Link Google Account"}
-                  </Button>
+          {/* Google Auth & Workspace Team Card (Admin Only) */}
+          {user?.is_admin && (
+            <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Google Auth & Workspace Collaboration</h2>
+                  <p className="text-xs text-muted-foreground">Link your account to Google and invite team members to your active workspace.</p>
                 </div>
               </div>
 
-              {/* Invite Workspace Members Box */}
-              <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
-                <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
-                  <UserPlus className="w-4 h-4 text-indigo-500" />
-                  Invite to {activeWorkspace?.name || "Workspace"}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Invite teammates or additional Google accounts to join your active workspace <strong className="text-foreground">{activeWorkspace?.name}</strong>.
-                </p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Input
-                    placeholder="teammate@gmail.com"
-                    value={inviteEmailInput}
-                    onChange={(e) => setInviteEmailInput(e.target.value)}
-                    className="h-9 text-xs rounded-xl bg-background border-border/80"
-                  />
-                  <Button size="sm" onClick={handleInviteMember} disabled={inviteLoading} className="h-9 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap shadow-sm">
-                    {inviteLoading ? "Sending..." : "Send Workspace Invite"}
-                  </Button>
+              <div className="grid md:grid-cols-2 gap-6 pt-2">
+                {/* Account Link Box */}
+                <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                  <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    Link Account ({user?.email})
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Link your primary <code className="px-1.5 py-0.5 rounded bg-muted text-primary font-mono text-[11px] font-semibold">{user?.email}</code> account to your Google email address for one-click Google Sign-In.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Input
+                      placeholder="e.g. yourname@gmail.com"
+                      value={googleEmailInput}
+                      onChange={(e) => setGoogleEmailInput(e.target.value)}
+                      className="h-9 text-xs rounded-xl bg-background border-border/80"
+                    />
+                    <Button size="sm" onClick={handleLinkGoogle} disabled={linkingLoading} className="h-9 text-xs font-semibold rounded-xl whitespace-nowrap shadow-sm">
+                      {linkingLoading ? "Linking..." : "Link Google Account"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Invite Workspace Members Box */}
+                <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                  <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                    <UserPlus className="w-4 h-4 text-indigo-500" />
+                    Invite to {activeWorkspace?.name || "Workspace"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Invite teammates or additional Google accounts to join your active workspace <strong className="text-foreground">{activeWorkspace?.name}</strong>.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Input
+                      placeholder="teammate@gmail.com"
+                      value={inviteEmailInput}
+                      onChange={(e) => setInviteEmailInput(e.target.value)}
+                      className="h-9 text-xs rounded-xl bg-background border-border/80"
+                    />
+                    <Button size="sm" onClick={handleInviteMember} disabled={inviteLoading} className="h-9 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap shadow-sm">
+                      {inviteLoading ? "Sending..." : "Send Workspace Invite"}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center min-h-[400px]">

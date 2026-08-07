@@ -14,9 +14,14 @@ interface DocumentPage {
   pages: number;
 }
 
-export function useDocuments(options: { pageSize?: number } = {}) {
+export interface UseDocumentsOptions {
+  pageSize?: number;
+  autoPoll?: boolean;
+}
+
+export function useDocuments(options: UseDocumentsOptions = {}) {
+  const { pageSize, autoPoll = false } = options;
   const { session, user, activeWorkspace } = useAuthContext();
-  const pageSize = options.pageSize;
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -53,6 +58,45 @@ export function useDocuments(options: { pageSize?: number } = {}) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeWorkspace?.id]);
+
+  useEffect(() => {
+    if (session?.access_token && activeWorkspace?.id) {
+      void fetchDocuments();
+    } else {
+      setDocuments([]);
+      setLoading(false);
+    }
+  }, [session?.access_token, activeWorkspace?.id, page, pageSize]);
+
+  const hasActiveJob = documents.some(
+    (d) => d.status === "pending" || d.status === "processing"
+  );
+
+  const pollCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!autoPoll || !session || !user || !hasActiveJob) {
+      pollCountRef.current = 0;
+      return;
+    }
+
+    if (pollCountRef.current >= 8) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      pollCountRef.current += 1;
+      void fetchDocuments();
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [autoPoll, session?.access_token, user?.id, hasActiveJob]);
 
   const uploadDocument = async (file: File, relativePath?: string, tags?: string[]) => {
     if (!session?.access_token) return;
@@ -298,45 +342,7 @@ export function useDocuments(options: { pageSize?: number } = {}) {
     }
   };
 
-  useEffect(() => {
-    setPage(1);
-  }, [activeWorkspace?.id]);
 
-  useEffect(() => {
-    if (session?.access_token && activeWorkspace?.id) {
-      void fetchDocuments();
-    } else {
-      setDocuments([]);
-      setLoading(false);
-    }
-  }, [session?.access_token, activeWorkspace?.id, page, pageSize]);
-
-  const hasActiveJob = documents.some(
-    (d) => d.status === "pending" || d.status === "processing"
-  );
-
-  const pollCountRef = useRef(0);
-
-  useEffect(() => {
-    if (!session || !user || !hasActiveJob) {
-      pollCountRef.current = 0;
-      return;
-    }
-
-    // Cap status polling at 8 attempts (32s) to prevent infinite loops if a job is stuck
-    if (pollCountRef.current >= 8) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      pollCountRef.current += 1;
-      void fetchDocuments();
-    }, 4000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [session?.access_token, user?.id, hasActiveJob]);
 
   return {
     documents,

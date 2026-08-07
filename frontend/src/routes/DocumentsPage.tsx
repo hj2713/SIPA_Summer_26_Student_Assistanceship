@@ -41,7 +41,7 @@ export function DocumentsPage() {
     bulkDeleteDocuments,
     retryDocument,
     retryDocumentsBatch
-  } = useDocuments();
+  } = useDocuments({ autoPoll: true });
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [expandedSummaryIds, setExpandedSummaryIds] = useState<string[]>([]);

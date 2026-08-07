@@ -44,7 +44,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
     setPage,
     pageCount,
     totalDocuments,
-  } = useDocuments({ pageSize: 50 });
+  } = useDocuments({ pageSize: 50, autoPoll: true });
   const visibleDocumentIdsKey = useMemo(() => documents.map((doc) => doc.id).join(","), [documents]);
   const activeCampaignObj = useMemo(() => {
     if (!selectedCampaignFilter) return null;

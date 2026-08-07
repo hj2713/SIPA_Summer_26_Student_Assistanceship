@@ -751,3 +751,136 @@ def update_user_permissions(user_id: str, payload: UpdateUserPermissionsRequest,
     return {"status": "success", "message": "User permissions updated successfully"}
 
 
+class KeyPreferenceRequest(BaseModel):
+    preference: str  # 'USE_PERSONAL_IF_AVAILABLE' | 'USE_WORKSPACE_ONLY' | 'ALWAYS_PERSONAL'
+
+
+@router.get("/user/key-preference")
+def get_user_key_preference(current_user: CurrentUserDep):
+    with get_db_session() as session:
+        u = session.users.get_by_id(current_user.id)
+        pref = "USE_PERSONAL_IF_AVAILABLE"
+        if u:
+            if isinstance(u, dict):
+                pref = u.get("llm_key_preference") or pref
+            else:
+                pref = getattr(u, "llm_key_preference", None) or pref
+        return {"preference": pref}
+
+
+@router.put("/user/key-preference")
+def update_user_key_preference(payload: KeyPreferenceRequest, current_user: CurrentUserDep):
+    pref = payload.preference.strip()
+    if pref not in ("USE_PERSONAL_IF_AVAILABLE", "USE_WORKSPACE_ONLY", "ALWAYS_PERSONAL"):
+        raise HTTPException(status_code=400, detail="Invalid preference value")
+
+    with get_db_session() as session:
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute("UPDATE users SET llm_key_preference = %s WHERE id = %s;", (pref, current_user.id))
+                else:
+                    cursor.execute("UPDATE users SET llm_key_preference = ? WHERE id = ?;", (pref, current_user.id))
+        except Exception as e:
+            logger.error(f"Failed to update key preference: {e}")
+            raise HTTPException(status_code=500, detail="Failed to save preference")
+
+    return {"status": "success", "preference": pref}
+
+
+class WorkspaceLLMCredentialUpdate(BaseModel):
+    provider: str
+    api_key: str
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+
+
+@router.get("/workspaces/{workspace_id}/llm-credentials")
+def list_workspace_llm_credentials(workspace_id: str, current_user: CurrentUserDep):
+    ws_id = workspace_id.strip().upper()
+    credentials = []
+    with get_db_session() as session:
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute(
+                        "SELECT id, provider, api_key_encrypted, model, base_url, updated_at FROM workspace_llm_credentials WHERE workspace_id = %s;",
+                        (ws_id,)
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT id, provider, api_key_encrypted, model, base_url, updated_at FROM workspace_llm_credentials WHERE workspace_id = ?;",
+                        (ws_id,)
+                    )
+                for row in cursor.fetchall():
+                    prov = row[1] if isinstance(row, (list, tuple)) else row["provider"]
+                    enc = row[2] if isinstance(row, (list, tuple)) else row["api_key_encrypted"]
+                    mod = row[3] if isinstance(row, (list, tuple)) else row.get("model")
+                    base = row[4] if isinstance(row, (list, tuple)) else row.get("base_url")
+                    
+                    from app.core.llm_credentials import decrypt_api_key
+                    raw_key = decrypt_api_key(enc) if enc else ""
+                    masked = (raw_key[:6] + "..." + raw_key[-4:]) if len(raw_key) > 10 else ("***" if raw_key else "")
+                    
+                    credentials.append({
+                        "provider": prov,
+                        "is_configured": bool(raw_key),
+                        "masked_key": masked,
+                        "model": mod,
+                        "base_url": base
+                    })
+        except Exception as e:
+            logger.warning(f"Error fetching workspace credentials: {e}")
+    return {"workspace_id": ws_id, "credentials": credentials}
+
+
+@router.post("/workspaces/{workspace_id}/llm-credentials/verify")
+def verify_and_save_workspace_llm_credential(workspace_id: str, payload: WorkspaceLLMCredentialUpdate, current_user: CurrentUserDep):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Only workspace admins can configure workspace API keys.")
+    
+    ws_id = workspace_id.strip().upper()
+    provider = payload.provider.strip().lower()
+    raw_key = payload.api_key.strip()
+    
+    from app.core.llm_credentials import verify_provider_api_key, encrypt_api_key
+    ok, err = verify_provider_api_key(provider, raw_key, payload.model, payload.base_url)
+    if not ok:
+        raise HTTPException(status_code=400, detail=err or "API Key verification failed.")
+    
+    encrypted = encrypt_api_key(raw_key)
+    c_id = str(uuid.uuid4())
+    
+    with get_db_session() as session:
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute(
+                        """
+                        INSERT INTO workspace_llm_credentials (id, workspace_id, provider, api_key_encrypted, model, base_url, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                        ON CONFLICT (workspace_id, provider) 
+                        DO UPDATE SET api_key_encrypted = EXCLUDED.api_key_encrypted, model = EXCLUDED.model, base_url = EXCLUDED.base_url, updated_at = CURRENT_TIMESTAMP;
+                        """,
+                        (c_id, ws_id, provider, encrypted, payload.model, payload.base_url)
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO workspace_llm_credentials (id, workspace_id, provider, api_key_encrypted, model, base_url, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                        ON CONFLICT(workspace_id, provider) 
+                        DO UPDATE SET api_key_encrypted = excluded.api_key_encrypted, model = excluded.model, base_url = excluded.base_url, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
+                        """,
+                        (c_id, ws_id, provider, encrypted, payload.model, payload.base_url)
+                    )
+        except Exception as e:
+            logger.error(f"Failed to save workspace credential: {e}")
+            raise HTTPException(status_code=500, detail="Failed to save workspace credential")
+            
+    return {"status": "success", "message": f"Successfully verified and saved workspace {provider} key."}
+
+

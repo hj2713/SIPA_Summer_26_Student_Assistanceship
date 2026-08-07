@@ -324,11 +324,11 @@ class BaseMessageRepository(ABC):
 
 class BaseLlmUsageLogRepository(ABC):
     @abstractmethod
-    def create(self, log_id: str, provider: str, model: str, service: str, campaign_id: Optional[str], thread_id: Optional[str], input_tokens: int, output_tokens: int, calculated_cost: float) -> None:
+    def create(self, log_id: str, provider: str, model: str, service: str, campaign_id: Optional[str], thread_id: Optional[str], input_tokens: int, output_tokens: int, calculated_cost: float, user_id: Optional[str] = None, workspace_id: Optional[str] = None, key_level_used: str = "system") -> None:
         pass
 
     @abstractmethod
-    def get_usage_stats(self, timeframe: str, campaign_id: Optional[str] = None, thread_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_usage_stats(self, timeframe: str, campaign_id: Optional[str] = None, thread_id: Optional[str] = None, user_id: Optional[str] = None, workspace_id: Optional[str] = None, scope: Optional[str] = None) -> Dict[str, Any]:
         pass
 
 class BaseUnitOfWork(ABC):

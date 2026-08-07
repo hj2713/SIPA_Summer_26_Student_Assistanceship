@@ -64,6 +64,7 @@ export function SettingsPage() {
   const jwt = session?.access_token ?? "";
 
   const [timeframe, setTimeframe] = useState<"last_hour" | "last_day" | "last_7_days" | "all">("last_day");
+  const [usageScope, setUsageScope] = useState<"personal" | "workspace" | "personal_in_workspace">("personal");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UsageStatsResponse | null>(null);
   const [credentialsLoading, setCredentialsLoading] = useState(true);
@@ -73,6 +74,12 @@ export function SettingsPage() {
     base_url: "",
     has_api_key: false,
   });
+
+  const [keyPreference, setKeyPreference] = useState<string>("USE_PERSONAL_IF_AVAILABLE");
+  const [preferenceSaving, setPreferenceSaving] = useState(false);
+  const [workspaceKeys, setWorkspaceKeys] = useState<any[]>([]);
+  const [wsProviderInput, setWsProviderInput] = useState<Record<string, string>>({});
+  const [verifyingWsProvider, setVerifyingWsProvider] = useState<Record<string, boolean>>({});
 
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [providerKeysInput, setProviderKeysInput] = useState<Record<string, string>>({});
@@ -109,6 +116,38 @@ export function SettingsPage() {
       setVerifyingProvider((prev) => ({ ...prev, [providerId]: false }));
     }
   };
+
+  const handleVerifyAndSaveWorkspaceKey = async (providerId: string, apiKey: string) => {
+    if (!activeWorkspace?.id) return;
+    if (!apiKey.trim()) {
+      toast.error(`Please enter a Workspace API key for ${providerId.toUpperCase()}`);
+      return;
+    }
+    setVerifyingWsProvider((prev) => ({ ...prev, [providerId]: true }));
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/workspaces/${activeWorkspace.id}/llm-credentials/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          provider: providerId,
+          api_key: apiKey.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `Workspace API Key verification failed for ${providerId.toUpperCase()}`);
+      toast.success(`Workspace API Key verified & saved for ${providerId.toUpperCase()} in ${activeWorkspace.name}!`);
+      setWsProviderInput((prev) => ({ ...prev, [providerId]: "" }));
+      await fetchWorkspaceKeys();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save workspace key");
+    } finally {
+      setVerifyingWsProvider((prev) => ({ ...prev, [providerId]: false }));
+    }
+  };
+
   const [linkingLoading, setLinkingLoading] = useState(false);
   const [inviteEmailInput, setInviteEmailInput] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -147,11 +186,63 @@ export function SettingsPage() {
     }
   };
 
+  const fetchKeyPreference = async () => {
+    if (!jwt) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/user/key-preference`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.preference) setKeyPreference(data.preference);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveKeyPreference = async (newPref: string) => {
+    if (!jwt) return;
+    setPreferenceSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/user/key-preference`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ preference: newPref }),
+      });
+      if (!res.ok) throw new Error("Failed to save preference");
+      setKeyPreference(newPref);
+      toast.success("LLM key scope preference updated!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update preference");
+    } finally {
+      setPreferenceSaving(false);
+    }
+  };
+
+  const fetchWorkspaceKeys = async () => {
+    if (!jwt || !activeWorkspace?.id) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/workspaces/${activeWorkspace.id}/llm-credentials`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspaceKeys(data.credentials || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchStats = async () => {
     if (!jwt) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/usage/stats?timeframe=${timeframe}`, {
+      const res = await fetch(`${API_BASE_URL}/api/usage/stats?timeframe=${timeframe}&scope=${usageScope}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) throw new Error("Failed to load statistics");
@@ -215,11 +306,13 @@ export function SettingsPage() {
 
   useEffect(() => {
     fetchStats();
-  }, [jwt, timeframe]);
+  }, [jwt, timeframe, usageScope]);
 
   useEffect(() => {
     fetchCredentials();
-  }, [jwt]);
+    fetchKeyPreference();
+    fetchWorkspaceKeys();
+  }, [jwt, activeWorkspace?.id]);
 
   // Max value calculation for custom SVG/CSS charting
   const maxTimelineCost = stats?.timeline && stats.timeline.length > 0
@@ -245,18 +338,47 @@ export function SettingsPage() {
               </p>
             </div>
 
-            <div className="flex gap-1.5 border border-border/60 rounded-xl p-1 bg-muted/40">
-              {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex gap-1 border border-border/60 rounded-xl p-1 bg-muted/40 text-xs">
                 <Button
-                  key={t}
-                  variant={timeframe === t ? "secondary" : "ghost"}
+                  variant={usageScope === "personal" ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setTimeframe(t)}
+                  onClick={() => setUsageScope("personal")}
                   className="text-xs h-7 rounded-lg"
                 >
-                  {t.replace(/_/g, " ")}
+                  👤 My Personal Usage
                 </Button>
-              ))}
+                <Button
+                  variant={usageScope === "workspace" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setUsageScope("workspace")}
+                  className="text-xs h-7 rounded-lg"
+                >
+                  🏢 Workspace Team Usage
+                </Button>
+                <Button
+                  variant={usageScope === "personal_in_workspace" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setUsageScope("personal_in_workspace")}
+                  className="text-xs h-7 rounded-lg"
+                >
+                  🎯 My Usage in {activeWorkspace?.name || "Workspace"}
+                </Button>
+              </div>
+
+              <div className="flex gap-1 border border-border/60 rounded-xl p-1 bg-muted/40">
+                {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
+                  <Button
+                    key={t}
+                    variant={timeframe === t ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setTimeframe(t)}
+                    className="text-xs h-7 rounded-lg"
+                  >
+                    {t.replace(/_/g, " ")}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -327,6 +449,137 @@ export function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Key Preference Mode Card */}
+            <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-foreground tracking-tight">
+                    API Key Scope Preference & Overrides
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Choose whether the platform uses your personal API keys, shared workspace keys, or fallbacks.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                {[
+                  {
+                    id: "USE_PERSONAL_IF_AVAILABLE",
+                    title: "Personal Key Override (Recommended)",
+                    desc: "Uses your personal API keys first. If not provided, falls back to workspace keys.",
+                    badge: "Default"
+                  },
+                  {
+                    id: "USE_WORKSPACE_ONLY",
+                    title: "Workspace Keys Only",
+                    desc: "Always uses the shared workspace API keys set by the Workspace Admin.",
+                    badge: "Team"
+                  },
+                  {
+                    id: "ALWAYS_PERSONAL",
+                    title: "Always Personal Key",
+                    desc: "Strictly requires your personal API key. Fails if your personal key is missing.",
+                    badge: "Strict"
+                  }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    disabled={preferenceSaving}
+                    onClick={() => handleSaveKeyPreference(item.id)}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      keyPreference === item.id
+                        ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500"
+                        : "border-border/60 bg-muted/20 hover:border-border"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-foreground">{item.title}</span>
+                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            {/* Workspace Shared Keys (Admin Only) */}
+            {user?.is_admin && (
+              <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-foreground tracking-tight">
+                        Workspace Shared API Keys ({activeWorkspace?.name || "Workspace"})
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Configure shared LLM API keys for all members in the active workspace.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  {[
+                    { id: "openai", name: "Workspace OpenAI Key", icon: "🤖" },
+                    { id: "openrouter", name: "Workspace OpenRouter Key", icon: "🌐" },
+                    { id: "gemini", name: "Workspace Gemini Key", icon: "✨" },
+                    { id: "anthropic", name: "Workspace Anthropic Key", icon: "🧠" },
+                  ].map((prov) => {
+                    const savedWsKey = workspaceKeys.find((k: any) => k.provider === prov.id);
+                    const isWsSaved = !!savedWsKey?.is_configured;
+                    const wsInput = wsProviderInput[prov.id] || "";
+                    const isWsTesting = verifyingWsProvider[prov.id] || false;
+
+                    return (
+                      <div key={prov.id} className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                            <span>{prov.icon}</span> {prov.name}
+                          </span>
+                          {isWsSaved ? (
+                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              Configured ({savedWsKey.masked_key})
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              Not Configured
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="password"
+                            placeholder="Enter Workspace API Key..."
+                            value={wsInput}
+                            onChange={(e) => setWsProviderInput((prev) => ({ ...prev, [prov.id]: e.target.value }))}
+                            className="h-8 text-xs rounded-xl bg-background border-border/80"
+                          />
+                          <Button
+                            size="sm"
+                            disabled={isWsTesting}
+                            onClick={() => handleVerifyAndSaveWorkspaceKey(prov.id, wsInput)}
+                            className="h-8 text-xs font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white whitespace-nowrap"
+                          >
+                            {isWsTesting ? "Saving..." : "Save Workspace Key"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
             <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-6">
               <div className="flex items-start justify-between gap-4">
                 <div>

@@ -338,9 +338,25 @@ def init_postgres_db():
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS workspace_llm_credentials (
+                    id VARCHAR(255) PRIMARY KEY,
+                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                    provider VARCHAR(50) NOT NULL,
+                    api_key_encrypted TEXT,
+                    model VARCHAR(100),
+                    base_url TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unique_workspace_provider UNIQUE (workspace_id, provider)
+                );
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS llm_usage_logs (
                     id VARCHAR(255) PRIMARY KEY,
                     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    user_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE SET NULL,
                     provider VARCHAR(255) NOT NULL,
                     model VARCHAR(255) NOT NULL,
                     service VARCHAR(255) NOT NULL,
@@ -348,11 +364,16 @@ def init_postgres_db():
                     thread_id VARCHAR(255) REFERENCES threads(id) ON DELETE SET NULL,
                     input_tokens INTEGER NOT NULL DEFAULT 0,
                     output_tokens INTEGER NOT NULL DEFAULT 0,
-                    calculated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0
+                    calculated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                    key_level_used VARCHAR(50) DEFAULT 'system'
                 );
             """)
 
             for ddl in [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS llm_key_preference VARCHAR(50) DEFAULT 'USE_PERSONAL_IF_AVAILABLE';",
+                "ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);",
+                "ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS workspace_id VARCHAR(255);",
+                "ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS key_level_used VARCHAR(50) DEFAULT 'system';",
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS model VARCHAR(255);",
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS dashboard_type VARCHAR(50) NOT NULL DEFAULT 'campaign';",
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_id VARCHAR(255) REFERENCES coding_workflows(id) ON DELETE SET NULL;",
@@ -698,11 +719,28 @@ def init_sqlite_db():
             except sqlite3.OperationalError:
                 pass
 
+        # Create workspace_llm_credentials table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS workspace_llm_credentials (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                provider TEXT NOT NULL,
+                api_key_encrypted TEXT,
+                model TEXT,
+                base_url TEXT,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                UNIQUE(workspace_id, provider)
+            );
+        """)
+
         # Create llm_usage_logs table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS llm_usage_logs (
                 id TEXT PRIMARY KEY,
                 timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+                workspace_id TEXT REFERENCES workspaces(id) ON DELETE SET NULL,
                 provider TEXT NOT NULL,
                 model TEXT NOT NULL,
                 service TEXT NOT NULL,
@@ -711,10 +749,17 @@ def init_sqlite_db():
                 input_tokens INTEGER NOT NULL DEFAULT 0,
                 output_tokens INTEGER NOT NULL DEFAULT 0,
                 calculated_cost REAL NOT NULL DEFAULT 0.0,
+                key_level_used TEXT DEFAULT 'system',
                 FOREIGN KEY (campaign_id) REFERENCES dashboards (id) ON DELETE SET NULL,
                 FOREIGN KEY (thread_id) REFERENCES threads (id) ON DELETE SET NULL
             );
         """)
+
+        for col_def in ["user_id TEXT", "workspace_id TEXT", "key_level_used TEXT DEFAULT 'system'"]:
+            try:
+                conn.execute(f"ALTER TABLE llm_usage_logs ADD COLUMN {col_def};")
+            except sqlite3.OperationalError:
+                pass
 
         # Add current_step and total_steps to dashboard_documents defensively
         for col, default_val in [("current_step", 0), ("total_steps", 7)]:
@@ -736,7 +781,7 @@ def init_sqlite_db():
             except sqlite3.OperationalError:
                 pass
 
-        for col in ["llm_provider", "llm_api_key_encrypted", "llm_model", "llm_base_url"]:
+        for col in ["llm_provider", "llm_api_key_encrypted", "llm_model", "llm_base_url", "llm_key_preference"]:
             try:
                 conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT;")
             except sqlite3.OperationalError:

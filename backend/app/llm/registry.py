@@ -145,14 +145,17 @@ def log_usage_to_db(
     service = ctx.get("service", "unknown")
     campaign_id = ctx.get("campaign_id")
     thread_id = ctx.get("thread_id")
+    user_id = ctx.get("user_id")
+    workspace_id = ctx.get("workspace_id")
+    key_level_used = ctx.get("key_level_used", "system")
     cost = calculate_cost(model, input_tokens, output_tokens)
 
     try:
         with get_db_conn() as conn:
             query = """
                 INSERT INTO llm_usage_logs (
-                    id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost, user_id, workspace_id, key_level_used
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
             if settings.DB_PROVIDER == "postgres":
                 query = query.replace("?", "%s")
@@ -168,7 +171,10 @@ def log_usage_to_db(
                     thread_id,
                     input_tokens,
                     output_tokens,
-                    cost
+                    cost,
+                    user_id,
+                    workspace_id,
+                    key_level_used
                 )
             )
             conn.commit()

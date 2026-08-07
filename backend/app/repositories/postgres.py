@@ -1090,17 +1090,45 @@ class PostgresLlmUsageLogRepository(BaseLlmUsageLogRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
 
-    def create(self, log_id: str, provider: str, model: str, service: str, campaign_id: Optional[str], thread_id: Optional[str], input_tokens: int, output_tokens: int, calculated_cost: float) -> None:
+    def create(
+        self,
+        log_id: str,
+        provider: str,
+        model: str,
+        service: str,
+        campaign_id: Optional[str],
+        thread_id: Optional[str],
+        input_tokens: int,
+        output_tokens: int,
+        calculated_cost: float,
+        user_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        key_level_used: str = "system"
+    ) -> None:
         with self.conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO llm_usage_logs (id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO llm_usage_logs (id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost, user_id, workspace_id, key_level_used)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """,
-                (str(log_id), provider, model, service, str(campaign_id) if campaign_id else None, str(thread_id) if thread_id else None, input_tokens, output_tokens, calculated_cost)
+                (
+                    str(log_id), provider, model, service,
+                    str(campaign_id) if campaign_id else None,
+                    str(thread_id) if thread_id else None,
+                    input_tokens, output_tokens, calculated_cost,
+                    user_id, workspace_id, key_level_used
+                )
             )
 
-    def get_usage_stats(self, timeframe: str, campaign_id: Optional[str] = None, thread_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_usage_stats(
+        self,
+        timeframe: str,
+        campaign_id: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        scope: Optional[str] = None
+    ) -> Dict[str, Any]:
         conditions = []
         params = []
 
@@ -1117,6 +1145,20 @@ class PostgresLlmUsageLogRepository(BaseLlmUsageLogRepository):
         if thread_id:
             conditions.append("thread_id = %s")
             params.append(thread_id)
+
+        # Scope & User Data Isolation Logic
+        if scope == "personal" or (user_id and not scope and not workspace_id):
+            conditions.append("user_id = %s")
+            params.append(user_id)
+        elif scope == "workspace" and workspace_id:
+            conditions.append("workspace_id = %s")
+            params.append(workspace_id)
+        elif scope == "personal_in_workspace" and user_id and workspace_id:
+            conditions.append("user_id = %s AND workspace_id = %s")
+            params.extend([user_id, workspace_id])
+        elif user_id:
+            conditions.append("user_id = %s")
+            params.append(user_id)
 
         where_clause = ""
         if conditions:

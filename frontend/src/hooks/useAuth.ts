@@ -41,63 +41,70 @@ export function useAuth(): AuthContextValue {
       }
     };
 
-    // Hydrate immediately from local storage
-    const stored = localStorage.getItem("local_session");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Session;
-        if (parsed && parsed.access_token && parsed.user) {
-          setSession(parsed);
-          setUser(parsed.user);
+    const initAuth = async () => {
+      // 1. Hydrate from local storage first
+      const stored = localStorage.getItem("local_session");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Session;
+          if (parsed && parsed.access_token && parsed.user) {
+            setSession(parsed);
+            setUser(parsed.user);
+          }
+        } catch (e) {
+          console.error("Failed to parse local session:", e);
+          localStorage.removeItem("local_session");
         }
-      } catch (e) {
-        console.error("Failed to parse local session:", e);
-        localStorage.removeItem("local_session");
       }
-    }
 
-    // Direct URL hash token extraction fallback (in case Supabase JS client fails on anon key validation)
-    if (window.location.hash.includes("access_token=")) {
-      try {
-        const hashParams = new URLSearchParams(window.location.hash.replace("#", "?"));
-        const token = hashParams.get("access_token");
-        if (token) {
-          const parts = token.split(".");
-          if (parts.length === 3) {
-            const base64Url = parts[1];
-            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-            const jsonPayload = decodeURIComponent(
-              atob(base64)
-                .split("")
-                .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-                .join("")
-            );
-            const payload = JSON.parse(jsonPayload);
-            if (payload?.email) {
-              void syncSupabaseGoogleUser(payload.email);
-              window.history.replaceState(null, "", window.location.pathname);
+      // 2. Direct URL hash token extraction fallback
+      if (window.location.hash.includes("access_token=")) {
+        try {
+          const hashParams = new URLSearchParams(window.location.hash.replace("#", "?"));
+          const token = hashParams.get("access_token");
+          if (token) {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+              const base64Url = parts[1];
+              const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+              const jsonPayload = decodeURIComponent(
+                atob(base64)
+                  .split("")
+                  .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+                  .join("")
+              );
+              const payload = JSON.parse(jsonPayload);
+              if (payload?.email) {
+                await syncSupabaseGoogleUser(payload.email);
+                window.history.replaceState(null, "", window.location.pathname);
+              }
             }
           }
+        } catch (err) {
+          console.error("Failed to parse URL hash access token:", err);
+        }
+      }
+
+      // 3. Supabase getSession check (PKCE flow or existing cookie session)
+      try {
+        const { data: { session: sbSession } } = await supabase.auth.getSession();
+        if (sbSession?.user?.email) {
+          await syncSupabaseGoogleUser(sbSession.user.email);
         }
       } catch (err) {
-        console.error("Failed to parse URL hash access token:", err);
+        console.error("Failed to get Supabase session:", err);
       }
-    }
 
-    // Check existing Supabase session or OAuth redirect callback
-    supabase.auth.getSession().then(({ data: { session: sbSession } }) => {
-      if (sbSession?.user?.email) {
-        void syncSupabaseGoogleUser(sbSession.user.email);
-      }
-    });
+      setLoading(false);
+    };
+
+    void initAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, sbSession) => {
       if (sbSession?.user?.email) {
         void syncSupabaseGoogleUser(sbSession.user.email);
       }
     });
-
-    setLoading(false);
 
     return () => {
       authListener.subscription.unsubscribe();

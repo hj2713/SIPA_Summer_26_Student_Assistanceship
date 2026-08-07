@@ -40,11 +40,11 @@ export function LoginForm() {
     try {
       if (showGoogleInput) {
         await signInWithGoogle(googleEmailFallback.trim());
+        navigate("/chat", { replace: true });
+        toast.success("Successfully signed in!");
       } else {
         await signInWithGoogle();
       }
-      navigate("/chat", { replace: true });
-      toast.success("Successfully signed in with Google!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Google sign-in failed";
       if (msg.toLowerCase().includes("provider is not enabled") || msg.toLowerCase().includes("unsupported provider")) {

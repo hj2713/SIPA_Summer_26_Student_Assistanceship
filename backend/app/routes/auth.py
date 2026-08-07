@@ -389,23 +389,17 @@ def google_login(payload: GoogleLoginRequest):
         # Check if user already exists
         row = session.users.get_by_email(email)
         
-        # If user does not exist, check if test@test.com exists to auto-link, or create new user
         if not row:
-            test_row = session.users.get_by_email("test@test.com")
-            if test_row:
-                # Link test@test.com to this google email by logging into test@test.com account
-                row = test_row
-            else:
-                user_id = str(uuid.uuid4())
-                pwd_hash = hash_password(str(uuid.uuid4()))
-                row = session.users.create(
-                    user_id=user_id,
-                    email=email,
-                    password_hash=pwd_hash,
-                    is_admin=0,
-                    can_add=1,
-                    can_delete=1
-                )
+            user_id = str(uuid.uuid4())
+            pwd_hash = hash_password(str(uuid.uuid4()))
+            row = session.users.create(
+                user_id=user_id,
+                email=email,
+                password_hash=pwd_hash,
+                is_admin=0,
+                can_add=1,
+                can_delete=1
+            )
 
         user_id = row["id"]
         user_email = row["email"]

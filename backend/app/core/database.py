@@ -122,7 +122,7 @@ def init_postgres_db():
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS workspaces (
                     id VARCHAR(255) PRIMARY KEY,
-                    name VARCHAR(255) UNIQUE NOT NULL,
+                    name VARCHAR(255) NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
@@ -434,10 +434,26 @@ def init_postgres_db():
                     (test_pwd_hash, "test@test.com")
                 )
 
+            # Remove UNIQUE constraint on name if it exists from earlier schema
+            try:
+                cursor.execute("ALTER TABLE workspaces DROP CONSTRAINT IF EXISTS workspaces_name_key;")
+            except Exception:
+                pass
+
+            # Migrate legacy 'PRODUCTION' workspace ID to 'ws_prod_00000001'
+            try:
+                cursor.execute("UPDATE workspaces SET id = 'ws_prod_00000001' WHERE id = 'PRODUCTION';")
+                cursor.execute("UPDATE workspace_memberships SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
+                cursor.execute("UPDATE documents SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
+                cursor.execute("UPDATE dashboards SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
+                cursor.execute("UPDATE coding_workflows SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
+            except Exception as mig_err:
+                logger.warning("Workspace ID migration note: %s", mig_err)
+
             # Ensure ws_prod_00000001, QA & TEST workspaces exist
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('ws_prod_00000001', 'PRODUCTION') ON CONFLICT DO NOTHING;")
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('ws_prod_00000001', 'PRODUCTION') ON CONFLICT (id) DO NOTHING;")
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT (id) DO NOTHING;")
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT (id) DO NOTHING;")
 
             # Seed test@gmail.com & test@test.com as members
             for email in ["test@gmail.com", "test@test.com"]:

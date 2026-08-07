@@ -1,6 +1,6 @@
 def test_workflow_crud_validate_and_publish(client, auth_headers):
     created = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Delegation workflow",
@@ -13,12 +13,12 @@ def test_workflow_crud_validate_and_publish(client, auth_headers):
     assert workflow["latest_version"] == 0
     assert workflow["definition"]["nodes"]
 
-    listed = client.get("/api/workflows?workspace_id=QA", headers=auth_headers)
+    listed = client.get("/api/workflows?workspace_id=TEST", headers=auth_headers)
     assert listed.status_code == 200
     assert any(item["id"] == workflow["id"] for item in listed.json())
 
     validated = client.post(
-        f"/api/workflows/{workflow['id']}/validate?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/validate?workspace_id=TEST",
         headers=auth_headers,
     )
     assert validated.status_code == 200
@@ -27,7 +27,7 @@ def test_workflow_crud_validate_and_publish(client, auth_headers):
     updated_definition = workflow["definition"]
     updated_definition["nodes"][1]["name"] = "Updated delegation analysis"
     updated = client.patch(
-        f"/api/workflows/{workflow['id']}?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": workflow["name"],
@@ -40,7 +40,7 @@ def test_workflow_crud_validate_and_publish(client, auth_headers):
     assert updated.json()["revision"] == workflow["revision"] + 1
 
     published = client.post(
-        f"/api/workflows/{workflow['id']}/publish?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/publish?workspace_id=TEST",
         headers=auth_headers,
         json={"changelog": "Initial research workflow"},
     )
@@ -48,7 +48,7 @@ def test_workflow_crud_validate_and_publish(client, auth_headers):
     assert published.json()["version"] == 1
 
     versions = client.get(
-        f"/api/workflows/{workflow['id']}/versions?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/versions?workspace_id=TEST",
         headers=auth_headers,
     )
     assert versions.status_code == 200
@@ -56,7 +56,7 @@ def test_workflow_crud_validate_and_publish(client, auth_headers):
 
 
 def test_create_project_law_delegation_rank_template(client, auth_headers):
-    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
+    templates = client.get("/api/workflow-templates?workspace_id=TEST", headers=auth_headers)
     assert templates.status_code == 200
     project_template = next(item for item in templates.json() if item["slug"] == "law_delegation_discretion_rank")
     assert project_template["definition"]["metadata"]["seed_version"] == 4
@@ -77,7 +77,7 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     assert any(node["id"] == "discretion_decision" for node in project_template["definition"]["nodes"])
 
     created = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Law Delegation + Discretion Rank",
@@ -98,7 +98,7 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
     ]
 
     validated = client.post(
-        f"/api/workflows/{created.json()['id']}/validate?workspace_id=QA",
+        f"/api/workflows/{created.json()['id']}/validate?workspace_id=TEST",
         headers=auth_headers,
     )
     assert validated.status_code == 200
@@ -106,7 +106,7 @@ def test_create_project_law_delegation_rank_template(client, auth_headers):
 
 
 def test_create_professor_prompt_suite_template_and_workflow(client, auth_headers):
-    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
+    templates = client.get("/api/workflow-templates?workspace_id=TEST", headers=auth_headers)
     assert templates.status_code == 200
     suite_template = next(item for item in templates.json() if item["slug"] == "professor_discretion_prompt_suite")
     assert suite_template["definition"]["metadata"]["workflow_family"] == "professor_discretion_prompt_suite"
@@ -114,7 +114,7 @@ def test_create_professor_prompt_suite_template_and_workflow(client, auth_header
     assert {"shared_inventory", "cascade_stage2_screen", "m9_multiclass", "b3_band_screen", "b3_finalize"} <= node_ids
 
     created = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Professor Prompt Suite",
@@ -131,7 +131,7 @@ def test_create_professor_prompt_suite_template_and_workflow(client, auth_header
     assert "b3_discretion_rank" in output_keys
 
     validated = client.post(
-        f"/api/workflows/{created.json()['id']}/validate?workspace_id=QA",
+        f"/api/workflows/{created.json()['id']}/validate?workspace_id=TEST",
         headers=auth_headers,
     )
     assert validated.status_code == 200
@@ -139,7 +139,7 @@ def test_create_professor_prompt_suite_template_and_workflow(client, auth_header
 
 
 def test_create_professor_prompt_suite_detailed_template_and_workflow(client, auth_headers):
-    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers)
+    templates = client.get("/api/workflow-templates?workspace_id=TEST", headers=auth_headers)
     assert templates.status_code == 200
     suite_template = next(item for item in templates.json() if item["slug"] == "professor_discretion_prompt_suite_detailed")
     assert suite_template["definition"]["metadata"]["workflow_family"] == "professor_discretion_prompt_suite_detailed"
@@ -161,7 +161,7 @@ def test_create_professor_prompt_suite_detailed_template_and_workflow(client, au
     assert gate_node["prompt_provenance"]["source_file"] == "Updates/Prompts/Prompt_v8.txt"
 
     created = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Professor Prompt Suite Detailed",
@@ -179,7 +179,7 @@ def test_create_professor_prompt_suite_detailed_template_and_workflow(client, au
     assert "b3_discretion_rank" in output_keys
 
     validated = client.post(
-        f"/api/workflows/{created.json()['id']}/validate?workspace_id=QA",
+        f"/api/workflows/{created.json()['id']}/validate?workspace_id=TEST",
         headers=auth_headers,
     )
     assert validated.status_code == 200
@@ -187,11 +187,11 @@ def test_create_professor_prompt_suite_detailed_template_and_workflow(client, au
 
 
 def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
-    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers).json()
+    templates = client.get("/api/workflow-templates?workspace_id=TEST", headers=auth_headers).json()
     blank = next(item for item in templates if item["slug"] == "blank")
 
     duplicated = client.post(
-        f"/api/workflow-templates/{blank['id']}/duplicate?workspace_id=QA",
+        f"/api/workflow-templates/{blank['id']}/duplicate?workspace_id=TEST",
         headers=auth_headers,
     )
     assert duplicated.status_code == 201
@@ -199,14 +199,14 @@ def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
     assert duplicate["name"] == "Blank Workflow Copy"
 
     exported = client.get(
-        f"/api/workflow-templates/{duplicate['id']}/export?workspace_id=QA",
+        f"/api/workflow-templates/{duplicate['id']}/export?workspace_id=TEST",
         headers=auth_headers,
     )
     assert exported.status_code == 200
     assert exported.json()["definition"]["nodes"]
 
     imported = client.post(
-        "/api/workflow-templates/import?workspace_id=QA",
+        "/api/workflow-templates/import?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Imported Blank",
@@ -222,7 +222,7 @@ def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
     updated_definition = imported_template["definition"]
     updated_definition["nodes"][0]["name"] = "Imported document input"
     updated = client.patch(
-        f"/api/workflow-templates/{imported_template['id']}?workspace_id=QA",
+        f"/api/workflow-templates/{imported_template['id']}?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Imported Blank Updated",
@@ -237,10 +237,10 @@ def test_workflow_template_crud_duplicate_import_export(client, auth_headers):
 
 
 def test_template_update_does_not_mutate_existing_workflow_draft(client, auth_headers):
-    templates = client.get("/api/workflow-templates?workspace_id=QA", headers=auth_headers).json()
+    templates = client.get("/api/workflow-templates?workspace_id=TEST", headers=auth_headers).json()
     blank = next(item for item in templates if item["slug"] == "blank")
     workflow = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={"name": "Copied from blank", "template_id": blank["id"]},
     ).json()
@@ -248,7 +248,7 @@ def test_template_update_does_not_mutate_existing_workflow_draft(client, auth_he
     changed_definition = blank["definition"]
     changed_definition["nodes"][0]["name"] = "Changed template input"
     updated = client.patch(
-        f"/api/workflow-templates/{blank['id']}?workspace_id=QA",
+        f"/api/workflow-templates/{blank['id']}?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": blank["name"],
@@ -261,7 +261,7 @@ def test_template_update_does_not_mutate_existing_workflow_draft(client, auth_he
     assert updated.status_code == 200
 
     reloaded_workflow = client.get(
-        f"/api/workflows/{workflow['id']}?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}?workspace_id=TEST",
         headers=auth_headers,
     )
     assert reloaded_workflow.status_code == 200
@@ -270,14 +270,14 @@ def test_template_update_does_not_mutate_existing_workflow_draft(client, auth_he
 
 def test_workflow_duplicate_creates_independent_draft(client, auth_headers):
     workflow = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={"name": "Original workflow", "template": "blank"},
     ).json()
     original_node_name = workflow["definition"]["nodes"][0]["name"]
 
     duplicated = client.post(
-        f"/api/workflows/{workflow['id']}/duplicate?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/duplicate?workspace_id=TEST",
         headers=auth_headers,
     )
     assert duplicated.status_code == 201
@@ -288,7 +288,7 @@ def test_workflow_duplicate_creates_independent_draft(client, auth_headers):
     updated_definition = duplicate["definition"]
     updated_definition["nodes"][0]["name"] = "Duplicated document input"
     update_response = client.patch(
-        f"/api/workflows/{duplicate['id']}?workspace_id=QA",
+        f"/api/workflows/{duplicate['id']}?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": duplicate["name"],
@@ -300,7 +300,7 @@ def test_workflow_duplicate_creates_independent_draft(client, auth_headers):
     assert update_response.status_code == 200
 
     original_reloaded = client.get(
-        f"/api/workflows/{workflow['id']}?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}?workspace_id=TEST",
         headers=auth_headers,
     )
     assert original_reloaded.status_code == 200
@@ -323,13 +323,13 @@ def test_workflow_file_test_runs_without_persisting_document(client, auth_header
 
     monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     workflow = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={"name": "File test", "template": "law_delegation_discretion_rank"},
     ).json()
 
     response = client.post(
-        f"/api/workflows/{workflow['id']}/test-file?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/test-file?workspace_id=TEST",
         headers=auth_headers,
         files={"file": ("law.txt", b"The law mentions an agency but grants no new authority.", "text/plain")},
     )
@@ -349,13 +349,13 @@ def test_workflow_test_returns_json_provider_error(client, auth_headers, monkeyp
 
     monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FailingLlm())
     workflow = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={"name": "Provider failure test", "template": "law_delegation_discretion_rank"},
     ).json()
 
     response = client.post(
-        f"/api/workflows/{workflow['id']}/test?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/test?workspace_id=TEST",
         headers=auth_headers,
         json={"source_text": "The law directs an agency to issue rules."},
     )
@@ -385,13 +385,13 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
 
     monkeypatch.setattr("app.workflows.executor.get_llm_for_model", lambda _model=None: FakeLlm())
     workflow = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={"name": "Workflow dashboard test", "template": "law_delegation_discretion_rank"},
     ).json()
 
     dashboard_response = client.post(
-        f"/api/workflows/{workflow['id']}/results-dashboard?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/results-dashboard?workspace_id=TEST",
         headers=auth_headers,
         json={"source": "draft"},
     )
@@ -403,7 +403,7 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
     assert dashboard["schema"][1]["workflow_source"] == "discretion_rank"
 
     run_response = client.post(
-        f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=TEST",
         headers=auth_headers,
         json={"source": "draft", "name": "test law", "source_text": "No new agency authority."},
     )
@@ -416,7 +416,7 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
     assert row["workflow_trace"]
 
     duplicate_response = client.post(
-        f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=QA",
+        f"/api/workflows/{workflow['id']}/results-dashboard/run-text?workspace_id=TEST",
         headers=auth_headers,
         json={"source": "draft", "name": "test law", "source_text": "No new agency authority."},
     )
@@ -441,7 +441,7 @@ def test_workflow_results_dashboard_persists_text_run_and_trace(client, auth_hea
 
 def test_workflow_update_rejects_stale_revision(client, auth_headers):
     workflow = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={"name": "Revision test", "template": "blank"},
     ).json()
@@ -450,5 +450,5 @@ def test_workflow_update_rejects_stale_revision(client, auth_headers):
         "definition": workflow["definition"],
         "revision": workflow["revision"],
     }
-    assert client.patch(f"/api/workflows/{workflow['id']}?workspace_id=QA", headers=auth_headers, json=payload).status_code == 200
-    assert client.patch(f"/api/workflows/{workflow['id']}?workspace_id=QA", headers=auth_headers, json=payload).status_code == 409
+    assert client.patch(f"/api/workflows/{workflow['id']}?workspace_id=TEST", headers=auth_headers, json=payload).status_code == 200
+    assert client.patch(f"/api/workflows/{workflow['id']}?workspace_id=TEST", headers=auth_headers, json=payload).status_code == 409

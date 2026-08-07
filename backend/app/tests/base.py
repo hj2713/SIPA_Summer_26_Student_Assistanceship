@@ -25,11 +25,13 @@ def get_current_permissions() -> Dict[str, bool]:
 # Any database modification target (WHERE clause params) must contain one of these IDs.
 ALLOWED_TEST_IDS: Set[str] = {
     "00000000-0000-0000-0000-000000000001",  # TEST_USER_ID
+    "TEST",                                  # Dedicated TEST workspace
     "QA",                                    # QA workspace
     "test@test.com",                         # TEST user email
     "test@gmail.com",                        # Admin user email
     "mock_hash",
 }
+
 
 
 class SafeTestCursor:
@@ -102,6 +104,25 @@ class SafeTestCursor:
         # SELECT queries are read-only and always allowed
         if is_select and not (is_insert or is_update or is_delete):
             return
+
+        # Block test operations from modifying PRODUCTION workspace operational data
+        if is_insert or is_update or is_delete:
+            is_schema_seed = ("INTO WORKSPACES" in query_upper or "INTO WORKSPACE_MEMBERSHIPS" in query_upper or "UPDATE USERS SET" in query_upper or "INTO USERS" in query_upper)
+            if not is_schema_seed:
+                if "'PRODUCTION'" in query_upper or '"PRODUCTION"' in query_upper:
+                    raise RuntimeError(
+                        f"CRITICAL SAFETY VIOLATION: Tests are strictly forbidden from modifying PRODUCTION workspace data! Query: {query}"
+                    )
+                if params:
+                    param_str = str(params).upper()
+                    if "PRODUCTION" in param_str:
+                        raise RuntimeError(
+                            f"CRITICAL SAFETY VIOLATION: Tests are strictly forbidden from modifying PRODUCTION workspace data! Query: {query}"
+                        )
+
+
+
+
             
         perms = get_current_permissions()
         

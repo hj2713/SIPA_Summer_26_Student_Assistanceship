@@ -13,7 +13,7 @@ _MOCK_DOC = {
     "content_type": "text/plain",
     "status": "failed",
     "content_hash": "mock-hash",
-    "workspace_id": "QA",
+    "workspace_id": "TEST",
     "metadata": {},
     "created_at": "2024-01-01T00:00:00+00:00",
     "updated_at": "2024-01-01T00:00:00+00:00",
@@ -54,7 +54,7 @@ def test_retry_single_document(client, auth_headers):
         filename="retry-me.txt",
         content=b"retried file content",
         content_type="text/plain",
-        workspace_id="QA",
+        workspace_id="TEST",
     )
 
 
@@ -93,5 +93,5 @@ def test_retry_batch_documents(client, auth_headers):
         filename="retry-me.txt",
         content=b"batch retried file content",
         content_type="text/plain",
-        workspace_id="QA",
+        workspace_id="TEST",
     )

@@ -40,7 +40,7 @@ def test_create_evaluation_campaign_happy_path(client, auth_headers):
 
 def test_create_evaluation_campaign_with_workflow_derives_schema_from_workflow(client, auth_headers):
     workflow_res = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Law Delegation + Discretion Rank",
@@ -175,7 +175,7 @@ def test_retry_documents_can_recover_active_stuck_runs(client, auth_headers):
         conn.execute(
             """
             INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model)
-            VALUES (?, 'QA', 'Recover Active', 'Desc', 'Prompt', '[]', 'gpt-4o-mini,gemini-3.1-flash-lite');
+            VALUES (?, 'TEST', 'Recover Active', 'Desc', 'Prompt', '[]', 'gpt-4o-mini,gemini-3.1-flash-lite');
             """,
             (dashboard_id,),
         )
@@ -183,7 +183,7 @@ def test_retry_documents_can_recover_active_stuck_runs(client, auth_headers):
             conn.execute(
                 """
                 INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
-                VALUES (?, ?, 'QA', ?, ?, 10, 'text/plain', 'completed', '{}');
+                VALUES (?, ?, 'TEST', ?, ?, 10, 'text/plain', 'completed', '{}');
                 """,
                 (doc_id, TEST_USER_ID, f"recover-{index}.txt", f"/tmp/recover-{index}.txt"),
             )
@@ -251,7 +251,7 @@ def test_link_workflow_to_campaign_rejects_mismatched_schema(client, auth_header
         campaign_id = campaign_res.json()["id"]
 
     workflow_res = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Law Delegation + Discretion Rank",
@@ -296,7 +296,7 @@ def test_link_workflow_to_campaign_merges_matching_schema_workflow_sources(clien
         campaign_id = campaign_res.json()["id"]
 
     workflow_res = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Law Delegation + Discretion Rank",
@@ -321,7 +321,7 @@ def test_link_workflow_to_campaign_merges_matching_schema_workflow_sources(clien
 
 def test_linked_workflow_cannot_be_changed_or_unlinked(client, auth_headers):
     workflow_one_res = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Workflow One",
@@ -330,7 +330,7 @@ def test_linked_workflow_cannot_be_changed_or_unlinked(client, auth_headers):
         },
     )
     workflow_two_res = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Workflow Two",
@@ -374,7 +374,7 @@ def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, aut
     dashboard_id = "eval-dashboard-linked"
     document_id = "10000000-0000-0000-0000-000000009999"
     workflow_response = client.post(
-        "/api/workflows?workspace_id=QA",
+        "/api/workflows?workspace_id=TEST",
         headers=auth_headers,
         json={
             "name": "Eval workflow",
@@ -392,14 +392,14 @@ def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, aut
             INSERT INTO dashboards (
                 id, workspace_id, name, description, prompt, schema, model, dashboard_type,
                 workflow_id, workflow_source, workflow_definition_json
-            ) VALUES (?, 'QA', 'Eval Linked', '', 'Prompt', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
+            ) VALUES (?, 'TEST', 'Eval Linked', '', 'Prompt', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
             """,
             (dashboard_id, workflow_id),
         )
         conn.execute(
             """
             INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
-            VALUES (?, ?, 'QA', 'linked-law.txt', '/tmp/linked-law.txt', 10, 'text/plain', 'completed', '{}');
+            VALUES (?, ?, 'TEST', 'linked-law.txt', '/tmp/linked-law.txt', 10, 'text/plain', 'completed', '{}');
             """,
             (document_id, TEST_USER_ID),
         )
@@ -413,7 +413,7 @@ def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, aut
     mock_queue.assert_called_once_with(
         dashboard_id=dashboard_id,
         workflow_id=workflow_id,
-        workspace_id="QA",
+        workspace_id="TEST",
         user_id=TEST_USER_ID,
         document_ids=[document_id],
         source="draft",

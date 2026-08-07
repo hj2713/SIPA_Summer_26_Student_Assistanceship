@@ -1,8 +1,10 @@
 import os
 import sys
+import uuid
 
 # Activate test mode connection wrapper and query firewall.
 os.environ["TEST_MODE"] = "1"
+
 
 from unittest.mock import MagicMock
 
@@ -130,23 +132,34 @@ def run_init_db():
                 from app.tests.base import SafeTestConnection
                 safe_conn = SafeTestConnection(conn)
                 with safe_conn.cursor() as cur:
+                    cur.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
                     cur.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
                     cur.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
                     cur.execute(
                         "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1) ON CONFLICT DO NOTHING;",
                         (TEST_USER_ID, "test@test.com", "mock_hash")
                     )
+                    cur.execute(
+                        "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, 'TEST', 'test@test.com') ON CONFLICT DO NOTHING;",
+                        (str(uuid.uuid4()),)
+                    )
                 safe_conn.commit()
         else:
             from app.core.database import get_db_conn
             with get_db_conn() as conn:
+                conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
                 conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
                 conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
                 conn.execute(
                     "INSERT OR IGNORE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
                     (TEST_USER_ID, "test@test.com", "mock_hash")
                 )
+                conn.execute(
+                    "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'TEST', 'test@test.com');",
+                    (str(uuid.uuid4()),)
+                )
                 conn.commit()
+
     finally:
         perms.update(old_perms)
 

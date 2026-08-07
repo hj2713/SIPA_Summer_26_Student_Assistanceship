@@ -21,11 +21,11 @@ def test_retrieve_context_happy_path():
     with get_db_conn() as conn:
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            ("99999999-9999-9999-9999-999999999999", user_id, "QA", "guide.txt", "mock_path", 120, "text/plain", "completed", "{}")
+            ("99999999-9999-9999-9999-999999999999", user_id, "TEST", "guide.txt", "mock_path", 120, "text/plain", "completed", "{}")
         )
         conn.execute(
             "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, "QA", "Retrieval result chunk content. test query", json.dumps([0.1] * 1536), "{}")
+            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, "TEST", "Retrieval result chunk content. test query", json.dumps([0.1] * 1536), "{}")
         )
         conn.commit()
 
@@ -49,19 +49,19 @@ def test_retrieve_context_targeted_document():
     with get_db_conn() as conn:
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_1, user_id, "QA", "doc1.txt", "path1", 100, "text/plain", "completed", "{}")
+            (doc_id_1, user_id, "TEST", "doc1.txt", "path1", 100, "text/plain", "completed", "{}")
         )
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_2, user_id, "QA", "doc2.txt", "path2", 100, "text/plain", "completed", "{}")
+            (doc_id_2, user_id, "TEST", "doc2.txt", "path2", 100, "text/plain", "completed", "{}")
         )
         conn.execute(
             "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            ("chunk-111", doc_id_1, user_id, "QA", "Target text inside document one", json.dumps([0.2] * 1536), "{}")
+            ("chunk-111", doc_id_1, user_id, "TEST", "Target text inside document one", json.dumps([0.2] * 1536), "{}")
         )
         conn.execute(
             "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            ("chunk-222", doc_id_2, user_id, "QA", "Target text inside document two", json.dumps([0.2] * 1536), "{}")
+            ("chunk-222", doc_id_2, user_id, "TEST", "Target text inside document two", json.dumps([0.2] * 1536), "{}")
         )
         conn.commit()
 
@@ -95,27 +95,27 @@ def test_retrieve_context_targeted_multiple_documents():
     with get_db_conn() as conn:
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_1, user_id, "QA", "doc1.txt", "path1", 100, "text/plain", "completed", "{}")
+            (doc_id_1, user_id, "TEST", "doc1.txt", "path1", 100, "text/plain", "completed", "{}")
         )
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_2, user_id, "QA", "doc2.txt", "path2", 100, "text/plain", "completed", "{}")
+            (doc_id_2, user_id, "TEST", "doc2.txt", "path2", 100, "text/plain", "completed", "{}")
         )
         conn.execute(
             "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (doc_id_3, user_id, "QA", "doc3.txt", "path3", 100, "text/plain", "completed", "{}")
+            (doc_id_3, user_id, "TEST", "doc3.txt", "path3", 100, "text/plain", "completed", "{}")
         )
         conn.execute(
             "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            ("chunk-111", doc_id_1, user_id, "QA", "Target text inside document one", json.dumps([0.2] * 1536), "{}")
+            ("chunk-111", doc_id_1, user_id, "TEST", "Target text inside document one", json.dumps([0.2] * 1536), "{}")
         )
         conn.execute(
             "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            ("chunk-222", doc_id_2, user_id, "QA", "Target text inside document two", json.dumps([0.2] * 1536), "{}")
+            ("chunk-222", doc_id_2, user_id, "TEST", "Target text inside document two", json.dumps([0.2] * 1536), "{}")
         )
         conn.execute(
             "INSERT INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            ("chunk-333", doc_id_3, user_id, "QA", "Target text inside document three", json.dumps([0.2] * 1536), "{}")
+            ("chunk-333", doc_id_3, user_id, "TEST", "Target text inside document three", json.dumps([0.2] * 1536), "{}")
         )
         conn.commit()
 

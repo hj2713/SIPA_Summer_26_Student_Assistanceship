@@ -123,10 +123,15 @@ CurrentUserDep = Annotated[CurrentUser, Depends(get_current_user)]
 def get_workspace_id(workspace_id: str = None) -> str:
     """Dependency to retrieve/update the active workspace ID dynamically.
     
-    If workspace_id query/form param is passed, we update the active workspace in RAM.
-    Otherwise, we retrieve it from RAM.
+    If TEST_MODE is active, all test API calls are strictly isolated to the TEST workspace.
     """
     from app.core.workspace import get_active_workspace, set_active_workspace
+    if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+        if not workspace_id or workspace_id in ("PRODUCTION", "QA"):
+            workspace_id = "TEST"
+        set_active_workspace(workspace_id)
+        return workspace_id
+
     if workspace_id:
         set_active_workspace(workspace_id)
         resolved = workspace_id
@@ -136,6 +141,8 @@ def get_workspace_id(workspace_id: str = None) -> str:
     if resolved in ("QA", "TEST"):
         resolved = "PRODUCTION"
         set_active_workspace("PRODUCTION")
+
+
 
     # Ensure each workspace exists once per process. Rechecking the same row on
     # every request adds an avoidable database round trip to all paginated calls.

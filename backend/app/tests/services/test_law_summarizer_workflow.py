@@ -28,14 +28,15 @@ def test_structured_law_summarizer_template_validity():
 
 def test_structured_law_summarizer_db_seeding():
     svc = WorkflowService()
-    svc.ensure_seed_templates("PRODUCTION")
+    svc.ensure_seed_templates("TEST")
 
     with svc.db_session_factory() as session:
-        row = session.workflow_templates.get_by_slug("PRODUCTION", "structured_law_summarizer")
+        row = session.workflow_templates.get_by_slug("TEST", "structured_law_summarizer")
         assert row is not None
         assert row["name"] == "Structured Law Summarizer"
         definition = json.loads(row["definition_json"])
         assert len(definition["nodes"]) == 5
+
 
 
 @pytest.mark.asyncio

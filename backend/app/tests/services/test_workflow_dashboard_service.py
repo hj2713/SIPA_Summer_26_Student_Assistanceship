@@ -15,11 +15,11 @@ def test_run_model_comparison_parallel_persists_all_models():
 
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Workflow Eval', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
             (dashboard_id,),
         )
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
             (document_id,),
         )
         conn.execute(
@@ -80,11 +80,11 @@ def test_run_model_comparison_parallel_marks_models_failed_when_document_load_cr
 
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval Crash', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Workflow Eval Crash', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
             (dashboard_id,),
         )
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
             (document_id,),
         )
         conn.execute(
@@ -143,11 +143,11 @@ def test_run_model_comparison_parallel_retry_model_only_runs_requested_model():
 
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval Retry One', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Workflow Eval Retry One', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
             (dashboard_id,),
         )
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
             (document_id,),
         )
         conn.execute(
@@ -207,11 +207,11 @@ def test_run_model_comparison_parallel_propagates_user_context_to_model_runs():
 
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval User Context', '', '', '[]', 'claude-sonnet-4.6', 'model_comparison');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Workflow Eval User Context', '', '', '[]', 'claude-sonnet-4.6', 'model_comparison');",
             (dashboard_id,),
         )
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
             (document_id,),
         )
         conn.execute(
@@ -261,11 +261,11 @@ def test_run_model_comparison_parallel_persists_partial_results_while_other_mode
 
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'Workflow Eval Live Progress', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Workflow Eval Live Progress', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
             (dashboard_id,),
         )
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
             (document_id,),
         )
         conn.execute(
@@ -341,7 +341,7 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
             """
             INSERT INTO coding_workflows (
                 id, workspace_id, name, description, status, draft_definition, revision, latest_version, created_by
-            ) VALUES (?, 'QA', 'Workflow 1', '', 'draft', '{"nodes":[],"edges":[],"outputs":[]}', 1, 0, 'user-1');
+            ) VALUES (?, 'TEST', 'Workflow 1', '', 'draft', '{"nodes":[],"edges":[],"outputs":[]}', 1, 0, 'user-1');
             """,
             (workflow_id,),
         )
@@ -350,13 +350,13 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
             INSERT INTO dashboards (
                 id, workspace_id, name, description, prompt, schema, model, dashboard_type,
                 workflow_id, workflow_source, workflow_definition_json
-            ) VALUES (?, 'QA', 'Workflow Eval Batch Retry', '', '', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
+            ) VALUES (?, 'TEST', 'Workflow Eval Batch Retry', '', '', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
             """,
             (dashboard_id, workflow_id),
         )
         for doc_id in doc_ids:
             conn.execute(
-                "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'QA', ?, '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
+                "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', ?, '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
                 (doc_id, f"{doc_id[-3:]}.txt"),
             )
         conn.commit()
@@ -379,7 +379,7 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
         await service.run_existing_documents_for_dashboard(
             dashboard_id=dashboard_id,
             workflow_id=workflow_id,
-            workspace_id="QA",
+            workspace_id="TEST",
             user_id=user_id,
             document_ids=doc_ids,
             retry_model="gpt-4o-mini",
@@ -411,7 +411,7 @@ def test_run_existing_documents_for_dashboard_batches_retry_model_across_documen
 def test_document_text_direct_raw_storage_lookup(monkeypatch):
     """Option A Test: Ensure _document_text fetches raw text directly from StorageService when file_path exists."""
     doc_id = "doc-raw-storage-test"
-    workspace_id = "QA"
+    workspace_id = "TEST"
     file_path = "storage/law_delegation.txt"
     user_id = "00000000-0000-0000-0000-000000000001"
 
@@ -419,7 +419,7 @@ def test_document_text_direct_raw_storage_lookup(monkeypatch):
         conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES (?, ?);", (workspace_id, workspace_id))
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, 'law_raw_storage_test.txt', ?, 100, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, 'law_raw_storage_test.txt', ?, 100, 'text/plain', 'completed', '{}');",
             (doc_id, user_id, workspace_id, file_path),
         )
         conn.commit()
@@ -438,14 +438,14 @@ def test_document_text_direct_raw_storage_lookup(monkeypatch):
 def test_document_text_chunk_fallback_when_raw_storage_missing(monkeypatch):
     """Option A Test: Ensure _document_text falls back to chunk reassembly when raw file storage lookup fails."""
     doc_id = "doc-chunk-fallback-test"
-    workspace_id = "QA"
+    workspace_id = "TEST"
     user_id = "00000000-0000-0000-0000-000000000001"
 
     with get_db_conn() as conn:
         conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES (?, ?);", (workspace_id, workspace_id))
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, 'law_legacy_fallback.txt', '', 100, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, 'law_legacy_fallback.txt', '', 100, 'text/plain', 'completed', '{}');",
             (doc_id, user_id, workspace_id),
         )
         conn.execute(
@@ -470,13 +470,14 @@ def test_create_text_document_stores_raw_text_to_storage(monkeypatch):
 
     with get_db_conn() as conn:
         conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
         conn.commit()
 
-    def mock_upload(client, uid, doc_id, filename, content, content_type):
-        path = f"storage/user_{uid}/{filename}"
+    def mock_upload(client, user_id, doc_id, filename, content, content_type, **kwargs):
+        path = f"storage/user_{user_id}/{filename}"
         uploaded_files[doc_id] = content
         return path
+
 
     monkeypatch.setattr(document_service, "upload_file_to_storage", mock_upload)
 
@@ -485,8 +486,9 @@ def test_create_text_document_stores_raw_text_to_storage(monkeypatch):
         filename="custom_law_storage.txt",
         text="Whole Law Document Content for Storage",
         user_id=user_id,
-        workspace_id="QA",
+        workspace_id="TEST",
     )
+
 
     assert doc_id in uploaded_files
     assert uploaded_files[doc_id] == b"Whole Law Document Content for Storage"
@@ -504,13 +506,13 @@ def test_execute_document_uses_provided_source_text_ram(monkeypatch):
 
     with get_db_conn() as conn:
         conn.execute("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?, 'test@test.com', 'hash');", (user_id,))
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
         conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'QA', 'RAM Test', '', '', '[]', 'gemini-3.1-flash-lite', 'campaign');",
+            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'RAM Test', '', '', '[]', 'gemini-3.1-flash-lite', 'campaign');",
             (dashboard_id,),
         )
         conn.execute(
-            "INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, 'QA', 'law_ram_test.txt', '', 100, 'text/plain', 'completed', '{}');",
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, 'TEST', 'law_ram_test.txt', '', 100, 'text/plain', 'completed', '{}');",
             (doc_id, user_id),
         )
         conn.execute(

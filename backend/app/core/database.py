@@ -425,25 +425,31 @@ def init_postgres_db():
             if not test_row:
                 cursor.execute(
                     "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
-                    (str(uuid.uuid4()), "test@test.com", test_pwd_hash)
+                    ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
                 )
+
             else:
                 cursor.execute(
                     "UPDATE users SET password_hash = %s, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;",
                     (test_pwd_hash, "test@test.com")
                 )
 
-            # Ensure PRODUCTION & QA workspaces exist
+            # Ensure PRODUCTION, QA & TEST workspaces exist
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
+            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
 
-
-            # Seed test@gmail.com & test@test.com as members of PRODUCTION
+            # Seed test@gmail.com & test@test.com as members
             for email in ["test@gmail.com", "test@test.com"]:
                 cursor.execute(
                     "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
                     (str(uuid.uuid4()), "PRODUCTION", email)
                 )
+            cursor.execute(
+                "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, 'TEST', 'test@test.com') ON CONFLICT DO NOTHING;",
+                (str(uuid.uuid4()),)
+            )
+
 
             # Requirement 4: Reset hj2713@columbia.edu so it starts in uninvited state for testing
             cursor.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = %s;", ("hj2713@columbia.edu",))
@@ -739,7 +745,7 @@ def init_sqlite_db():
         """)
 
         # Create llm_usage_logs table
-        conn.execute("""
+        conn.executescript("""
             CREATE TABLE IF NOT EXISTS llm_usage_logs (
                 id TEXT PRIMARY KEY,
                 timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -757,7 +763,24 @@ def init_sqlite_db():
                 FOREIGN KEY (campaign_id) REFERENCES dashboards (id) ON DELETE SET NULL,
                 FOREIGN KEY (thread_id) REFERENCES threads (id) ON DELETE SET NULL
             );
+
+            CREATE TABLE IF NOT EXISTS workflow_jobs (
+                id TEXT PRIMARY KEY,
+                job_type TEXT NOT NULL DEFAULT 'evaluate_column',
+                status TEXT NOT NULL DEFAULT 'queued',
+                dashboard_id TEXT NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+                workspace_id TEXT REFERENCES workspaces(id) ON DELETE SET NULL,
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                error_message TEXT,
+                queued_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                started_at TEXT,
+                completed_at TEXT
+            );
         """)
+        conn.commit()
+
+
+
 
         for col_def in ["user_id TEXT", "workspace_id TEXT", "key_level_used TEXT DEFAULT 'system'"]:
             try:
@@ -844,23 +867,26 @@ def init_sqlite_db():
         test_row = cursor.fetchone()
         test_pwd_hash = hash_password("test@test.com")
         if not test_row:
-            test_id = str(uuid.uuid4())
             conn.execute(
                 "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
-                (test_id, "test@test.com", test_pwd_hash)
+                ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
             )
+
         else:
             conn.execute(
                 "UPDATE users SET password_hash = ?, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = ?;",
                 (test_pwd_hash, "test@test.com")
             )
 
-        # Seed PRODUCTION & QA workspaces & memberships
+        # Seed PRODUCTION, QA & TEST workspaces & memberships
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
 
         for email in ["test@gmail.com", "test@test.com"]:
             conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'PRODUCTION', ?);", (str(uuid.uuid4()), email))
+        conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'TEST', 'test@test.com');", (str(uuid.uuid4()),))
+
 
         # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing
         conn.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = ?;", ("hj2713@columbia.edu",))

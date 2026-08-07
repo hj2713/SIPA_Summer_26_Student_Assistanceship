@@ -378,8 +378,39 @@ class WorkflowDashboardService:
                     except Exception as e:
                         logger.warning("Failed to fetch raw file from storage for document_id=%s: %s", document_id, e)
 
-            logger.exception("Could not read workflow source text from database/storage for document_id=%s", document_id)
+        # 3. Chunk fallback directly via DB query
+        try:
+            from app.core.database import get_db_conn
+            with get_db_conn() as conn:
+
+                cursor = conn.execute(
+                    "SELECT content, metadata FROM document_chunks WHERE document_id = ? ORDER BY id ASC;",
+                    (document_id,)
+                )
+                rows = cursor.fetchall()
+                if rows:
+                    def get_chunk_idx(row):
+                        meta = row["metadata"] if hasattr(row, "__getitem__") else getattr(row, "metadata", None)
+                        if isinstance(meta, str):
+                            try:
+                                meta = json.loads(meta)
+                            except Exception:
+                                meta = {}
+                        if isinstance(meta, dict):
+                            return meta.get("chunk_index", 0)
+                        return 0
+                    rows_sorted = sorted(rows, key=get_chunk_idx)
+                    parts = [(r["content"] if hasattr(r, "__getitem__") else getattr(r, "content", "")) for r in rows_sorted]
+                    assembled = "\n\n".join(p for p in parts if p)
+                    if assembled.strip():
+                        return assembled
+        except Exception as err:
+            logger.warning("Failed chunk fallback for doc_id=%s: %s", document_id, err)
+
+        logger.exception("Could not read workflow source text from database/storage for document_id=%s", document_id)
         raise HTTPException(status_code=400, detail=f"Document text content could not be retrieved for document_id={document_id}.")
+
+
 
     # -------------------------------------------------------------------------
     # Core per-model, per-document runner

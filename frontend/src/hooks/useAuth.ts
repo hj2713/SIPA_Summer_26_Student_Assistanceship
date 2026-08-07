@@ -139,15 +139,14 @@ export function useAuth(): AuthContextValue {
         const list = rawList.filter((w) => w.id !== "QA" && w.id !== "TEST");
         setWorkspaces(list);
         
-        // Restore active workspace or fallback to PRODUCTION / first one
+        // Restore active workspace or fallback to user's first available workspace
         const storedId = localStorage.getItem("active_workspace_id");
         const found = list.find((w) => w.id === storedId && w.id !== "QA" && w.id !== "TEST");
         if (found) {
           setActiveWorkspaceState(found);
         } else if (list.length > 0) {
-          const prod = list.find((w) => w.id === "PRODUCTION") ?? list[0];
-          setActiveWorkspaceState(prod);
-          localStorage.setItem("active_workspace_id", prod.id);
+          setActiveWorkspaceState(list[0]);
+          localStorage.setItem("active_workspace_id", list[0].id);
         }
       }
     } catch (err) {

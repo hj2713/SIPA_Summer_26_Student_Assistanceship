@@ -25,10 +25,10 @@ export function useDocuments(options: { pageSize?: number } = {}) {
   const [pageCount, setPageCount] = useState(1);
 
   const fetchDocuments = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || !activeWorkspace?.id) return;
     setLoading(true);
     try {
-      const workspaceId = activeWorkspace?.id ?? DEFAULT_WORKSPACE_ID;
+      const workspaceId = activeWorkspace.id;
       if (pageSize) {
         const data = await apiFetch<DocumentPage>(
           `/api/documents/page?workspace_id=${workspaceId}&page=${page}&page_size=${pageSize}`,

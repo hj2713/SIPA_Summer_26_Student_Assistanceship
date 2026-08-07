@@ -62,7 +62,7 @@ function WorkflowBuilderInner() {
   const isTemplate = searchParams.get("type") === "template";
   const { session, activeWorkspace } = useAuthContext();
   const jwt = session?.access_token || "";
-  const workspaceId = activeWorkspace?.id || "PRODUCTION";
+  const workspaceId = activeWorkspace?.id || "";
   const [workflow, setWorkflow] = useState<CodingWorkflow | null>(null);
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -93,7 +93,7 @@ function WorkflowBuilderInner() {
   }, []);
 
   useEffect(() => {
-    if (!jwt || !id) return;
+    if (!jwt || !id || !workspaceId) return;
     const loadPromise = isTemplate 
       ? workflowApi.getTemplate(id, jwt, workspaceId) 
       : workflowApi.get(id, jwt, workspaceId);

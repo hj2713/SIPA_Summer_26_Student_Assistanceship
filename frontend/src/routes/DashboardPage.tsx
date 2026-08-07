@@ -155,9 +155,9 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
   }, [previewDocId, session, documents]);
 
   const fetchCampaigns = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || !activeWorkspace?.id) return;
     try {
-      const workspaceId = activeWorkspace?.id ?? "PRODUCTION";
+      const workspaceId = activeWorkspace.id;
       const headers = { Authorization: `Bearer ${session.access_token}` };
       const campaignResponse = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${workspaceId}`, { headers });
       if (campaignResponse.ok) setCampaigns(await campaignResponse.json());
@@ -167,13 +167,13 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
   };
 
   const fetchCampaignMapping = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || !activeWorkspace?.id) return;
     if (documents.length === 0) {
       setCampaignDocumentMapping({});
       return;
     }
     try {
-      const workspaceId = activeWorkspace?.id ?? "PRODUCTION";
+      const workspaceId = activeWorkspace.id;
       const mappingResponse = await fetch(`${API_BASE_URL}/api/dashboards/document-mapping?workspace_id=${workspaceId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },

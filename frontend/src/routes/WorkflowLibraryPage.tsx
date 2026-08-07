@@ -26,7 +26,7 @@ export function WorkflowLibraryPage() {
   const navigate = useNavigate();
   const { session, activeWorkspace } = useAuthContext();
   const jwt = session?.access_token || "";
-  const workspaceId = activeWorkspace?.id || "PRODUCTION";
+  const workspaceId = activeWorkspace?.id || "";
   const [workflows, setWorkflows] = useState<CodingWorkflow[]>([]);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,8 @@ export function WorkflowLibraryPage() {
   const [deleteTemplateTarget, setDeleteTemplateTarget] = useState<WorkflowTemplate | null>(null);
 
   useEffect(() => {
-    if (!jwt) return;
+    if (!jwt || !activeWorkspace?.id) return;
+    const workspaceId = activeWorkspace.id;
     let active = true;
     Promise.all([workflowApi.list(jwt, workspaceId), workflowApi.listTemplates(jwt, workspaceId)])
       .then(([workflowItems, templateItems]) => {
@@ -54,7 +55,7 @@ export function WorkflowLibraryPage() {
       .catch((error) => { if (active) toast.error(error instanceof Error ? error.message : "Failed to load coding workflows"); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [jwt, workspaceId]);
+  }, [jwt, activeWorkspace?.id]);
 
   const createWorkflow = async (event: React.FormEvent) => {
     event.preventDefault();

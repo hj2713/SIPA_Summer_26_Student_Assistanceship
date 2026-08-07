@@ -483,7 +483,7 @@ def list_workspaces(current_user: CurrentUserDep):
                 pass
         
         # Check workspace_memberships table for explicit membership (all users including admins)
-        allowed_ids = {"PRODUCTION"}
+        allowed_ids = set()
 
         try:
             if hasattr(session, "conn") and session.conn:
@@ -504,12 +504,16 @@ def list_workspaces(current_user: CurrentUserDep):
         except Exception as e:
             logger.warning(f"Error checking workspace memberships: {e}")
 
-        member_rows = [r for r in valid_rows if r["id"] in allowed_ids]
+        # Admins can access all non-internal workspaces, non-admins only see explicit memberships
+        if current_user.is_admin:
+            member_rows = valid_rows
+        else:
+            member_rows = [r for r in valid_rows if r["id"] in allowed_ids]
 
-        # If user has no workspaces assigned, auto-provision a personal workspace for them
+        # If user has no workspaces assigned, auto-provision a unique personal workspace for them
         if not member_rows:
             user_prefix = current_user.email.split("@")[0].upper()
-            personal_ws_id = f"WS-{current_user.id[:8].upper()}"
+            personal_ws_id = f"ws_{uuid.uuid4().hex[:12]}"
             personal_ws_name = f"{user_prefix}'S WORKSPACE"
             try:
                 if not session.workspaces.get_by_id(personal_ws_id):
@@ -543,22 +547,18 @@ def list_workspaces(current_user: CurrentUserDep):
 
 @router.post("/workspaces", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
-    """Create a new workspace and add creator as member."""
-    name = payload.name.strip().upper()
-    if not name or name in ("QA", "TEST"):
+    """Create a new workspace with a unique UUID hash ID and add creator as member."""
+    display_name = payload.name.strip()
+    if not display_name or display_name.upper() in ("QA", "TEST"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid workspace name"
         )
     
-    workspace_id = name
+    # Generate unique workspace ID (UUID-based hash string) to allow duplicate display names across different users
+    workspace_id = f"ws_{uuid.uuid4().hex[:12]}"
     with get_db_session() as session:
-        if session.workspaces.get_by_id(workspace_id):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Workspace already exists"
-            )
-        session.workspaces.create(workspace_id=workspace_id, name=name)
+        session.workspaces.create(workspace_id=workspace_id, name=display_name)
 
         try:
             if hasattr(session, "conn") and session.conn:
@@ -577,7 +577,7 @@ def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
         except Exception as e:
             logger.error(f"Failed to save workspace membership: {e}")
 
-    return WorkspaceResponse(id=workspace_id, name=name)
+    return WorkspaceResponse(id=workspace_id, name=display_name)
 
 
 @router.get("/workspaces/active", response_model=WorkspaceResponse)

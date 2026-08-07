@@ -482,12 +482,9 @@ def list_workspaces(current_user: CurrentUserDep):
             except Exception:
                 pass
         
-        # If user is admin (e.g. test@test.com), show all valid workspaces
-        if current_user.is_admin:
-            return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in valid_rows]
-        
-        # Non-admin user: check workspace_memberships table
-        allowed_ids = set()
+        # Check workspace_memberships table for explicit membership (all users including admins)
+        allowed_ids = {"PRODUCTION"}
+
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()

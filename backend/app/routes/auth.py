@@ -15,7 +15,18 @@ from app.core.llm_credentials import (
     update_user_llm_credentials,
 )
 
+import logging
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
+
+def is_postgres_session(session) -> bool:
+    if settings.DB_PROVIDER.lower() == "postgres":
+        return True
+    conn_obj = getattr(session, "conn", None)
+    if conn_obj:
+        conn_str = str(type(conn_obj)).lower()
+        return "psycopg" in conn_str or "pg" in conn_str or hasattr(conn_obj, "pg_conn")
+    return False
 
 class AuthRequest(BaseModel):
     email: str
@@ -478,7 +489,7 @@ def list_workspaces(current_user: CurrentUserDep):
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
-                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                if is_postgres_session(session):
                     cursor.execute(
                         "SELECT workspace_id FROM workspace_memberships WHERE LOWER(user_email) = %s;",
                         (current_user.email.lower(),)
@@ -508,7 +519,7 @@ def list_workspaces(current_user: CurrentUserDep):
                 if hasattr(session, "conn") and session.conn:
                     cursor = session.conn.cursor()
                     m_id = str(uuid.uuid4())
-                    if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                    if is_postgres_session(session):
                         cursor.execute(
                             "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
                             (m_id, personal_ws_id, current_user.email.lower())
@@ -548,7 +559,7 @@ def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
                 m_id = str(uuid.uuid4())
-                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                if is_postgres_session(session):
                     cursor.execute(
                         "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
                         (m_id, workspace_id, current_user.email.lower())
@@ -602,7 +613,7 @@ def list_workspace_members(workspace_id: str, current_user: CurrentUserDep):
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
-                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                if is_postgres_session(session):
                     cursor.execute("SELECT user_email FROM workspace_memberships WHERE workspace_id = %s;", (ws_id,))
                 else:
                     cursor.execute("SELECT user_email FROM workspace_memberships WHERE workspace_id = ?;", (ws_id,))
@@ -654,7 +665,7 @@ def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
                 m_id = str(uuid.uuid4())
-                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                if is_postgres_session(session):
                     cursor.execute(
                         "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
                         (m_id, ws_id, invite_email)
@@ -681,11 +692,22 @@ def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current
                 can_delete=0
             )
 
+    # Dispatch email invitation to recipient's inbox
+    from app.services.email_service import send_workspace_invite_email
+    email_sent = send_workspace_invite_email(invite_email, ws_id, current_user.email)
+
+    msg = f"Successfully invited {invite_email} to workspace {ws_id}."
+    if email_sent:
+        msg += " Invitation email sent to recipient's inbox."
+    else:
+        msg += " Membership recorded in workspace."
+
     return {
         "status": "success",
-        "message": f"Successfully invited {invite_email} to join workspace {ws_id}.",
+        "message": msg,
         "workspace_id": ws_id,
         "invited_email": invite_email,
+        "email_sent": email_sent
     }
 
 
@@ -712,7 +734,7 @@ def update_user_permissions(user_id: str, payload: UpdateUserPermissionsRequest,
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
-                if hasattr(session.conn, "pg_conn") or "psycopg2" in str(type(session.conn)):
+                if is_postgres_session(session):
                     cursor.execute(
                         "UPDATE users SET can_add = %s, can_delete = %s WHERE id = %s;",
                         (1 if payload.can_add else 0, 1 if payload.can_delete else 0, user_id)

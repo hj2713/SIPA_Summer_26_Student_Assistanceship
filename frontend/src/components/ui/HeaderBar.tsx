@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { CiteUsModal } from "@/components/ui/CiteUsModal";
+import { Quote } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,27 +15,40 @@ import { useNavigate } from "react-router-dom";
 export function HeaderBar({ title, description }: { title?: string; description?: string }) {
   const { user, activeWorkspace, signOut } = useAuthContext();
   const navigate = useNavigate();
+  const [citeModalOpen, setCiteModalOpen] = useState(false);
 
   return (
-    <header className="h-14 border-b border-border/50 bg-card/60 backdrop-blur-md px-6 flex items-center justify-between z-20 sticky top-0 transition-colors">
-      <div className="flex items-center gap-3">
-        {title ? (
-          <div>
-            <h1 className="text-sm font-semibold text-foreground tracking-tight">{title}</h1>
-            {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-              LD
+    <>
+      <header className="h-14 border-b border-border/50 bg-card/60 backdrop-blur-md px-6 flex items-center justify-between z-20 sticky top-0 transition-colors">
+        <div className="flex items-center gap-3">
+          {title ? (
+            <div>
+              <h1 className="text-sm font-semibold text-foreground tracking-tight">{title}</h1>
+              {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
             </div>
-            <span className="font-semibold text-sm tracking-tight text-foreground">Law Delegation Platform</span>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                LD
+              </div>
+              <span className="font-semibold text-sm tracking-tight text-foreground">Law Delegation Platform</span>
+            </div>
+          )}
+        </div>
 
-      <div className="flex items-center gap-3">
-        {/* Workspace Chip */}
+        <div className="flex items-center gap-3">
+          {/* Cite Us Button */}
+          <button
+            type="button"
+            onClick={() => setCiteModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 text-xs font-semibold transition-all shadow-xs"
+          >
+            <Quote className="w-3.5 h-3.5" />
+            <span>Cite Us</span>
+          </button>
+
+          {/* Workspace Chip */}
+
         {activeWorkspace && (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary shadow-xs">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -87,5 +103,8 @@ export function HeaderBar({ title, description }: { title?: string; description?
         )}
       </div>
     </header>
+    <CiteUsModal open={citeModalOpen} onOpenChange={setCiteModalOpen} />
+    </>
   );
 }
+

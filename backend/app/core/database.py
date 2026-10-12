@@ -123,6 +123,7 @@ def init_postgres_db():
                 CREATE TABLE IF NOT EXISTS workspaces (
                     id VARCHAR(255) PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
+                    created_by VARCHAR(255),
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
@@ -162,6 +163,7 @@ def init_postgres_db():
                     id VARCHAR(255) PRIMARY KEY,
                     workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
                     user_email VARCHAR(255) NOT NULL,
+                    role VARCHAR(50) NOT NULL DEFAULT 'member' CHECK(role IN ('owner', 'admin', 'member')),
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT unique_workspace_user_email UNIQUE (workspace_id, user_email)
                 );
@@ -384,6 +386,9 @@ def init_postgres_db():
                 "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS token_limit INTEGER DEFAULT 2500000;",
                 "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_trace TEXT;",
                 "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_context TEXT;",
+                # Workspace privacy: add role to memberships and created_by to workspaces
+                "ALTER TABLE workspace_memberships ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'member';",
+                "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);",
             ]:
                 cursor.execute(ddl)
 
@@ -403,34 +408,33 @@ def init_postgres_db():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
 
-            # Seed test@gmail.com
+            # Seed test@gmail.com — regular user (admin is per-workspace, not global)
             cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@gmail.com",))
             admin_row = cursor.fetchone()
             admin_pwd_hash = hash_password("test@gmail.com")
             if not admin_row:
                 cursor.execute(
-                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
+                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 0, 1, 1);",
                     (str(uuid.uuid4()), "test@gmail.com", admin_pwd_hash)
                 )
             else:
                 cursor.execute(
-                    "UPDATE users SET password_hash = %s, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;",
+                    "UPDATE users SET password_hash = %s, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = %s;",
                     (admin_pwd_hash, "test@gmail.com")
                 )
 
-            # Seed test@test.com
+            # Seed test@test.com — regular user (admin is per-workspace, not global)
             cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@test.com",))
             test_row = cursor.fetchone()
             test_pwd_hash = hash_password("test@test.com")
             if not test_row:
                 cursor.execute(
-                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1);",
+                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 0, 1, 1);",
                     ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
                 )
-
             else:
                 cursor.execute(
-                    "UPDATE users SET password_hash = %s, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;",
+                    "UPDATE users SET password_hash = %s, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = %s;",
                     (test_pwd_hash, "test@test.com")
                 )
 
@@ -450,21 +454,32 @@ def init_postgres_db():
             except Exception as mig_err:
                 logger.warning("Workspace ID migration note: %s", mig_err)
 
-            # Ensure ws_prod_00000001, QA & TEST workspaces exist
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('ws_prod_00000001', 'PRODUCTION') ON CONFLICT (id) DO NOTHING;")
+            # Ensure ws_prod_00000001, QA & TEST workspaces exist (with created_by)
+            cursor.execute("INSERT INTO workspaces (id, name, created_by) VALUES ('ws_prod_00000001', 'PRODUCTION', 'test@gmail.com') ON CONFLICT (id) DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT (id) DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT (id) DO NOTHING;")
 
-            # Seed test@gmail.com & test@test.com as members
-            for email in ["test@gmail.com", "test@test.com"]:
-                cursor.execute(
-                    "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
-                    (str(uuid.uuid4()), "ws_prod_00000001", email)
-                )
+            # Seed workspace memberships with roles: creator gets 'owner', others get 'member'
             cursor.execute(
-                "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, 'TEST', 'test@test.com') ON CONFLICT DO NOTHING;",
+                "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'owner') ON CONFLICT (workspace_id, user_email) DO UPDATE SET role = 'owner';",
+                (str(uuid.uuid4()), "ws_prod_00000001", "test@gmail.com")
+            )
+            cursor.execute(
+                "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'member') ON CONFLICT DO NOTHING;",
+                (str(uuid.uuid4()), "ws_prod_00000001", "test@test.com")
+            )
+            cursor.execute(
+                "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, 'TEST', 'test@test.com', 'member') ON CONFLICT DO NOTHING;",
                 (str(uuid.uuid4()),)
             )
+
+            # Backfill: set role='owner' for existing workspace creators where created_by is set
+            cursor.execute("""
+                UPDATE workspace_memberships SET role = 'owner'
+                WHERE (workspace_id, user_email) IN (
+                    SELECT w.id, w.created_by FROM workspaces w WHERE w.created_by IS NOT NULL
+                ) AND role != 'owner';
+            """)
 
 
             # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing when not in TEST_MODE
@@ -487,6 +502,7 @@ def init_sqlite_db():
             CREATE TABLE IF NOT EXISTS workspaces (
                 id TEXT PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
+                created_by TEXT,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
             );
         """)
@@ -526,6 +542,7 @@ def init_sqlite_db():
                 id TEXT PRIMARY KEY,
                 workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
                 user_email TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('owner', 'admin', 'member')),
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 UNIQUE(workspace_id, user_email)
             );
@@ -845,6 +862,14 @@ def init_sqlite_db():
             except sqlite3.OperationalError:
                 pass
 
+        # Workspace privacy: add role to memberships and created_by to workspaces
+        for col, col_type in [("role", "TEXT NOT NULL DEFAULT 'member'"), ("created_by", "TEXT")]:
+            tbl = "workspace_memberships" if col == "role" else "workspaces"
+            try:
+                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type};")
+            except sqlite3.OperationalError:
+                pass
+
         # Create indexes
         conn.execute("CREATE INDEX IF NOT EXISTS idx_threads_user_updated ON threads (user_id, updated_at DESC);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, created_at ASC);")
@@ -862,48 +887,47 @@ def init_sqlite_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
 
         # --- SEED DEFAULTS ---
-        # 1. Default Admin User: test@gmail.com / test@gmail.com
+        # Seed test@gmail.com — regular user (admin is per-workspace, not global)
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM users WHERE email = ?;", ("test@gmail.com",))
         admin_row = cursor.fetchone()
+        admin_pwd_hash = hash_password("test@gmail.com")
         if not admin_row:
             admin_id = str(uuid.uuid4())
-            admin_pwd_hash = hash_password("test@gmail.com")
             conn.execute(
-                "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
+                "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 1, 1);",
                 (admin_id, "test@gmail.com", admin_pwd_hash)
             )
         else:
-            admin_pwd_hash = hash_password("test@gmail.com")
             conn.execute(
-                "UPDATE users SET password_hash = ?, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = ?;",
+                "UPDATE users SET password_hash = ?, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = ?;",
                 (admin_pwd_hash, "test@gmail.com")
             )
 
-        # 2b. Also seed test@test.com as default admin (easy to remember)
+        # Seed test@test.com — regular user (admin is per-workspace, not global)
         cursor.execute("SELECT id FROM users WHERE email = ?;", ("test@test.com",))
         test_row = cursor.fetchone()
         test_pwd_hash = hash_password("test@test.com")
         if not test_row:
             conn.execute(
-                "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
+                "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 1, 1);",
                 ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
             )
-
         else:
             conn.execute(
-                "UPDATE users SET password_hash = ?, is_admin = 1, can_add = 1, can_delete = 1 WHERE email = ?;",
+                "UPDATE users SET password_hash = ?, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = ?;",
                 (test_pwd_hash, "test@test.com")
             )
 
-        # Seed ws_prod_00000001, QA & TEST workspaces & memberships
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('ws_prod_00000001', 'PRODUCTION');")
+        # Seed ws_prod_00000001, QA & TEST workspaces with created_by
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name, created_by) VALUES ('ws_prod_00000001', 'PRODUCTION', 'test@gmail.com');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
 
-        for email in ["test@gmail.com", "test@test.com"]:
-            conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'ws_prod_00000001', ?);", (str(uuid.uuid4()), email))
-        conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'TEST', 'test@test.com');", (str(uuid.uuid4()),))
+        # Seed workspace memberships with roles: creator gets 'owner', others get 'member'
+        conn.execute("INSERT OR REPLACE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'ws_prod_00000001', 'test@gmail.com', 'owner');", (str(uuid.uuid4()),))
+        conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'ws_prod_00000001', 'test@test.com', 'member');", (str(uuid.uuid4()),))
+        conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'TEST', 'test@test.com', 'member');", (str(uuid.uuid4()),))
 
 
         # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing when not in TEST_MODE

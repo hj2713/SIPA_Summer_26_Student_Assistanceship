@@ -174,3 +174,36 @@ This repo is building a serious research coding platform for legislative delegat
 
 The immediate mission is to make the first-stage delegation coding workflow reliable, inspectable, and repeatable. Once that is stable, the project should expand toward richer discretion and constraint coding.
 
+## Citation & Academic Licensing
+
+**Terms of Use**: *Legal Text Workflow Studio* is open source and freely accessible for academic, policy, and research use in exchange for citation. If you use this software platform, API, workflow methodology, or generated datasets in your research or publications, please cite us as follows:
+
+### APA 7th Edition Citation
+
+> Legal Text Workflow Studio Team. (2026). *Legal Text Workflow Studio: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion* [Computer software]. arXiv preprint. https://arxiv.org/abs/2608.xxxx
+
+### BibTeX Entry
+
+```bibtex
+@article{legaltextworkflow2026,
+  title     = {Legal Text Workflow Studio: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion},
+  author    = {{Legal Text Workflow Studio Team}},
+  journal   = {arXiv preprint arXiv:2608.xxxx},
+  year      = {2026},
+  url       = {https://arxiv.org/abs/2608.xxxx}
+}
+```
+
+If citing the software repository directly:
+
+```bibtex
+@software{legaltextworkflow_software_2026,
+  title     = {Legal Text Workflow Studio},
+  author    = {{Legal Text Workflow Studio Team}},
+  year      = {2026},
+  publisher = {Zenodo},
+  url       = {https://github.com/hj2713/SIPA_Summer_26_Student_Assistanceship}
+}
+```
+
+

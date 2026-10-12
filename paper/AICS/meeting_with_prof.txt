@@ -1,0 +1,35 @@
+# Paper Submission Context
+
+- Paper under review; reviewers flagged Table 5 as the primary concern
+- Target conference: Irish applied computing conference (ACIS), focused on big data, computation, and cognitive topics
+  - Accepts prototypes and demos, which fits the paper’s framing
+  - Page limit: 12 pages; current draft (“main three stage three”) is 13
+- Reformatting to ACIS style template is underway and causing significant disruption to layout
+
+# Table 5 Fixes (Priority Task)
+
+- Two additions required to address reviewer concerns:
+  1. Add N (sample size) observations column
+  2. Add consistency index column
+- Must clarify the index scale used: 1-to-4, not 0-to-4 or 0-to-5
+- Need to explicitly state how the table is constructed in the paper
+
+# Document and Version Control
+
+- Working file: “AISC main three stage three” in LaTeX
+- Multiple versions exist; do not work on any other version
+- Table 2 being removed to save space; Table 4 becomes the relevant reference
+- Formatting changes (equations moved inline) have disrupted layout throughout
+
+# Himanshu’s Immediate Tasks
+
+- Rerun the analysis and produce a first cut of the revised Table 5
+- Do not edit any text in the document yet; note any desired changes separately
+- Await the ACIS style template (to be emailed) and a clean formatted version before making text edits
+- Follow-up sync planned in approximately 1.5 hours
+
+# Next Steps
+
+- **Rerun Table 5 with N observations and consistency index added** (Himanshu)
+- **Hold all text edits until reformatted template is ready** (Himanshu)
+- **Send ACIS style template and call for papers to Himanshu**

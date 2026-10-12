@@ -1,0 +1,134 @@
+Dear Sharyn O'Halloran,
+
+On behalf of the ICTAI Program Committee, we would like to thank you for submitting your paper to the 38th International Conference on Tools with Artificial Intelligence (ICTAI 2026).
+ 
+Paper ID 852: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion, 
+
+The program committee received a large number of high-quality submissions this year. Due to competitive space constraints and the high standards of the conference, we regret to inform you that your paper could not be accepted for inclusion in this year's program.
+
+The evaluation process was highly rigorous, with each paper carefully reviewed by our program committee members. To provide you with constructive feedback, the reviewer's comments and scores are appended to the bottom of this message. We hope that these detailed reports will be helpful in refining your research for future submissions.
+
+Even though we cannot include your paper in the proceedings, we would still love to have you join us at the conference. You are very welcome to register and attend the sessions, keynote talks, and panels. You can find all the registration details on the ICTAI 2026 Website.
+
+Thank you again for your time and effort, and we wish you all the best with your research and future work.
+
+Best regards,
+
+ICTAI 2026 - Program Co-Chairs
+
+SUBMISSION: 852
+TITLE: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion
+
+----------------------- REVIEW 1 ---------------------
+
+SUBMISSION: 852
+TITLE: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion
+
+----------- Overall evaluation -----------
+SCORE: -2 (reject)
+----- TEXT:
+This paper develops an LLM-based workflow that transforms legal concepts into judgments. The proposed method is claimed to be replicable and theory-guided, and is evaluated on US financial regulation laws in terms of preserving legislative delegation and administrative discretion. 
+
+The need for a replicable methodology that goes beyond one-shot classification is well-motivated. The need to decompose a given construct into ordered judgments is thus natural. At the same time, it is not clear if this process is related to the chain-of-thought procedure widely used by LLMs to solve reasoning problems. A discussion on this aspect might be helpful. 
+
+My one significant concern is that the workflow described in Sec. II and Fig. 1 is overly simplistic. Sec. II is also written at a very high level of abstraction, and it is not clear why the mapping in Sec. II.D is adequate to model a broad range of delegation and discretion paradigms. 
+
+There are several other aspects of the current manuscript that need more clarity- some of these are mentioned subsequently. In Sec. IV, the meaning of the phrase 'residual discretion' is not clear. In Table I, it is not clear how the quantity \hat{d}_i is estimated in Step 2 since the term g_D has not been defined. Is this the same as the term g_C in Sec. II.D? If the main reason for using an LLM-based workflow is to reduce the dependence on human labor, then why is it reasonable to have human expertise before, during, and after model execution in Sec. V? Or is this a different type of expertise that is being leveraged? Some details here would have been helpful. In Sec. VI, is there a reason for the choice of GPT-OSS over other more powerful versions of GPT?
+
+My other significant concern is that the entire model in Sec. II is ultimately evaluated on only 169 summaries. While I am not an expert in this field, this number seems very small to make conclusive judgments on the effectiveness of the model. Moreover, the methodology relies on summaries rather than the full text of the laws/ statutes being examined. This, to my eyes, potentially reduces the claimed effectiveness of the proposed approach. 
+
+Overall, while the paper makes a promising effort to address an interesting problem, the manuscript will be significantly strengthened by inclusion of more details (as mentioned above), and expanding the scope of the method to other types of legal instruments and full texts of the laws rather than only using legal summaries.
+
+
+----------------------- REVIEW 2 ---------------------
+
+SUBMISSION: 852
+TITLE: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion
+
+----------- Overall evaluation -----------
+SCORE: 1 (weak accept)
+----- TEXT:
+This paper presents a workflow for using LLMs to code legislative delegation and administrative discretion in U.S. financial regulation law, structured around an established principal agent theoretical model in which discretion is a function of delegated authority and the constraints placed on it. Rather than asking a model to output a discretion rank in one shot, the system decomposes the judgment into a delegation gate, separate authority and constraint classifications, a deterministic theory based mapping from those components to a rank, and a comparison against a strategy specific prediction, with every stage's prompts, outputs, and evidence retained in an execution trace. The approach is evaluated on a benchmark of 169 previously coded financial regulation laws, comparing three ranking strategies against a one shot baseline across five language models.
+
+I want to start with what I think is genuinely good about this paper. The core methodological idea, that a one shot classification collapses several linked judgments into an opaque output that cannot be audited or diagnosed when it disagrees with a benchmark, is a real and well argued problem, and decomposing the task along the lines of an actual formal theory rather than an arbitrary set of sub questions is a sensible design choice. The distinction the paper draws between the strategy specific predicted rank and the theory implied rank computed from the deterministic mapping, with disagreements flagged rather than silently resolved, is a nice piece of design that gives researchers a genuine diagnostic tool rather than just a black box with a nicer prompt. The case discussion around PL83-577 is a good concrete illustration of exactly the kind of diagnosis this architecture is meant to enable. I also think the paper's own framing of its contribution, that replicability rather 
+than raw predictive accuracy is the primary claim, is honest and appropriately modest given the results, and the human validation and case level adjudication design in Section V reflects a mature understanding of how this kind of tool should actually be used in a research pipeline rather than deployed as an autonomous coder.
+
+That said, I have several concerns that keep me from a stronger accept.
+
+The headline predictive results are fairly weak, and I think the paper could be more direct about this in the main text rather than leaving a reader to work it out from Table V. The best configuration, Direct Multiclass on Gemini, reaches 41.9 percent exact match accuracy and a quadratic weighted kappa of only 0.157, which by conventional standards indicates slight rather than good agreement with the benchmark. Most of the other model and strategy combinations report kappa values below 0.15, and several are close to zero or even negative for the Two Band strategy. This does not mean the architectural contribution is not valuable, but the paper should state plainly, probably in the abstract or introduction, that no evaluated configuration achieves strong agreement with expert coded discretion ranks, since a reader skimming the abstract could come away with a more favorable impression than the numbers support.
+
+Second, the one shot baseline comparison that anchors the paper's main empirical claim, that the staged workflow improves over unconstrained one shot prediction, is only run on a single model, Gemini. The paper is upfront about this limitation and correctly notes the claim is illustrative rather than universal, but this means the central quantitative argument for the workflow's benefit over a naive baseline rests on one model out of five, and the future work section says this will be expanded later. I would have liked to see at least one additional model's one shot baseline in this submission to strengthen the comparison, since without it the reader cannot tell whether the observed exact match improvement, from 28.6 to 41.9 percent, generalizes or is specific to how Gemini responds to unconstrained versus staged prompting.
+
+Third, the discretion rank benchmark is small, 169 laws with only 8 delegation negative cases, and drawn from a single domain, financial regulation. The paper is honest about this in the limitations section and does not overreach on external validity, which I appreciate, but it does mean the cross model comparison in Table V is working with a fairly limited and imbalanced sample, and the absence of any confidence intervals or significance testing on the reported metrics makes it hard to know how much of the variation across strategies and models reflects a real effect versus sampling noise at this scale.
+
+Fourth, there is no human upper bound or intercoder reliability figure reported, so there is no way to calibrate how far 41.9 percent exact match or a kappa of 0.157 is from what a second human coder following the same codebook would achieve. The paper acknowledges this directly and defers it to future work, which is fair, but it is a real gap in interpreting whether the model's disagreements with the benchmark reflect model limitations or genuine ambiguity in the underlying coding task, an ambiguity that the PL83-577 example itself suggests is not negligible.
+
+One smaller point, the specific model identifiers listed in the experimental protocol, particularly the exact version strings for several of the language models, would benefit from a footnote or citation confirming the release and access details, since some readers may not be able to verify these configurations independently at review time.
+
+Weighing all of this, I think the paper's architectural and methodological contribution, a decomposed, versioned, auditable measurement workflow grounded in an explicit formal theory, is a genuine and useful idea for the legal and political science NLP community, and the paper is unusually careful about separating what it has shown from what it has not. But the empirical results are modest, the central comparative claim rests on a single model, and the benchmark is small and imbalanced. I am comfortable with a weak accept on the strength of the methodological contribution and the paper's own honesty about its limitations, but I would not push for a stronger accept until the one shot baseline comparison is extended across models and some human reliability benchmark is reported.
+
+
+----------------------- REVIEW 3 ---------------------
+
+SUBMISSION: 852
+TITLE: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion
+
+----------- Overall evaluation -----------
+SCORE: 1 (weak accept)
+----- TEXT:
+The paper proposes a theory-guided, versioned LLM workflow for measuring legislative delegation and administrative discretion from legal texts. The approach decomposes the construct into ordered decisions while preserving prompts, settings, rationales, and execution traces for auditability and replication. Empirical results on a benchmark of U.S. financial-regulation laws show improved balanced accuracy for the binary delegation stage and modest but consistent gains for rank prediction when using staged strategies over an unconstrained one-shot baseline across several LLM backends. 
+
+This paper provides a clear conceptual contribution by designing a workflow to translate a formal delegation theory into an executable, multi-stage LLM measurement instrument with explicit deterministic mappings. Separation of generative model outputs from deterministic, theory-implied mappings and explicit consistency checks addresses reproducibility and auditability concerns oftern missing in LLM classification works. The paper also provides a clear execution flow, and the mapping from theory to computation is explicit and presentations are made accessible to both legal/political science and AI community. 
+
+However, with the dataset size this small (N=169) and imbalanced (only 8 negative), the authors should seriously consider including at least some statistical tests. Baselines are also missing so there's no comparison to traditional supervised text classifiers or instruction-tuned open-weight models. The authors should also consider discussing adjacent reproducibility-constrained agent/workflow frameworks (like R-LAM, blueprint-first, code-controlled agents), legal-rule extraction pipelines (e.g. De Jure), ordinal classification literature as alternative strategies for the ordinal rank stage, and recent political science codebook-to-LLM studies. The authors should also consider release the prototype publicly, at least some code, prompts, etc, so that it can really strengthen the reproducibility claims. 
+
+Overall, this paper deals with an important problem that how to make LLM-based legal coding replicable, auditable, and grounded in substantive theory rather than opaque one-shot prompts. The proposed workflow and prototype demonstrate thoughtful engineering aligned with a well-established delegation/discretion framework, and the empirical comparisons across models and strategies provide initial evidence that staged, theory-guided designs can outperform unconstrained baselines. However, the empirical evaluation has notable gaps (small, imbalanced datasets without uncertainty quantification; missing classical and instruction-tuned baselines; limited discussion of run-to-run stability and public release) constraining the strength of the claims. While reporting across several models is valuable, and including kappa metrics is approrpriate for ordinal outcomes, but the aggregate imporvements (41.9%, 76.9% within-one on Gemini 3.5) remain modest without a sense of human agreement c
+eilings or classical baselines. I view this as a very solid contribution with good impact in legal NLP and political methodology, but the authors should seriously consider the above suggestions, even just one or two, which would greatly strengthen the paper's claim.
+
+
+----------------------- REVIEW 4 ---------------------
+
+SUBMISSION: 852
+TITLE: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion
+
+----------- Overall evaluation -----------
+SCORE: -1 (weak reject)
+----- TEXT:
+Coding statutes for how much freedom they leave to an agency is slow by hand, and a
+one-shot answer from a language model is opaque. This paper splits the judgment the way
+the theory splits it, keeps a deterministic theory rule separate from the model's output
+so disagreements can be flagged, and versions the workflow. It is demonstrated on US
+financial-regulation laws with five models and three ranking strategies.
+
+The design has merit, and the delegation results in Table IV look fine.
+
+Table V is the main problem. Its footnote says the number of completed cases differs
+across model-strategy combinations. So the configurations were scored on different sets
+of cases, the claim that exact match rises from 28.6% to 41.9% compares runs on different
+cases, and the statement in Section VII-C that the evaluation is on a 169-case benchmark
+cannot be true for every row. The comparison would only be meaningful on one common case
+set, with sample sizes per cell and the failures explained.
+
+The agreement is also too low for the stated purpose. The best cell reaches a weighted
+kappa of about 0.2 and most cells are much lower, which does not support the abstract's
+claim about scalable legal coding.
+
+The five-point scale does not follow from the theory. Under Discretion = D(1 - C),
+whether rank 2 is above rank 3 depends on the sizes of the terms, so the ordering needed
+a justification, or an evaluation on the two-by-two grid instead of ordinal metrics.
+
+The consistency indicator, the most distinctive part of the approach, is recorded but
+never reported.
+
+The system is worth building on, but the evaluation as reported cannot be relied on.
+
+
+----------------------- REVIEW 5 ---------------------
+
+SUBMISSION: 852
+TITLE: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion
+
+----------- Overall evaluation -----------
+SCORE: -1 (weak reject)
+----- TEXT:
+The text and explanation aren't very clear as to what methodology was employed. I recommend rewriting this paper in a manner that can be followed.

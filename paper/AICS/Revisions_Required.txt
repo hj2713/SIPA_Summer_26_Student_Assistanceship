@@ -1,0 +1,238 @@
+AICS 2026 - HIGH-VALUE PRE-SUBMISSION REVISIONS FOR HIMANSHU
+Date: 2026-09-07
+Goal: Minimum high-value empirical and technical repairs needed to make the prototype paper defensible for AICS without turning it into the later full validation paper.
+
+RULE
+Do not infer missing values from percentages. Do not fill cells from memory. Use law IDs and stored execution outputs to calculate every new value. Preserve an auditable file containing the case set used for each reported comparison.
+
+PRIORITY 1 - CRITICAL / MUST FIX
+TABLE 5 MUST USE DEFENSIBLE COMMON CASE SETS AND REPORT N
+
+Concern raised
+ICTAI Reviewer 4 identified the most serious problem in the submitted evaluation: Table 5 metrics were calculated on different completed-case sets. Therefore, differences such as 28.6% versus 41.9% could reflect different cases rather than different strategies. Reviewers 2 and 3 also highlighted the small sample and difficulty interpreting cross-model differences.
+
+Why this matters
+If Table 5 still compares different cases without a paired/common denominator, the evaluation can again be judged unreliable regardless of the prototype framing.
+
+Implementation steps
+1. Build one analysis file indexed by stable law ID.
+2. Include, for every law ID:
+   - expert benchmark delegation label;
+   - expert benchmark discretion rank;
+   - model name;
+   - strategy name;
+   - completion/failure status;
+   - strategy-predicted rank;
+   - component outputs needed for the theory-implied rank;
+   - execution identifier/version if available.
+3. First determine the intended population for the discretion-rank task from the actual codebook/data. Do not infer it from the current percentages. Verify explicitly whether the rank evaluation is restricted to benchmark delegated cases / ranks 1-4 and apply that population consistently.
+4. Create a completion matrix by law ID x model x strategy.
+5. For the primary staged-strategy comparison, define a common set of law IDs with completed valid outputs for every staged configuration that will be compared directly.
+6. For the Gemini one-shot comparison, define a paired Gemini set containing only law IDs with completed outputs for the one-shot baseline and the Gemini staged strategy or strategies being compared. If this set differs from the primary cross-model set, present the Gemini one-shot comparison separately rather than mixing denominators silently.
+7. If a single global intersection across every reported model/strategy is large enough to be informative, use it for the main cross-model table. If it becomes unreasonably small, use clearly labeled comparison panels/sets and do not make direct claims across panels.
+8. Recompute, from the common case set(s):
+   - Exact-match accuracy;
+   - Within-one accuracy;
+   - Mean absolute error;
+   - Linear weighted kappa;
+   - Quadratic weighted kappa.
+9. Fill the N column in Table 5 with the actual denominator used for each valid comparison/panel.
+10. Report raw completion/failure counts separately in the text or table note. A useful minimal statement is: attempted N, completed N, persistent failures N.
+11. Archive the exact list of law IDs used for every reported comparison so the calculation can be reproduced.
+12. Replace the carried-over ICTAI numbers in the working draft with the recomputed values. Do not retain the old values if the common-case denominator changes them.
+13. Update the results prose only after the recalculation. Do not say a workflow "improves" on one-shot unless the common-case paired results support that statement.
+
+Required output for Sharyn
+- Revised Table 5 with defensible N values.
+- A small CSV/Excel/JSON file listing the law IDs in each comparison set.
+- Completion/failure counts for each model-strategy configuration.
+- Short note describing exactly how the common set was defined.
+
+PRIORITY 2 - CRITICAL / MUST FIX
+CALCULATE AND REPORT THE THEORETICAL-CONSISTENCY INDICATOR
+
+Concern raised
+ICTAI Reviewer 4 noted that the consistency indicator is arguably one of the most distinctive parts of the workflow, but the submitted paper defined it and never reported it.
+
+Why this matters
+The AICS prototype claim is diagnostic and architectural. Reporting consistency directly tests whether decomposition exposes contradictions that a one-shot classification would hide. This result is more central to the prototype paper than adding another broad benchmark.
+
+Definition already in the paper
+q_i^(s) = 1[ strategy-predicted rank = theory-implied rank ].
+
+Implementation steps
+1. For each completed staged run, retrieve:
+   - delegation output d_hat;
+   - authority output a_hat;
+   - constraint output c_hat;
+   - strategy-specific predicted rank y_tilde.
+2. Reconstruct the theory-implied rank y_map using the deterministic codebook mapping already implemented in the workflow:
+   - no delegation -> 0;
+   - delegation + Low authority + Strong constraints -> 1;
+   - delegation + Low authority + Weak constraints -> 2;
+   - delegation + High authority + Strong constraints -> 3;
+   - delegation + High authority + Weak constraints -> 4.
+3. For each eligible case, set q=1 when y_tilde equals y_map and q=0 otherwise.
+4. Do not assign q to a case missing any component needed for y_map or missing the strategy rank. Mark that case incomplete for this calculation and report the denominator.
+5. Do not calculate this measure for the unconstrained one-shot baseline unless that baseline actually generated the same component variables. In the current design it does not, so Table 5 correctly uses -- for one-shot consistency.
+6. For each model x staged-strategy configuration calculate:
+   - number consistent = sum(q);
+   - denominator = number of complete eligible cases;
+   - consistency rate = sum(q) / denominator.
+7. Prefer calculating the consistency rate on the same common case set used for the corresponding performance comparison. If a separate denominator is unavoidable, state it explicitly.
+8. Spot-check at least five q=0 cases against the stored execution traces to verify that the mismatch is real and not a joining/coding error.
+9. Fill every * in the Consist. column with the calculated rate (and, if space permits, report count/N in a note or supplementary analysis file).
+10. Update Section 5.3 only after the calculations. Report the observed range and identify high/low configurations only if the calculated values support those descriptions.
+
+Required output for paper
+- Consistency numerator, denominator, and rate for every model x staged-strategy cell.
+- A file listing all inconsistent law IDs, y_tilde, y_map, and the component values producing y_map.
+- Updated Table 5 consistency column.
+
+PRIORITY 3 - HIGH / ALREADY DRAFTED, VERIFY BEFORE SUBMISSION
+MAKE THE FIVE-CATEGORY SCALE THEORETICALLY PRECISE
+
+Concern raised
+Reviewer 4 argued that Rank 2 versus Rank 3 does not mechanically follow from the continuous expression D(1-C) without assumptions about magnitudes.
+
+What has already been changed
+The AICS draft now states that the five-category scale is an expert-coded ordinal operationalization. Equation (1) identifies the substantive dimensions; the codebook supplies the categorical mapping in Equation (2).
+
+Himanshu steps
+1. Verify the four delegated cells in Equation (2) exactly match the historical coding protocol.
+2. Verify every prompt/strategy uses the same rank definitions.
+3. Keep the sentence stating that the 1-4 ordering is not mechanically implied by numerical values of D(1-C).
+4. Add, if needed, one short sentence in Evaluation Design: ordinal metrics evaluate reproduction of the historical expert-coded ordering, not estimation of a continuous D(1-C) magnitude.
+5. Do not introduce a new mathematical assumption merely to force Rank 2 < Rank 3 unless that assumption exists in the underlying substantive work.
+
+PRIORITY 4 - HIGH / MUST VERIFY AFTER TABLE 5 IS RECALCULATED
+ALIGN ALL CLAIMS WITH MODEST PERFORMANCE AND THE PROTOTYPE OBJECTIVE
+
+Concern raised
+Reviewers 2, 3, and 4 all emphasized that rank agreement is modest. Reviewer 2 specifically warned that the abstract could leave a more favorable impression than the numbers support.
+
+What has already been changed
+- Abstract states rank agreement remains modest.
+- Prototype is framed as a feasibility/diagnostic system, not an automated replacement.
+- Current results text withholds cross-strategy improvement claims until the common-case calculation is done.
+
+Himanshu steps
+1. Recalculate Table 5 first.
+2. Search the manuscript for: improve, outperform, scalable, strong agreement, generalize, reproducible, consistently.
+3. For each occurrence, confirm the statement is supported by the revised common-case evidence.
+4. Keep the central contribution on auditability, versioning, deterministic mapping, and diagnostics.
+5. If a common-case strategy improvement is real, report the exact paired values and N. Do not generalize it across models unless the additional rows support the statement.
+6. Keep the conclusion explicit that the current paper is the first-stage prototype, not the definitive validation study.
+
+PRIORITY 5 - HIGH VALUE IF TIME ALLOWS; DO NOT BLOCK AICS IF PRIORITIES 1-4 ARE COMPLETE
+ADD ONE-SHOT BASELINES ON ADDITIONAL MODELS
+
+Concern raised
+Reviewer 2 noted that the central one-shot comparison is currently available only for Gemini. Reviewer 3 similarly requested stronger baselines.
+
+Why it helps
+A second or broader one-shot comparison would make it easier to show that the workflow architecture is not a Gemini-specific prompting artifact.
+
+Implementation steps
+1. Freeze the exact one-shot prompt used for Gemini.
+2. Use the same source texts, same target rank definition, and the same common-case population.
+3. Run the one-shot prompt on one or more of the already evaluated backends.
+4. Use the same structured output constraints where they do not change the substantive one-shot task.
+5. Record failures and model identifiers.
+6. Compute the same rank metrics on the same paired cases used for the corresponding staged comparison.
+7. Add rows only when the comparison denominator is explicit.
+8. If time is insufficient, leave this as a stated limitation and do not imply that the one-shot comparison generalizes across models.
+
+PRIORITY 6 - MEDIUM-HIGH VALUE IF EASY AFTER COMMON-CASE REBUILD
+ADD UNCERTAINTY FOR KEY RESULTS
+
+Concern raised
+Reviewers 2 and 3 noted the small/imbalanced sample and absence of confidence intervals or statistical uncertainty.
+
+Minimum implementation
+1. Use the final common-case law IDs.
+2. Bootstrap law IDs with replacement (for example 1,000 resamples).
+3. Recompute the key metrics for each resample.
+4. Report 95% percentile intervals for the primary delegation and rank metrics.
+5. For weighted kappa, record and handle any bootstrap samples in which kappa is undefined rather than silently assigning a value.
+6. At minimum, confidence intervals for Exact, W1, MAE, and balanced accuracy would improve interpretation.
+
+Do not block submission if this cannot be completed cleanly before the deadline. It is lower priority than fixing the denominator and reporting consistency.
+
+PRIORITY 7 - MEDIUM / EASY DOCUMENTATION FIX
+VERIFY MODEL IDENTIFIERS AND ACCESS DETAILS
+
+Concern raised
+Reviewer 2 asked for release/access details for exact model identifiers.
+
+Implementation steps
+1. Confirm every model identifier against the actual run logs/API configuration.
+2. Do not rely on remembered marketing names.
+3. Record provider and access date for each model.
+4. Add a short footnote or citation with provider/release information where verifiable.
+5. If an identifier is an internal/provider alias rather than a public release name, say so explicitly rather than presenting it as independently verifiable.
+
+PRIORITY 8 - MEDIUM / ALREADY ADDRESSED IN DRAFT
+CLARIFY THAT WORKFLOW DECOMPOSITION IS NOT HIDDEN CHAIN-OF-THOUGHT
+
+Concern raised
+Reviewer 1 asked whether the staged process was simply chain-of-thought.
+
+What has already been changed
+The prototype section now states that this is an external, versioned decomposition with typed stage outputs and retained evidence, not reliance on hidden chain-of-thought.
+
+Himanshu steps
+1. Confirm the implementation really stores explicit stage outputs and evidence as stated.
+2. Do not claim access to hidden model reasoning.
+3. Keep terminology focused on staged workflow, typed outputs, evidence, deterministic mappings, and traceability.
+
+PRIORITY 9 - MEDIUM / ALREADY ADDRESSED IN DRAFT
+CLARIFY WHY HUMAN EXPERTISE REMAINS IN AN AUTOMATED WORKFLOW
+
+Concern raised
+Reviewer 1 asked why human expertise is needed before, during, and after execution if the goal is to reduce human labor.
+
+What has already been changed
+The AICS draft states that domain experts govern the instrument: they define the construct/rules and adjudicate flagged cases, while the LLM scales application.
+
+Himanshu steps
+1. Confirm the prototype actually supports the stated case-level inspection/override functions.
+2. Keep the distinction between method-level revision and local case adjudication.
+3. Do not frame the system as autonomous coding.
+
+PRIORITY 10 - FUTURE FULL PAPER / DO NOT BLOCK AICS
+HUMAN INTERCODER RELIABILITY / HUMAN UPPER BOUND
+
+Concern raised
+Reviewers 2 and 3 wanted a human reliability benchmark to interpret model-benchmark disagreement.
+
+Recommendation for AICS
+Do not create a rushed human-coding exercise merely to satisfy this point. Retain it as an explicit limitation/future-work item unless a properly designed independent recoding exercise already exists.
+
+For the later full paper
+1. Draw a pre-specified sample of laws including easy, difficult, and boundary cases.
+2. Have at least one independent expert coder apply the same codebook without access to the benchmark label.
+3. Report component-level and final-rank agreement, including weighted kappa.
+4. Use this to distinguish model error from genuine codebook ambiguity.
+
+PRIORITY 11 - FUTURE FULL PAPER / DO NOT BLOCK AICS
+FULL STATUTES, ADDITIONAL POLICY DOMAINS, AND SYSTEMATIC REPEATED-RUN STABILITY
+
+Concern raised
+Reviewers 1 and 3 asked for broader legal instruments/full text and run-to-run stability.
+
+Recommendation
+Keep these as explicit future-work items. They are appropriate for the later full validation paper and are not necessary to establish the AICS prototype if the current benchmark evaluation is made methodologically sound.
+
+FINAL MINIMUM SUBMISSION GATE
+Before the AICS paper can be submitted, all of the following must be true:
+[ ] Table 5 performance metrics have been recalculated on defensible common case set(s).
+[ ] Actual N values replace every N * placeholder.
+[ ] Consistency rates replace every staged Consist. * placeholder.
+[ ] Completion/failure counts are documented.
+[ ] Results prose has been updated from the recalculated table and makes no unsupported improvement claim.
+[ ] Five-rank operationalization language remains in Section 2.
+[ ] Abstract still states that discretion-rank agreement is modest unless the recalculated evidence materially changes that conclusion.
+[ ] No * working-draft markers remain in the submission PDF.
+[ ] PDF is anonymous and metadata says Anonymous Authors.
+[ ] Final paper remains within the AICS 6-12 page CCIS limit including references.

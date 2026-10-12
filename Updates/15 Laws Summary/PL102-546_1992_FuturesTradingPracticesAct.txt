@@ -1,0 +1,110 @@
+7/3/09 12:38 PMCQ Almanac Online Edition
+Page 1 of 3http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal92-1107459&type=hitlist&num=7
+Document Outline
+Limitation on Trading Practices
+Regulatory Enhancement
+Assistance to Foreign Exchanges
+Miscellaneous Provisions
+Intermarket Coordination
+Provisions of Reauthorization for Commodities Futures Trading
+Commission (CTFC)
+An article from CQ Almanac 1992
+As passed, the legislation (HR 707 — PL 102 – 546) to reauthorize/the Commodity Futures Trading Commission
+did the following:
+Limitation on Trading Practices
+Dual Trading. Prohibited dual trading in any futures market unless the CFTC provided a specific exemption. Dual
+trading occurred when brokers traded for a client and for themselves or a fellow broker on the same day. Abuse of dual
+trading could enable a broker to capitalize on inside knowledge of a client's order.
+The CFTC could exempt an exchange if any of the following conditions were met:
+The exchange had an electronic internal audit system set up to monitor the times and amounts of all trades on the
+trading floor.
+The CFTC found that banning dual trading would be harmful to the public interest.
+The contract market was small, with less than 7,000 contracts changing hands each day. The CFTC could adjust this
+threshold to account for market liquidity, price volatility and other considerations.
+Broker associations. Forbade brokers from knowingly executing customer orders with someone with whom they were
+affiliated through a broker association or an employment or other relationship. Brokers would have to disclose to the
+exchange and to the CFTC any knowledge of business or financial relationships between traders.
+Regulatory Enhancement
+Audit trails. Required that exchanges put into place electronic or computerized systems to monitor all floor trades,
+recording the parties and the exact time of the transaction. Within three years, the auditing methods would have to be
+sophisticated enough to provide data to the market on a continuous basis and to independently register the time of each
+transaction and check it against the time entered by the trader. For the most part, the technology to establish these audit
+trails existed and was being purchased and installed by several of the major futures exchanges. With accurate auditing
+of transactions, dual trading would be permissible because trading abuses could be identified. The CFTC would have
+broad authority to inspect and monitor the audit trail technology and to determine when it met the statutory standards.
+Audit reporting. Required the CFTC to report within two years of enactment on how the futures exchanges were
+complying with the audit requirements. The General Accounting Office was also to report on audit trail compliance.
+Market auditing. Required that each futures market in each exchange maintained and used an audit system that
+included inspectors for floor trading, electronic records of transactions as they were reported and appropriated discipline
+for infractions.
+Deficiency orders. Set mandatory inspection guidelines for the CFTC to audit exchange systems at least once every
+two years. Flaws in the system would have to be reported and improved. The exchanges would have certain appeal
+rights regarding the inspections and findings.
+Telemarketing fraud. Required that futures associations establish supervisory guidelines for telephone solicitation.
+They could require that a member not enter an order by a new customer until  three days after the customer signed an
+ 
+7/3/09 12:38 PMCQ Almanac Online Edition
+Page 2 of 3http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal92-1107459&type=hitlist&num=7
+They could require that a member not enter an order by a new customer until  three days after the customer signed an
+agreement acknowledging the risk involved in the trade.
+Undercover operations. Directed the CFTC to cooperate with federal agencies in requesting and arranging undercover
+operations.
+Disciplinary committees. Provided guidelines to the exchanges for establishing review panels on disciplinary actions
+for traders found to break the rules.
+Board memberships. Outlined the requirements for members serving on the oversight boards for each contract market
+and required that the futures associations refuse membership to individuals found to violate trading rules.
+Floor trader registration. Required all individuals who traded in a contract market for their own accounts to register
+with the CFTC. The registration could be revoked if a trader violated CFTC regulations. All registered traders would have
+to attend periodic ethics training seminars.
+Increased penalties. Established a range of felony penalties for individuals who violated trading rules. The penalties
+would be determined in part by the gravity of the infractions, as well as the financial strength of the individuals found
+guilty. The penalty for embezzlement would be increased to $1 million for corporations and $500,000 for individuals.
+The bill also would set criteria for establishing the financial liability of brokers who violated trading rules. The broker's
+firm could be held liable for claims arising from rules violations, and in cases in which the firm willfully selected the
+broker to aid in the violation, the firm could face punitive damages. The CFTC would have authority to force individuals
+who violated trading rules to pay restitution to clients.
+Insider trading. Made it a felony to trade on the basis of material, non-public information.
+Commissioner requirements. Set guidelines for CFTC commissioners and outlined the conditions under which a
+member of a futures market governing board violated conflict of interest rules.
+Study directives. Directed the General Accounting Office to study a fee collection system that would help pay for
+enforcement of the new rules. The CFTC also would be required to study the competitiveness of the U.S. futures trading
+industry in relation to those of other countries.
+Computerized trading. Recommended that the CFTC assist in the development and use of computerized trading
+systems in addition to the traditional open outcry trading then used in futures pits.
+Published rules. Required the CFTC to publish and allow public review of all guidelines governing civil penalties.
+Assistance to Foreign Exchanges
+Allowed the CFTC to assist foreign futures authorities in investigating possible violations of futures trading laws, when
+the investigation was deemed to be in the “clear interest” of the United States. Information regarding such an
+investigation could be be disclosed only to Congress or during a judicial inquiry. The provision exempted certain
+information related to foreign futures exchange investigation from the Freedom of Information Act when the release of
+such information would violate confidentiality laws in the foreign country.
+Miscellaneous Provisions
+Authorized appropriations in the amount of $53 million for fiscal 1993 and $60 million for fiscal 1994.
+Authorized the CFTC to suspend or alter the registration of any person charged with violations of the Commodity
+Exchange Act.
+Empowered the CFTC to adopt recordkeeping and reporting requirements for futures commission merchants.
+Intermarket Coordination
+Futures margins. Allowed the Board of Governors of the Federal Reserve System to set or change margin levels
+required on stock-index futures transactions, or options on stock-index futures. The authority could be delegated to the
+CFTC on a daily basis. Margins were the good-faith deposits on futures transactions that ensured that the contract could
+be fulfilled by both parties.
+Swaps and hybrids. Authorized the CFTC to exempt certain exotic financial instruments from the requirements of the
+Commodity Exchange Act. The conference report specified that the exemption was to be used “sparingly.” The provision
+was written to apply solely to swaps and other derivative products known as hybrids, forwards, and deposits, which
+defied the traditional formulation of futures products.
+Studies of derivatives. Directed the CFTC to cooperate with the Securities and Exchange Commission and the Federal
+Reserve Board to conduct a comprehensive study of swaps and the offexchange derivatives trading industry. The study
+7/3/09 12:38 PMCQ Almanac Online Edition
+Page 3 of 3http://library.cqpress.com.monstera.cc.columbia.edu:2048/cqalmanac/document.php?id=cqal92-1107459&type=hitlist&num=7
+Reserve Board to conduct a comprehensive study of swaps and the offexchange derivatives trading industry. The study
+was supposed to examine whether a single federal agency should regulate the markets for futures, securities, options,
+swaps and derivative products.
+Document Citation
+"Provisions of Reauthorization for Commodities Futures Trading Commission (CTFC)." CQ Press Electronic Library, CQ
+Almanac Online Edition, cqal92-1107459. Originally published in CQ Almanac 1992 (Washington: Congressional Quarterly,
+1993). http://library.cqpress.com/cqalmanac/cqal92-1107459 (accessed July 3, 2009).
+Document ID: cqal92-1107459
+Document URL: http://library.cqpress.com/cqalmanac/cqal92-1107459
+© 1993, 2009, CQ Press, A Division of SAGE Publications. All Rights Reserved.
+2300 N Street N.W., Suite 800 • Washington, D.C. 20037 • 202-729-1800
+General Terms of Service | Copyright Notice and Takedown Policy | Masthead

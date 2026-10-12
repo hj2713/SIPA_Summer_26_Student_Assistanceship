@@ -99,6 +99,7 @@ class OpenAIProvider:
             model=self._model,
             messages=structured_messages,
             response_format={"type": "json_object"},
+            max_tokens=4096,
         )
         content = _extract_message_text(response.choices[0].message if getattr(response, "choices", None) else None)
         if not content:
@@ -134,6 +135,7 @@ class OpenAIProvider:
                 model=self._model,
                 messages=repair_messages,
                 response_format={"type": "json_object"},
+                max_tokens=4096,
             )
             repair_content = _extract_message_text(repair_response.choices[0].message if getattr(repair_response, "choices", None) else None)
             if not repair_content:

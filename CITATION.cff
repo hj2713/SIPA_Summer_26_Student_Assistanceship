@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software or methodology in your research, please cite it as below."
+authors:
+  - name: "Legal Text Workflow Studio Team"
+title: "Legal Text Workflow Studio: A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion"
+date-released: 2026-08-13
+url: "https://github.com/hj2713/SIPA_Summer_26_Student_Assistanceship"
+repository-code: "https://github.com/hj2713/SIPA_Summer_26_Student_Assistanceship"
+type: software
+license: MIT

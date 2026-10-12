@@ -1,0 +1,626 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usepackage{placeins}
+\usepackage{float}
+\usepackage{threeparttable}
+\usepackage{hyperref}
+% Compatibility for the unchanged numeric citation calls in main3.
+\makeatletter
+\newcommand{\citep}[1]{%
+  \begingroup
+  \edef\ccis@citekeys{\zap@space#1 \@empty}%
+  \expandafter\cite\expandafter{\ccis@citekeys}%
+  \endgroup
+}
+\makeatother
+% Allow line breaking without changing wording, margins, or font sizes.
+\emergencystretch=2em
+
+\definecolor{navy}{HTML}{17365D}
+\definecolor{blue}{HTML}{2F75B5}
+\definecolor{lightblue}{HTML}{EAF2F8}
+\definecolor{green}{HTML}{548235}
+\definecolor{lightgreen}{HTML}{EAF4E3}
+\definecolor{orange}{HTML}{C55A11}
+\definecolor{lightorange}{HTML}{FCE4D6}
+\definecolor{reviewred}{HTML}{9C0006}
+\definecolor{reviewfill}{HTML}{FFC7CE}
+
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=navy,
+  citecolor=navy,
+  urlcolor=blue,
+  pdfauthor={Anonymous Authors},
+  pdftitle={A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion}
+}
+\definecolor{navy}{RGB}{0,0,128}
+\setlist{nosep,leftmargin=*}
+\renewcommand{\arraystretch}{1.08}
+\newcommand{\systemname}{an anonymized research prototype.}
+\newcommand{\future}[1]{\textit{#1}}
+
+\title{A Replicable Theory-Guided LLM Workflow for Measuring Legal Delegation and Administrative Discretion}
+
+% \author{
+% \IEEEauthorblockN{Anonymous Author(s)}
+% \IEEEauthorblockA{\small Anonymous Institution\\
+% Anonymous Location \\
+% anonymous@example.com}
+% }
+
+\titlerunning{A Replicable Theory-Guided LLM Workflow}
+\author{Anonymous Authors}
+\authorrunning{Anonymous Authors}
+\institute{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+
+Coding complex legal texts for nuanced institutional concepts is difficult to scale, replicate, and audit. Large language models can reduce the cost of coding and text analysis. However, one-shot classifications often obscure the judgments underlying the final result and are difficult to reproduce across models and runs. We develop a replicable, theory-guided LLM workflow that converts expert coding rules into a versioned, auditable measurement instrument. The workflow decomposes complex legal concepts into ordered judgments. It preserves prompts, settings, evidence, and intermediate outputs while distinguishing generative classifications from predefined coding rules. We demonstrate the approach by measuring legislative delegation and administrative discretion in U.S. financial-regulation laws. The system first determines whether a law delegates qualifying authority. It then classifies the amount of authority and the strength of statutory constraints before assigning a five-category ordinal discretion rank. We implement the workflow in a research prototype that displays prompts, settings, outputs, validation rules, and execution records. We evaluate the binary delegation classification on the full delegation benchmark and compare three rank-classification strategies across multiple language models for the subset with complete expert-coded discretion ranks. The resulting tool supports scalable legal coding and makes the measurement process transparent, auditable, and reproducible.
+\keywords{legal natural language processing \and large language models \and legislative delegation \and administrative discretion \and reproducible workflows \and quantitative legal coding}
+\end{abstract}
+
+
+
+\section{Introduction}
+
+Researchers studying political institutions routinely convert complex legal texts into structured measures of authority, constraint, and institutional design \cite{grimmer2013text}. Manually coding laws is difficult because institutional concepts are latent and multidimensional. Identifying them requires judgment across multiple provisions rather than reliance on a single phrase or clause. This process requires expert coding rules, several related judgments, and preservation of the evidence supporting each decision. Administrative discretion is a useful example. It reflects the residual policy latitude available to an executive actor after accounting for both the authority delegated by the legislature and the legal and administrative constraints governing its use \cite{epstein1999delegating,ohalloran2015banking}.
+
+Large language models offer a scalable approach to legal coding. However, one-shot classification collapses these linked judgments into a single output. A model may assign the correct rank for the wrong reason, produce a rank inconsistent with its stated assessment of delegation or constraints, or make errors that cannot be traced to a specific coding decision. Single-prompt approaches are therefore difficult to audit, revise, and reproduce across models and runs. A replicable measurement system must instead decompose the construct into ordered judgments, preserve the evidence and intermediate outputs, and apply the coding rules consistently.
+
+We address this problem with a theory-guided workflow that turns the measurement model into an executable sequence of decisions. First, the workflow determines whether a law delegates qualifying authority. If it does, the system separately classifies the amount of authority and the strength of statutory constraints, then combines those judgments to assign a discretion rank. We implement the workflow in \systemname{} to execute and record prompts, settings, intermediate outputs, and validation rules within a versioned, auditable framework. This paper makes four principal contributions:
+\begin{enumerate}[nosep,leftmargin=*]
+    \item \textbf{Replicable measurement instrument.} We develop an LLM-based instrument for measuring legal delegation and administrative discretion. The complete workflow, rather than an isolated prompt, is archived, versioned, and auditable.
+    \item \textbf{Theory-guided workflow.} We translate an established formal model of delegation and discretion into an executable measurement workflow. The model identifies the concepts and relationships that define the variables used in empirical tests.
+    \item \textbf{Transparent validation.} We separate generative LLM judgments from deterministic theoretical mappings and preserve the intermediate evidence needed to diagnose disagreements.
+    \item \textbf{Research-facing prototype.} We enable domain researchers to apply and inspect the measurement process without directly managing prompts, APIs, model orchestration, or structured-output parsing.
+\end{enumerate}
+
+The objective is not to establish an autonomous legal coder. It shows how expert-defined measurement can be made scalable, inspectable, and auditable.
+
+\section{Measurement Task and Design Requirements}
+
+\subsection{Delegation, Constraints, and Residual Discretion}
+
+Delegation is the transfer of policymaking authority from a legislature to an executive or administrative actor, enabling the agent to modify policy or regulate conduct. Delegation alone, however, does not determine administrative discretion. Legislatures often impose substantive and procedural constraints, such as administrative standards, approval requirements, deadlines, reporting obligations, and oversight reviews, that restrict the agent's ability to set policy.
+
+In principal-agent models of institutional design, administrative discretion is the agent's residual policy latitude after accounting for delegated authority and the constraints on its use \cite{epstein1999delegating,epstein1994administrative}. We operationalize this construct as
+\begin{equation}
+\mathrm{Discretion}=D(1-C),
+\label{eq:discretion}
+\end{equation}
+where $D$ represents delegated authority and $C$ is the constraint index \cite{epstein1999delegating,ohalloran2015banking}. The workflow must therefore preserve the conceptual ordering in the measurement model: delegation is logically prior to discretion, and residual discretion depends jointly on the amount of authority transferred and the strength of constraints on its use.
+
+The operationalization builds on a cumulative research program on legislative delegation and administrative discretion. Early formal work conceptualized discretion as the range of policy choices left to an administrative actor and examined how legislatures balance administrative expertise against the risks of bureaucratic drift \citep{epstein1994administrative}. Later empirical work operationalized these concepts using a database of U.S. financial-regulation laws, combining measures of delegated authority and legal constraints into a discretion index \citep{ohalloran2015banking,ohalloran2016datascience,groll2021delegation}.
+
+\subsection{Ordinal operationalization}
+
+The expert coding instrument translates this continuous theory into a five-category ordinal rank. Rank 0 is determined by the absence of a qualifying delegation. Conditional on delegation, the remaining four classes represent the cells produced by crossing delegated authority (low or high) with statutory constraints (strong or weak). The ordering is an expert-coded operationalization of the theoretical construct rather than a mechanical implication of Eq.~\ref{eq:discretion} alone.
+
+Let $x_i$ denote the legal text for law $i$. The measurement model contains three component variables: $d_i \in \{0,1\}$ indicates whether the law delegates qualifying policymaking authority, $a_i \in \{\mathrm{Low},\mathrm{High}\}$ denotes the amount of delegated authority, and $c_i \in \{\mathrm{Strong},\mathrm{Weak}\}$ denotes the strength of statutory constraints. The discretion rank is $y_i=m(d_i,a_i,c_i)$, where
+\begin{equation}
+ m(d_i,a_i,c_i)=
+\begin{cases}
+0, & d_i=0,\\
+1, & d_i=1,\ a_i=\mathrm{Low},\ c_i=\mathrm{Strong},\\
+2, & d_i=1,\ a_i=\mathrm{Low},\ c_i=\mathrm{Weak},\\
+3, & d_i=1,\ a_i=\mathrm{High},\ c_i=\mathrm{Strong},\\
+4, & d_i=1,\ a_i=\mathrm{High},\ c_i=\mathrm{Weak}.
+\end{cases}
+\label{eq:rankmap}
+\end{equation}
+This mapping defines the substantive meaning of the five discretion ranks. It is part of the measurement model rather than a learned relationship.
+
+Subsequent computational studies treated the recovery of discretion from legal text as a classification problem and demonstrated the usefulness of computational methods alongside expert coding \citep{ohalloran2015markets,ohalloran2016computational,ohalloran2017graph}. The present paper takes a different step. Rather than using theory-derived variables only as inputs to a flat classifier, we use the measurement model to structure the sequence of judgments and the relationships among them.
+
+\subsection{Computational Requirements}
+
+LLMs have shown promise as low-cost annotators across text-annotation and qualitative tasks \citep{gilardi2023chatgpt,dai2023llm}. Those results do not establish reliability for specialized legal constructs. Prompted generative models may perform poorly when applying domain-expert codebooks to specialized historical or legal texts \citep{thalken2023modeling}. Legal NLP benchmarks such as LexGLUE and LegalBench likewise emphasize task-specific evaluation and expert-designed categories \citep{chalkidis2022lexglue,guha2023legalbench}. These findings motivate a conservative design in which LLM coding is evaluated against a controlled expert-coded benchmark and remains subject to expert review.
+
+The workflow uses versioned LLM stages to estimate the component variables: $\hat d_i=g_D(x_i)$, $\hat a_i=g_A(x_i,\hat d_i)$, and $\hat c_i=g_C(x_i,\hat d_i,\hat a_i)$. The component stages also return structured evidence and rationales, denoted collectively by $r_i$. The prompts, inputs, outputs, evidence, and model settings are retained in the execution trace.
+
+The system then applies one of three rank-classification strategies: Sequential Ordinal Cascade, Direct Multiclass Rank Prediction, and Two-Band Rank Classification. For strategy $s$, $\tilde y_i^{(s)}=h_s(x_i,\hat d_i,\hat a_i,\hat c_i,r_i)$. The theoretical mapping and the rank-classification strategies perform different functions. The mapping $m(d_i,a_i,c_i)$ defines the construct, whereas $h_s(\cdot)$ estimates the final rank under alternative computational strategies.
+
+For each law, the system computes the theory-implied rank $y_i^{\mathrm{map}}=m(\hat d_i,\hat a_i,\hat c_i)$ and compares it with the strategy-specific prediction. Define the consistency indicator
+\begin{equation}
+q_i^{(s)} = \mathbf{1}\left[\tilde y_i^{(s)} = y_i^{\mathrm{map}}\right].
+\label{eq:consistency}
+\end{equation}
+A value of $q_i^{(s)}=1$ indicates that the rank predicted by strategy $s$ agrees with the rank implied by the model's own delegation, authority, and constraint classifications. A disagreement is retained and flagged for review rather than silently overwritten. This design allows the evaluation to distinguish benchmark agreement from internal theoretical consistency.
+
+The workflow also draws on weak supervision and interactive human-feedback systems \citep{ratner2017snorkel,cormack2014evaluation}, as well as prompt-chaining systems that decompose LLM tasks into modular, controllable steps \citep{wu2022aichains,wu2022promptchainer}. We do not claim to introduce human-in-the-loop annotation or prompt chaining. The contribution is to integrate these computational approaches with a substantive political-economy measurement model so that expert coding rules determine the variables, dependencies, deterministic mappings, and validation checks used by the workflow. Section 3 describes how these requirements are implemented in the theory-guided workflow.
+
+
+@@@@@@@@@
+
+\section{Theory-Guided Workflow Architecture}
+
+The workflow order is grounded in the substantive theory. It is not merely an engineering strategy to reduce prompt length. A law cannot confer administrative discretion without first transferring authority. Once delegation is established, residual discretion depends jointly on the amount of authority transferred and the constraints on its use. The computational architecture therefore mirrors the conceptual structure of the measurement model.
+
+The system was developed iteratively to align LLM judgments with the expert codebook rules. The crucial methodological shift was from treating a single prompt as the coding instrument to treating the structured, multi-stage workflow graph as the coding instrument.
+
+
+\subsection{From Expert Coding Rules to Workflow Logic}
+
+The final rank depends on earlier judgments. A model should first determine whether a qualifying delegation exists, then inventory administrative actors and authority, assess the breadth and centrality of that authority, identify constraints, and only then estimate residual leeway. If no delegation exists, the workflow deterministically assigns rank 0 rather than making another model call on an inapplicable question. If delegation exists, the rank stage receives the earlier values and rationales explicitly.
+
+This dependency structure addresses a recurrent failure of independent-column coding: a later variable, such as \texttt{discretion\_rank} cannot reliably use an earlier delegation decision unless the pipeline stores and forwards that decision. In the prototype, execution order is computed from the graph rather than assumed from the visual order of columns. Each node records inputs, outputs, status, timing, and, where applicable, evidence and rationale.
+
+\subsection{Executable Workflow Operations}
+
+Table 1 translates the measurement logic into the executable sequence implemented by the workflow. It distinguishes LLM-assisted judgments from deterministic operations and shows how the system moves from source-text ingestion through delegation screening, component classification, rank prediction, consistency validation, and output storage.
+ 
+\begin{table}[t]
+\caption{Algorithmic execution of the theory-guided discretion workflow.}
+\label{tab:algorithm}
+\centering
+\footnotesize
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.06\columnwidth}>{\raggedright\arraybackslash}p{\dimexpr0.94\columnwidth-2\tabcolsep\relax}@{}}
+\hline
+\textbf{Step} & \textbf{Operation and Logic} \\
+\hline
+
+1 &
+\textbf{Load Source Text:}
+Read the legislative summary or statutory text \(x_i\) and attach
+stable identifiers. \\
+
+2 &
+\textbf{Delegation Gate (LLM):}
+Estimate
+\(\hat d_i=g_D(x_i)\in\{0,1\}\)
+and retain the supporting evidence and rationale. \\
+
+3 &
+\textbf{Early Exit (Deterministic):}
+If \(\hat d_i=0\), set the theory-implied rank
+\(y_i^{\mathrm{map}}=0\), assign the required default values, and stop
+the delegated-discretion branch. \\
+
+4 &
+\textbf{Component Classification (LLM):}
+Conditional on \(\hat d_i=1\), identify the relevant administrative
+actors, classify delegated authority
+\(\hat a_i\in\{\mathrm{Low},\mathrm{High}\}\), classify statutory
+constraints
+\(\hat c_i\in\{\mathrm{Strong},\mathrm{Weak}\}\), and retain the
+supporting evidence and rationales \(r_i\). \\
+
+5 &
+\textbf{Strategy-Specific Rank Prediction (LLM):}
+Apply the selected rank-classification strategy. The Sequential
+Ordinal Cascade uses
+successive early-exit binary decisions; Direct Multiclass predicts
+Ranks \(1\)--\(4\) in one step; and Two-Band first predicts a
+lower/higher rank band and then classifies within the selected band. \\
+
+6 &
+\textbf{Theoretical Consistency Validation (Deterministic):}
+Compute
+\(y_i^{\mathrm{map}}=m(\hat d_i,\hat a_i,\hat c_i)\)
+and compare it with the strategy-specific prediction
+\(\tilde y_i^{(s)}\). Record the consistency indicator
+\(q_i^{(s)}\) and flag any disagreement. \\
+
+7 &
+\textbf{Output Serialization:}
+Store the component classifications, theory-implied rank,
+strategy-specific rank, consistency flag, evidence, prompts, model
+settings, execution trace, runtimes, token use, cost, and final
+reported output. \\
+
+\hline
+\end{tabular}
+\end{table}
+
+
+ 
+ The implemented engine supports several node types:
+\begin{enumerate}[nosep]
+  \item \textbf{Document Input nodes} ingest the source text and attach stable metadata (such as public law numbers and publication years) to define a unique document instance.
+  \item \textbf{LLM nodes} send natural-language prompts and source texts to the selected model provider, then parse the structured JSON output into typed fields (booleans, strings, enums, lists).
+  \item \textbf{Condition nodes} evaluate boolean expressions (e.g., matching the output of a prior delegation gate) and route the execution path to the appropriate successor branch.
+  \item \textbf{Set Value nodes} deterministically assign default values to output fields without triggering LLM calls, bypassing downstream nodes when prior conditions dictate a fixed result.
+  \item \textbf{Validation nodes} evaluate user-defined rules and integrity constraints (e.g., checking that discretion rank is zero if delegation is false) and record validation flags or raise validation errors when outputs are anomalous.
+  \item \textbf{Output nodes} group and serialize the final variables and rationales to expose them on the dashboard.
+\end{enumerate}
+
+The workflow retains both the strategy-specific prediction \(\tilde y_i^{(s)}\) and the theory-implied rank \(y_i^{\mathrm{map}}\). Strategy-specific predictions are used for comparative evaluation and are not silently replaced when they conflict with the deterministic component mapping. Instead, the validation node records the disagreement with an inconsistency flag. This separation allows researchers to evaluate both agreement with the expert-coded benchmark and consistency with the rules used to construct the discretion rank.
+
+A one-shot prediction collapses the relationships among delegation, authority, constraints, and discretion into an opaque judgment. The workflow makes the measurement assumptions inspectable and testable because researchers can locate a disagreement at the Delegation Gate, authority classification, constraint classification, rank-classification strategy, or consistency check. Figure~\ref{fig:reproducibility} illustrates the reproducibility architecture, showing how source inputs, versioned instruments, execution configurations, and trace logs are stored to ensure auditability.  The prototype implements the workflow as an auditable research instrument rather than as a production deployment system.
+
+\begin{figure}[t]
+\centering
+\resizebox{0.9\textwidth}{!}{\input{figures/reproducibility_flow.tex}}
+\caption{Reproducibility and execution tracking pipeline. The system archives the source corpus, the workflow JSON schema and definition hash (SHA-256), model configurations, and a comprehensive node-level execution trace to ensure that any coded dataset can be audited and reconstructed.}
+\label{fig:reproducibility}
+\end{figure}
+
+\subsection{Audit Record and Reproducibility}
+
+Human expertise enters before, during, and after model execution. Before execution, domain experts define the construct, identify its constituent dimensions, delimit the source universe, specify coding rules, and determine the relationships that the model must preserve. During evaluation, experts distinguish extraction errors from conceptual boundary cases. After evaluation, they decide whether a disagreement warrants a local case correction, a revision of the operational rule, or reconsideration of the historical benchmark. Human-in-the-loop design is the mechanism by which the theoretically structured measurement instrument is governed and validated.
+
+\subsubsection{Method-level revision}
+
+At the method level, researchers revise the codebook, source policy, stage prompts, dependencies, output definitions, and deterministic mappings. A method-level revision changes the general measurement rule and creates a new version to protect comparability across model runs.
+\subsubsection{Case-level adjudication}
+
+For an individual coded law, a researcher can inspect final values and node-by-node execution traces, manually override a selected value and rationale, or request AI re-evaluation with corrective feedback. History distinguishes initial AI output, manual override, and AI re-evaluation. A manual correction is local to that law; it does not automatically change the codebook, the prompt, or other cases. Case correction protects the dataset from a known error without altering the underlying coding rule, avoiding opaque automated learning processes.
+
+\section{Benchmark and Experimental Design}
+
+\subsection{Benchmark and source discipline}
+
+The benchmark consists of U.S. financial-regulation laws previously published and adjudicated under a consistent coding protocol. The evaluation corpus contains $N=169$ statutory summaries covering the period 1950--2013, consisting of 161 delegation-positive and 8 delegation-negative laws. We treat these observations as an operational benchmark for replicating measurements and not as an infallible legal truth. The source universe is methodologically important: the benchmark labels were derived from legislative summaries, so benchmark runs use the same set of summary-level information to maintain consistency.
+
+\subsection{Evaluation levels}
+
+The empirical evaluation asks whether LLMs can reproduce a theory-based measurement instrument, not merely whether they can generate plausible descriptions of statutes. The evaluation therefore occurs at several levels: whether the model identifies qualifying delegation, correctly characterizes the amount of authority, correctly characterizes the strength of constraints, produces a final rank consistent with those component judgments, and agrees with the historical benchmark.
+
+We separate the evaluation into two distinct prediction tasks:
+\begin{enumerate}
+    \item \textbf{Delegation Stage}: Binary delegation classification evaluated on the full available delegation benchmark ($N=169$).
+    \item \textbf{Residual Discretion Stage}: Ordinal rank classification ($1$--$4$) is evaluated only when a qualifying delegation exists.
+\end{enumerate}
+
+
+\subsection{Controlled prompt and workflow comparison}
+
+To evaluate discretion ranking, we implement and compare three staged computational strategies against a one-shot baseline. The strategies are summarized in Table~\ref{tab:strategies_comparison}.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of evaluation strategies.}
+\label{tab:strategies_comparison}
+\small
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash}p{0.26\textwidth}
+>{\raggedright\arraybackslash}p{0.10\textwidth}
+>{\raggedright\arraybackslash}X
+>{\raggedright\arraybackslash}p{0.13\textwidth}@{}}
+\toprule
+\textbf{Strategy} & \textbf{Inputs} & \textbf{Decision process} & \textbf{Output} \\
+\midrule
+One-shot baseline & Law text & Single LLM prediction with no intermediate guidance & Discretion Rank 0--4 \\
+\addlinespace
+Sequential Ordinal Cascade & Stage outputs & Evaluates early-exit binary splits: Rank 0 vs. Ranks 1--4 (delegation gate), then Rank 1 vs. Ranks 2--4, then Rank 2 vs. Ranks 3--4, and Rank 3 vs. Rank 4 & Discretion Rank 0--4 \\
+\addlinespace
+Direct Multiclass Rank Prediction & Stage outputs & Predicts 1--4 directly using extracted authority and constraints & Discretion Rank 0--4 \\
+\addlinespace
+Two-Band Rank Classification & Stage outputs & Low-rank vs. high-rank band split, then within-band classification & Discretion Rank 0--4 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Experimental protocol}
+
+The experimental protocol is specified as follows:
+\begin{itemize}[nosep]
+    \raggedright
+    \item \textbf{Models}: We evaluate Gemini 3.5 (\texttt{gemini-3.5-flash-lite}), Qwen 3 (\texttt{qwen/qwen3-235b-a22b-2507}), DeepSeek (\texttt{deepseek-v4-flash}), Kimi K2.5 (\texttt{moonshotai/kimi-k2.5}), and GPT-OSS (\texttt{openai/gpt-oss-120b}). An unconstrained One-Shot Baseline is evaluated on Gemini 3.5 as an illustrative use case. The generalizability claim of this study focuses on the replicable measurement process across laws and LLM backends rather than the specific numerical output of any single model configuration.
+    \item \textbf{Settings}: The system uses a temperature of 0.0 to reduce sampling variation. Because commercial APIs may exhibit nondeterminism or provider-side changes, the system retains exact model identifiers and execution timestamps. A systematic evaluation of output stability across repeated runs remains future work.
+    \item \textbf{Output Format}: Nodes output structured JSON adhering to strict Pydantic schemas.
+    \item \textbf{Retry \& Failures}: If a model call fails, returns an invalid structured output, or times out, the system retries the call up to three times using the identical prompt, parameters, and schema settings. Persistent failures are recorded in the execution log and excluded or reported according to the stated evaluation protocol.
+\end{itemize}
+
+
+\subsection{Metrics}
+
+For the binary delegation task, we report accuracy, balanced accuracy, class-specific precision and recall, macro-F1. For the ordinal discretion task, we report exact-match accuracy, within-one accuracy, mean absolute error, linear weighted kappa, and quadratic weighted kappa.
+
+\section{Experimental Findings}
+
+\subsection{Binary delegation}
+
+Table~\ref{tab:binary} reports binary delegation screening results on the full available delegation benchmark ($N=169$). The benchmark is severely imbalanced (161 positive cases and only 8 negative cases). We compare the production Delegation Gate against an earlier broad-screening baseline (\emph{High-Recall Screen}), an unconstrained prompt configuration designed to maximize positive recall by flagging any potential authority transfer.
+ 
+
+\begin{table}[htbp]
+\centering
+\caption{Binary delegation stage screening results ($N=169$).}
+\label{tab:binary}
+\small
+\begin{tabular}{@{}l@{\hspace{3pt}}rr@{}}
+\toprule
+\textbf{Metric} & \textbf{High-Recall Screen} & \textbf{Delegation Gate} \\
+\midrule
+Overall Accuracy & 94.67\% & 91.72\% \\
+Balanced Accuracy & 73.45\% & 89.71\% \\
+Positive Recall (Delegation) & 96.89\% & 91.93\% \\
+Negative Recall & 50.00\% & 87.50\% \\
+Positive Precision & 97.50\% & 99.33\% \\
+Negative Precision & 44.44\% & 35.00\% \\
+Macro-F1 & 72.13\% & 72.74\% \\
+\midrule
+TP / FN / TN / FP & 156 / 5 / 4 / 4 & 148 / 13 / 7 / 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+While the High-Recall Screen baseline yields slightly higher raw accuracy because of the extreme class imbalance, the conservative Delegation Gate detects seven of the eight rare negative cases, producing substantially higher balanced accuracy and slightly higher macro-F1.
+
+\subsection{Diagnosing disagreement}
+
+The law PL83-577 illustrates why source discipline and intermediate evidence matter. The benchmark codes it as non-delegation (rank 0). An exploratory staged run instead identified Securities and Exchange Commission rulemaking and exemption authority and returned delegation. This disagreement could reflect an overbroad coding rule, a source-universe difference, or a mismatch between historical summary coding and full statutory detail. The trace does not by itself determine which label is correct; it makes the source of the disagreement visible for expert adjudication.
+
+\subsection{Discretion rank and model comparison}
+
+Table~\ref{tab:multimodel_large} reports the cross-model evaluation of the three ranking strategies (Sequential Ordinal Cascade, Direct Multiclass Rank Prediction, and Two-Band Rank Classification) alongside an unconstrained One-Shot Rank Prediction baseline on the expert-coded discretion benchmark ($N=169$).
+
+\begin{table}[t]
+\centering
+\begin{threeparttable}
+
+\caption{Cross-model evaluation results across ranking strategies and unconstrained baseline.}
+\label{tab:multimodel_large}
+\scriptsize
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Strategy} & \textbf{Exact} & \textbf{W1} & \textbf{MAE} & \textbf{Linear $\kappa_w$} & \textbf{Quad $\kappa_w$} \\
+\midrule
+\multirow{4}{*}{Gemini 3.5} 
+  & One-Shot Baseline (Unconstrained) & 28.6\% & 62.1\% & 1.250 & 0.051 & 0.042 \\
+  & Sequential Ordinal Cascade & 29.9\% & 75.2\% & 1.077 & 0.104 & 0.094 \\
+  & Direct Multiclass Prediction & 41.9\% & 76.9\% & 0.915 & 0.207 & 0.157 \\
+  & Two-Band Classification & 29.9\% & 65.8\% & 1.188 & 0.044 & 0.010 \\
+\midrule
+\multirow{3}{*}{Qwen 3} 
+  & Sequential Ordinal Cascade & 25.6\% & 65.9\% & 1.225 & 0.062 & 0.059 \\
+  & Direct Multiclass Prediction & 32.6\% & 64.3\% & 1.171 & 0.105 & 0.093 \\
+  & Two-Band Classification & 17.8\% & 48.8\% & 1.620 & 0.030 & 0.010 \\
+\midrule
+\multirow{3}{*}{DeepSeek} 
+  & Sequential Ordinal Cascade & 20.9\% & 57.4\% & 1.434 & 0.022 & 0.010 \\
+  & Direct Multiclass Prediction & 29.5\% & 71.3\% & 1.140 & 0.055 & 0.014 \\
+  & Two-Band Classification & 8.5\% & 41.9\% & 1.837 & -0.014 & -0.020 \\
+\midrule
+\multirow{3}{*}{Kimi K2.5} 
+  & Sequential Ordinal Cascade & 30.0\% & 63.3\% & 1.317 & 0.133 & 0.094 \\
+  & Direct Multiclass Prediction & 21.7\% & 60.0\% & 1.433 & 0.076 & 0.067 \\
+  & Two-Band Classification & 15.0\% & 45.0\% & 1.700 & -0.008 & -0.003 \\
+\midrule
+\multirow{3}{*}{GPT-OSS} 
+  & Sequential Ordinal Cascade & 20.0\% & 55.3\% & 1.482 & 0.056 & 0.067 \\
+  & Direct Multiclass Prediction & 32.9\% & 69.4\% & 1.129 & 0.106 & 0.072 \\
+  & Two-Band Classification & 9.4\% & 37.6\% & 1.871 & 0.007 & 0.021 \\
+\bottomrule
+\end{tabular}
+
+\begin{tablenotes}
+\scriptsize
+\item[] \textit{Note:} Metrics are calculated on completed runs; the number of completed cases varies across model-strategy combinations.
+\end{tablenotes}
+
+\end{threeparttable}
+\end{table}
+
+
+For Gemini 3.5, Direct Multiclass Rank Prediction reports the strongest aggregate results among the reported configurations. Exact-match accuracy increases from 28.6\% for the unconstrained One-Shot Baseline to 41.9\%, while within-one accuracy rises from 62.1\% to 76.9\% and mean absolute error falls from 1.250 to 0.915. Here, the One-Shot Baseline serves as an illustrative comparison for Gemini 3.5, demonstrating workflow gains rather than a universal empirical result across all models.
+
+% Within-one accuracy exceeds exact-match accuracy across all configurations, indicating that many errors are adjacent. However, errors of two or more ranks remain non-de minimis for several model-strategy combinations, and weighted kappa remains low. Overall, the models show partial ordinal agreement with the historical expert-coded benchmark.
+
+
+\subsection{Limitations}
+
+While the proposed framework improves replication and logical consistency, three main limitations remain. First, the evaluation relies on legislative summaries rather than full statutory text. Summaries have a more uniform structure, and applying the prompts directly to full statutory text or omnibus acts may introduce noise due to parsing complexity and document length limits. Second, the current prompts and expert benchmarks are tailored to the financial-regulation domain (banking and securities). The external validity of these prompts for other administrative policy domains, such as environmental or labor law, remains to be verified. Third, although deterministic validation enforces specified consistency rules, the underlying LLM classifications remain sensitive to model choice, prompt wording, nondeterministic API behavior, and provider-side model updates.
+
+\subsection{Novelty claim}
+
+The paper relies on well-established theories of delegation and administrative discretion. Our contribution is a replicable LLM measurement architecture that implements a theoretical model through explicit variables, ordered stages, deterministic consistency rules, and preserved execution records.
+
+
+\section{Replication Workflow}
+
+The current prototype can be replicated through the following research-facing sequence:
+\begin{enumerate}[nosep]
+  \item \textbf{Prepare the corpus.} Upload CQ summaries or corresponding major-provisions text and retain stable law identifiers. Keep full statutes in a separately labeled exploratory collection.
+  \item \textbf{Create the instrument.} Duplicate the delegation-and-discretion workflow template. Review every stage's theoretical purpose, prompt, required inputs, typed outputs, and final/internal visibility.
+  \item \textbf{Validate and test.} Run representative positive, negative, and boundary cases. Inspect graph validation, final outputs, and node-level traces.
+  \item \textbf{Freeze a version.} Before an evaluation run, the workflow definition, prompts, model settings, and source set are frozen and assigned a version identifier. Subsequent edits create a new workflow version and do not alter the record of prior runs.
+  \item \textbf{Run a controlled evaluation.} Apply the same workflow and source set across selected models or strategies. Record model identifiers, settings, timestamps, failures, token use, and cost.
+  \item \textbf{Compare with the benchmark.} Map benchmark columns, calculate binary class-specific metrics and ordinal rank metrics, and inspect every mismatch.
+  \item \textbf{Intervene explicitly.} Correct a case locally when appropriate. If a disagreement reveals a general coding-rule problem, revise the workflow as a new version, rerun the development set, and evaluate the revised version on data not used to make that change when such data are available.
+  \item \textbf{Export the dataset.} Preserve final variables alongside the workflow version, model, source universe, and audit history needed for downstream quantitative analysis.
+\end{enumerate}
+
+\section{Future Work}
+
+Future work will evaluate the workflow on a held-out set of laws, measure component-level authority and constraint performance, and test external validity in an additional policy domain. We will also expand the one-shot baseline evaluation across all open and commercial LLM backends to further demonstrate replicability across diverse legal corpora and evolving models. Independent expert recoding would also permit direct estimation of intercoder reliability and clarify the upper bound on model-benchmark agreement.
+
+
+\section{Conclusion}
+
+This paper began with a longstanding measurement problem: how to recover delegated authority and administrative discretion from legal text. Political-economy theory provides a clear conceptual answer. Legislatures may transfer varying amounts of authority to administrative actors and impose varying constraints on their exercise; discretion is the residual policy latitude of those joint choices.
+
+The methodological challenge is to make that theory executable at scale without reducing it to either a black-box classifier or a single opaque prompt. We address this challenge with a theory-guided LLM workflow. Delegation, authority, and constraints are treated as distinct yet interdependent components, and the final category is derived from their theoretically specified relationship. Human experts govern the source universe, codebook, validation process, case adjudication, and instrument revision.
+
+The resulting system is a replicable measurement instrument whose computational structure is guided by an established theory of delegation and discretion. Replicability is the primary contribution; theory-guided design explains why the workflow's stages, dependencies, and validation rules are substantively meaningful. The system does not remove judgment from institutional measurement; instead, it makes judgment explicit, structured, inspectable, and reproducible.
+
+\bibliographystyle{splncs04}
+\bibliography{references}
+
+\end{document}
+
+
+
+JUNK
+
+\subsection{System Implementation Status}
+
+To distinguish between the features fully operational in the prototype, those partially implemented, and those planned for future iterations, Table~\ref{tab:status} summarizes the current capability matrix of the visual builder and execution studio.
+
+\begin{table}[htbp]
+\centering
+\caption{System implementation and capability matrix.}
+\label{tab:status}
+\small
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}Xccc@{}}
+\toprule
+\textbf{Capability} & \textbf{Implemented} & \textbf{Evaluated} & \textbf{Planned} \\
+\midrule
+Versioned workflow definitions & Yes & Yes & \\
+Conditional branching & Yes & Yes & \\
+Deterministic rank mapping & Yes & Yes & \\
+Prompt and output logging & Yes & Yes & \\
+Workflow hash (SHA-256) & Yes & Yes & \\
+Case-level manual override & Yes & Partial & \\
+Version-comparison interface & Partial & Partial & \\
+Formal approval workflow & & & Yes \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\section{Theory and Operationalization of Administrative Discretion}
+
+\subsection{Theoretical framework of administrative discretion}
+
+
+Delegation is the transfer of policymaking authority from a legislature to an executive or administrative actor, enabling the agent to modify policy or regulate conduct. Delegation alone, however, does not determine administrative discretion. Legislatures often impose substantive and procedural constraints, such as administrative standards, approval requirements, deadlines, reporting obligations, and oversight reviews, that restrict the agent's ability to set policy.
+
+In principal-agent models of institutional design, administrative discretion is the agent's residual policy latitude after accounting for delegated authority and the constraints on its use \citep{epstein1999delegating, epstein1994administrative}. We operationalize this construct as:
+
+
+\begin{equation}
+\label{eq:discretion}
+\mathrm{Discretion}=D(1-C),
+\end{equation}
+where \(D\) represents delegated authority and \(C\) is the constraint index \citep{epstein1999delegating,ohalloran2015banking}.
+
+\subsection{Ordinal operationalization}
+
+The LLM workflow translates this continuous theory into a five-category ordinal coding. Rank 0 is determined by the absence of a qualifying delegation. Conditional on delegation, the remaining classes represent the four cells produced by crossing the authority classification (low or high) with the constraint classification (strong or weak). The final rank is therefore derived from these component judgments as illustrated in Figure~\ref{fig:conceptual}.
+
+
+\subsection{Theory-guided computational inference}
+
+We use the term \emph{theory-guided AI} to describe a computational design in which substantive theory structures the inference process. Delegation is logically prior to discretion. Conditional on a qualifying delegation, the workflow evaluates authority and constraints as separate components and then uses their relationship to interpret or validate the final discretion rank: \(\text{Delegation} \rightarrow \{\text{Authority}, \text{Constraints}\} \rightarrow \text{Discretion rank}\). Figure~\ref{fig:conceptual} summarizes the theory-to-classification mapping used in the main workflow.
+
+
+
+\textbf{Step 1. Input.} The workflow ingests a legislative summary or statutory text, \(x_i\), together with a stable law identifier.
+
+\textbf{Step 2. Delegation Gate.} The delegation gate predicts whether the law delegates authority, \(\hat d_i \in \{0,1\}\). If \(\hat d_i=0\), the workflow assigns Rank 0 deterministically and skips the component-classification and rank-prediction stages. If \(\hat d_i=1\), the workflow proceeds to component classification.
+
+
+\begin{figure}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  box1/.style={draw=black, rounded corners=5pt, very thick, align=center, fill=white, minimum height=1.1cm, text width=3.3cm},
+  box1long/.style={draw=black, rounded corners=5pt, very thick, align=center, fill=white, minimum height=1.1cm, text width=4.8cm},
+  box2/.style={draw=black, rounded corners=5pt, very thick, align=center, fill=white, minimum height=0.85cm, text width=2.7cm, inner sep=3pt},
+  arrow/.style={-{Latex[length=2.5mm, width=2.0mm]}, very thick, draw=black}
+]
+
+% --- Row 1 ---
+\node[box1] (s1) at (0, 3.2) {\textbf{Step 1}\\Input};
+\node[box1] (s2) at (4.5, 3.2) {\textbf{Step 2}\\Delegation Gate};
+\node[box1long] (s3) at (9.65, 3.2) {\textbf{Step 3}\\Component Classification\\and Rank Assignment};
+\node[box1] (s4) at (14.8, 3.2) {\textbf{Step 4}\\Validation and Storage};
+
+\draw[arrow] (s1) -- (s2);
+\draw[arrow] (s2) -- (s3);
+\draw[arrow] (s3) -- (s4);
+
+% --- Row 2 ---
+\node[box2] (legal) at (0.8, 0) {Legal Text};
+\node[box2] (gate2) at (4.5, 0) {Delegation Gate};
+\node[box2] (comp) at (8.2, 0) {Component\\Classification};
+
+\node[box2] (exit) at (4.5, -1.6) {Deterministic\\Exit\\Rank 0};
+
+\node[box2] (theory) at (11.5, 1.4) {Theory-\\Based Rank\\Mapping};
+\node[box2] (check) at (11.5, 0) {Consistency\\Check};
+\node[box2] (strat) at (11.5, -1.4) {Rank-Classification\\Strategy};
+
+\node[box2] (coded) at (14.8, 0) {Coded Output};
+
+% --- Arrows Row 2 ---
+\draw[arrow] (legal) -- (gate2);
+\draw[arrow] (gate2) -- node[above, font=\sffamily\small] {Yes} (comp);
+\draw[arrow] (gate2) -- node[right, font=\sffamily\small] {No} (exit);
+
+\draw[arrow] (comp) -- (theory);
+\draw[arrow] (comp) -- (strat);
+\draw[arrow] (theory) -- (check);
+\draw[arrow] (strat) -- (check);
+\draw[arrow] (check) -- (coded);
+
+\end{tikzpicture}%
+}
+
+\vspace{0.2cm}
+\caption{Four-stage theory-guided classification workflow.}
+\label{fig:conceptual}
+\end{figure}
+
+
+
+\textbf{Step 3. Component Classification and Rank Assignment.} For laws predicted to delegate authority, the workflow classifies the amount of delegated authority, \(\hat a_i \in \{\mathrm{Low},\mathrm{High}\}\), and the strength of statutory constraints, \(\hat c_i \in \{\mathrm{Strong},\mathrm{Weak}\}\). The component stage retains supporting evidence and rationale, \(r_i\). The workflow calculates the rank implied by the component classifications, \(y_i^{\mathrm{map}}=m(\hat d_i,\hat a_i,\hat c_i)\), using the deterministic mapping. The selected rank-classification strategy, \(s\), produces a separate predicted rank, \(\tilde y_i^{(s)}\). The workflow records both ranks.
+
+
+
+\textbf{Step 4. Validation and Storage.} The workflow compares the two rank outputs and calculates the consistency indicator, \(q_i^{(s)}=\mathbf{1}[\tilde y_i^{(s)}=y_i^{\mathrm{map}}]\). The indicator equals 1 when the ranks agree and 0 when they disagree. The workflow stores the final rank, component values, evidence, model settings, and execution trace.
+
+
+\subsection{Problem Formulation}
+
+Let $x_i$ denote the legal text for law $i$. The theoretical measurement model contains three component variables. Let \(d_i \in \{0,1\}\) indicate whether the law delegates qualifying policymaking authority, \(a_i \in \{\mathrm{Low},\mathrm{High}\}\) denote the amount of delegated authority, and \(c_i \in \{\mathrm{Strong},\mathrm{Weak}\}\) denote the strength of statutory constraints.
+
+The substantive theory defines a deterministic mapping from these components to the discretion rank: \(y_i = m(d_i,a_i,c_i)\), where
+\begin{equation}
+\label{eq:rank_mapping}
+m(d_i,a_i,c_i)=
+\begin{cases}
+0, & d_i=0,\\
+1, & d_i=1,\ a_i=\mathrm{Low},\ c_i=\mathrm{Strong},\\
+2, & d_i=1,\ a_i=\mathrm{Low},\ c_i=\mathrm{Weak},\\
+3, & d_i=1,\ a_i=\mathrm{High},\ c_i=\mathrm{Strong},\\
+4, & d_i=1,\ a_i=\mathrm{High},\ c_i=\mathrm{Weak}.
+\end{cases}
+\end{equation}
+This mapping defines the substantive meaning of the five discretion ranks. It is part of the measurement model rather than a learned relationship.
+
+The workflow uses versioned LLM stages to estimate the component variables: \(\hat d_i = g_D(x_i)\), \(\hat a_i = g_A(x_i,\hat d_i)\), and \(\hat c_i = g_C(x_i,\hat d_i,\hat a_i)\). The component stages also return structured evidence and rationales, denoted collectively by $r_i$. The prompts, inputs, outputs, evidence, and model settings are retained in the execution trace.
+
+The system then applies one of three rank-classification strategies. Let \(\mathcal{S} = \{\mathrm{Cascade},\mathrm{Multiclass},\mathrm{TwoBand}\}\) denote the Sequential Ordinal Cascade, Direct Multiclass Rank Prediction, and Two-Band Rank Classification strategies, respectively. For strategy $s \in \mathcal{S}$, \(\tilde y_i^{(s)} = h_s(x_i,\hat d_i,\hat a_i,\hat c_i,r_i)\). The Sequential Ordinal Cascade exploits the outcome's ordered structure. The delegation gate first separates Rank $0$ from Ranks $1$--$4$. Conditional on delegation, the cascade proceeds in stages, with the first separating Rank $1$ from Ranks $2$--$4$, the second separating Rank $2$ from Ranks $3$--$4$, and the final stage separating Rank $3$ from Rank $4$. Each positive decision produces an early exit, while each negative decision routes the case to the next stage.
+
+The Direct Multiclass strategy predicts one of Ranks $1$--$4$ in a single ranking step using the outputs and rationales of the stored components. The Two-Band strategy first separates the lower-rank band $\{1,2\}$ from the higher-rank band $\{3,4\}$, then classifies within the selected band.
+
+The theoretical mapping and the ranking strategies, therefore, perform different functions. The mapping $m(d_i,a_i,c_i)$ defines the construct, whereas the functions $h_s(\cdot)$ estimate the final rank under alternative computational strategies.
+
+For each law, the system also computes the theory-implied rank; that is, the rank is determined by the estimated component classifications, \(y_i^{\mathrm{map}} = m(\hat d_i,\hat a_i,\hat c_i)\) and compares it with the strategy-specific prediction. Define the consistency indicator
+\begin{equation}
+\label{eq:consistency}
+q_i^{(s)} = \mathbf{1}\left[\tilde y_i^{(s)} = y_i^{\mathrm{map}}\right].
+\end{equation}
+A value of $q_i^{(s)}=1$ indicates that the rank predicted by the strategy $s$ agrees with the rank implied by the model's own delegation, authority, and constraint classifications. A disagreement is retained and flagged for review rather than silently overwritten. This design allows the evaluation to distinguish benchmark agreement from internal theoretical consistency.
+
+
+\section{Related Work}
+
+The present study extends a cumulative research program on legislative delegation and administrative discretion. Early formal work conceptualized discretion as the range of policy choices left to an administrative actor and examined how legislatures balance administrative expertise against the risks of bureaucratic drift \citep{epstein1994administrative}. Later empirical work operationalized these concepts using a database of U.S. financial-regulation laws, combining measures of delegated authority and legal constraints into a discretion index \citep{ohalloran2015banking,ohalloran2016datascience,groll2021delegation}. Computational studies have since demonstrated the utility of algorithmic approaches for recovering discretion classifications from legal text \citep{ohalloran2015markets,ohalloran2016computational,ohalloran2017graph}. Rather than using theory-derived variables only as inputs to a flat classifier, we use the theory to structure the LLM workflow itself.
+
+LLMs have shown promise as low-cost annotators across various text-annotation and qualitative tasks \citep{gilardi2023chatgpt,dai2023llm}. However, prompted generative models often perform poorly when applied to domain-expert codebooks for specialized historical or legal texts \citep{thalken2023modeling}. This contrast motivates our conservative design: LLM coding must be evaluated against a controlled benchmark and remain subject to human review. Legal NLP benchmarks such as LexGLUE and LegalBench also emphasize task-specific evaluation and expert-designed categories \citep{chalkidis2022lexglue,guha2023legalbench}.
+
+Our work also builds on weak supervision and interactive human feedback systems \citep{ratner2017snorkel,cormack2014evaluation}, alongside visual prompt-chaining systems that decompose LLM tasks into modular, controllable steps \citep{wu2022aichains,wu2022promptchainer}. Rather than claiming to introduce human-in-the-loop annotation or prompt chaining, we integrate these computational paradigms with a formal political-economy measurement model of legislative delegation.
+

@@ -16,6 +16,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/dashboards", tags=["dashboards"])
 
 
+def _verify_campaign_workspace(campaign_id: str, workspace_id: str) -> None:
+    """Verify that a campaign belongs to the user's active workspace.
+    
+    Raises 404 if campaign not found, 403 if workspace mismatch.
+    This is the central workspace boundary enforcement for all campaign operations.
+    """
+    from app.repositories import get_db_session
+    with get_db_session() as session:
+        row = session.dashboards.get_by_id(campaign_id)
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Campaign dashboard not found."
+            )
+        campaign_ws = row.get("workspace_id", "")
+        if campaign_ws and campaign_ws != workspace_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this campaign in your current workspace."
+            )
+
+
+
 @router.post("", response_model=DashboardRow, status_code=status.HTTP_201_CREATED)
 async def create_campaign(
     payload: DashboardCreate,
@@ -65,16 +88,19 @@ def get_document_campaign_mapping(
 @router.get("/{id}", response_model=DashboardRow)
 def get_campaign(
     id: str,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Retrieve details for a specific campaign dashboard."""
+    _verify_campaign_workspace(id, workspace_id)
     return campaign_service.get_campaign(id)
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_campaign(
     id: str,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Delete a research campaign dashboard."""
     if not current_user.is_admin and not current_user.can_delete:
@@ -82,6 +108,7 @@ def delete_campaign(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete campaigns."
         )
+    _verify_campaign_workspace(id, workspace_id)
     
     deleted = campaign_service.delete_campaign(id)
     if not deleted:
@@ -95,7 +122,8 @@ def delete_campaign(
 def update_campaign(
     id: str,
     payload: DashboardUpdate,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Update campaign name, description, prompt, or column schema."""
     if not current_user.is_admin and not current_user.can_add:
@@ -103,6 +131,7 @@ def update_campaign(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaigns."
         )
+    _verify_campaign_workspace(id, workspace_id)
     return campaign_service.update_campaign(id, payload)
 
 
@@ -111,17 +140,15 @@ def link_workflow(
     id: str,
     payload: LinkWorkflowPayload,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
 ):
-    """Link (or unlink) a workflow to an existing dashboard.
-    
-    Pass workflow_id to link, or null to unlink. No documents are re-processed;
-    new uploads and retries will automatically use the linked workflow.
-    """
+    """Link (or unlink) a workflow to an existing dashboard."""
     if not current_user.is_admin and not current_user.can_add:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaigns."
         )
+    _verify_campaign_workspace(id, workspace_id)
     return campaign_service.link_workflow_to_campaign(id, payload.workflow_id)
 
 
@@ -129,9 +156,11 @@ def link_workflow(
 @router.get("/{id}/documents", response_model=List[DashboardDocumentRow])
 def list_campaign_documents(
     id: str,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
-    """List all documents linked to this campaign, along with their coded values and processing statuses."""
+    """List all documents linked to this campaign."""
+    _verify_campaign_workspace(id, workspace_id)
     return campaign_service.list_campaign_documents(id)
 
 
@@ -139,23 +168,27 @@ def list_campaign_documents(
 def list_campaign_documents_page(
     id: str,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
 ):
+    _verify_campaign_workspace(id, workspace_id)
     items, total = campaign_service.list_campaign_documents_page(id, page, page_size)
     pages = max(1, (total + page_size - 1) // page_size)
     return DashboardDocumentPage(items=items, total=total, page=page, page_size=page_size, pages=pages)
 
 
 @router.get("/{id}/documents/status-summary", response_model=CampaignStatusSummary)
-def get_campaign_status_summary(id: str, current_user: CurrentUserDep):
+def get_campaign_status_summary(id: str, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
     """Return lightweight aggregate job counts for polling without loading document rows."""
+    _verify_campaign_workspace(id, workspace_id)
     return campaign_service.get_campaign_status_summary(id)
 
 
 @router.get("/{id}/benchmark/professor", response_model=BenchmarkComparisonSummary)
-def compare_professor_benchmark(id: str, current_user: CurrentUserDep):
+def compare_professor_benchmark(id: str, current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
     """Compare dashboard outputs against the project professor benchmark CSV."""
+    _verify_campaign_workspace(id, workspace_id)
     return benchmark_evaluation_service.compare_professor_benchmark(id)
 
 
@@ -166,7 +199,8 @@ class BulkDeleteDocumentsRequest(BaseModel):
 def bulk_delete_campaign_documents(
     id: str,
     payload: BulkDeleteDocumentsRequest,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Remove multiple documents from this campaign dashboard (unlinks the association)."""
     if not current_user.can_delete and not current_user.is_admin:
@@ -174,6 +208,7 @@ def bulk_delete_campaign_documents(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete documents from this campaign."
         )
+    _verify_campaign_workspace(id, workspace_id)
     campaign_service.delete_dashboard_documents(id, payload.document_ids)
     return
 
@@ -181,15 +216,16 @@ def bulk_delete_campaign_documents(
 def link_campaign_documents(
     id: str,
     document_ids: List[str],
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
-    """Link existing global documents to this campaign and enqueue processing on this dashboard."""
+    """Link existing global documents to this campaign and enqueue processing."""
     if not current_user.can_add and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaign documents."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     campaign_service.link_campaign_documents(id, document_ids, current_user.id)
     return {"message": f"Successfully linked {len(document_ids)} documents and enqueued them for coding."}
 
@@ -199,8 +235,10 @@ def check_duplicate_filenames(
     id: str,
     filenames: List[str],
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
 ):
     """Given a list of filenames, return which ones are already linked to this dashboard."""
+    _verify_campaign_workspace(id, workspace_id)
     existing = campaign_service.get_filenames_in_dashboard(id)
     duplicates = [f for f in filenames if f in existing]
     return {"duplicates": duplicates}
@@ -224,6 +262,7 @@ async def upload_campaign_document(
         )
 
     workspace_id = get_workspace_id(workspace_id)
+    _verify_campaign_workspace(id, workspace_id)
     user_client = get_user_client(current_user.jwt, workspace_id)
     filename = relative_path or file.filename
     if not filename:
@@ -262,6 +301,7 @@ async def upload_campaign_document(
 def retry_failed_documents(
     id: str,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
     payload: Optional[List[str]] = None,
     model: Optional[str] = Query(None, description="Model to retry failed runs for specifically"),
     include_active: bool = Query(False, description="Also requeue pending/processing runs that appear stuck")
@@ -272,7 +312,7 @@ def retry_failed_documents(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaign documents."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     doc_ids = campaign_service.retry_failed_documents(
         id,
         current_user.id,
@@ -290,7 +330,8 @@ def retry_failed_documents(
 @router.post("/{id}/raise-token-limit", status_code=status.HTTP_200_OK)
 def raise_token_limit(
     id: str,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Increase token limit by 2.5M and retry any suspended documents."""
     if not current_user.can_add and not current_user.is_admin:
@@ -298,7 +339,7 @@ def raise_token_limit(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaigns."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     from app.repositories import get_db_session
     with get_db_session() as session:
         dashboard = session.dashboards.get_by_id(id)
@@ -316,6 +357,7 @@ def raise_token_limit(
 def add_model_to_campaign(
     id: str,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
     model: str = Query(..., description="The LLM model name to add to the evaluation dashboard")
 ):
     """Add a new model to the evaluation dashboard and trigger evaluations for it."""
@@ -324,7 +366,7 @@ def add_model_to_campaign(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaigns."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     from app.repositories import get_db_session
     with get_db_session() as session:
         dashboard = session.dashboards.get_by_id(id)
@@ -370,15 +412,16 @@ def add_model_to_campaign(
 def delete_model_from_campaign(
     id: str,
     current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id),
     model: str = Query(..., description="The LLM model name to remove from the evaluation dashboard")
 ):
-    """Remove an LLM model from the dashboard. This updates the dashboard's model list and removes its evaluations from dashboard documents."""
+    """Remove an LLM model from the dashboard."""
     if not current_user.can_add and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaigns."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     from app.repositories import get_db_session
     import json
     with get_db_session() as session:
@@ -428,7 +471,8 @@ def update_coded_cell(
     id: str,
     doc_id: str,
     payload: CellUpdatePayload,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Override an AI-generated value in a specific spreadsheet grid cell."""
     if not current_user.can_add and not current_user.is_admin:
@@ -436,7 +480,7 @@ def update_coded_cell(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to edit values."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     coded_values = campaign_service.update_coded_cell(
         id, doc_id, payload.column_name, payload.value, payload.reasoning
     )
@@ -448,7 +492,8 @@ async def reevaluate_coded_cell(
     id: str,
     doc_id: str,
     payload: ReevaluateCellPayload,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Trigger LLM re-evaluation of a specific cell using researcher corrective feedback."""
     if not current_user.can_add and not current_user.is_admin:
@@ -456,7 +501,7 @@ async def reevaluate_coded_cell(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to re-evaluate values."
         )
-
+    _verify_campaign_workspace(id, workspace_id)
     coded_values = await campaign_service.reevaluate_coded_cell(
         id, doc_id, payload.column_name, payload.user_prompt
     )
@@ -469,7 +514,8 @@ async def reevaluate_campaign_column(
     column_name: str,
     payload: ReevaluateColumnPayload,
     background_tasks: BackgroundTasks,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Trigger LLM re-evaluation of a specific column across all documents."""
     if not current_user.can_add and not current_user.is_admin:
@@ -477,6 +523,7 @@ async def reevaluate_campaign_column(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to re-evaluate columns."
         )
+    _verify_campaign_workspace(id, workspace_id)
     return await campaign_service.reevaluate_column(id, column_name, payload.feedback_prompt, background_tasks)
 
 
@@ -485,7 +532,8 @@ async def reevaluate_campaign_row(
     id: str,
     doc_id: str,
     payload: ReevaluateRowPayload,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Trigger LLM re-evaluation of all columns in a row (document) using feedback."""
     if not current_user.can_add and not current_user.is_admin:
@@ -493,6 +541,7 @@ async def reevaluate_campaign_row(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to re-evaluate rows."
         )
+    _verify_campaign_workspace(id, workspace_id)
     coded_values = await campaign_service.reevaluate_row(id, doc_id, payload.feedback_prompt)
     return {"message": "Row re-evaluated successfully.", "coded_values": coded_values}
 
@@ -500,7 +549,8 @@ async def reevaluate_campaign_row(
 @router.post("/{id}/regenerate-schema", response_model=DashboardRow)
 async def regenerate_campaign_schema(
     id: str,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Regenerate campaign schema by running the LLM prompt extraction again."""
     if not current_user.can_add and not current_user.is_admin:
@@ -508,6 +558,7 @@ async def regenerate_campaign_schema(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify campaigns."
         )
+    _verify_campaign_workspace(id, workspace_id)
     return await campaign_service.regenerate_campaign_schema(id)
 
 
@@ -515,8 +566,10 @@ async def regenerate_campaign_schema(
 def get_campaign_document_trace(
     id: str,
     doc_id: str,
-    current_user: CurrentUserDep
+    current_user: CurrentUserDep,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """Retrieve execution trace and context details for a specific campaign document."""
+    _verify_campaign_workspace(id, workspace_id)
     from app.services.workflow_dashboard_service import workflow_dashboard_service
     return workflow_dashboard_service.get_trace(id, doc_id)

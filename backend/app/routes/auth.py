@@ -21,6 +21,55 @@ import logging
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
 
+
+def _get_workspace_role(session, workspace_id: str, user_email: str) -> str | None:
+    """Return the user's role in a workspace ('owner', 'admin', 'member') or None if not a member.
+    
+    This is the single source of truth for workspace authorization.
+    All workspace-scoped permission checks should use this helper.
+    """
+    try:
+        if hasattr(session, "conn") and session.conn:
+            cursor = session.conn.cursor()
+            if is_postgres_session(session):
+                cursor.execute(
+                    "SELECT role FROM workspace_memberships WHERE workspace_id = %s AND LOWER(user_email) = %s;",
+                    (workspace_id, user_email.lower())
+                )
+            else:
+                cursor.execute(
+                    "SELECT role FROM workspace_memberships WHERE workspace_id = ? AND LOWER(user_email) = ?;",
+                    (workspace_id, user_email.lower())
+                )
+            row = cursor.fetchone()
+            if row:
+                return row[0] if isinstance(row, (list, tuple)) else row["role"]
+    except Exception as e:
+        logger.warning(f"Error checking workspace role: {e}")
+    return None
+
+
+def _require_workspace_member(session, workspace_id: str, user_email: str) -> str:
+    """Require user to be a workspace member. Returns role or raises 403."""
+    role = _get_workspace_role(session, workspace_id, user_email)
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You are not a member of workspace '{workspace_id}'."
+        )
+    return role
+
+
+def _require_workspace_admin(session, workspace_id: str, user_email: str) -> str:
+    """Require user to be a workspace owner or admin. Returns role or raises 403."""
+    role = _require_workspace_member(session, workspace_id, user_email)
+    if role not in ("owner", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only workspace owners and admins can perform this action."
+        )
+    return role
+
 def is_postgres_session(session) -> bool:
     if settings.DB_PROVIDER.lower() == "postgres":
         return True
@@ -504,11 +553,8 @@ def list_workspaces(current_user: CurrentUserDep):
         except Exception as e:
             logger.warning(f"Error checking workspace memberships: {e}")
 
-        # Admins can access all non-internal workspaces, non-admins only see explicit memberships
-        if current_user.is_admin:
-            member_rows = valid_rows
-        else:
-            member_rows = [r for r in valid_rows if r["id"] in allowed_ids]
+        # All users (including former "admins") only see workspaces they have explicit membership in
+        member_rows = [r for r in valid_rows if r["id"] in allowed_ids]
 
         # If user has no workspaces assigned, auto-provision a unique personal workspace for them
         if not member_rows:
@@ -518,18 +564,28 @@ def list_workspaces(current_user: CurrentUserDep):
             try:
                 if not session.workspaces.get_by_id(personal_ws_id):
                     session.workspaces.create(workspace_id=personal_ws_id, name=personal_ws_name)
+                    # Set created_by for the new workspace
+                    try:
+                        if hasattr(session, "conn") and session.conn:
+                            cursor = session.conn.cursor()
+                            if is_postgres_session(session):
+                                cursor.execute("UPDATE workspaces SET created_by = %s WHERE id = %s;", (current_user.email.lower(), personal_ws_id))
+                            else:
+                                cursor.execute("UPDATE workspaces SET created_by = ? WHERE id = ?;", (current_user.email.lower(), personal_ws_id))
+                    except Exception:
+                        pass
                 
                 if hasattr(session, "conn") and session.conn:
                     cursor = session.conn.cursor()
                     m_id = str(uuid.uuid4())
                     if is_postgres_session(session):
                         cursor.execute(
-                            "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                            "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'owner') ON CONFLICT DO NOTHING;",
                             (m_id, personal_ws_id, current_user.email.lower())
                         )
                     else:
                         cursor.execute(
-                            "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, ?, ?);",
+                            "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, ?, ?, 'owner');",
                             (m_id, personal_ws_id, current_user.email.lower())
                         )
                 return [WorkspaceResponse(id=personal_ws_id, name=personal_ws_name)]
@@ -547,7 +603,7 @@ def list_workspaces(current_user: CurrentUserDep):
 
 @router.post("/workspaces", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
-    """Create a new workspace with a unique UUID hash ID and add creator as member."""
+    """Create a new workspace with a unique UUID hash ID and add creator as owner."""
     display_name = payload.name.strip()
     if not display_name or display_name.upper() in ("QA", "TEST"):
         raise HTTPException(
@@ -560,18 +616,30 @@ def create_workspace(payload: WorkspaceCreate, current_user: CurrentUserDep):
     with get_db_session() as session:
         session.workspaces.create(workspace_id=workspace_id, name=display_name)
 
+        # Set created_by for ownership tracking
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute("UPDATE workspaces SET created_by = %s WHERE id = %s;", (current_user.email.lower(), workspace_id))
+                else:
+                    cursor.execute("UPDATE workspaces SET created_by = ? WHERE id = ?;", (current_user.email.lower(), workspace_id))
+        except Exception:
+            pass
+
+        # Add creator as 'owner' member
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
                 m_id = str(uuid.uuid4())
                 if is_postgres_session(session):
                     cursor.execute(
-                        "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                        "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'owner') ON CONFLICT DO NOTHING;",
                         (m_id, workspace_id, current_user.email.lower())
                     )
                 else:
                     cursor.execute(
-                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, ?, ?);",
+                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, ?, ?, 'owner');",
                         (m_id, workspace_id, current_user.email.lower())
                     )
         except Exception as e:
@@ -611,84 +679,91 @@ def set_active_workspace_endpoint(payload: WorkspaceCreate, current_user: Curren
 
 @router.get("/workspaces/{workspace_id}/members")
 def list_workspace_members(workspace_id: str, current_user: CurrentUserDep):
-    """List members and invited accounts for a workspace."""
+    """List members for a workspace. Only workspace members can view the member list."""
     ws_id = workspace_id.strip().upper()
     with get_db_session() as session:
-        member_emails = set()
+        # Verify caller is a member of this workspace
+        _require_workspace_member(session, ws_id, current_user.email)
+
+        member_rows = []
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
                 if is_postgres_session(session):
-                    cursor.execute("SELECT user_email FROM workspace_memberships WHERE workspace_id = %s;", (ws_id,))
+                    cursor.execute(
+                        "SELECT wm.user_email, wm.role FROM workspace_memberships wm WHERE wm.workspace_id = %s;",
+                        (ws_id,)
+                    )
                 else:
-                    cursor.execute("SELECT user_email FROM workspace_memberships WHERE workspace_id = ?;", (ws_id,))
+                    cursor.execute(
+                        "SELECT wm.user_email, wm.role FROM workspace_memberships wm WHERE wm.workspace_id = ?;",
+                        (ws_id,)
+                    )
                 for r in cursor.fetchall():
                     email_val = r[0] if isinstance(r, (list, tuple)) else r["user_email"]
-                    member_emails.add(email_val.lower())
+                    role_val = (r[1] if isinstance(r, (list, tuple)) else r.get("role")) or "member"
+                    member_rows.append({"email": email_val.lower(), "role": role_val})
         except Exception as e:
             logger.warning(f"Error reading workspace members: {e}")
 
+        # Enrich with user details from the users table
         all_users = session.users.list_all()
-        for u in all_users:
-            if u.get("is_admin"):
-                member_emails.add(u["email"].lower())
+        user_map = {u["email"].lower(): u for u in all_users}
 
         members = []
-        for u in all_users:
-            if u["email"].lower() in member_emails:
-                members.append({
-                    "id": u["id"],
-                    "email": u["email"],
-                    "is_admin": bool(u.get("is_admin", 0)),
-                    "can_add": bool(u.get("can_add", 0)),
-                    "can_delete": bool(u.get("can_delete", 0)),
-                    "role": "Owner/Admin" if u.get("is_admin") else "Member",
-                    "status": "Active"
-                })
+        for m in member_rows:
+            u = user_map.get(m["email"])
+            role_label = "Owner" if m["role"] == "owner" else ("Admin" if m["role"] == "admin" else "Member")
+            members.append({
+                "id": u["id"] if u else "",
+                "email": m["email"],
+                "is_admin": m["role"] in ("owner", "admin"),
+                "can_add": bool(u.get("can_add", 0)) if u else False,
+                "can_delete": bool(u.get("can_delete", 0)) if u else False,
+                "role": role_label,
+                "status": "Active" if u else "Invited"
+            })
         return members
 
 
 @router.post("/workspaces/{workspace_id}/invite")
 def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current_user: CurrentUserDep):
-    """Invite a Google / team email to join a workspace (Admin only)."""
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only workspace administrators can invite team members."
-        )
-    invite_email = payload.email.strip().lower()
+    """Invite a Google / team email to join a workspace (Workspace owner/admin only)."""
     ws_id = workspace_id.strip().upper()
+    with get_db_session() as session:
+        _require_workspace_admin(session, ws_id, current_user.email)
+    invite_email = payload.email.strip().lower()
     if not invite_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email cannot be empty"
         )
     
-    with get_db_session() as session:
-        # Add to workspace_memberships
+    with get_db_session() as session_inner:
+        # Add to workspace_memberships with 'member' role
         try:
-            if hasattr(session, "conn") and session.conn:
-                cursor = session.conn.cursor()
+            if hasattr(session_inner, "conn") and session_inner.conn:
+                cursor = session_inner.conn.cursor()
                 m_id = str(uuid.uuid4())
-                if is_postgres_session(session):
+                if is_postgres_session(session_inner):
                     cursor.execute(
-                        "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                        "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'member') ON CONFLICT DO NOTHING;",
                         (m_id, ws_id, invite_email)
                     )
                 else:
                     cursor.execute(
-                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, ?, ?);",
+                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, ?, ?, 'member');",
                         (m_id, ws_id, invite_email)
                     )
         except Exception as e:
             logger.error(f"Failed to save workspace membership: {e}")
 
         # Ensure user account exists (with non-admin default flags)
-        user_row = session.users.get_by_email(invite_email)
+        user_row = session_inner.users.get_by_email(invite_email)
         if not user_row:
             u_id = str(uuid.uuid4())
             pwd_hash = hash_password(str(uuid.uuid4()))
-            session.users.create(
+            session_inner.users.create(
                 user_id=u_id,
                 email=invite_email,
                 password_hash=pwd_hash,
@@ -806,6 +881,8 @@ def list_workspace_llm_credentials(workspace_id: str, current_user: CurrentUserD
     ws_id = workspace_id.strip().upper()
     credentials = []
     with get_db_session() as session:
+        # Verify user is a member of this workspace
+        _require_workspace_member(session, ws_id, current_user.email)
         try:
             if hasattr(session, "conn") and session.conn:
                 cursor = session.conn.cursor()
@@ -843,10 +920,11 @@ def list_workspace_llm_credentials(workspace_id: str, current_user: CurrentUserD
 
 @router.post("/workspaces/{workspace_id}/llm-credentials/verify")
 def verify_and_save_workspace_llm_credential(workspace_id: str, payload: WorkspaceLLMCredentialUpdate, current_user: CurrentUserDep):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Only workspace admins can configure workspace API keys.")
-    
     ws_id = workspace_id.strip().upper()
+
+    # Verify user is a workspace owner or admin
+    with get_db_session() as session:
+        _require_workspace_admin(session, ws_id, current_user.email)
     provider = payload.provider.strip().lower()
     raw_key = payload.api_key.strip()
     

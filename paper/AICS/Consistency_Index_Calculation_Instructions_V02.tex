@@ -1,0 +1,156 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\title{Consistency Rate Calculation Instructions}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose}
+
+The paper defines an internal consistency check in Eq.~3 and includes that check in the theory-guided workflow. Table~4 reports agreement with the expert-coded benchmark. It does not report whether each strategy-specific discretion rank agrees with the discretion rank implied by the model's own delegation, authority, and constraint classifications.
+
+We need the consistency results to evaluate the workflow's central validation claim.
+
+\section*{Definition}
+
+For each completed law $i$ and rank-classification strategy $s$, compare:
+
+\begin{itemize}[nosep]
+    \item the strategy-predicted discretion rank, $\tilde y_i^{(s)}$, and
+    \item the discretion rank implied by the model's predicted delegation, authority, and constraint classifications, $y_i^{\mathrm{map}}$.
+\end{itemize}
+
+The case-level consistency indicator is
+
+\[
+q_i^{(s)}
+=
+\mathbf{1}
+\left[
+\tilde y_i^{(s)} = y_i^{\mathrm{map}}
+\right].
+\]
+
+Thus, $q_i^{(s)}=1$ when the two ranks agree and $q_i^{(s)}=0$ when they differ.
+
+\section*{Step-by-Step Calculation}
+
+For each staged model-strategy combination:
+
+\begin{enumerate}[leftmargin=*]
+
+    \item Identify the strategy-predicted discretion rank, $\tilde y_i^{(s)}$, for each completed law.
+
+    \item Retrieve the model's predicted values for:
+    \begin{itemize}[nosep]
+        \item delegation, $\hat d_i$,
+        \item delegated authority, $\hat a_i$, and
+        \item statutory constraints, $\hat c_i$.
+    \end{itemize}
+
+    \item Apply the existing 0--4 mapping to those predictions:
+    \[
+    y_i^{\mathrm{map}}
+    =
+    m(\hat d_i,\hat a_i,\hat c_i),
+    \]
+    where
+    \[
+    m(\hat d_i,\hat a_i,\hat c_i)=
+    \begin{cases}
+    0, & \hat d_i=0,\\
+    1, & \hat d_i=1,\ \hat a_i=\mathrm{Low},\ \hat c_i=\mathrm{Strong},\\
+    2, & \hat d_i=1,\ \hat a_i=\mathrm{Low},\ \hat c_i=\mathrm{Weak},\\
+    3, & \hat d_i=1,\ \hat a_i=\mathrm{High},\ \hat c_i=\mathrm{Strong},\\
+    4, & \hat d_i=1,\ \hat a_i=\mathrm{High},\ \hat c_i=\mathrm{Weak}.
+    \end{cases}
+    \]
+
+    \item Compare $\tilde y_i^{(s)}$ with $y_i^{\mathrm{map}}$:
+    \begin{itemize}[nosep]
+        \item if the ranks are equal, code the case as consistent ($q_i^{(s)}=1$);
+        \item if they differ, code the case as inconsistent ($q_i^{(s)}=0$).
+    \end{itemize}
+
+    \item Calculate the consistency rate for each model-strategy combination:
+    \[
+    \mathrm{Consistency}^{(s)}
+    =
+    \frac{\sum_i q_i^{(s)}}{N_s}
+    \times 100.
+    \]
+
+    Here, $N_s$ is the number of completed cases for which both ranks are available. This should equal the corresponding $N$ reported in Table~4 if both values were retained for every completed case. If the denominator differs from Table~4, please report the difference and explain why.
+
+    \item Report:
+    
+    \[
+    \text{Model} \;|\; \text{Strategy} \;|\; N
+    \;|\; \text{Number Consistent}
+    \;|\; \text{Consistency \%}.
+    \]
+
+\end{enumerate}
+
+\section*{Required Results}
+
+Please provide one consistency result for each of the three staged strategies for each model:
+
+\begin{itemize}[nosep]
+    \item Gemini 3.5: Sequential Ordinal Cascade, Direct Multiclass, Two-Band
+    \item Qwen 3: Sequential Ordinal Cascade, Direct Multiclass, Two-Band
+    \item DeepSeek: Sequential Ordinal Cascade, Direct Multiclass, Two-Band
+    \item Kimi K2.5: Sequential Ordinal Cascade, Direct Multiclass, Two-Band
+    \item GPT-OSS: Sequential Ordinal Cascade, Direct Multiclass, Two-Band
+\end{itemize}
+
+This yields 15 consistency results. The unconstrained One-Shot Baseline is N/A because it does not produce the intermediate component classifications required for this comparison.
+
+\section*{Important Distinction}
+
+The Table~4 metrics---Exact, W1, MAE, and weighted kappa---measure agreement between the model prediction and the expert-coded benchmark.
+
+The consistency rate measures whether the workflow's final discretion prediction agrees with the discretion rank implied by its own intermediate classifications.
+
+We need both results to evaluate the workflow.
+
+\section*{Implementation Note}
+
+If the component classifications and strategy-specific rank predictions are stored in the execution logs, calculate the consistency rates directly from the saved outputs. No model reruns should be necessary.
+
+\section*{Table 5 Placeholder}
+
+I added the following placeholder to the new working draft in Overleaf. Please replace the asterisks with the consistency percentages.
+
+Table~\ref{tab:consistency} reports the percentage of completed cases in which
+the predicted discretion rank agrees with the rank implied by the model's
+delegation, authority, and constraint classifications. Internal theoretical consistency ranges from X\% to Y\% across model-strategy combinations, with [model-strategy] showing the highest consistency.
+
+\begin{table}[htbp]
+\centering
+\caption{Internal theoretical consistency (\%).}
+\label{tab:consistency}
+\scriptsize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Model} & \textbf{Cascade} & \textbf{Direct} & \textbf{Two-Band} \\
+\midrule
+Gemini 3.5 & * & * & * \\
+Qwen 3     & * & * & * \\
+DeepSeek   & * & * & * \\
+Kimi K2.5  & * & * & * \\
+GPT-OSS    & * & * & * \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\end{document}
+

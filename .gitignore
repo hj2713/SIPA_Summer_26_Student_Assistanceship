@@ -47,3 +47,29 @@ coverage.xml
 # Logs
 *.log
 *.db
+
+# Graphify
+graphify-out/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.brf
+*.fls
+*.fdb_latexmk
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lot
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.synctex.gz
+*.synctex(busy)
+*.run.xml
+*-blx.bib
+*.xdv

@@ -201,7 +201,7 @@ class WorkflowExecutor:
                         [
                             LLMMessage(
                                 role="system",
-                                content="You are executing one stage of a versioned research coding workflow. Return only the requested structured fields.",
+                                content="You are executing one stage of a versioned research coding workflow. Return only the requested structured fields as JSON. Do not output any preamble, analysis, or conversational commentary outside the requested fields.",
                             ),
                             LLMMessage(role="user", content="\n\n".join(prompt_parts)),
                         ],

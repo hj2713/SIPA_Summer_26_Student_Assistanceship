@@ -84,6 +84,9 @@ class OpenAIProvider:
                 "function": {"name": force_tool},
             }
 
+        if "kimi" in self._model.lower() or "moonshot" in self._model.lower():
+            kwargs["extra_body"] = {"reasoning": {"effort": "none"}}
+
         response = await self._client.chat.completions.create(**kwargs)
         async for chunk in response:
             yield _from_openai_chunk(chunk)
@@ -95,11 +98,18 @@ class OpenAIProvider:
     ) -> tuple[BaseModel, LLMUsage]:
         base_messages = [_to_openai_message(m) for m in messages]
         structured_messages = _ensure_json_keyword_for_structured_output(base_messages)
+        extra_kwargs: dict[str, Any] = {}
+        max_tokens = 4096
+        if "kimi" in self._model.lower() or "moonshot" in self._model.lower():
+            extra_kwargs["extra_body"] = {"reasoning": {"effort": "none"}}
+            max_tokens = 1024
+
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=structured_messages,
             response_format={"type": "json_object"},
-            max_tokens=4096,
+            max_tokens=max_tokens,
+            **extra_kwargs,
         )
         content = _extract_message_text(response.choices[0].message if getattr(response, "choices", None) else None)
         if not content:
@@ -136,6 +146,7 @@ class OpenAIProvider:
                 messages=repair_messages,
                 response_format={"type": "json_object"},
                 max_tokens=4096,
+                **extra_kwargs,
             )
             repair_content = _extract_message_text(repair_response.choices[0].message if getattr(repair_response, "choices", None) else None)
             if not repair_content:

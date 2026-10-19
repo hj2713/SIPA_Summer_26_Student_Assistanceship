@@ -34,17 +34,17 @@ Future agents should treat this repository like a product under active research 
 
 Stable project intent belongs in:
 
-1. `Setup-Files/AIM_OF_PROJECT.md`
-2. `Setup-Files/FEATURES.md`
+1. `docs/AIM_OF_PROJECT.md`
+2. `docs/FEATURES.md`
 3. `README.md`
 
 Active work, unresolved issues, benchmark incidents, and completed fixes belong in:
 
-1. `Project-Tracking/ACTIVE_WORK.md`
-2. `Project-Tracking/DECISIONS.md`
-3. `Project-Tracking/COMPLETED_WORK.md`
+1. `docs/tracking/ACTIVE_WORK.md`
+2. `docs/tracking/DECISIONS.md`
+3. `docs/tracking/COMPLETED_WORK.md`
 
-Do not turn stable docs into a running diary. If a detail may become stale after a prompt change, data fix, or code fix, track it in `Project-Tracking/`.
+Do not turn stable docs into a running diary. If a detail may become stale after a prompt change, data fix, or code fix, track it in `docs/tracking/`.
 
 ## Product Surface
 

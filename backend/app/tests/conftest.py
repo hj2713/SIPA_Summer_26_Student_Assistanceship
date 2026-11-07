@@ -4,7 +4,7 @@ import uuid
 
 # Activate test mode connection wrapper and query firewall.
 os.environ["TEST_MODE"] = "1"
-
+os.environ["DB_PROVIDER"] = "sqlite"
 
 from unittest.mock import MagicMock
 
@@ -25,6 +25,9 @@ import time
 # Load settings from env/.env — no hardcoded values here ever.
 # JWT_SECRET and DB_PROVIDER are fully controlled by the environment.
 from app.core.config import settings
+
+# Force SQLite in all automated tests to guarantee zero interaction with Supabase production
+settings.DB_PROVIDER = "sqlite"
 
 # Use the JWT_SECRET already resolved by settings (from .env or env var).
 # This is the same secret the running app uses, so tokens stay valid.

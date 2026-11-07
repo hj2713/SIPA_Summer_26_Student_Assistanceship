@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/dashboards", tags=["dashboards"])
 
 
-def _verify_campaign_workspace(campaign_id: str, workspace_id: str) -> None:
+def _verify_campaign_workspace(campaign_id: str, workspace_id: str) -> dict:
     """Verify that a campaign belongs to the user's active workspace.
     
     Raises 404 if campaign not found, 403 if workspace mismatch.
-    This is the central workspace boundary enforcement for all campaign operations.
+    Returns the campaign row dictionary to eliminate duplicate queries.
     """
     from app.repositories import get_db_session
     with get_db_session() as session:
@@ -36,6 +36,7 @@ def _verify_campaign_workspace(campaign_id: str, workspace_id: str) -> None:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have access to this campaign in your current workspace."
             )
+        return dict(row)
 
 
 
@@ -92,8 +93,8 @@ def get_campaign(
     workspace_id: str = Depends(get_workspace_id)
 ):
     """Retrieve details for a specific campaign dashboard."""
-    _verify_campaign_workspace(id, workspace_id)
-    return campaign_service.get_campaign(id)
+    row = _verify_campaign_workspace(id, workspace_id)
+    return campaign_service._dashboard_row(row)
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)

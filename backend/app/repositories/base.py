@@ -39,6 +39,10 @@ class BaseWorkspaceRepository(ABC):
     def list_all(self) -> List[Dict[str, Any]]:
         pass
 
+    @abstractmethod
+    def list_for_user(self, user_email: str) -> List[Dict[str, Any]]:
+        pass
+
 class BaseDocumentRepository(ABC):
     @abstractmethod
     def get_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:

@@ -521,84 +521,41 @@ def link_google(payload: LinkGoogleRequest, current_user: CurrentUserDep):
 def list_workspaces(current_user: CurrentUserDep):
     """List available workspaces for the current user based on membership."""
     with get_db_session() as session:
-        rows = session.workspaces.list_all()
-        valid_rows = [r for r in rows if r["id"] not in ("QA", "TEST") and r["name"] not in ("QA", "TEST")]
-        if not valid_rows or not any(r["id"] == "ws_prod_00000001" for r in valid_rows):
-            try:
-                session.workspaces.create(workspace_id="ws_prod_00000001", name="PRODUCTION")
-                if not any(r["id"] == "ws_prod_00000001" for r in valid_rows):
-                    valid_rows.append({"id": "ws_prod_00000001", "name": "PRODUCTION"})
-            except Exception:
-                pass
-        
-        # Check workspace_memberships table for explicit membership (all users including admins)
-        allowed_ids = set()
+        # Fast direct query based on user's membership
+        member_rows = session.workspaces.list_for_user(current_user.email)
+        valid_rows = [
+            r for r in member_rows
+            if r["id"] not in ("QA", "TEST") or current_user.email.lower() == "test@test.com"
+        ]
 
-        try:
-            if hasattr(session, "conn") and session.conn:
-                cursor = session.conn.cursor()
-                if is_postgres_session(session):
-                    cursor.execute(
-                        "SELECT workspace_id FROM workspace_memberships WHERE LOWER(user_email) = %s;",
-                        (current_user.email.lower(),)
-                    )
-                else:
-                    cursor.execute(
-                        "SELECT workspace_id FROM workspace_memberships WHERE LOWER(user_email) = ?;",
-                        (current_user.email.lower(),)
-                    )
-                for r in cursor.fetchall():
-                    email_ws = r[0] if isinstance(r, (list, tuple)) else r["workspace_id"]
-                    allowed_ids.add(email_ws)
-        except Exception as e:
-            logger.warning(f"Error checking workspace memberships: {e}")
-
-        # All users (including former "admins") only see workspaces they have explicit membership in
-        member_rows = [r for r in valid_rows if r["id"] in allowed_ids]
+        if valid_rows:
+            return [WorkspaceResponse(id=r["id"], name=r["name"]) for r in valid_rows]
 
         # If user has no workspaces assigned, auto-provision a unique personal workspace for them
-        if not member_rows:
-            user_prefix = current_user.email.split("@")[0].upper()
-            personal_ws_id = f"ws_{uuid.uuid4().hex[:12]}"
-            personal_ws_name = f"{user_prefix}'S WORKSPACE"
-            try:
-                if not session.workspaces.get_by_id(personal_ws_id):
-                    session.workspaces.create(workspace_id=personal_ws_id, name=personal_ws_name)
-                    # Set created_by for the new workspace
-                    try:
-                        if hasattr(session, "conn") and session.conn:
-                            cursor = session.conn.cursor()
-                            if is_postgres_session(session):
-                                cursor.execute("UPDATE workspaces SET created_by = %s WHERE id = %s;", (current_user.email.lower(), personal_ws_id))
-                            else:
-                                cursor.execute("UPDATE workspaces SET created_by = ? WHERE id = ?;", (current_user.email.lower(), personal_ws_id))
-                    except Exception:
-                        pass
-                
-                if hasattr(session, "conn") and session.conn:
-                    cursor = session.conn.cursor()
-                    m_id = str(uuid.uuid4())
-                    if is_postgres_session(session):
-                        cursor.execute(
-                            "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'owner') ON CONFLICT DO NOTHING;",
-                            (m_id, personal_ws_id, current_user.email.lower())
-                        )
-                    else:
-                        cursor.execute(
-                            "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, ?, ?, 'owner');",
-                            (m_id, personal_ws_id, current_user.email.lower())
-                        )
-                return [WorkspaceResponse(id=personal_ws_id, name=personal_ws_name)]
-            except Exception as e:
-                logger.error(f"Failed to auto-create personal workspace: {e}")
-
-        final_workspaces = []
-        for row in member_rows:
-            if row["id"] in ("QA", "TEST") and current_user.email.lower() != "test@test.com":
-                continue
-            final_workspaces.append(row)
-
-        return [WorkspaceResponse(id=row["id"], name=row["name"]) for row in final_workspaces]
+        user_prefix = current_user.email.split("@")[0].upper()
+        personal_ws_id = f"ws_{uuid.uuid4().hex[:12]}"
+        personal_ws_name = f"{user_prefix}'S WORKSPACE"
+        try:
+            session.workspaces.create(workspace_id=personal_ws_id, name=personal_ws_name)
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                m_id = str(uuid.uuid4())
+                if is_postgres_session(session):
+                    cursor.execute("UPDATE workspaces SET created_by = %s WHERE id = %s;", (current_user.email.lower(), personal_ws_id))
+                    cursor.execute(
+                        "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'owner') ON CONFLICT DO NOTHING;",
+                        (m_id, personal_ws_id, current_user.email.lower())
+                    )
+                else:
+                    cursor.execute("UPDATE workspaces SET created_by = ? WHERE id = ?;", (current_user.email.lower(), personal_ws_id))
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, ?, ?, 'owner');",
+                        (m_id, personal_ws_id, current_user.email.lower())
+                    )
+            return [WorkspaceResponse(id=personal_ws_id, name=personal_ws_name)]
+        except Exception as e:
+            logger.error(f"Failed to auto-create personal workspace: {e}")
+            return []
 
 
 @router.post("/workspaces", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)

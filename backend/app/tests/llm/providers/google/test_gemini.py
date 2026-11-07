@@ -8,9 +8,8 @@ from app.llm.types import LLMMessage
 @pytest.mark.asyncio
 async def test_gemini_integration():
     """Test that the Gemini integration is configured and can make successful calls."""
-    # Ensure provider is gemini
-    assert settings.LLM_PROVIDER == "gemini", "LLM_PROVIDER must be set to 'gemini' to test Gemini"
-    assert settings.GEMINI_API_KEY, "GEMINI_API_KEY must be configured in environment"
+    if not settings.GEMINI_API_KEY or settings.LLM_PROVIDER != "gemini":
+        pytest.skip("GEMINI_API_KEY not configured or LLM_PROVIDER is not gemini")
     
     llm = get_llm()
     assert llm.provider_name == "gemini"

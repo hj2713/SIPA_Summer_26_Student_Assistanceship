@@ -910,7 +910,7 @@ def init_sqlite_db():
         test_pwd_hash = hash_password("test@test.com")
         if not test_row:
             conn.execute(
-                "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 1, 1);",
+                "INSERT OR IGNORE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 1, 1);",
                 ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
             )
         else:

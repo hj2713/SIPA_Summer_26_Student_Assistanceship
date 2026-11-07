@@ -42,21 +42,21 @@ def test_retrieve_context_applies_metadata_filter():
     # Seed documents and chunks in SQLite: one matching "guide" category and one "report" category
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO documents (id, user_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            ("99999999-9999-9999-9999-999999999999", user_id, "doc_guide.txt", "mock_path_1", 120, "text/plain", "completed", json.dumps({"category": "guide"}))
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            ("99999999-9999-9999-9999-999999999999", user_id, client.workspace_id, "doc_guide.txt", "mock_path_1", 120, "text/plain", "completed", json.dumps({"category": "guide"}))
         )
         conn.execute(
-            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?);",
-            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, "RAG filters match content. test query", json.dumps([0.25] * 1536), "{}")
+            "INSERT OR REPLACE INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, client.workspace_id, "RAG filters match content. test query", json.dumps([0.25] * 1536), "{}")
         )
         
         conn.execute(
-            "INSERT INTO documents (id, user_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            ("88888888-8888-8888-8888-888888888888", user_id, "doc_report.txt", "mock_path_2", 120, "text/plain", "completed", json.dumps({"category": "report"}))
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            ("88888888-8888-8888-8888-888888888888", user_id, client.workspace_id, "doc_report.txt", "mock_path_2", 120, "text/plain", "completed", json.dumps({"category": "report"}))
         )
         conn.execute(
-            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?);",
-            ("22222222-2222-2222-2222-222222222222", "88888888-8888-8888-8888-888888888888", user_id, "Other document text about test query.", json.dumps([0.25] * 1536), "{}")
+            "INSERT OR REPLACE INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            ("22222222-2222-2222-2222-222222222222", "88888888-8888-8888-8888-888888888888", user_id, client.workspace_id, "Other document text about test query.", json.dumps([0.25] * 1536), "{}")
         )
         conn.commit()
 

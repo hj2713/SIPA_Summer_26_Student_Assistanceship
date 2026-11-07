@@ -123,6 +123,20 @@ class PostgresWorkspaceRepository(BaseWorkspaceRepository):
             cursor.execute("SELECT * FROM workspaces ORDER BY name ASC;")
             return cursor.fetchall()
 
+    def list_for_user(self, user_email: str) -> List[Dict[str, Any]]:
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT w.id, w.name, w.created_by, wm.role
+                FROM workspaces w
+                JOIN workspace_memberships wm ON w.id = wm.workspace_id
+                WHERE LOWER(wm.user_email) = %s
+                ORDER BY w.name ASC;
+                """,
+                (user_email.strip().lower(),)
+            )
+            return cursor.fetchall()
+
 class PostgresDocumentRepository(BaseDocumentRepository):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn

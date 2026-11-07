@@ -17,12 +17,12 @@ def test_retrieve_context_without_reranking():
     # Seed document and chunk in SQLite
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO documents (id, user_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            ("99999999-9999-9999-9999-999999999999", user_id, "guide.txt", "mock_path", 120, "text/plain", "completed", "{}")
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            ("99999999-9999-9999-9999-999999999999", user_id, client.workspace_id, "guide.txt", "mock_path", 120, "text/plain", "completed", "{}")
         )
         conn.execute(
-            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?);",
-            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, "Hybrid result content. test query", json.dumps([0.1] * 1536), "{}")
+            "INSERT OR REPLACE INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, client.workspace_id, "Hybrid result content. test query", json.dumps([0.1] * 1536), "{}")
         )
         conn.commit()
 
@@ -52,12 +52,12 @@ def test_retrieve_context_with_reranking(mock_rerank):
     # Seed document and chunk in SQLite
     with get_db_conn() as conn:
         conn.execute(
-            "INSERT INTO documents (id, user_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            ("99999999-9999-9999-9999-999999999999", user_id, "guide.txt", "mock_path", 120, "text/plain", "completed", "{}")
+            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            ("99999999-9999-9999-9999-999999999999", user_id, client.workspace_id, "guide.txt", "mock_path", 120, "text/plain", "completed", "{}")
         )
         conn.execute(
-            "INSERT INTO document_chunks (id, document_id, user_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?);",
-            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, "Hybrid result content. test query", json.dumps([0.1] * 1536), "{}")
+            "INSERT OR REPLACE INTO document_chunks (id, document_id, user_id, workspace_id, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            ("11111111-1111-1111-1111-111111111111", "99999999-9999-9999-9999-999999999999", user_id, client.workspace_id, "Hybrid result content. test query", json.dumps([0.1] * 1536), "{}")
         )
         conn.commit()
 

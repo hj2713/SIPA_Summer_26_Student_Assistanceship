@@ -131,6 +131,20 @@ class SQLiteWorkspaceRepository(BaseWorkspaceRepository):
         cursor.execute("SELECT * FROM workspaces ORDER BY name ASC;")
         return [dict(r) for r in cursor.fetchall()]
 
+    def list_for_user(self, user_email: str) -> List[Dict[str, Any]]:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT w.id, w.name, w.created_by, wm.role
+            FROM workspaces w
+            JOIN workspace_memberships wm ON w.id = wm.workspace_id
+            WHERE LOWER(wm.user_email) = ?
+            ORDER BY w.name ASC;
+            """,
+            (user_email.strip().lower(),)
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
 class SQLiteDocumentRepository(BaseDocumentRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn

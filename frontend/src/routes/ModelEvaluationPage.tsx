@@ -807,6 +807,34 @@ export function ModelEvaluationPage() {
     return () => clearInterval(interval);
   }, [isPolling, id, session]);
 
+  // Lazily fetch trace details for single-model runs if not already in the cell view
+  useEffect(() => {
+    if (!selectedCellView || !campaign?.id || !session?.access_token) return;
+    if (selectedCellView.trace && selectedCellView.trace.length > 0) return;
+
+    let cancelled = false;
+    const fetchLazyTrace = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/${selectedCellView.documentId}/trace`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.workflow_trace) {
+          setSelectedCellView((prev: any) =>
+            prev ? { ...prev, trace: data.workflow_trace, context: data.workflow_context || prev.context } : null
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load trace lazily", err);
+      }
+    };
+    void fetchLazyTrace();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCellView?.documentId, campaign?.id, session?.access_token]);
+
   // Handle campaign creation. When a workflow is selected, dashboard columns come
   // directly from workflow outputs instead of prompt schema extraction.
   const handleCreateCampaign = async (e: React.FormEvent) => {

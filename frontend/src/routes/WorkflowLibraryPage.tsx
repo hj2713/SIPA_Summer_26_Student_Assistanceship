@@ -1,16 +1,33 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpenCheck, Copy, Download, GitBranch, Layers3, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import {
+  GitBranch,
+  Plus,
+  Sparkles,
+  Trash2,
+  Upload,
+  Download,
+  Copy,
+  Search,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
+  Sliders,
+  Workflow,
+  BookOpen,
+  Share2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useAuthContext } from "@/context/AuthContext";
 import { workflowApi } from "@/lib/workflowApi";
 import type { CodingWorkflow, WorkflowTemplate } from "@/types/workflow";
+import { cn } from "@/lib/utils";
 
 function downloadJson(filename: string, value: unknown) {
   const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
@@ -27,9 +44,14 @@ export function WorkflowLibraryPage() {
   const { session, activeWorkspace } = useAuthContext();
   const jwt = session?.access_token || "";
   const workspaceId = activeWorkspace?.id || "";
+
+  const [activeTab, setActiveTab] = useState<"library" | "my_workflows" | "shared">("library");
+  const [searchQuery, setSearchQuery] = useState("");
   const [workflows, setWorkflows] = useState<CodingWorkflow[]>([]);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Dialog states
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -43,18 +65,27 @@ export function WorkflowLibraryPage() {
 
   useEffect(() => {
     if (!jwt || !activeWorkspace?.id) return;
-    const workspaceId = activeWorkspace.id;
+    const currentWorkspaceId = activeWorkspace.id;
     let active = true;
-    Promise.all([workflowApi.list(jwt, workspaceId), workflowApi.listTemplates(jwt, workspaceId)])
+    Promise.all([
+      workflowApi.list(jwt, currentWorkspaceId),
+      workflowApi.listTemplates(jwt, currentWorkspaceId),
+    ])
       .then(([workflowItems, templateItems]) => {
         if (!active) return;
         setWorkflows(workflowItems);
         setTemplates(templateItems);
         setTemplateId((current) => current || templateItems[0]?.id || "");
       })
-      .catch((error) => { if (active) toast.error(error instanceof Error ? error.message : "Failed to load coding workflows"); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .catch((error) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Failed to load coding workflows");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [jwt, activeWorkspace?.id]);
 
   const createWorkflow = async (event: React.FormEvent) => {
@@ -62,7 +93,11 @@ export function WorkflowLibraryPage() {
     if (!name.trim() || !templateId) return;
     setCreating(true);
     try {
-      const workflow = await workflowApi.create({ name: name.trim(), description: description.trim(), template_id: templateId }, jwt, workspaceId);
+      const workflow = await workflowApi.create(
+        { name: name.trim(), description: description.trim(), template_id: templateId },
+        jwt,
+        workspaceId
+      );
       toast.success("Workflow draft created");
       setShowCreate(false);
       navigate(`/workflows/${workflow.id}`);
@@ -108,13 +143,21 @@ export function WorkflowLibraryPage() {
     }
   };
 
-  const duplicateTemplate = async (template: WorkflowTemplate) => {
+  const replicateAndEditTemplate = async (template: WorkflowTemplate) => {
     try {
-      const copy = await workflowApi.duplicateTemplate(template.id, jwt, workspaceId);
-      setTemplates((current) => [copy, ...current]);
-      toast.success("Template duplicated");
+      const workflow = await workflowApi.create(
+        {
+          name: `${template.name} (Copy)`,
+          description: template.description || "Replicated from official library benchmark.",
+          template_id: template.id,
+        },
+        jwt,
+        workspaceId
+      );
+      toast.success(`Workflow created from ${template.name}`);
+      navigate(`/workflows/${workflow.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to duplicate template");
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate workflow");
     }
   };
 
@@ -132,12 +175,16 @@ export function WorkflowLibraryPage() {
     setImporting(true);
     try {
       const parsed = JSON.parse(importJson);
-      const template = await workflowApi.importTemplate({
-        name: parsed.name || "Imported Workflow Template",
-        description: parsed.description || "",
-        category: parsed.category || "Imported",
-        definition: parsed.definition || parsed,
-      }, jwt, workspaceId);
+      const template = await workflowApi.importTemplate(
+        {
+          name: parsed.name || "Imported Workflow Template",
+          description: parsed.description || "",
+          category: parsed.category || "Imported",
+          definition: parsed.definition || parsed,
+        },
+        jwt,
+        workspaceId
+      );
       setTemplates((current) => [template, ...current]);
       setImportJson("");
       setShowImport(false);
@@ -149,125 +196,607 @@ export function WorkflowLibraryPage() {
     }
   };
 
+  const filteredTemplates = templates.filter(
+    (t) =>
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredWorkflows = workflows.filter(
+    (w) =>
+      w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-[#F7F3EE] text-stone-900 overflow-hidden">
       <ThreadSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-7xl p-8">
-          <header className="mb-8 flex items-start justify-between gap-6">
+
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Top Header Bar */}
+        <div className="bg-white border-b border-stone-200 px-8 py-6 shadow-sm">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="mb-2 flex items-center gap-2 text-primary"><GitBranch size={22} /><span className="text-xs font-bold uppercase tracking-[0.18em]">Research method library</span></div>
-              <h1 className="text-3xl font-bold tracking-tight">Coding Workflows</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">Build and test DB-managed research workflows without redeploying for prompt, branch, or output changes.</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="lg" onClick={() => setShowImport(true)}><Upload size={16} /> Import template</Button>
-              <Button size="lg" onClick={() => setShowCreate(true)}><Plus size={16} /> New workflow</Button>
-            </div>
-          </header>
-
-          <div className="mb-7 grid gap-4 md:grid-cols-3">
-            <div 
-              onClick={() => setShowImport(true)}
-              className="rounded-xl border bg-card p-4 cursor-pointer hover:border-violet-500/40 hover:shadow-md transition-all group"
-            >
-              <BookOpenCheck className="mb-3 text-violet-600 group-hover:scale-110 transition-transform" size={20} />
-              <p className="text-sm font-semibold group-hover:text-primary transition-colors">DB-managed templates</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Workflow definitions can be edited, imported, exported, and reused from the database.</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-400 group-hover:underline">
-                Import JSON Template →
-              </span>
+              <div className="flex items-center gap-2 text-[#0B3B36] font-semibold text-xs tracking-wider uppercase mb-1">
+                <Workflow className="h-4 w-4 text-[#E6AA4C]" />
+                <span>Multi-Agent Workflow Pipelines</span>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-stone-900">
+                Coding Workflows
+              </h1>
+              <p className="text-xs text-stone-500 mt-1 max-w-2xl">
+                Chain prompts and deterministic evaluation rules into multi-step pipelines to automate empirical legislative analysis.
+              </p>
             </div>
 
-            <div 
-              onClick={() => setShowCreate(true)}
-              className="rounded-xl border bg-card p-4 cursor-pointer hover:border-amber-500/40 hover:shadow-md transition-all group"
-            >
-              <GitBranch className="mb-3 text-amber-600 group-hover:scale-110 transition-transform" size={20} />
-              <p className="text-sm font-semibold group-hover:text-primary transition-colors">Deterministic + AI logic</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Conditions can skip unnecessary LLM calls and set exact values.</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 group-hover:underline">
-                Create New Workflow →
-              </span>
+            <div className="flex items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl border-stone-300 text-stone-700 hover:bg-stone-100 text-xs gap-1.5 h-9 font-medium"
+                onClick={() => setShowImport(true)}
+              >
+                <Upload className="h-3.5 w-3.5 text-stone-500" />
+                Import JSON
+              </Button>
+              <Button
+                size="sm"
+                className="rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white text-xs gap-1.5 h-9 font-medium shadow-sm"
+                onClick={() => setShowCreate(true)}
+              >
+                <Plus className="h-3.5 w-3.5 text-[#E6AA4C]" />
+                Create Workflow
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 max-w-7xl w-full mx-auto px-8 py-6 space-y-6">
+          {/* Controls Bar: Search & DARE 3-Tab Filter */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
+            {/* 3 Tabs matching DARE */}
+            <div className="flex items-center gap-1 bg-stone-200/60 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveTab("library")}
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5",
+                  activeTab === "library"
+                    ? "bg-white text-[#0B3B36] shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                )}
+              >
+                <BookOpen className="h-3.5 w-3.5 text-[#E6AA4C]" />
+                <span>Library</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-100 text-stone-600 font-mono">
+                  {templates.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("my_workflows")}
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5",
+                  activeTab === "my_workflows"
+                    ? "bg-white text-[#0B3B36] shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                )}
+              >
+                <GitBranch className="h-3.5 w-3.5 text-[#0B3B36]" />
+                <span>My Workflows</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-100 text-stone-600 font-mono">
+                  {workflows.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("shared")}
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5",
+                  activeTab === "shared"
+                    ? "bg-white text-[#0B3B36] shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                )}
+              >
+                <Share2 className="h-3.5 w-3.5 text-stone-500" />
+                <span>Shared With Me</span>
+              </button>
             </div>
 
-            <div 
-              onClick={() => {
-                document.getElementById('workflow-drafts-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="rounded-xl border bg-card p-4 cursor-pointer hover:border-cyan-500/40 hover:shadow-md transition-all group"
-            >
-              <Layers3 className="mb-3 text-cyan-600 group-hover:scale-110 transition-transform" size={20} />
-              <p className="text-sm font-semibold group-hover:text-primary transition-colors">Immutable published versions</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Drafts can change freely; published workflow versions stay auditable.</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 group-hover:underline">
-                Browse Workflow Drafts →
-              </span>
+            {/* Search Input */}
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400" />
+              <input
+                type="text"
+                placeholder="Search workflows & templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-200 bg-white text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#0B3B36]"
+              />
             </div>
           </div>
 
-          <section className="mb-10">
-            <div className="mb-3 flex items-center justify-between">
-              <div><h2 className="text-lg font-bold">Workflow Templates</h2><p className="text-xs text-muted-foreground">These are reusable DB records. Creating a workflow copies template JSON into an editable draft.</p></div>
-            </div>
-            {loading ? <div className="rounded-xl border py-10 text-center text-sm text-muted-foreground">Loading templates…</div> : templates.length === 0 ? (
-              <div className="rounded-xl border border-dashed py-10 text-center text-xs text-muted-foreground">No templates found. Import a JSON template or reload to seed defaults.</div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {templates.map((template) => (
-                  <Card 
-                    key={template.id}
-                    className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
-                    onClick={() => navigate(`/workflows/${template.id}?type=template`)}
-                  >
-                    <CardHeader className="border-b">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <CardTitle>{template.name}</CardTitle>
-                          <CardDescription className="mt-1 line-clamp-2 min-h-10 text-xs">{template.description || "No description yet."}</CardDescription>
-                        </div>
-                        <span className="rounded-full bg-primary/10 px-2 py-1 text-[9px] font-bold uppercase text-primary">{template.category}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-1.5">
-                        {Array.from(new Set(template.definition.nodes.map((node) => node.kind))).map((kind) => <span key={kind} className="rounded bg-muted px-2 py-1 text-[9px] font-medium uppercase text-muted-foreground">{kind.replace("_", " ")}</span>)}
-                      </div>
-                      <div className="mt-4 flex items-center justify-between border-t pt-3 text-[10px] text-muted-foreground">
-                        <span>{template.definition.nodes.length} nodes · rev {template.revision}</span>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon-xs" title="Export JSON" onClick={(e) => { e.stopPropagation(); void exportTemplate(template); }}><Download size={12} /></Button>
-                          <Button variant="ghost" size="icon-xs" title="Duplicate" onClick={(e) => { e.stopPropagation(); void duplicateTemplate(template); }}><Copy size={12} /></Button>
-                          <Button variant="ghost" size="icon-xs" title="Delete" onClick={(e) => { e.stopPropagation(); setDeleteTemplateTarget(template); }}><Trash2 className="text-destructive" size={12} /></Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </section>
+          {/* TAB 1: LIBRARY (Official Frozen Benchmarks) */}
+          {activeTab === "library" && (
+            <div className="space-y-6">
+              {/* Featured Frozen Benchmark Card */}
+              <div className="rounded-2xl border-2 border-[#0B3B36]/20 bg-gradient-to-r from-white via-white to-[#F4ECE2] p-6 shadow-md relative overflow-hidden">
+                <div className="absolute right-4 -top-8 w-40 h-40 bg-[#E6AA4C]/10 rounded-full blur-2xl pointer-events-none" />
+                
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="space-y-2 max-w-3xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#0B3B36] text-white text-[10px] font-bold tracking-wide uppercase flex items-center gap-1">
+                        <Lock className="h-3 w-3 text-[#E6AA4C]" />
+                        Official Frozen Benchmark v1.0
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#E6AA4C]/20 text-[#A26D19] border border-[#E6AA4C]/40 text-[10px] font-bold tracking-wide uppercase flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Verified Peer-Review Standard
+                      </span>
+                    </div>
 
-          <section id="workflow-drafts-section">
-            <h2 className="mb-3 text-lg font-bold">Workflow Drafts</h2>
-            {loading ? <div className="py-20 text-center text-sm text-muted-foreground">Loading workflows…</div> : workflows.length === 0 ? (
-              <div className="rounded-2xl border border-dashed py-20 text-center"><Sparkles className="mx-auto mb-4 text-muted-foreground" size={30} /><h2 className="font-semibold">Create your first reusable coding method</h2><p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">Start from a DB template, then edit and test the copied draft freely.</p><Button className="mt-5" onClick={() => setShowCreate(true)}><Plus size={14} /> Create workflow</Button></div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{workflows.map((workflow) => {
-                const kinds = new Set(workflow.definition.nodes.map((node) => node.kind));
-                return <Card key={workflow.id} className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md" onClick={() => navigate(`/workflows/${workflow.id}`)}><CardHeader className="border-b"><div className="flex items-start justify-between gap-2"><div><CardTitle>{workflow.name}</CardTitle><CardDescription className="mt-1 line-clamp-2 min-h-10 text-xs">{workflow.description || "No description yet."}</CardDescription></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${workflow.status === "published" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{workflow.status}</span></div></CardHeader><CardContent><div className="flex flex-wrap gap-1.5">{Array.from(kinds).map((kind) => <span key={kind} className="rounded bg-muted px-2 py-1 text-[9px] font-medium uppercase text-muted-foreground">{kind.replace("_", " ")}</span>)}</div><div className="mt-4 flex items-center justify-between border-t pt-3 text-[10px] text-muted-foreground"><span>{workflow.definition.nodes.length} nodes · v{workflow.latest_version || "draft"}</span><div className="flex gap-1"><Button variant="ghost" size="icon-xs" title="Duplicate" onClick={(event) => { event.stopPropagation(); void duplicateWorkflow(workflow); }}><Copy size={12} /></Button><Button variant="ghost" size="icon-xs" onClick={(event) => { event.stopPropagation(); setDeleteWorkflowTarget(workflow); }}><Trash2 className="text-destructive" size={12} /></Button></div></div></CardContent></Card>;
-              })}</div>
-            )}
-          </section>
+                    <h2 className="text-xl font-bold text-stone-900 tracking-tight">
+                      O'Halloran Administrative Delegation & Discretion Coder
+                    </h2>
+
+                    <p className="text-xs text-stone-600 leading-relaxed">
+                      Deterministic 2-stage directed pipeline: Node 1 screens statutory text for administrative delegation (<code className="bg-stone-100 px-1 py-0.5 rounded text-stone-800 font-mono">delegate_law</code>). If zero, Node 2 deterministically branches to set <code className="bg-stone-100 px-1 py-0.5 rounded text-stone-800 font-mono">discretion_rank = 0</code> with zero LLM waste. If one, evaluates statutory discretion constraints on a 1–5 scale.
+                    </p>
+
+                    {/* Node Chaining Preview */}
+                    <div className="pt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-stone-700">
+                      <span className="px-2.5 py-1 rounded-lg bg-stone-100 border border-stone-200 font-medium">
+                        1. Statute Ingestion
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-stone-400" />
+                      <span className="px-2.5 py-1 rounded-lg bg-[#0B3B36]/10 text-[#0B3B36] border border-[#0B3B36]/20 font-bold">
+                        2. Delegation Screening
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-stone-400" />
+                      <span className="px-2.5 py-1 rounded-lg bg-[#E6AA4C]/20 text-[#8C590E] border border-[#E6AA4C]/30 font-bold">
+                        3. Branch Logic (delegate==1)
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-stone-400" />
+                      <span className="px-2.5 py-1 rounded-lg bg-[#785D7B]/15 text-[#5A415D] border border-[#785D7B]/30 font-bold">
+                        4. Discretion Classifier (1–5)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      className="rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white text-xs font-bold gap-2 h-10 px-5 shadow-sm"
+                      onClick={() => {
+                        const standardTemplate = templates.find((t) =>
+                          t.name.toLowerCase().includes("delegation")
+                        ) || templates[0];
+                        if (standardTemplate) {
+                          void replicateAndEditTemplate(standardTemplate);
+                        } else {
+                          setShowCreate(true);
+                        }
+                      }}
+                    >
+                      <Sparkles className="h-4 w-4 text-[#E6AA4C]" />
+                      Replicate & Run
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl border-stone-300 text-stone-700 hover:bg-stone-50 text-xs font-semibold gap-1.5 h-10 px-4"
+                      onClick={() => {
+                        const standardTemplate = templates.find((t) =>
+                          t.name.toLowerCase().includes("delegation")
+                        ) || templates[0];
+                        if (standardTemplate) {
+                          navigate(`/workflows/${standardTemplate.id}?type=template`);
+                        }
+                      }}
+                    >
+                      <Sliders className="h-3.5 w-3.5 text-stone-500" />
+                      Inspect Graph
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Template Grid */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-stone-900 tracking-tight">
+                    All Reusable Templates ({filteredTemplates.length})
+                  </h3>
+                  <span className="text-xs text-stone-500">
+                    Imported or seeded DB templates
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="rounded-2xl border border-stone-200 bg-white py-16 text-center text-xs text-stone-500">
+                    Loading workflow templates…
+                  </div>
+                ) : filteredTemplates.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-stone-300 bg-white py-16 text-center text-xs text-stone-500">
+                    No matching templates found.
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {filteredTemplates.map((template) => (
+                      <Card
+                        key={template.id}
+                        className="rounded-2xl border border-stone-200 bg-white hover:border-[#0B3B36]/40 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                        onClick={() => navigate(`/workflows/${template.id}?type=template`)}
+                      >
+                        <CardHeader className="pb-3 border-b border-stone-100">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <CardTitle className="text-sm font-bold text-stone-900">
+                                {template.name}
+                              </CardTitle>
+                              <CardDescription className="text-xs text-stone-500 line-clamp-2">
+                                {template.description || "No description provided."}
+                              </CardDescription>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-[#0B3B36]/10 text-[#0B3B36] text-[9px] font-bold tracking-wider uppercase shrink-0">
+                              {template.category}
+                            </span>
+                          </div>
+                        </CardHeader>
+
+                        <CardContent className="pt-3 pb-3 space-y-3">
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from(new Set(template.definition.nodes.map((n) => n.kind))).map(
+                              (kind) => (
+                                <span
+                                  key={kind}
+                                  className="rounded-md bg-stone-100 px-2 py-0.5 text-[9px] font-medium text-stone-600 uppercase"
+                                >
+                                  {kind.replace("_", " ")}
+                                </span>
+                              )
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-[10px] text-stone-500">
+                            <span>{template.definition.nodes.length} nodes · rev {template.revision}</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-stone-500 hover:text-stone-900"
+                                title="Duplicate into Workflows"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void replicateAndEditTemplate(template);
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-stone-500 hover:text-stone-900"
+                                title="Export JSON"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void exportTemplate(template);
+                                }}
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-stone-500 hover:text-red-600"
+                                title="Delete Template"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTemplateTarget(template);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: MY WORKFLOWS (Custom editable drafts) */}
+          {activeTab === "my_workflows" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-stone-900">Workspace Workflows</h2>
+                  <p className="text-xs text-stone-500">
+                    Draft and published workflow pipelines editable inside this workspace.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white text-xs gap-1.5 h-8 font-medium"
+                  onClick={() => setShowCreate(true)}
+                >
+                  <Plus className="h-3.5 w-3.5 text-[#E6AA4C]" />
+                  New Draft
+                </Button>
+              </div>
+
+              {loading ? (
+                <div className="rounded-2xl border border-stone-200 bg-white py-16 text-center text-xs text-stone-500">
+                  Loading workspace workflows…
+                </div>
+              ) : filteredWorkflows.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-stone-300 bg-white py-16 text-center space-y-3">
+                  <Sparkles className="h-8 w-8 text-[#E6AA4C] mx-auto" />
+                  <h3 className="text-sm font-bold text-stone-800">No custom workflows yet</h3>
+                  <p className="text-xs text-stone-500 max-w-md mx-auto">
+                    Start by replicating the official O'Halloran template or create a new blank graph.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white text-xs"
+                    onClick={() => setShowCreate(true)}
+                  >
+                    Create Workflow
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredWorkflows.map((workflow) => {
+                    const kinds = new Set(workflow.definition.nodes.map((n) => n.kind));
+                    return (
+                      <Card
+                        key={workflow.id}
+                        className="rounded-2xl border border-stone-200 bg-white hover:border-[#0B3B36]/40 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                        onClick={() => navigate(`/workflows/${workflow.id}`)}
+                      >
+                        <CardHeader className="pb-3 border-b border-stone-100">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <CardTitle className="text-sm font-bold text-stone-900">
+                                {workflow.name}
+                              </CardTitle>
+                              <CardDescription className="text-xs text-stone-500 line-clamp-2">
+                                {workflow.description || "No description provided."}
+                              </CardDescription>
+                            </div>
+                            <span
+                              className={cn(
+                                "px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase shrink-0",
+                                workflow.status === "published"
+                                  ? "bg-emerald-500/10 text-emerald-700"
+                                  : "bg-[#E6AA4C]/20 text-[#A26D19]"
+                              )}
+                            >
+                              {workflow.status}
+                            </span>
+                          </div>
+                        </CardHeader>
+
+                        <CardContent className="pt-3 pb-3 space-y-3">
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from(kinds).map((kind) => (
+                              <span
+                                key={kind}
+                                className="rounded-md bg-stone-100 px-2 py-0.5 text-[9px] font-medium text-stone-600 uppercase"
+                              >
+                                {kind.replace("_", " ")}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-[10px] text-stone-500">
+                            <span>
+                              {workflow.definition.nodes.length} nodes · v{workflow.latest_version || "draft"}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-stone-500 hover:text-stone-900"
+                                title="Duplicate"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void duplicateWorkflow(workflow);
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-stone-500 hover:text-red-600"
+                                title="Delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteWorkflowTarget(workflow);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: SHARED WITH ME */}
+          {activeTab === "shared" && (
+            <div className="rounded-2xl border border-dashed border-stone-300 bg-white py-16 text-center space-y-3">
+              <Share2 className="h-8 w-8 text-stone-400 mx-auto" />
+              <h3 className="text-sm font-bold text-stone-800">No shared pipelines</h3>
+              <p className="text-xs text-stone-500 max-w-md mx-auto">
+                Workflows shared across your lab or invited collaborators will appear here.
+              </p>
+            </div>
+          )}
         </div>
       </main>
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Create coding workflow</DialogTitle></DialogHeader><form className="space-y-5" onSubmit={createWorkflow}><div><label className="text-xs font-bold uppercase text-muted-foreground">Workflow name</label><Input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Law Delegation + Discretion Rank" className="mt-1" required /></div><div><label className="text-xs font-bold uppercase text-muted-foreground">Description</label><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What research method does this workflow implement?" rows={3} className="mt-1 w-full rounded-md border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" /></div><div><label className="text-xs font-bold uppercase text-muted-foreground">Starting template</label><div className="mt-2 grid max-h-72 gap-3 overflow-y-auto sm:grid-cols-2">{templates.map((template) => <button key={template.id} type="button" onClick={() => setTemplateId(template.id)} className={`rounded-xl border p-4 text-left ${templateId === template.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}><BookOpenCheck className="mb-2 text-primary" size={18} /><p className="text-xs font-semibold">{template.name}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{template.description || `${template.definition.nodes.length} node template`}</p></button>)}</div></div><div className="flex justify-end gap-2 border-t pt-4"><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button><Button type="submit" disabled={creating || !templateId}>{creating ? "Creating…" : "Create draft"}</Button></div></form></DialogContent></Dialog>
+      {/* Create Workflow Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="sm:max-w-xl rounded-2xl border-stone-200 bg-white text-stone-900 p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-stone-900">
+              Create New Workflow
+            </DialogTitle>
+            <DialogDescription className="text-xs text-stone-500">
+              Configure a research pipeline draft by cloning a standard template.
+            </DialogDescription>
+          </DialogHeader>
 
-      <Dialog open={showImport} onOpenChange={setShowImport}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Import workflow template JSON</DialogTitle></DialogHeader><form className="space-y-4" onSubmit={importTemplate}><p className="text-xs leading-relaxed text-muted-foreground">Paste an exported workflow-template JSON object. If you paste only a workflow definition, it will be imported as “Imported Workflow Template”.</p><textarea value={importJson} onChange={(event) => setImportJson(event.target.value)} rows={14} placeholder='{"name":"My Template","definition":{"schema_version":1,"nodes":[],"edges":[],"outputs":[],"viewport":{"x":0,"y":0,"zoom":1}}}' className="w-full rounded-md border bg-background p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-primary/30" required /><div className="flex justify-end gap-2 border-t pt-4"><Button type="button" variant="outline" onClick={() => setShowImport(false)}>Cancel</Button><Button type="submit" disabled={importing || !importJson.trim()}>{importing ? "Importing…" : "Import template"}</Button></div></form></DialogContent></Dialog>
+          <form className="space-y-4 pt-2" onSubmit={createWorkflow}>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-stone-600">
+                Workflow Name
+              </label>
+              <Input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. 1990s Banking Act Delegation Analysis"
+                className="mt-1 rounded-xl text-xs bg-stone-50"
+                required
+              />
+            </div>
 
-      <ConfirmationDialog open={deleteWorkflowTarget !== null} onOpenChange={(open) => !open && setDeleteWorkflowTarget(null)} title="Delete coding workflow" description={`Delete “${deleteWorkflowTarget?.name || "this workflow"}”? Its published versions will also be removed. Existing campaigns are unaffected because workflow adoption is not enabled yet.`} confirmText="Delete workflow" variant="destructive" onConfirm={deleteWorkflow} />
-      <ConfirmationDialog open={deleteTemplateTarget !== null} onOpenChange={(open) => !open && setDeleteTemplateTarget(null)} title="Delete workflow template" description={`Delete “${deleteTemplateTarget?.name || "this template"}”? Existing workflow drafts copied from it are unaffected.`} confirmText="Delete template" variant="destructive" onConfirm={deleteTemplate} />
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-stone-600">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What research hypothesis or legislative corpus does this analyze?"
+                rows={2}
+                className="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 p-2.5 text-xs text-stone-800 outline-none focus:ring-2 focus:ring-[#0B3B36]"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-stone-600">
+                Starting Template
+              </label>
+              <div className="mt-1.5 grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
+                {templates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => setTemplateId(template.id)}
+                    className={cn(
+                      "rounded-xl border p-3 text-left transition-all",
+                      templateId === template.id
+                        ? "border-[#0B3B36] bg-[#0B3B36]/5 ring-1 ring-[#0B3B36]"
+                        : "border-stone-200 hover:bg-stone-50"
+                    )}
+                  >
+                    <div className="font-bold text-xs text-stone-900">{template.name}</div>
+                    <div className="text-[10px] text-stone-500 mt-1 line-clamp-2">
+                      {template.description || `${template.definition.nodes.length} node template`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs"
+                onClick={() => setShowCreate(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white text-xs font-semibold"
+                disabled={creating || !templateId}
+              >
+                {creating ? "Creating…" : "Create Draft"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Template Dialog */}
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="sm:max-w-2xl rounded-2xl border-stone-200 bg-white text-stone-900 p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-stone-900">
+              Import Workflow Template JSON
+            </DialogTitle>
+            <DialogDescription className="text-xs text-stone-500">
+              Paste an exported workflow template JSON definition to import into your workspace.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="space-y-4 pt-2" onSubmit={importTemplate}>
+            <textarea
+              value={importJson}
+              onChange={(e) => setImportJson(e.target.value)}
+              rows={12}
+              placeholder='{"name":"Custom Pipeline","definition":{"schema_version":1,"nodes":[],"edges":[]}}'
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3 font-mono text-xs text-stone-800 outline-none focus:ring-2 focus:ring-[#0B3B36]"
+              required
+            />
+            <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs"
+                onClick={() => setShowImport(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white text-xs font-semibold"
+                disabled={importing || !importJson.trim()}
+              >
+                {importing ? "Importing…" : "Import Template"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmationDialog
+        open={deleteWorkflowTarget !== null}
+        onOpenChange={(open) => !open && setDeleteWorkflowTarget(null)}
+        title="Delete coding workflow"
+        description={`Delete “${deleteWorkflowTarget?.name || "this workflow"}”? Its published versions will also be removed.`}
+        confirmText="Delete workflow"
+        variant="destructive"
+        onConfirm={deleteWorkflow}
+      />
+      <ConfirmationDialog
+        open={deleteTemplateTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTemplateTarget(null)}
+        title="Delete workflow template"
+        description={`Delete “${deleteTemplateTarget?.name || "this template"}”? Existing workflow drafts copied from it are unaffected.`}
+        confirmText="Delete template"
+        variant="destructive"
+        onConfirm={deleteTemplate}
+      />
     </div>
   );
 }

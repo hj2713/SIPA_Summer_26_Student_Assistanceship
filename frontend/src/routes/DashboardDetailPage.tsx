@@ -1562,55 +1562,55 @@ export function DashboardDetailPage() {
   const pending = statusSummary.pending;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F7F3EE] text-stone-900">
       <ThreadSidebar />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Detail Page Header */}
-        <div className="border-b bg-card px-6 py-4 flex justify-between items-center shadow-sm">
+        <div className="border-b border-stone-200 bg-white px-6 py-4 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => navigate("/campaigns")}
-              className="rounded-full hover:bg-muted"
+              className="rounded-full hover:bg-stone-100 text-stone-600"
             >
               <ArrowLeft size={18} />
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold tracking-tight">{campaign?.name}</h2>
+                <h2 className="text-xl font-bold tracking-tight text-stone-900">{campaign?.name}</h2>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => setShowPromptModal(true)}
-                  className="h-7 text-xs gap-1 border-muted-foreground/20 hover:bg-muted"
+                  className="h-7 text-xs gap-1 border-stone-300 text-stone-700 hover:bg-stone-50 rounded-lg"
                 >
-                  <BookOpen size={12} /> View Codebook
+                  <BookOpen size={12} className="text-[#0B3B36]" /> View Codebook
                 </Button>
               </div>
               <div className="relative group/desc">
                 <p 
-                  className="text-muted-foreground text-xs line-clamp-1 mt-0.5 max-w-2xl cursor-pointer hover:text-foreground transition-colors pr-6 select-none"
+                  className="text-stone-500 text-xs line-clamp-1 mt-0.5 max-w-2xl cursor-pointer hover:text-stone-800 transition-colors pr-6 select-none"
                   title="Hover or click to view full description"
                 >
                   {campaign?.description}
                 </p>
                 {/* Expand hover/click popover */}
-                <div className="absolute left-0 top-full mt-1.5 hidden group-hover/desc:block z-50 w-96 bg-card border border-border rounded-lg p-3 text-xs text-foreground shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 leading-relaxed max-h-48 overflow-y-auto">
-                  <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Campaign Description</div>
+                <div className="absolute left-0 top-full mt-1.5 hidden group-hover/desc:block z-50 w-96 bg-white border border-stone-200 rounded-xl p-3 text-xs text-stone-800 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 leading-relaxed max-h-48 overflow-y-auto">
+                  <div className="font-semibold text-stone-400 text-[10px] uppercase tracking-wider mb-1">Campaign Description</div>
                   {campaign?.description}
                 </div>
               </div>
               {usageStats && (
-                <div className="flex items-center gap-3 mt-2.5 text-[11px] text-muted-foreground flex-wrap">
-                  <span className="flex items-center gap-1 bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400 px-2 py-0.5 rounded border border-violet-500/20 font-semibold shadow-sm">
+                <div className="flex items-center gap-3 mt-2.5 text-[11px] text-stone-600 flex-wrap">
+                  <span className="flex items-center gap-1 bg-[#E6AA4C]/15 text-[#A26D19] px-2 py-0.5 rounded-lg border border-[#E6AA4C]/30 font-semibold shadow-sm">
                     <Coins size={11} /> Cost: ${usageStats.total_cost.toFixed(5)}
                   </span>
-                  <span className="flex items-center gap-1 bg-muted/60 px-2 py-0.5 rounded border border-border shadow-sm">
+                  <span className="flex items-center gap-1 bg-stone-100 text-stone-600 px-2 py-0.5 rounded-lg border border-stone-200 shadow-sm">
                     Prompt Tokens: {usageStats.input_tokens.toLocaleString()}
                   </span>
-                  <span className="flex items-center gap-1 bg-muted/60 px-2 py-0.5 rounded border border-border shadow-sm">
+                  <span className="flex items-center gap-1 bg-stone-100 text-stone-600 px-2 py-0.5 rounded-lg border border-stone-200 shadow-sm">
                     Completion Tokens: {usageStats.output_tokens.toLocaleString()}
                   </span>
                 </div>
@@ -1679,14 +1679,14 @@ export function DashboardDetailPage() {
 
         {/* Dashboard Progress Banner */}
         {total > 0 && (
-          <div className="px-6 py-2.5 bg-muted/40 border-b flex justify-between items-center text-xs">
+          <div className="px-6 py-2.5 bg-stone-100/90 border-b border-stone-200 flex justify-between items-center text-xs text-stone-700">
             <div className="flex items-center gap-4">
-              <span className="font-semibold text-muted-foreground">Sequential Coding Progress:</span>
+              <span className="font-semibold text-stone-500">Sequential Coding Progress:</span>
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-emerald-500" /> Completed: {completed}/{total}</span>
-                {processing > 0 && <span className="flex items-center gap-1 text-primary"><Loader2 size={12} className="animate-spin" /> Processing: {processing}</span>}
-                {pending > 0 && <span className="flex items-center gap-1 text-amber-500"><Loader2 size={12} /> Pending: {pending}</span>}
-                {failed > 0 && <span className="flex items-center gap-1 text-destructive font-semibold"><AlertCircle size={12} /> Failed: {failed}</span>}
+                <span className="flex items-center gap-1 font-medium"><CheckCircle size={12} className="text-emerald-600" /> Completed: {completed}/{total}</span>
+                {processing > 0 && <span className="flex items-center gap-1 text-[#0B3B36] font-medium"><Loader2 size={12} className="animate-spin" /> Processing: {processing}</span>}
+                {pending > 0 && <span className="flex items-center gap-1 text-[#E6AA4C] font-medium"><Loader2 size={12} /> Pending: {pending}</span>}
+                {failed > 0 && <span className="flex items-center gap-1 text-red-600 font-semibold"><AlertCircle size={12} /> Failed: {failed}</span>}
               </div>
             </div>
 

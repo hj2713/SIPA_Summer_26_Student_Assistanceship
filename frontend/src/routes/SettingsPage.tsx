@@ -4,7 +4,7 @@ import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, TrendingUp, Cpu, Coins, KeyRound, ShieldCheck, Users, UserPlus } from "lucide-react";
+import { Loader2, TrendingUp, Cpu, Coins, KeyRound, ShieldCheck, Users, UserPlus, Plus } from "lucide-react";
 import { API_BASE_URL } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 import { HeaderBar } from "@/components/ui/HeaderBar";
@@ -320,65 +320,137 @@ export function SettingsPage() {
     : 0;
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-[#F7F3EE] text-stone-900 overflow-hidden">
       <ThreadSidebar />
       
       <div className="flex-1 flex flex-col overflow-y-auto w-full">
-        <HeaderBar title="Usage & Settings" description="Manage Google Auth linking, team workspace invitations, and LLM credentials." />
+        <HeaderBar title="Cost Tracking & BYOK Vault" description="Manage LLM provider credentials, token expenses, Google OAuth, and workspace permissions." />
 
-        <div className="p-8 max-w-6xl mx-auto w-full space-y-8">
-          {/* Header Controls */}
-          <div className="flex justify-between items-center border-b pb-4 border-border/50">
-            <div>
-              <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                Platform Overview
+        <div className="p-8 max-w-6xl mx-auto w-full space-y-6">
+          {/* DARE-Style Hero Banner */}
+          <div className="rounded-2xl bg-gradient-to-r from-[#0B3B36] via-[#0E4F47] to-[#12584F] text-white p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full bg-[#E6AA4C] text-[#0B3B36] text-[10px] font-bold uppercase tracking-wider">
+                  Academic Routing
+                </span>
+                <span className="text-xs text-stone-300 font-medium">
+                  Workspace: <strong className="text-white">{activeWorkspace?.name}</strong>
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <Coins className="h-6 w-6 text-[#E6AA4C]" />
+                Research Wallet & Cost Tracking
               </h1>
-              <p className="text-muted-foreground text-xs mt-0.5">
-                Workspace: <strong className="text-foreground">{activeWorkspace?.name}</strong> • User: <strong className="text-foreground">{user?.email}</strong>
+              <p className="text-xs text-stone-300 max-w-xl leading-relaxed">
+                Platform Wallet Initial Balance: <strong className="text-[#E6AA4C] font-mono text-sm">$20.00</strong>. Or connect your own OpenRouter, OpenAI, Gemini, or LiteLLM proxy keys with AES-256-GCM encryption.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="flex gap-1 border border-border/60 rounded-xl p-1 bg-muted/40 text-xs">
-                <Button
-                  variant={usageScope === "personal" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setUsageScope("personal")}
-                  className="text-xs h-7 rounded-lg"
-                >
-                  👤 My Personal Usage
-                </Button>
-                <Button
-                  variant={usageScope === "workspace" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setUsageScope("workspace")}
-                  className="text-xs h-7 rounded-lg"
-                >
-                  🏢 Workspace Team Usage
-                </Button>
-                <Button
-                  variant={usageScope === "personal_in_workspace" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setUsageScope("personal_in_workspace")}
-                  className="text-xs h-7 rounded-lg"
-                >
-                  🎯 My Usage in {activeWorkspace?.name || "Workspace"}
-                </Button>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const target = document.getElementById("provider-credentials-section");
+                  target?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="h-9 px-3.5 rounded-xl border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold gap-1.5"
+              >
+                + LiteLLM Key
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const target = document.getElementById("provider-credentials-section");
+                  target?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="h-9 px-4 rounded-xl bg-[#E6AA4C] hover:bg-[#d89b35] text-[#0B3B36] text-xs font-bold gap-1.5 shadow-sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add BYO Key
+              </Button>
+            </div>
+          </div>
 
-              <div className="flex gap-1 border border-border/60 rounded-xl p-1 bg-muted/40">
-                {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
-                  <Button
-                    key={t}
-                    variant={timeframe === t ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeframe(t)}
-                    className="text-xs h-7 rounded-lg"
-                  >
-                    {t.replace(/_/g, " ")}
-                  </Button>
-                ))}
+          {/* DARE-Style 3-Card Stack */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <Coins className="h-4 w-4 text-[#E6AA4C]" />
+                  Platform Wallet
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
+                  Active
+                </span>
               </div>
+              <div className="text-xl font-black text-stone-900 font-mono">$20.00</div>
+              <p className="text-[10px] text-stone-500">Departmental seed balance for test runs.</p>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-[#0B3B36]" />
+                  LiteLLM Gateway
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">
+                  Ready
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-stone-700 pt-1">Proxy Architecture</div>
+              <p className="text-[10px] text-stone-500">Centralized routing through lab proxy endpoints.</p>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <KeyRound className="h-4 w-4 text-[#785D7B]" />
+                  BYOK Cipher Vault
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6AA4C]/20 text-[#A26D19]">
+                  AES-256-GCM
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-stone-700 pt-1">Direct Provider Keys</div>
+              <p className="text-[10px] text-stone-500">Encrypted at rest with strict user isolation.</p>
+            </div>
+          </div>
+
+          {/* Controls Bar for Scope & Timeframe */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
+            <div className="flex gap-1 border border-stone-200 rounded-xl p-1 bg-stone-100/70 text-xs">
+              <Button
+                variant={usageScope === "personal" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setUsageScope("personal")}
+                className="text-xs h-7 rounded-lg font-medium"
+              >
+                👤 My Usage
+              </Button>
+              <Button
+                variant={usageScope === "workspace" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setUsageScope("workspace")}
+                className="text-xs h-7 rounded-lg font-medium"
+              >
+                🏢 Workspace Usage
+              </Button>
+            </div>
+
+            <div className="flex gap-1 border border-stone-200 rounded-xl p-1 bg-stone-100/70">
+              {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
+                <Button
+                  key={t}
+                  variant={timeframe === t ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setTimeframe(t)}
+                  className="text-xs h-7 rounded-lg capitalize font-medium"
+                >
+                  {t.replace(/_/g, " ")}
+                </Button>
+              ))}
             </div>
           </div>
 
@@ -580,17 +652,17 @@ export function SettingsPage() {
               </Card>
             )}
 
-            <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-6">
+            <Card id="provider-credentials-section" className="p-6 border border-stone-200 bg-white rounded-2xl shadow-sm space-y-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <KeyRound className="h-5 w-5 text-indigo-500" />
-                    <h3 className="font-bold text-base text-foreground tracking-tight">
+                    <KeyRound className="h-5 w-5 text-[#0B3B36]" />
+                    <h3 className="font-bold text-base text-stone-900 tracking-tight">
                       LLM Provider Credentials & Key Verification
                     </h3>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Enter API keys for your preferred LLM providers. Each key is tested with a live test call and securely encrypted in the database.
+                  <p className="text-xs text-stone-500 mt-1">
+                    Enter API keys for your preferred LLM providers. Each key is tested with a live test call and securely encrypted in the database with AES-256-GCM.
                   </p>
                 </div>
               </div>
@@ -649,7 +721,7 @@ export function SettingsPage() {
                               size="sm"
                               disabled={isTesting || !currentInput.trim()}
                               onClick={() => handleVerifyAndSaveProviderKey(provider.id, currentInput)}
-                              className="h-8 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-95 shadow-sm"
+                              className="h-8 text-xs font-semibold rounded-xl bg-[#0B3B36] text-white hover:bg-[#0B3B36]/90 shadow-sm"
                             >
                               {isTesting ? "Testing API Call..." : "Test & Save API Key"}
                             </Button>

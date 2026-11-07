@@ -19,19 +19,19 @@ export function HeaderBar({ title, description }: { title?: string; description?
 
   return (
     <>
-      <header className="h-14 border-b border-border/50 bg-card/60 backdrop-blur-md px-6 flex items-center justify-between z-20 sticky top-0 transition-colors">
+      <header className="h-14 border-b border-stone-200 bg-white px-6 flex items-center justify-between z-20 sticky top-0 transition-colors shadow-xs">
         <div className="flex items-center gap-3">
           {title ? (
             <div>
-              <h1 className="text-sm font-semibold text-foreground tracking-tight">{title}</h1>
-              {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
+              <h1 className="text-sm font-bold text-stone-900 tracking-tight">{title}</h1>
+              {description && <p className="text-[11px] text-stone-500">{description}</p>}
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+              <div className="h-7 w-7 rounded-lg bg-[#0B3B36] text-white flex items-center justify-center font-bold text-xs shadow-sm">
                 LD
               </div>
-              <span className="font-semibold text-sm tracking-tight text-foreground">Law Delegation Platform</span>
+              <span className="font-bold text-sm tracking-tight text-stone-900">Law Delegation Platform</span>
             </div>
           )}
         </div>
@@ -41,23 +41,22 @@ export function HeaderBar({ title, description }: { title?: string; description?
           <button
             type="button"
             onClick={() => setCiteModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 text-xs font-semibold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-[#785D7B]/30 bg-[#785D7B]/10 text-[#5A415D] hover:bg-[#785D7B]/20 text-xs font-semibold transition-all shadow-xs"
           >
             <Quote className="w-3.5 h-3.5" />
             <span>Cite Us</span>
           </button>
 
           {/* Workspace Chip */}
+          {activeWorkspace && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0B3B36]/10 border border-[#0B3B36]/20 text-xs font-semibold text-[#0B3B36] shadow-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{activeWorkspace.name}</span>
+            </div>
+          )}
 
-        {activeWorkspace && (
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary shadow-xs">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>{activeWorkspace.name}</span>
-          </div>
-        )}
-
-        {/* Theme Toggle Button */}
-        <ThemeToggle />
+          {/* Theme Toggle Button */}
+          <ThemeToggle />
 
         {/* User Account Menu */}
         {user && (

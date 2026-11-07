@@ -48,28 +48,32 @@ export function LoginForm() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 bg-background overflow-hidden selection:bg-primary/20">
-      {/* Background Decorative Gradients */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-500/15 to-violet-500/15 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[350px] h-[350px] bg-gradient-to-br from-cyan-500/10 to-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
+    <div className="relative min-h-screen flex items-center justify-center p-4 bg-[#F7F3EE] text-stone-900 overflow-hidden selection:bg-[#E6AA4C]/30">
+      {/* Background Decorative Warm Accents */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-[#0B3B36]/10 to-[#E6AA4C]/15 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[350px] h-[350px] bg-[#785D7B]/10 blur-[100px] rounded-full pointer-events-none" />
 
       {/* Top Header Controls */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md relative z-10 glass-panel border border-border/60 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-xl">
+      <Card className="w-full max-w-md relative z-10 bg-white border border-stone-200 shadow-xl rounded-2xl overflow-hidden">
         <CardHeader className="text-center pb-2 pt-8">
-          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-[#0B3B36] text-[#E6AA4C] flex items-center justify-center shadow-md font-black">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+              <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+              <path d="M7 21h10"/>
+              <path d="M12 3v18"/>
+              <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
             </svg>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-            Law Delegation Portal
+          <CardTitle className="text-2xl font-bold tracking-tight text-stone-900">
+            Law Delegation Platform
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground mt-1">
-            Enterprise Legal RAG & Autonomous Workflow Platform
+          <CardDescription className="text-xs text-stone-500 mt-1">
+            Columbia SIPA · Empirical Legislative Coding Workbench
           </CardDescription>
         </CardHeader>
 
@@ -78,7 +82,7 @@ export function LoginForm() {
           <Button
             type="button"
             variant="outline"
-            className="w-full h-11 border-border/80 hover:bg-muted/80 font-medium text-sm gap-3 rounded-xl transition-all shadow-sm group"
+            className="w-full h-11 border-stone-300 hover:bg-stone-50 font-medium text-xs gap-3 rounded-xl transition-all shadow-xs group text-stone-700"
             onClick={() => handleGoogleSignIn()}
             disabled={googleLoading || loading}
           >
@@ -149,7 +153,7 @@ export function LoginForm() {
 
             <Button
               type="submit"
-              className="w-full h-11 font-semibold text-sm rounded-xl bg-primary text-primary-foreground hover:opacity-95 shadow-md shadow-primary/20 transition-all mt-2"
+              className="w-full h-11 font-semibold text-xs rounded-xl bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white shadow-sm transition-all mt-2"
               disabled={loading || googleLoading}
             >
               {loading ? "Authenticating…" : "Sign In to Workspace"}
@@ -160,7 +164,7 @@ export function LoginForm() {
           <div className="pt-2 text-center">
             <button
               type="button"
-              className="text-xs text-primary/80 hover:text-primary hover:underline font-medium transition-colors"
+              className="text-xs text-[#0B3B36] hover:underline font-semibold transition-colors"
               onClick={() => {
                 setEmail("test@test.com");
                 setPassword("test123456");

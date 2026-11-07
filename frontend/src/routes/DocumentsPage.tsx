@@ -864,34 +864,34 @@ export function DocumentsPage() {
   const globalFailedDocs = documents.filter((d) => d.status === "failed");
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F7F3EE] text-stone-900">
       <ThreadSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <HeaderBar title="Documents & Dashboards" description="Ingest files, explore directory trees, and analyze metadata dashboards." />
+        <HeaderBar title="Law Corpus & Sources" description="Ingest public laws, explore statute directory trees, and prepare text for RAG pipelines." />
         
         {/* Tab Switcher Header Bar */}
-        <div className="px-8 pt-3 border-b border-border/50 bg-card/30 flex items-center gap-4 shrink-0">
+        <div className="px-8 pt-3 border-b border-stone-200 bg-white flex items-center gap-4 shrink-0 shadow-xs">
           <button
             onClick={() => setTab("files")}
             type="button"
             className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 ${
               activeTab === "files"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-[#0B3B36] text-[#0B3B36]"
+                : "border-transparent text-stone-500 hover:text-stone-900"
             }`}
           >
-            📄 Manage & Ingest Files
+            📄 Statutes & Public Laws ({documents.length})
           </button>
           <button
             onClick={() => setTab("dashboard")}
             type="button"
             className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 ${
               activeTab === "dashboard"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-[#0B3B36] text-[#0B3B36]"
+                : "border-transparent text-stone-500 hover:text-stone-900"
             }`}
           >
-            📊 Dashboards & Analytics
+            📊 Corpus Analytics & Indexing
           </button>
         </div>
 

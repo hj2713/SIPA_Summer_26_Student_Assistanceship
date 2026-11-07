@@ -1466,7 +1466,7 @@ export function ModelEvaluationPage() {
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground animate-fade-in">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F7F3EE] text-stone-900 animate-fade-in">
       <ThreadSidebar />
 
       {/* Main Container */}
@@ -1476,18 +1476,18 @@ export function ModelEvaluationPage() {
         {campaign ? (
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header Detail Dashboard */}
-            <div className="border-b bg-card/40 backdrop-blur-md px-8 py-5 flex items-center justify-between z-10">
+            <div className="border-b border-stone-200 bg-white px-8 py-5 flex items-center justify-between z-10 shadow-sm">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/evaluation")} className="text-xs h-6 px-1.5 gap-1 text-muted-foreground hover:text-primary">
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/evaluation")} className="text-xs h-6 px-1.5 gap-1 text-stone-500 hover:text-[#0B3B36]">
                     &larr; Back
                   </Button>
-                  <span className="text-[10px] uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#0B3B36] bg-[#0B3B36]/10 px-2.5 py-0.5 rounded-full">
                     Model Evaluation Run
                   </span>
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight">{campaign.name}</h1>
-                <p className="text-xs text-muted-foreground line-clamp-1">{campaign.description}</p>
+                <h1 className="text-2xl font-bold tracking-tight text-stone-900">{campaign.name}</h1>
+                <p className="text-xs text-stone-500 line-clamp-1">{campaign.description}</p>
               </div>
 
               <div className="flex items-center gap-3">

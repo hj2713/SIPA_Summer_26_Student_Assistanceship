@@ -191,6 +191,7 @@ export function DashboardDetailPage() {
   const [polling, setPolling] = useState(false);
   const [statusSummary, setStatusSummary] = useState<CampaignStatusSummary>({ total: 0, pending: 0, processing: 0, completed: 0, failed: 0 });
   const lastPageRefreshRef = useRef(0);
+  const prevStatusSummaryRef = useRef<CampaignStatusSummary | null>(null);
 
   // Selection states
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
@@ -551,17 +552,29 @@ export function DashboardDetailPage() {
     }
   };
 
-  // Initialization
+  // Initialization - campaign metadata, thread, and usage on load
   useEffect(() => {
     if (id && jwt) {
       void fetchCampaign();
-      void fetchDocuments();
       void fetchStatusSummary();
-      void fetchGlobalDocuments();
       void fetchCampaignThread();
       void fetchCampaignUsage();
     }
+  }, [id, jwt]);
+
+  // Fetch documents whenever campaign ID, token, or page changes
+  useEffect(() => {
+    if (id && jwt) {
+      void fetchDocuments();
+    }
   }, [id, jwt, documentPage]);
+
+  // Fetch global workspace documents lazily only when link modal is opened
+  useEffect(() => {
+    if (showLinkModal && id && jwt) {
+      void fetchGlobalDocuments();
+    }
+  }, [showLinkModal, id, jwt]);
 
   // Reset link search query on close
   useEffect(() => {
@@ -571,7 +584,7 @@ export function DashboardDetailPage() {
   }, [showLinkModal]);
 
   // Poll a tiny aggregate endpoint while coding is active. Refresh the visible
-  // rows every 5 seconds so the user sees progress steps in real time.
+  // rows only when active items change or complete.
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -581,8 +594,24 @@ export function DashboardDetailPage() {
       const summary = await fetchStatusSummary();
       if (cancelled || !summary) return;
       const active = summary.pending > 0 || summary.processing > 0;
-      await fetchDocuments(true);
-      void fetchCampaignUsage();
+      const prev = prevStatusSummaryRef.current;
+      prevStatusSummaryRef.current = summary;
+
+      const now = Date.now();
+      const finishedChanged =
+        !prev ||
+        prev.completed !== summary.completed ||
+        prev.failed !== summary.failed ||
+        prev.total !== summary.total;
+      const periodicRefreshDue = now - lastPageRefreshRef.current > 20000;
+
+      // Only re-fetch document rows if something finished, count changed, run completed, or 20s elapsed
+      if (finishedChanged || !active || periodicRefreshDue) {
+        await fetchDocuments(true);
+        void fetchCampaignUsage();
+        lastPageRefreshRef.current = now;
+      }
+
       if (active && !cancelled) {
         timeoutId = setTimeout(poll, 5000);
       }

@@ -2,6 +2,17 @@
 
 This file records project decisions that future agents should preserve unless the user deliberately changes direction.
 
+## 2026-11-06 - Atomic Merging for Concurrent Model Evaluation Outputs
+
+Decision:
+All writes to `dashboard_documents.coded_values` when multiple models run concurrently on the same document must perform atomic dictionary merges against the latest database record rather than persisting an in-memory snapshot captured at worker task startup.
+
+Reason:
+Fast models (e.g. DeepSeek, Flash) finish in ~15–20 seconds, while large/reasoning models (e.g. GPT-5.5) take 2–3 minutes. If the slower task holds a stale snapshot from task start, serializing its in-memory dictionary on completion overwrites all fields written by faster models in the interim.
+
+Implication:
+[`WorkflowDashboardService.run_model_comparison_parallel`](file:///Users/himanshujhawar/Desktop/Developing/Law%20Delegation/backend/app/services/workflow_dashboard_service.py#L640-L830) and repository methods updating `coded_values` must re-query the latest `coded_values` string from `dashboard_documents` right before writing, merge the completed model's payload into that dict, and write back the merged result, or use PostgreSQL `jsonb_set` / row-level locks (`FOR UPDATE`).
+
 ## 2026-06-20 - Stable Docs Are Not Issue Logs
 
 Decision:

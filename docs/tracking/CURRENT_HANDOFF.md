@@ -1,8 +1,23 @@
 # Current Project Handoff
 
-Last updated: 2026-06-24
+Last updated: 2026-11-06
 
 This is the short context file to give a new agent before continuing work.
+
+## Latest Evaluation & Background Worker Concurrency Finding (2026-11-06)
+
+During diagnosis of evaluation `4568634e-6d67-4ce7-98a3-61dc0c619707` (`https://law-delegation.vercel.app/evaluation/4568634e-6d67-4ce7-98a3-61dc0c619707` on document `15 Laws Summary/PL107-123_2001_Investor_CapitalMarketsFeeReliefAct.txt`), we verified the cloud queue and worker architecture:
+
+- **Queue Architecture**: Document evaluation runs are persisted into `workflow_jobs` in PostgreSQL and processed FIFO by [`WorkflowDashboardService`](file:///Users/himanshujhawar/Desktop/Developing/Law%20Delegation/backend/app/services/workflow_dashboard_service.py#L28-L50) (`workflow-worker-*`).
+- **Claim & Lease**: Jobs are claimed in batches of up to concurrency 10 (`claim_next`) with 600s leases and 30s heartbeats.
+- **Root Cause of Output Disappearance / "Processing" Freeze**:
+  - The worker claimed both `openai/gpt-5.5` and `deepseek/deepseek-v4-flash` concurrently for the same document via `asyncio.gather`.
+  - Both tasks loaded `dashboard_documents.coded_values` at start (`status: "pending"`).
+  - DeepSeek finished quickly in ~18s, wrote 132 fields into `coded_values`, and completed its job.
+  - GPT-5.5 took ~3 minutes, completed 133 fields, and wrote back its stale in-memory snapshot of `all_coded` (which recorded DeepSeek as still `pending`).
+  - This write clobbered DeepSeek's completed output back to `pending` with 0 fields, leaving the document overall status stuck at `"processing"` while `workflow_jobs` marked both as `"completed"`.
+- **Immediate Workaround**: Trigger a single-model retry for `deepseek/deepseek-v4-flash` via the frontend retry button.
+- **Code Fix Required**: In [`WorkflowDashboardService.run_model_comparison_parallel`](file:///Users/himanshujhawar/Desktop/Developing/Law%20Delegation/backend/app/services/workflow_dashboard_service.py#L640-L830), re-fetch and dictionary-merge the latest `coded_values` from PostgreSQL right before updating `dashboard_documents`, rather than writing an in-memory snapshot.
 
 ## Product Goal
 

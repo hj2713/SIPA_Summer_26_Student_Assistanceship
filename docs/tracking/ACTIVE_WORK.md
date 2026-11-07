@@ -22,6 +22,20 @@ Next Action:
 The next concrete step.
 ```
 
+## 2026-11-06 - Workflow Model Evaluation Race Condition on `coded_values`
+
+Status: Open
+Area: Backend
+
+Problem:
+When a model comparison workflow runs multiple models in parallel on the same document (e.g. `openai/gpt-5.5` and `deepseek/deepseek-v4-flash`), the background worker claims and runs both jobs concurrently via `asyncio.gather`. Each task reads `coded_values` at start. When a faster model finishes (~18s, 132 fields), it persists its output to `dashboard_documents`. When a slower model finishes later (~3m, 133 fields), its in-memory snapshot of `all_coded` still has the faster model as `pending`. Writing back to PostgreSQL overwrites the faster model's completed output with empty values, leaving the document stuck in `"processing"`.
+
+Why It Matters:
+Cloud evaluations executed from the frontend (`/evaluation/:id`) appear stuck or missing model outputs even though LLM inference completed successfully and `workflow_jobs` marked both jobs completed.
+
+Next Action:
+In [`WorkflowDashboardService`](file:///Users/himanshujhawar/Desktop/Developing/Law%20Delegation/backend/app/services/workflow_dashboard_service.py#L28-L50), re-fetch the latest `coded_values` from the database immediately prior to updating `dashboard_documents`, or use PostgreSQL atomic JSONB update / row locking (`SELECT ... FOR UPDATE`) to merge model outputs safely. For the affected evaluation `4568634e-6d67-4ce7-98a3-61dc0c619707`, trigger a retry specifically for `deepseek/deepseek-v4-flash`.
+
 ## 2026-06-20 - Benchmark Tracking Needs Formalization
 
 Status: In Progress

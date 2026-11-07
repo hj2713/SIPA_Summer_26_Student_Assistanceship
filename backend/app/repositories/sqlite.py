@@ -511,7 +511,7 @@ class SQLiteDashboardDocumentRepository(BaseDashboardDocumentRepository):
             """
             SELECT d.id as document_id, d.filename, d.file_size, d.metadata as doc_metadata,
                    dd.status, dd.coded_values, dd.error_message, dd.error_type,
-                   dd.current_step, dd.total_steps, dd.workflow_trace, dd.workflow_context
+                   dd.current_step, dd.total_steps
             FROM dashboard_documents dd
             JOIN documents d ON dd.document_id = d.id
             WHERE dd.dashboard_id = ?

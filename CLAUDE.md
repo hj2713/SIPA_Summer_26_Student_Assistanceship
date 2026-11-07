@@ -13,6 +13,8 @@ Platform for structured legislative coding and LLM-assisted evaluation campaigns
 - **Active Workflows & Evaluation**:
   - Benchmark runner: `scripts/run_benchmark_evaluations.py`
   - Status reporter: `scripts/report_benchmark_status.py`
+  - Job Queue: Enqueued in PostgreSQL `workflow_jobs` table; drained by [`WorkflowDashboardService`](file:///Users/himanshujhawar/Desktop/Developing/Law%20Delegation/backend/app/services/workflow_dashboard_service.py#L28-L50) (`workflow-worker-*`).
+  - Concurrency & Results: Multi-model evaluation runs must merge into `dashboard_documents.coded_values` atomically to avoid race conditions when models finish at different speeds.
 - **Tech Stack**:
   - Backend: FastAPI (`backend/app`), PostgreSQL / Supabase, Pydantic, Uvicorn
   - Frontend: React + TypeScript + Vite + Tailwind CSS (`frontend/src`)

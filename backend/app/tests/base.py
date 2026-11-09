@@ -88,6 +88,11 @@ class SafeTestCursor:
         return query
 
     def _validate_query(self, query: str, params: Any):
+        if settings.DB_PROVIDER == "postgres":
+            raise RuntimeError(
+                "CRITICAL SECURITY BLOCK: Unit tests must NEVER run against PostgreSQL / Supabase!"
+            )
+
         query_upper = query.strip().upper()
         
         # 1. Block TRUNCATE and DROP completely in tests
@@ -144,9 +149,14 @@ class SafeTestCursor:
                 ALLOWED_TEST_IDS.add(lit)
             return
 
-        if is_delete:
+        action = "DELETE" if is_delete else "UPDATE"
+        if is_delete and not perms.get("allow_delete"):
             raise RuntimeError(
-                f"CRITICAL SAFETY VIOLATION: DELETE queries are strictly forbidden in tests! Query: {query}"
+                f"CRITICAL SAFETY VIOLATION: DELETE executed without database permission inside test! Query: {query}"
+            )
+        if is_update and not perms.get("allow_update"):
+            raise RuntimeError(
+                f"CRITICAL SAFETY VIOLATION: UPDATE executed without database permission inside test! Query: {query}"
             )
                 
             if "WHERE" not in query_upper:

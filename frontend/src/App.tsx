@@ -11,6 +11,7 @@ import { DashboardPage } from "@/routes/DashboardPage";
 import { DashboardListPage } from "@/routes/DashboardListPage";
 import { DashboardDetailPage } from "@/routes/DashboardDetailPage";
 import { SettingsPage } from "@/routes/SettingsPage";
+import { DocumentationPage } from "@/routes/DocumentationPage";
 import { WorkflowLibraryPage } from "@/routes/WorkflowLibraryPage";
 import { WorkflowBuilderPage } from "@/routes/WorkflowBuilderPage";
 import { ModelEvaluationPage } from "@/routes/ModelEvaluationPage";
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="/workflows" element={<WorkflowLibraryPage />} />
               <Route path="/workflows/:id" element={<WorkflowBuilderPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/docs" element={<DocumentationPage />} />
             </Route>
 
             {/* Catch-all */}

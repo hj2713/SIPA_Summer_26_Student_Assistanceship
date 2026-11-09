@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { useAuthContext } from "@/context/AuthContext";
@@ -318,6 +318,10 @@ export function ModelEvaluationPage() {
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [modelPickerQuery, setModelPickerQuery] = useState("");
 
+  // Table Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "all">(25);
+
   const startResize = (e: React.MouseEvent, columnId: string) => {
     e.preventDefault();
     const startX = e.pageX;
@@ -340,28 +344,6 @@ export function ModelEvaluationPage() {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  const getModelStatsForField = (model: string, colName: string) => {
-    let completed = 0;
-    let running = 0;
-    let failed = 0;
-    
-    documents.forEach((doc) => {
-      const run = doc.coded_values?.[model] || {};
-      const status = getModelRunStatus(doc, model);
-      
-      const hasValue = run.values && run.values[colName] !== undefined && run.values[colName] !== null && run.values[colName] !== "";
-      
-      if (status === "completed" && hasValue) {
-        completed++;
-      } else if (status === "processing" || status === "pending") {
-        running++;
-      } else {
-        failed++;
-      }
-    });
-    
-    return { completed, running, failed, total: documents.length };
-  };
 
   const markModelRetryQueued = (documentIds: string[], modelName?: string) => {
     const targetIds = new Set(documentIds);
@@ -453,19 +435,48 @@ export function ModelEvaluationPage() {
   });
 
   const toggleColumnVisibility = (columnName: string) => {
-    setHiddenColumns((current) => ({
-      ...current,
-      [columnName]: !current[columnName],
-    }));
+    setHiddenColumns((current) => {
+      const next = {
+        ...current,
+        [columnName]: !current[columnName],
+      };
+      if (id) {
+        try { localStorage.setItem(`campaign_${id}_hidden_cols`, JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
   };
 
-  const showAllColumns = () => setHiddenColumns({});
-  const hideAllColumns = () => setHiddenColumns(
-    schemaColumns.reduce<Record<string, boolean>>((acc, column) => {
+  const showAllColumns = () => {
+    setHiddenColumns({});
+    if (id) {
+      try { localStorage.setItem(`campaign_${id}_hidden_cols`, JSON.stringify({})); } catch {}
+    }
+  };
+
+  const hideAllColumns = () => {
+    const next = schemaColumns.reduce<Record<string, boolean>>((acc, column) => {
       acc[column.name] = true;
       return acc;
-    }, {})
-  );
+    }, {});
+    setHiddenColumns(next);
+    if (id) {
+      try { localStorage.setItem(`campaign_${id}_hidden_cols`, JSON.stringify(next)); } catch {}
+    }
+  };
+
+  const showKeyColumnsOnly = () => {
+    const next: Record<string, boolean> = {};
+    schemaColumns.forEach((col, idx) => {
+      if (idx >= 8) {
+        next[col.name] = true;
+      }
+    });
+    setHiddenColumns(next);
+    if (id) {
+      try { localStorage.setItem(`campaign_${id}_hidden_cols`, JSON.stringify(next)); } catch {}
+    }
+  };
 
   const toggleModelVisibility = (modelName: string) => {
     setHiddenModelColumns((current) => ({
@@ -547,6 +558,56 @@ export function ModelEvaluationPage() {
     }
     return "missing";
   };
+
+  const columnStatsMap = useMemo(() => {
+    const map: Record<string, Record<string, { completed: number; running: number; failed: number; total: number }>> = {};
+    const totalDocs = documents.length;
+
+    for (const model of campaignModels) {
+      map[model] = {};
+      for (const col of schemaColumns) {
+        map[model][col.name] = { completed: 0, running: 0, failed: 0, total: totalDocs };
+      }
+    }
+
+    for (const doc of documents) {
+      for (const model of campaignModels) {
+        const run = doc.coded_values?.[model] || {};
+        const status = getModelRunStatus(doc, model);
+        const vals = run.values || {};
+        const modelMap = map[model];
+        if (!modelMap) continue;
+
+        for (const col of schemaColumns) {
+          const stats = modelMap[col.name];
+          if (!stats) continue;
+          const val = vals[col.name];
+          const hasVal = val !== undefined && val !== null && val !== "";
+          if (status === "completed" && hasVal) {
+            stats.completed++;
+          } else if (status === "processing" || status === "pending") {
+            stats.running++;
+          } else {
+            stats.failed++;
+          }
+        }
+      }
+    }
+    return map;
+  }, [documents, campaignModels, schemaColumns]);
+
+  const getModelStatsForField = (model: string, colName: string) => {
+    return columnStatsMap[model]?.[colName] || { completed: 0, running: 0, failed: 0, total: documents.length };
+  };
+
+  const totalDocuments = documents.length;
+  const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(totalDocuments / (typeof pageSize === "number" ? pageSize : 25)));
+  const displayedDocuments = useMemo(() => {
+    if (pageSize === "all") return documents;
+    const size = typeof pageSize === "number" ? pageSize : 25;
+    const start = (currentPage - 1) * size;
+    return documents.slice(start, start + size);
+  }, [documents, currentPage, pageSize]);
 
   const isSharedBenchmarkTarget = (targetKey: string): boolean =>
     !workflowStrategies.some((strategy) => targetKey === strategy.rankKey || targetKey.startsWith(strategy.prefix));
@@ -676,6 +737,27 @@ export function ModelEvaluationPage() {
       if (!resDash.ok) throw new Error("Failed to load dashboard details");
       const campaignData: Campaign = await resDash.json();
       setCampaign(campaignData);
+
+      // Initialize visible columns smartly to keep UI responsive
+      try {
+        const savedCols = localStorage.getItem(`campaign_${campaignId}_hidden_cols`);
+        if (savedCols) {
+          setHiddenColumns(JSON.parse(savedCols));
+        } else if (Array.isArray(campaignData.schema) && campaignData.schema.length > 8) {
+          const initialHidden: Record<string, boolean> = {};
+          campaignData.schema.forEach((col, idx) => {
+            if (col?.name && idx >= 8) {
+              initialHidden[col.name] = true;
+            }
+          });
+          setHiddenColumns(initialHidden);
+        } else {
+          setHiddenColumns({});
+        }
+      } catch (e) {
+        console.error("Failed to restore column visibility", e);
+      }
+      setCurrentPage(1);
       if (campaignData.workflow_id && activeWorkspace?.id) {
         try {
           const workflow = await workflowApi.get(campaignData.workflow_id, session.access_token, activeWorkspace.id);
@@ -775,9 +857,9 @@ export function ModelEvaluationPage() {
           previous.completed !== summary.completed ||
           previous.failed !== summary.failed ||
           previous.total !== summary.total;
-        const fullRefreshDue = now - lastFullDocumentPollRef.current > 20000;
 
-        if (finishedCountChanged || fullRefreshDue || !stillRunning) {
+        // Only fetch documents if counts actually changed or execution just completed
+        if (finishedCountChanged || !stillRunning) {
           const resDocs = await fetch(`${API_BASE_URL}/api/dashboards/${id}/documents`, {
             headers: { Authorization: `Bearer ${session.access_token}` },
           });
@@ -803,7 +885,7 @@ export function ModelEvaluationPage() {
       } catch (err) {
         console.error("Polling sync error", err);
       }
-    }, 4000);
+    }, 8000);
     return () => clearInterval(interval);
   }, [isPolling, id, session]);
 
@@ -1902,89 +1984,94 @@ export function ModelEvaluationPage() {
                   </div>
                 </div>
                 <Dialog open={showColumnPicker} onOpenChange={setShowColumnPicker}>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
+                  <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[85vh] flex flex-col p-6">
+                    <DialogHeader className="space-y-1 pb-3 border-b border-border/40">
+                      <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                         <SlidersHorizontal className="h-4 w-4 text-primary" />
                         Select visible columns
                       </DialogTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Choose the columns you want to inspect. Preferences are automatically saved for this campaign.
+                      </p>
                     </DialogHeader>
 
-                    <div className="space-y-4">
+                    <div className="flex flex-col gap-2.5 pt-2">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="text-xs text-muted-foreground">
-                          Choose the columns you want to inspect. This only affects the current view.
+                        <div className="relative flex-1">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={columnPickerQuery}
+                            onChange={(event) => setColumnPickerQuery(event.target.value)}
+                            placeholder="Search columns by name or type..."
+                            className="h-9 pl-9 text-xs"
+                          />
                         </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={showAllColumns} className="h-8 gap-1.5 text-xs">
-                            <Eye className="h-3.5 w-3.5" />
-                            Show all
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button type="button" variant="outline" size="sm" onClick={showKeyColumnsOnly} className="h-9 gap-1.5 text-xs text-primary border-primary/30 bg-primary/5 hover:bg-primary/10">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Key Variables ({Math.min(8, schemaColumns.length)})
                           </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={hideAllColumns} className="h-8 gap-1.5 text-xs">
+                          <Button type="button" variant="outline" size="sm" onClick={showAllColumns} className="h-9 gap-1.5 text-xs">
+                            <Eye className="h-3.5 w-3.5" />
+                            Show all ({schemaColumns.length})
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={hideAllColumns} className="h-9 gap-1.5 text-xs">
                             <EyeOff className="h-3.5 w-3.5" />
                             Hide all
                           </Button>
                         </div>
                       </div>
 
-                      <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={columnPickerQuery}
-                          onChange={(event) => setColumnPickerQuery(event.target.value)}
-                          placeholder="Search columns..."
-                          className="h-9 pl-9 text-xs"
-                        />
-                      </div>
-
-                      <div className="max-h-[52vh] overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-3">
-                        <div className="space-y-2">
-                          {filteredSchemaColumns.length > 0 ? (
-                            filteredSchemaColumns.map((col) => {
+                      <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-border/50 bg-muted/20 p-2.5">
+                        {filteredSchemaColumns.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {filteredSchemaColumns.map((col) => {
                               const isHidden = Boolean(hiddenColumns[col.name]);
                               return (
                                 <button
                                   key={col.name}
                                   type="button"
                                   onClick={() => toggleColumnVisibility(col.name)}
-                                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                                  className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 text-left transition-all ${
                                     isHidden
-                                      ? "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
-                                      : "border-primary/30 bg-primary/5 text-foreground hover:bg-primary/10"
+                                      ? "border-border/60 bg-background/80 text-muted-foreground hover:bg-muted/40 opacity-70"
+                                      : "border-primary/40 bg-primary/5 text-foreground hover:bg-primary/10 shadow-xs"
                                   }`}
                                   aria-pressed={!isHidden}
                                 >
                                   <span
-                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                      isHidden ? "border-input bg-background" : "border-primary bg-primary text-primary-foreground"
+                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                      isHidden ? "border-muted-foreground/30 bg-background" : "border-primary bg-primary text-primary-foreground"
                                     }`}
                                   >
                                     {!isHidden && <Check className="h-2.5 w-2.5 stroke-[3]" />}
                                   </span>
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block break-words text-sm font-semibold leading-snug">{normalizeLabel(col.name)}</span>
-                                    <span className="mt-0.5 block break-words text-[11px] text-muted-foreground leading-snug">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate text-xs font-semibold leading-tight text-foreground">
+                                      {normalizeLabel(col.name)}
+                                    </div>
+                                    <div className="mt-0.5 truncate text-[10px] text-muted-foreground font-mono">
                                       {col.name}
                                       {col.type ? ` · ${col.type}` : ""}
-                                    </span>
-                                  </span>
+                                    </div>
+                                  </div>
                                 </button>
                               );
-                            })
-                          ) : (
-                            <div className="rounded-lg border border-dashed border-border/40 px-3 py-6 text-center text-xs text-muted-foreground">
-                              No columns match that search.
-                            </div>
-                          )}
-                        </div>
+                            })}
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-border/40 px-3 py-8 text-center text-xs text-muted-foreground">
+                            No columns match &quot;{columnPickerQuery}&quot;
+                          </div>
+                        )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-[11px] text-muted-foreground">
-                          {visibleColumnCount} visible, {schemaColumns.length - visibleColumnCount} hidden
+                      <div className="flex items-center justify-between border-t border-border/40 pt-2.5">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          <span className="font-semibold text-foreground">{visibleColumnCount}</span> of <span className="font-semibold text-foreground">{schemaColumns.length}</span> columns visible
                         </div>
-                        <Button type="button" size="sm" onClick={() => setShowColumnPicker(false)} className="h-8 px-3 text-xs">
-                          Close
+                        <Button type="button" size="sm" onClick={() => setShowColumnPicker(false)} className="h-8 px-4 text-xs font-semibold">
+                          Done
                         </Button>
                       </div>
                     </div>
@@ -1992,43 +2079,42 @@ export function ModelEvaluationPage() {
                 </Dialog>
 
                 <Dialog open={showModelPicker} onOpenChange={setShowModelPicker}>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
+                  <DialogContent className="w-[92vw] sm:max-w-lg max-h-[80vh] flex flex-col p-6">
+                    <DialogHeader className="space-y-1 pb-3 border-b border-border/40">
+                      <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                         <Layers className="h-4 w-4 text-primary" />
                         Select visible models
                       </DialogTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Choose which model subcolumns appear in the evaluation grid.
+                      </p>
                     </DialogHeader>
 
-                    <div className="space-y-4">
+                    <div className="flex flex-col gap-2.5 pt-2">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="text-xs text-muted-foreground">
-                          Choose which model subcolumns appear in the grid. This only affects the current view.
+                        <div className="relative flex-1">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={modelPickerQuery}
+                            onChange={(event) => setModelPickerQuery(event.target.value)}
+                            placeholder="Search models..."
+                            className="h-9 pl-9 text-xs"
+                          />
                         </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={showAllModelColumns} className="h-8 gap-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button type="button" variant="outline" size="sm" onClick={showAllModelColumns} className="h-9 gap-1.5 text-xs">
                             <Eye className="h-3.5 w-3.5" />
-                            Show all
+                            Show all ({campaignModels.length})
                           </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={hideAllModelColumns} className="h-8 gap-1.5 text-xs">
+                          <Button type="button" variant="outline" size="sm" onClick={hideAllModelColumns} className="h-9 gap-1.5 text-xs">
                             <EyeOff className="h-3.5 w-3.5" />
                             Hide all
                           </Button>
                         </div>
                       </div>
 
-                      <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={modelPickerQuery}
-                          onChange={(event) => setModelPickerQuery(event.target.value)}
-                          placeholder="Search models..."
-                          className="h-9 pl-9 text-xs"
-                        />
-                      </div>
-
-                      <div className="max-h-[52vh] overflow-y-auto rounded-xl border border-border/40 bg-muted/20 p-3">
-                        <div className="space-y-2">
+                      <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-border/50 bg-muted/20 p-2.5">
+                        <div className="space-y-1.5">
                           {filteredCampaignModels.length > 0 ? (
                             filteredCampaignModels.map((model) => {
                               const isHidden = Boolean(hiddenModelColumns[model]);
@@ -2037,26 +2123,23 @@ export function ModelEvaluationPage() {
                                   key={model}
                                   type="button"
                                   onClick={() => toggleModelVisibility(model)}
-                                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                                  className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-all ${
                                     isHidden
-                                      ? "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
-                                      : "border-primary/30 bg-primary/5 text-foreground hover:bg-primary/10"
+                                      ? "border-border/60 bg-background/80 text-muted-foreground hover:bg-muted/40 opacity-70"
+                                      : "border-primary/40 bg-primary/5 text-foreground hover:bg-primary/10 shadow-xs"
                                   }`}
                                   aria-pressed={!isHidden}
                                 >
                                   <span
-                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                      isHidden ? "border-input bg-background" : "border-primary bg-primary text-primary-foreground"
+                                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                      isHidden ? "border-muted-foreground/30 bg-background" : "border-primary bg-primary text-primary-foreground"
                                     }`}
                                   >
                                     {!isHidden && <Check className="h-2.5 w-2.5 stroke-[3]" />}
                                   </span>
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block break-words text-sm font-semibold leading-snug">{model}</span>
-                                    <span className="mt-0.5 block break-words text-[11px] text-muted-foreground leading-snug">
-                                      Model subcolumn
-                                    </span>
-                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block truncate text-xs font-semibold text-foreground font-mono">{model}</span>
+                                  </div>
                                 </button>
                               );
                             })
@@ -2068,12 +2151,12 @@ export function ModelEvaluationPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-[11px] text-muted-foreground">
-                          {visibleCampaignModels.length} visible, {campaignModels.length - visibleCampaignModels.length} hidden
+                      <div className="flex items-center justify-between border-t border-border/40 pt-2.5">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          <span className="font-semibold text-foreground">{visibleCampaignModels.length}</span> of <span className="font-semibold text-foreground">{campaignModels.length}</span> models visible
                         </div>
-                        <Button type="button" size="sm" onClick={() => setShowModelPicker(false)} className="h-8 px-3 text-xs">
-                          Close
+                        <Button type="button" size="sm" onClick={() => setShowModelPicker(false)} className="h-8 px-4 text-xs font-semibold">
+                          Done
                         </Button>
                       </div>
                     </div>
@@ -2101,7 +2184,8 @@ export function ModelEvaluationPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full overflow-x-auto">
+                  <div className="flex-1 flex flex-col min-h-0 w-full">
+                    <div className="w-full overflow-x-auto flex-1">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead className="sticky top-0 z-20 bg-card border-b border-border/30">
                         <tr>
@@ -2184,7 +2268,7 @@ export function ModelEvaluationPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {documents.map((doc) => (
+                        {displayedDocuments.map((doc) => (
                           <tr key={doc.document_id} className="border-b border-border/15 hover:bg-muted/5 transition-colors">
                             <td 
                               style={{ 
@@ -2386,7 +2470,64 @@ export function ModelEvaluationPage() {
                       </tbody>
                     </table>
                   </div>
-                )}
+
+                  {/* Pagination Controls */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border bg-card/60 shrink-0">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        Showing <span className="font-semibold text-foreground">{totalDocuments === 0 ? 0 : (currentPage - 1) * (pageSize === "all" ? totalDocuments : pageSize) + 1}</span> to{" "}
+                        <span className="font-semibold text-foreground">
+                          {pageSize === "all" ? totalDocuments : Math.min(currentPage * (typeof pageSize === "number" ? pageSize : 25), totalDocuments)}
+                        </span>{" "}
+                        of <span className="font-semibold text-foreground">{totalDocuments}</span> files
+                      </span>
+                      <div className="flex items-center gap-1.5 ml-4">
+                        <span className="text-[11px]">Rows:</span>
+                        <select
+                          value={String(pageSize)}
+                          onChange={(e) => {
+                            const val = e.target.value === "all" ? "all" : Number(e.target.value);
+                            setPageSize(val as any);
+                            setCurrentPage(1);
+                          }}
+                          className="h-7 px-2 rounded-lg border border-border bg-background text-foreground text-xs"
+                        >
+                          <option value="25">25 per page</option>
+                          <option value="50">50 per page</option>
+                          <option value="100">100 per page</option>
+                          <option value="all">All ({totalDocuments})</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {pageSize !== "all" && totalPages > 1 && (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage <= 1}
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className="h-7 px-2.5 text-xs rounded-lg border-border"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs text-muted-foreground px-2 font-medium">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          className="h-7 px-2.5 text-xs rounded-lg border-border"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               </div>
 
             </div>

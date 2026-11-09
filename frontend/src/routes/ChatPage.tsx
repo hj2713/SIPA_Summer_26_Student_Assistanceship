@@ -55,16 +55,16 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F7F3EE] text-stone-900 overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <ThreadSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         {!threadId ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center p-8 max-w-2xl mx-auto">
-            <div className="h-12 w-12 rounded-2xl bg-[#0B3B36] text-white flex items-center justify-center font-bold text-lg shadow-md mb-1">
+            <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-md mb-1">
               §
             </div>
-            <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Legislative Research Assistant</h1>
-            <p className="text-xs text-stone-500 max-w-md leading-relaxed">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Legislative Research Assistant</h1>
+            <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
               Query ingested public laws and statutes with grounded RAG retrieval, citations, and statutory delegation audits.
             </p>
 
@@ -72,17 +72,17 @@ export function ChatPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left pt-2 pb-2">
               <button
                 onClick={() => void handleSend("Which executive agencies receive delegated rulemaking authority under the ingested statutes?")}
-                className="p-3 rounded-xl border border-stone-200 bg-white hover:border-[#0B3B36]/40 hover:shadow-xs transition-all text-xs text-stone-700"
+                className="p-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-xs transition-all text-xs text-foreground"
               >
-                <span className="font-semibold text-stone-900 block mb-0.5">Agency Delegation</span>
-                <span className="text-[11px] text-stone-500">Which agencies receive delegated rulemaking power?</span>
+                <span className="font-semibold text-foreground block mb-0.5">Agency Delegation</span>
+                <span className="text-[11px] text-muted-foreground">Which agencies receive delegated rulemaking power?</span>
               </button>
               <button
                 onClick={() => void handleSend("Explain how statutory constraints affect discretion ranks on the 1 to 5 scale.")}
-                className="p-3 rounded-xl border border-stone-200 bg-white hover:border-[#0B3B36]/40 hover:shadow-xs transition-all text-xs text-stone-700"
+                className="p-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-xs transition-all text-xs text-foreground"
               >
-                <span className="font-semibold text-stone-900 block mb-0.5">Discretion Constraints</span>
-                <span className="text-[11px] text-stone-500">How do statutory reporting rules lower discretion rank?</span>
+                <span className="font-semibold text-foreground block mb-0.5">Discretion Constraints</span>
+                <span className="text-[11px] text-muted-foreground">How do statutory reporting rules lower discretion rank?</span>
               </button>
             </div>
 
@@ -100,18 +100,18 @@ export function ChatPage() {
         ) : (
           <>
             {/* Thread Header Bar */}
-            <div className="flex items-center justify-between border-b border-stone-200 px-6 py-3 bg-white shadow-xs z-10">
+            <div className="flex items-center justify-between border-b border-border px-6 py-3 bg-card shadow-xs z-10">
               <div className="flex flex-col">
-                <span className="font-bold text-stone-900 text-sm truncate max-w-md">
+                <span className="font-bold text-foreground text-sm truncate max-w-md">
                   {activeThread?.title || "Active Research Chat"}
                 </span>
-                <span className="text-[11px] text-stone-500">
+                <span className="text-[11px] text-muted-foreground">
                   RAG Grounded Legal Exploration
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-stone-500 font-medium">Model:</label>
+                  <label className="text-xs text-muted-foreground font-medium">Model:</label>
                   <select
                     value={currentModel}
                     onChange={async (e) => {
@@ -123,7 +123,7 @@ export function ChatPage() {
                         toast.error("Failed to update thread model");
                       }
                     }}
-                    className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#0B3B36] font-medium"
+                    className="rounded-xl border border-border bg-muted px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                   >
                     {availableModels.length > 0 ? (
                       availableModels.map((m) => (

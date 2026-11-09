@@ -138,7 +138,7 @@ class SQLiteWorkspaceRepository(BaseWorkspaceRepository):
             SELECT w.id, w.name, w.created_by, wm.role
             FROM workspaces w
             JOIN workspace_memberships wm ON w.id = wm.workspace_id
-            WHERE LOWER(wm.user_email) = ?
+            WHERE LOWER(wm.user_email) = ? AND (wm.status = 'active' OR wm.status IS NULL)
             ORDER BY w.name ASC;
             """,
             (user_email.strip().lower(),)

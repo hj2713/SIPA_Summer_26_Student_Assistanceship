@@ -12,7 +12,7 @@ class ResolvedLLMCredentials:
     provider: str
     model: Optional[str]
     base_url: Optional[str]
-    key_level: str  # 'personal' | 'workspace' | 'system'
+    key_level: str  # 'personal' | 'workspace'
 
 
 def is_postgres_session(session) -> bool:
@@ -31,10 +31,17 @@ def resolve_llm_credentials(
     provider: str = "openai"
 ) -> ResolvedLLMCredentials:
     """
-    Chain of Responsibility Pattern for LLM API Key Resolution:
-    1. User Personal Key (if user_id provided & user has verified personal key & preference allows)
-    2. Workspace Shared Key (if workspace_id provided & workspace admin configured key)
-    3. System Default Environment Key (fallback)
+    Pure Bring-Your-Own-Key (BYOK) Resolution:
+    1. User Personal Key: Checked from user_llm_credentials (encrypted at rest)
+       if preference allows ('USE_PERSONAL_IF_AVAILABLE' or 'ALWAYS_PERSONAL').
+    2. Workspace Shared Key: Checked from workspace_llm_credentials (encrypted at rest)
+       if preference allows ('USE_PERSONAL_IF_AVAILABLE' or 'USE_WORKSPACE_ONLY').
+
+    SECURITY / ARCHITECTURAL RULE:
+    Zero server environment variable fallback! The backend must never fall back to
+    host/developer environment keys (OPENAI_API_KEY, GEMINI_API_KEY, etc.).
+    All credentials must be explicitly configured and encrypted in the database.
+    If no valid key exists, the request fails with a clear user-facing error.
     """
     provider_clean = provider.strip().lower()
     
@@ -48,27 +55,25 @@ def resolve_llm_credentials(
                 key_preference = getattr(user_row, "llm_key_preference", None) or "USE_PERSONAL_IF_AVAILABLE"
 
         # -------------------------------------------------------------
-        # STAGE 1: Personal Key Override
+        # STAGE 1: Personal Key Override (from user_llm_credentials DB)
         # -------------------------------------------------------------
         if user_id and key_preference != "USE_WORKSPACE_ONLY":
             try:
-                user_key = session.user_llm_credentials.get_by_user_and_provider(user_id, provider_clean)
-                if user_key and user_key.get("api_key_encrypted"):
-                    from app.core.llm_credentials import decrypt_api_key
-                    decrypted = decrypt_api_key(user_key["api_key_encrypted"])
-                    if decrypted and decrypted.strip():
-                        return ResolvedLLMCredentials(
-                            api_key=decrypted.strip(),
-                            provider=provider_clean,
-                            model=user_key.get("model"),
-                            base_url=user_key.get("base_url"),
-                            key_level="personal"
-                        )
+                from app.core.llm_credentials import get_user_llm_credentials_for_provider
+                user_cred = get_user_llm_credentials_for_provider(user_id, provider_clean)
+                if user_cred and user_cred.api_key and user_cred.api_key.strip():
+                    return ResolvedLLMCredentials(
+                        api_key=user_cred.api_key.strip(),
+                        provider=provider_clean,
+                        model=user_cred.model,
+                        base_url=user_cred.base_url,
+                        key_level="personal"
+                    )
             except Exception as e:
                 logger.warning(f"Error checking user personal LLM key: {e}")
 
         # -------------------------------------------------------------
-        # STAGE 2: Workspace Admin Shared Key
+        # STAGE 2: Workspace Admin Shared Key (from workspace_llm_credentials DB)
         # -------------------------------------------------------------
         if workspace_id and key_preference != "ALWAYS_PERSONAL":
             try:
@@ -87,29 +92,11 @@ def resolve_llm_credentials(
             except Exception as e:
                 logger.warning(f"Error checking workspace LLM key: {e}")
 
-        # -------------------------------------------------------------
-        # STAGE 3: System Environment Fallback Key
-        # -------------------------------------------------------------
-        system_key = None
-        if provider_clean == "openai":
-            system_key = settings.OPENAI_API_KEY
-        elif provider_clean == "openrouter":
-            system_key = settings.OPENROUTER_API_KEY
-        elif provider_clean == "gemini":
-            system_key = getattr(settings, "GEMINI_API_KEY", None)
-        elif provider_clean == "anthropic":
-            system_key = getattr(settings, "ANTHROPIC_API_KEY", None)
-
-        if system_key and system_key.strip():
-            return ResolvedLLMCredentials(
-                api_key=system_key.strip(),
-                provider=provider_clean,
-                model=None,
-                base_url=None,
-                key_level="system"
-            )
-
-    raise ValueError(f"No valid API key configured for provider '{provider_clean}'. Please set your API key in Settings.")
+    # No server environment fallback! Pure BYOK architecture.
+    raise ValueError(
+        f"No valid API key configured for provider '{provider_clean}'. "
+        f"Please add your API key in Settings → Cost Tracking & BYOK Vault."
+    )
 
 
 def get_workspace_llm_credential(session, workspace_id: str, provider: str) -> Optional[dict]:

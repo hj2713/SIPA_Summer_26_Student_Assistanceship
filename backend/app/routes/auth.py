@@ -1,3 +1,4 @@
+import os
 import time
 import uuid
 import jwt
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_workspace_role(session, workspace_id: str, user_email: str) -> str | None:
-    """Return the user's role in a workspace ('owner', 'admin', 'member') or None if not a member.
+    """Return the user's role in a workspace ('owner', 'admin', 'member') or None if not a member or still pending.
     
     This is the single source of truth for workspace authorization.
     All workspace-scoped permission checks should use this helper.
@@ -33,17 +34,30 @@ def _get_workspace_role(session, workspace_id: str, user_email: str) -> str | No
             cursor = session.conn.cursor()
             if is_postgres_session(session):
                 cursor.execute(
-                    "SELECT role FROM workspace_memberships WHERE workspace_id = %s AND LOWER(user_email) = %s;",
+                    "SELECT role, status FROM workspace_memberships WHERE LOWER(workspace_id) = LOWER(%s) AND LOWER(user_email) = %s;",
                     (workspace_id, user_email.lower())
                 )
             else:
                 cursor.execute(
-                    "SELECT role FROM workspace_memberships WHERE workspace_id = ? AND LOWER(user_email) = ?;",
+                    "SELECT role, status FROM workspace_memberships WHERE LOWER(workspace_id) = LOWER(?) AND LOWER(user_email) = ?;",
                     (workspace_id, user_email.lower())
                 )
             row = cursor.fetchone()
             if row:
-                return row[0] if isinstance(row, (list, tuple)) else row["role"]
+                if isinstance(row, (list, tuple)):
+                    role_val = row[0]
+                    status_val = row[1] if len(row) > 1 else "active"
+                elif hasattr(row, "keys"):
+                    role_val = row["role"]
+                    status_val = row["status"] if "status" in row.keys() else "active"
+                else:
+                    role_val = str(row[0])
+                    status_val = "active"
+                
+                # Pending invitations do not grant workspace access until explicitly accepted
+                if status_val == "pending" and role_val != "owner":
+                    return None
+                return role_val
     except Exception as e:
         logger.warning(f"Error checking workspace role: {e}")
     return None
@@ -436,6 +450,7 @@ class LinkGoogleRequest(BaseModel):
 
 class InviteMemberRequest(BaseModel):
     email: str
+    role: Optional[str] = "member"
 
 @router.post("/google-login", response_model=AuthResponse)
 def google_login(payload: GoogleLoginRequest):
@@ -637,7 +652,7 @@ def set_active_workspace_endpoint(payload: WorkspaceCreate, current_user: Curren
 @router.get("/workspaces/{workspace_id}/members")
 def list_workspace_members(workspace_id: str, current_user: CurrentUserDep):
     """List members for a workspace. Only workspace members can view the member list."""
-    ws_id = workspace_id.strip().upper()
+    ws_id = workspace_id.strip()
     with get_db_session() as session:
         # Verify caller is a member of this workspace
         _require_workspace_member(session, ws_id, current_user.email)
@@ -648,37 +663,56 @@ def list_workspace_members(workspace_id: str, current_user: CurrentUserDep):
                 cursor = session.conn.cursor()
                 if is_postgres_session(session):
                     cursor.execute(
-                        "SELECT wm.user_email, wm.role FROM workspace_memberships wm WHERE wm.workspace_id = %s;",
+                        "SELECT wm.user_email, wm.role, wm.status FROM workspace_memberships wm WHERE LOWER(wm.workspace_id) = LOWER(%s);",
                         (ws_id,)
                     )
                 else:
                     cursor.execute(
-                        "SELECT wm.user_email, wm.role FROM workspace_memberships wm WHERE wm.workspace_id = ?;",
+                        "SELECT wm.user_email, wm.role, wm.status FROM workspace_memberships wm WHERE LOWER(wm.workspace_id) = LOWER(?);",
                         (ws_id,)
                     )
                 for r in cursor.fetchall():
-                    email_val = r[0] if isinstance(r, (list, tuple)) else r["user_email"]
-                    role_val = (r[1] if isinstance(r, (list, tuple)) else r.get("role")) or "member"
-                    member_rows.append({"email": email_val.lower(), "role": role_val})
+                    if isinstance(r, (list, tuple)):
+                        email_val = r[0]
+                        role_val = r[1] if len(r) > 1 else "member"
+                        status_val = r[2] if len(r) > 2 else "active"
+                    elif hasattr(r, "keys"):
+                        email_val = r["user_email"]
+                        role_val = r["role"] if "role" in r.keys() else "member"
+                        status_val = r["status"] if "status" in r.keys() else "active"
+                    else:
+                        email_val = str(r[0])
+                        role_val = "member"
+                        status_val = "active"
+                    member_rows.append({
+                        "email": str(email_val).lower(),
+                        "role": (role_val or "member").lower(),
+                        "status": (status_val or "active").lower()
+                    })
         except Exception as e:
             logger.warning(f"Error reading workspace members: {e}")
 
         # Enrich with user details from the users table
         all_users = session.users.list_all()
-        user_map = {u["email"].lower(): u for u in all_users}
+        user_map = {}
+        for u in all_users:
+            u_dict = dict(u) if hasattr(u, "keys") else (u if isinstance(u, dict) else {})
+            if "email" in u_dict and u_dict["email"]:
+                user_map[u_dict["email"].lower()] = u_dict
 
         members = []
         for m in member_rows:
             u = user_map.get(m["email"])
             role_label = "Owner" if m["role"] == "owner" else ("Admin" if m["role"] == "admin" else "Member")
+            status_label = "Active" if (m["status"] == "active" or m["role"] == "owner") else "Pending Acceptance"
             members.append({
-                "id": u["id"] if u else "",
+                "id": u.get("id", "") if u else "",
                 "email": m["email"],
                 "is_admin": m["role"] in ("owner", "admin"),
                 "can_add": bool(u.get("can_add", 0)) if u else False,
                 "can_delete": bool(u.get("can_delete", 0)) if u else False,
                 "role": role_label,
-                "status": "Active" if u else "Invited"
+                "status": status_label
             })
         return members
 
@@ -686,10 +720,14 @@ def list_workspace_members(workspace_id: str, current_user: CurrentUserDep):
 @router.post("/workspaces/{workspace_id}/invite")
 def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current_user: CurrentUserDep):
     """Invite a Google / team email to join a workspace (Workspace owner/admin only)."""
-    ws_id = workspace_id.strip().upper()
+    ws_id = workspace_id.strip()
     with get_db_session() as session:
         _require_workspace_admin(session, ws_id, current_user.email)
     invite_email = payload.email.strip().lower()
+    target_role = (payload.role or "member").strip().lower()
+    if target_role not in ("admin", "member"):
+        target_role = "member"
+
     if not invite_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -697,21 +735,26 @@ def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current
         )
     
     with get_db_session() as session_inner:
-        # Add to workspace_memberships with 'member' role
+        # Add to workspace_memberships with specified role
         try:
             if hasattr(session_inner, "conn") and session_inner.conn:
                 cursor = session_inner.conn.cursor()
                 m_id = str(uuid.uuid4())
                 if is_postgres_session(session_inner):
                     cursor.execute(
-                        "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'member') ON CONFLICT DO NOTHING;",
-                        (m_id, ws_id, invite_email)
+                        """INSERT INTO workspace_memberships (id, workspace_id, user_email, role, status)
+                           VALUES (%s, %s, %s, %s, 'pending')
+                           ON CONFLICT (workspace_id, user_email) DO UPDATE SET role = EXCLUDED.role, status = 'pending';""",
+                        (m_id, ws_id, invite_email, target_role)
                     )
                 else:
                     cursor.execute(
-                        "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, ?, ?, 'member');",
-                        (m_id, ws_id, invite_email)
+                        """INSERT INTO workspace_memberships (id, workspace_id, user_email, role, status)
+                           VALUES (?, ?, ?, ?, 'pending')
+                           ON CONFLICT (workspace_id, user_email) DO UPDATE SET role = excluded.role, status = 'pending';""",
+                        (m_id, ws_id, invite_email, target_role)
                     )
+                session_inner.conn.commit()
         except Exception as e:
             logger.error(f"Failed to save workspace membership: {e}")
 
@@ -729,11 +772,14 @@ def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current
                 can_delete=0
             )
 
-    # Dispatch email invitation to recipient's inbox
+    # Dispatch email invitation to recipient's inbox (free SMTP / Resend)
     from app.services.email_service import send_workspace_invite_email
     email_sent = send_workspace_invite_email(invite_email, ws_id, current_user.email)
 
-    msg = f"Successfully invited {invite_email} to workspace {ws_id}."
+    app_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    invite_link = f"{app_url}/login?workspace={ws_id}&email={invite_email}"
+
+    msg = f"Successfully invited {invite_email} to workspace {ws_id} as {target_role}."
     if email_sent:
         msg += " Invitation email sent to recipient's inbox."
     else:
@@ -744,8 +790,139 @@ def invite_to_workspace(workspace_id: str, payload: InviteMemberRequest, current
         "message": msg,
         "workspace_id": ws_id,
         "invited_email": invite_email,
-        "email_sent": email_sent
+        "role": target_role,
+        "email_sent": email_sent,
+        "invite_link": invite_link,
     }
+
+
+@router.delete("/workspaces/{workspace_id}/members/{email}")
+def remove_workspace_member(workspace_id: str, email: str, current_user: CurrentUserDep):
+    """Remove a member from the workspace (Workspace owner/admin only)."""
+    ws_id = workspace_id.strip()
+    target_email = email.strip().lower()
+
+    if target_email == current_user.email.lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot remove yourself from the workspace."
+        )
+
+    with get_db_session() as session:
+        _require_workspace_admin(session, ws_id, current_user.email)
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute(
+                        "DELETE FROM workspace_memberships WHERE LOWER(workspace_id) = LOWER(%s) AND LOWER(user_email) = %s AND role != 'owner';",
+                        (ws_id, target_email)
+                    )
+                else:
+                    cursor.execute(
+                        "DELETE FROM workspace_memberships WHERE LOWER(workspace_id) = LOWER(?) AND LOWER(user_email) = ? AND role != 'owner';",
+                        (ws_id, target_email)
+                    )
+                session.conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to remove workspace member: {e}")
+            raise HTTPException(status_code=500, detail="Failed to remove member")
+
+    return {"status": "success", "message": f"Removed {target_email} from workspace."}
+
+
+@router.get("/invitations/pending")
+def list_pending_invitations(current_user: CurrentUserDep):
+    """List pending invitations for the current user. Called strictly on-demand."""
+    invitations = []
+    with get_db_session() as session:
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute(
+                        """SELECT wm.workspace_id, w.name, wm.role, wm.created_at
+                           FROM workspace_memberships wm
+                           JOIN workspaces w ON LOWER(w.id) = LOWER(wm.workspace_id)
+                           WHERE LOWER(wm.user_email) = %s AND wm.status = 'pending';""",
+                        (current_user.email.lower(),)
+                    )
+                else:
+                    cursor.execute(
+                        """SELECT wm.workspace_id, w.name, wm.role, wm.created_at
+                           FROM workspace_memberships wm
+                           JOIN workspaces w ON LOWER(w.id) = LOWER(wm.workspace_id)
+                           WHERE LOWER(wm.user_email) = ? AND wm.status = 'pending';""",
+                        (current_user.email.lower(),)
+                    )
+                for r in cursor.fetchall():
+                    if isinstance(r, (list, tuple)):
+                        invitations.append({
+                            "workspace_id": r[0],
+                            "workspace_name": r[1],
+                            "role": r[2] or "member",
+                            "created_at": str(r[3]) if len(r) > 3 else ""
+                        })
+                    else:
+                        invitations.append({
+                            "workspace_id": r["workspace_id"],
+                            "workspace_name": r["name"],
+                            "role": r["role"] or "member",
+                            "created_at": str(r["created_at"]) if "created_at" in r.keys() else ""
+                        })
+        except Exception as e:
+            logger.warning(f"Error fetching pending invitations: {e}")
+    return invitations
+
+
+@router.post("/workspaces/{workspace_id}/accept")
+def accept_workspace_invitation(workspace_id: str, current_user: CurrentUserDep):
+    """Accept a pending workspace invitation."""
+    ws_id = workspace_id.strip()
+    with get_db_session() as session:
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute(
+                        "UPDATE workspace_memberships SET status = 'active' WHERE LOWER(workspace_id) = LOWER(%s) AND LOWER(user_email) = %s;",
+                        (ws_id, current_user.email.lower())
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE workspace_memberships SET status = 'active' WHERE LOWER(workspace_id) = LOWER(?) AND LOWER(user_email) = ?;",
+                        (ws_id, current_user.email.lower())
+                    )
+                session.conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to accept invitation: {e}")
+            raise HTTPException(status_code=500, detail="Failed to accept invitation")
+    return {"status": "success", "message": f"Successfully joined workspace {ws_id}."}
+
+
+@router.post("/workspaces/{workspace_id}/decline")
+def decline_workspace_invitation(workspace_id: str, current_user: CurrentUserDep):
+    """Decline and remove a pending workspace invitation."""
+    ws_id = workspace_id.strip()
+    with get_db_session() as session:
+        try:
+            if hasattr(session, "conn") and session.conn:
+                cursor = session.conn.cursor()
+                if is_postgres_session(session):
+                    cursor.execute(
+                        "DELETE FROM workspace_memberships WHERE LOWER(workspace_id) = LOWER(%s) AND LOWER(user_email) = %s AND status = 'pending';",
+                        (ws_id, current_user.email.lower())
+                    )
+                else:
+                    cursor.execute(
+                        "DELETE FROM workspace_memberships WHERE LOWER(workspace_id) = LOWER(?) AND LOWER(user_email) = ? AND status = 'pending';",
+                        (ws_id, current_user.email.lower())
+                    )
+                session.conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to decline invitation: {e}")
+            raise HTTPException(status_code=500, detail="Failed to decline invitation")
+    return {"status": "success", "message": f"Invitation to {ws_id} declined."}
 
 
 class UpdateUserPermissionsRequest(BaseModel):

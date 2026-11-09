@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"
     # When false, authenticated users must save their own API key in Settings.
     # This prevents accidental use of the deployment owner's API key in production.
-    ALLOW_SERVER_LLM_FALLBACK: bool = True
+    ALLOW_SERVER_LLM_FALLBACK: bool = False
 
     # OpenAI / OpenRouter credentials and model names
     OPENAI_API_KEY: str = ""

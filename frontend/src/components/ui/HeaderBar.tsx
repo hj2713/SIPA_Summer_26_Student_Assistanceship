@@ -19,19 +19,19 @@ export function HeaderBar({ title, description }: { title?: string; description?
 
   return (
     <>
-      <header className="h-14 border-b border-stone-200 bg-white px-6 flex items-center justify-between z-20 sticky top-0 transition-colors shadow-xs">
+      <header className="h-14 border-b border-border bg-card px-6 flex items-center justify-between z-20 sticky top-0 transition-colors shadow-xs">
         <div className="flex items-center gap-3">
           {title ? (
             <div>
-              <h1 className="text-sm font-bold text-stone-900 tracking-tight">{title}</h1>
-              {description && <p className="text-[11px] text-stone-500">{description}</p>}
+              <h1 className="text-sm font-bold text-foreground tracking-tight">{title}</h1>
+              {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-[#0B3B36] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              <div className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-xs">
                 LD
               </div>
-              <span className="font-bold text-sm tracking-tight text-stone-900">Law Delegation Platform</span>
+              <span className="font-bold text-sm tracking-tight text-foreground">Law Delegation Platform</span>
             </div>
           )}
         </div>
@@ -41,7 +41,7 @@ export function HeaderBar({ title, description }: { title?: string; description?
           <button
             type="button"
             onClick={() => setCiteModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-[#785D7B]/30 bg-[#785D7B]/10 text-[#5A415D] hover:bg-[#785D7B]/20 text-xs font-semibold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-accent-plum/30 bg-accent-plum/10 text-accent-plum hover:bg-accent-plum/20 text-xs font-semibold transition-all shadow-xs"
           >
             <Quote className="w-3.5 h-3.5" />
             <span>Cite Us</span>
@@ -49,7 +49,7 @@ export function HeaderBar({ title, description }: { title?: string; description?
 
           {/* Workspace Chip */}
           {activeWorkspace && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0B3B36]/10 border border-[#0B3B36]/20 text-xs font-semibold text-[#0B3B36] shadow-xs">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary shadow-xs">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>{activeWorkspace.name}</span>
             </div>
@@ -67,7 +67,7 @@ export function HeaderBar({ title, description }: { title?: string; description?
                   type="button"
                   className="flex items-center gap-2 p-1 pl-2 pr-2.5 rounded-xl border border-border/60 hover:bg-muted/60 transition-colors text-left"
                 >
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-medium text-xs flex items-center justify-center shadow-sm uppercase">
+                  <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground font-medium text-xs flex items-center justify-center shadow-xs uppercase">
                     {user.email.slice(0, 2)}
                   </div>
                   <span className="text-xs font-medium text-foreground max-w-[120px] truncate hidden md:inline">

@@ -10,18 +10,18 @@ from app.tests.conftest import TEST_USER_ID
 def clean_db():
     with get_db_conn() as conn:
         try:
-            conn.execute("DELETE FROM dashboard_documents;")
-            conn.execute("DELETE FROM dashboards;")
-            conn.execute("DELETE FROM documents;")
+            conn.execute("DELETE FROM dashboard_documents WHERE dashboard_id IN (SELECT id FROM dashboards WHERE workspace_id = 'TEST');")
+            conn.execute("DELETE FROM dashboards WHERE workspace_id = 'TEST';")
+            conn.execute("DELETE FROM documents WHERE workspace_id = 'TEST';")
             conn.commit()
         except Exception:
             pass
     yield
     with get_db_conn() as conn:
         try:
-            conn.execute("DELETE FROM dashboard_documents;")
-            conn.execute("DELETE FROM dashboards;")
-            conn.execute("DELETE FROM documents;")
+            conn.execute("DELETE FROM dashboard_documents WHERE dashboard_id IN (SELECT id FROM dashboards WHERE workspace_id = 'TEST');")
+            conn.execute("DELETE FROM dashboards WHERE workspace_id = 'TEST';")
+            conn.execute("DELETE FROM documents WHERE workspace_id = 'TEST';")
             conn.commit()
         except Exception:
             pass

@@ -241,3 +241,91 @@ def test_link_google_endpoint_success(client, auth_headers):
     assert "successfully linked" in data["message"]
 
 
+def test_invite_and_remove_workspace_member(client):
+    from app.tests.factories import create_test_user, create_test_workspace
+    owner = create_test_user(email="workspace_owner@university.edu", is_admin=True)
+    ws = create_test_workspace(name="Collaborative Lab", creator_user_id=owner["id"], creator_email=owner["email"])
+
+    collab_email = "colleague_lab@university.edu"
+    from app.tests.base import ALLOWED_TEST_IDS
+    ALLOWED_TEST_IDS.add(collab_email)
+
+    invite_res = client.post(
+        f"/api/auth/workspaces/{ws['id']}/invite",
+        json={"email": collab_email, "role": "admin"},
+        headers=owner["headers"]
+    )
+    assert invite_res.status_code == 200
+    invite_data = invite_res.json()
+    assert invite_data["status"] == "success"
+    assert invite_data["role"] == "admin"
+    assert "invite_link" in invite_data
+    assert collab_email in invite_data["invite_link"]
+
+    # 2. List members and verify collaborator is listed
+    members_res = client.get(f"/api/auth/workspaces/{ws['id']}/members", headers=owner["headers"])
+    assert members_res.status_code == 200
+    members = members_res.json()
+    collab = next((m for m in members if m["email"] == collab_email), None)
+    assert collab is not None
+    assert collab["role"] == "Admin"
+
+    # 3. Remove collaborator
+    del_res = client.delete(f"/api/auth/workspaces/{ws['id']}/members/{collab_email}", headers=owner["headers"])
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "success"
+
+    # 4. Verify removed
+    members_res2 = client.get(f"/api/auth/workspaces/{ws['id']}/members", headers=owner["headers"])
+    members2 = members_res2.json()
+    assert not any(m["email"] == collab_email for m in members2)
+
+
+def test_invitation_pending_and_accept_flow(client):
+    from app.tests.factories import create_test_user, create_test_workspace
+    owner = create_test_user(email="lab_owner@university.edu", is_admin=True)
+    ws = create_test_workspace(name="Empirical Research Lab", creator_user_id=owner["id"], creator_email=owner["email"])
+
+    collab = create_test_user(email="invited_researcher@university.edu")
+
+    # 1. Owner invites collaborator
+    invite_res = client.post(
+        f"/api/auth/workspaces/{ws['id']}/invite",
+        json={"email": collab["email"], "role": "member"},
+        headers=owner["headers"]
+    )
+    assert invite_res.status_code == 200
+
+    # 2. In owner's member view, collaborator is 'Pending Acceptance'
+    members_res = client.get(f"/api/auth/workspaces/{ws['id']}/members", headers=owner["headers"])
+    assert members_res.status_code == 200
+    member_item = next((m for m in members_res.json() if m["email"] == collab["email"]), None)
+    assert member_item is not None
+    assert member_item["status"] == "Pending Acceptance"
+
+    # 3. Collaborator does NOT have active access yet
+    collab_workspaces = client.get("/api/auth/workspaces", headers=collab["headers"]).json()
+    assert not any(w["id"] == ws["id"] for w in collab_workspaces)
+
+    # 4. Collaborator checks pending invitations on-demand
+    pending_res = client.get("/api/auth/invitations/pending", headers=collab["headers"])
+    assert pending_res.status_code == 200
+    pending_list = pending_res.json()
+    assert any(p["workspace_id"] == ws["id"] for p in pending_list)
+
+    # 5. Collaborator accepts invitation
+    accept_res = client.post(f"/api/auth/workspaces/{ws['id']}/accept", headers=collab["headers"])
+    assert accept_res.status_code == 200
+    assert accept_res.json()["status"] == "success"
+
+    # 6. Collaborator now has full active access to the workspace
+    collab_workspaces_after = client.get("/api/auth/workspaces", headers=collab["headers"]).json()
+    assert any(w["id"] == ws["id"] for w in collab_workspaces_after)
+
+    # 7. Owner sees status as 'Active'
+    members_after = client.get(f"/api/auth/workspaces/{ws['id']}/members", headers=owner["headers"]).json()
+    member_after = next((m for m in members_after if m["email"] == collab["email"]), None)
+    assert member_after is not None
+    assert member_after["status"] == "Active"
+
+

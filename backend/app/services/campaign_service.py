@@ -140,8 +140,32 @@ class CampaignService:
         except Exception:
             return fallback
 
-    def _dashboard_document_row(self, row: Dict[str, Any]) -> DashboardDocumentRow:
+    def _prune_coded_values(self, coded: Dict[str, Any]) -> Dict[str, Any]:
+        """Strip bulky execution traces, contexts, and history from coded_values for table list views.
+
+        Full traces and context are preserved in the DB and returned on-demand via /documents/{doc_id}/trace.
+        """
+        if not isinstance(coded, dict):
+            return {}
+        pruned: Dict[str, Any] = {}
+        for key, val in coded.items():
+            if isinstance(val, dict) and ("values" in val or "status" in val):
+                # Multi-model evaluation structure: strip heavy trace and context
+                model_run = dict(val)
+                model_run.pop("trace", None)
+                model_run.pop("context", None)
+                pruned[key] = model_run
+            elif key.endswith("_history"):
+                # Single-model prompt history: skip for list view
+                continue
+            else:
+                pruned[key] = val
+        return pruned
+
+    def _dashboard_document_row(self, row: Dict[str, Any], include_trace: bool = True) -> DashboardDocumentRow:
         coded = self._parse_workflow_json(row.get("coded_values"), {})
+        if not include_trace:
+            coded = self._prune_coded_values(coded)
         try:
             doc_meta = json.loads(row.get("doc_metadata") or "{}") if isinstance(row.get("doc_metadata"), str) else (row.get("doc_metadata") or {})
             tags = doc_meta.get("tags", [])
@@ -158,8 +182,8 @@ class CampaignService:
             tags=tags,
             current_step=row.get("current_step") or 0,
             total_steps=row.get("total_steps") or 7,
-            workflow_trace=self._parse_workflow_json(row.get("workflow_trace"), None),
-            workflow_context=self._parse_workflow_json(row.get("workflow_context"), None),
+            workflow_trace=self._parse_workflow_json(row.get("workflow_trace"), None) if include_trace else None,
+            workflow_context=self._parse_workflow_json(row.get("workflow_context"), None) if include_trace else None,
         )
 
     async def create_campaign(
@@ -498,7 +522,7 @@ class CampaignService:
             
             results = []
             for r in rows:
-                results.append(self._dashboard_document_row(r))
+                results.append(self._dashboard_document_row(r, include_trace=False))
             return results
 
     def list_campaign_documents_page(self, id: str, page: int, page_size: int) -> tuple[List[DashboardDocumentRow], int]:
@@ -510,7 +534,7 @@ class CampaignService:
 
             results = []
             for r in rows:
-                results.append(self._dashboard_document_row(r))
+                results.append(self._dashboard_document_row(r, include_trace=False))
             return results, total
 
     def get_document_campaign_mapping(self, workspace_id: str, document_ids: List[str]) -> List[Dict[str, Any]]:

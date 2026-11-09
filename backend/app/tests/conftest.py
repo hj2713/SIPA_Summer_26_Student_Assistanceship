@@ -5,8 +5,9 @@ import uuid
 # Activate test mode connection wrapper and query firewall.
 os.environ["TEST_MODE"] = "1"
 os.environ["DB_PROVIDER"] = "sqlite"
+os.environ["DATABASE_URL"] = ""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Mock docling package dynamically if not installed to prevent import errors in tests
 try:
@@ -23,11 +24,11 @@ except ImportError:
 import time
 
 # Load settings from env/.env — no hardcoded values here ever.
-# JWT_SECRET and DB_PROVIDER are fully controlled by the environment.
 from app.core.config import settings
 
-# Force SQLite in all automated tests to guarantee zero interaction with Supabase production
+# Force SQLite and erase DATABASE_URL in all automated tests to guarantee ZERO interaction with Supabase
 settings.DB_PROVIDER = "sqlite"
+settings.DATABASE_URL = None
 
 # Use the JWT_SECRET already resolved by settings (from .env or env var).
 # This is the same secret the running app uses, so tokens stay valid.
@@ -75,6 +76,18 @@ def cleanup_test_db():
 
     # Clean up TEST_MODE after the session
     os.environ.pop("TEST_MODE", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def airgap_postgres_shield():
+    """Impenetrable air-gap: block ANY connection to PostgreSQL / Supabase during tests."""
+    def forbidden_connect(*args, **kwargs):
+        raise RuntimeError(
+            "CRITICAL SECURITY VIOLATION: Unit tests are strictly blocked from connecting to PostgreSQL / Supabase!"
+        )
+
+    with patch("psycopg.connect", side_effect=forbidden_connect):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -129,40 +142,19 @@ def run_init_db():
     perms["allow_delete"] = True
     
     try:
-        if settings.DB_PROVIDER == "postgres":
-            import psycopg
-            with psycopg.connect(settings.DATABASE_URL, prepare_threshold=None) as conn:
-                from app.tests.base import SafeTestConnection
-                safe_conn = SafeTestConnection(conn)
-                with safe_conn.cursor() as cur:
-                    cur.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT DO NOTHING;")
-                    cur.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT DO NOTHING;")
-                    cur.execute("INSERT INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION') ON CONFLICT DO NOTHING;")
-                    cur.execute(
-                        "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 1, 1, 1) ON CONFLICT DO NOTHING;",
-                        (TEST_USER_ID, "test@test.com", "mock_hash")
-                    )
-                    cur.execute(
-                        "INSERT INTO workspace_memberships (id, workspace_id, user_email) VALUES (%s, 'TEST', 'test@test.com') ON CONFLICT DO NOTHING;",
-                        (str(uuid.uuid4()),)
-                    )
-                safe_conn.commit()
-        else:
-            from app.core.database import get_db_conn
-            with get_db_conn() as conn:
-                conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
-                # conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
-                # conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('PRODUCTION', 'PRODUCTION');")
-                conn.execute(
-                    "INSERT OR IGNORE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
-                    (TEST_USER_ID, "test@test.com", "mock_hash")
-                )
-                conn.execute(
-                    "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email) VALUES (?, 'TEST', 'test@test.com');",
-                    (str(uuid.uuid4()),)
-                )
-                conn.commit()
-
+        from app.core.database import get_db_conn
+        with get_db_conn() as conn:
+            conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
+            conn.execute(
+                "INSERT OR IGNORE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 1, 1, 1);",
+                (TEST_USER_ID, "test@test.com", "mock_hash")
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'TEST', 'test@test.com', 'owner');",
+                (str(uuid.uuid4()),)
+            )
+            conn.execute("UPDATE workspace_memberships SET role = 'owner' WHERE workspace_id = 'TEST' AND user_email = 'test@test.com';")
+            conn.commit()
     finally:
         perms.update(old_perms)
 

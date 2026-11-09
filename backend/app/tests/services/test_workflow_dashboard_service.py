@@ -7,26 +7,33 @@ from app.core.request_context import get_current_user_id
 from app.services.coding_service import coding_service
 from app.services.document_service import document_service
 from app.services.workflow_dashboard_service import WorkflowDashboardService
+from app.tests.factories import create_test_campaign, create_test_document, link_document_to_campaign
 
 
 def test_run_model_comparison_parallel_persists_all_models():
     dashboard_id = "workflow-dash-1"
     document_id = "workflow-doc-1"
 
-    with get_db_conn() as conn:
-        conn.execute(
-            "INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model, dashboard_type) VALUES (?, 'TEST', 'Workflow Eval', '', '', '[]', 'gemini-3.1-flash-lite,deepseek-v4-flash', 'model_comparison');",
-            (dashboard_id,),
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata) VALUES (?, '00000000-0000-0000-0000-000000000001', 'TEST', 'law.txt', '/tmp/law.txt', 10, 'text/plain', 'completed', '{}');",
-            (document_id,),
-        )
-        conn.execute(
-            "INSERT INTO dashboard_documents (dashboard_id, document_id, coded_values, status) VALUES (?, ?, '{}', 'processing');",
-            (dashboard_id, document_id),
-        )
-        conn.commit()
+    create_test_campaign(
+        workspace_id="TEST",
+        name="Workflow Eval",
+        model="gemini-3.1-flash-lite,deepseek-v4-flash",
+        dashboard_type="model_comparison",
+        campaign_id=dashboard_id,
+    )
+    create_test_document(
+        workspace_id="TEST",
+        user_id="00000000-0000-0000-0000-000000000001",
+        filename="law.txt",
+        document_id=document_id,
+        status="completed",
+    )
+    link_document_to_campaign(
+        dashboard_id=dashboard_id,
+        document_id=document_id,
+        status="processing",
+        coded_values={},
+    )
 
     service = WorkflowDashboardService()
 

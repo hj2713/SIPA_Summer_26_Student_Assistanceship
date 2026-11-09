@@ -1,59 +1,70 @@
+"""Database connection pooling, session management, and lifecycle.
+
+All raw schema DDL statements and migration logic are modularized into
+`app.db.schemas` and `app.core.schema`.
+"""
 import os
 import sqlite3
-import hashlib
-import json
-import uuid
 import logging
 from contextlib import contextmanager
 from app.core.config import settings
+from app.core.schema import (
+    init_postgres_db as schema_init_postgres,
+    init_sqlite_db as schema_init_sqlite,
+    _clean_bloated_coded_values as schema_clean_bloated,
+    hash_password,
+    verify_password,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def get_db_path() -> str:
-    # Use TEST_MODE env var to select the test database path.
-    # Never rely on a hardcoded secret string for environment detection.
+    """Return SQLite database path depending on environment."""
     if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
         return "data/test_local_rag.db"
     return "data/local_rag.db"
 
+
 _pg_pool = None
+
 
 def get_postgres_pool():
     """Lazily initialize the connection pool for PostgreSQL."""
     global _pg_pool
+    if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
+        raise RuntimeError(
+            "CRITICAL SECURITY BLOCK: Unit tests are strictly forbidden from connecting to PostgreSQL / Supabase!"
+        )
+
     if _pg_pool is None:
         if not settings.DATABASE_URL:
             raise ValueError("DATABASE_URL is not set but DB_PROVIDER is 'postgres'")
-        
+
         from psycopg_pool import ConnectionPool
         from psycopg.rows import dict_row
-        
+
         logger.info("Initializing PostgreSQL Connection Pool in database.py...")
         _pg_pool = ConnectionPool(
             conninfo=settings.DATABASE_URL,
             min_size=1,
             max_size=20,
             open=True,
-            # Recycle connections regularly and validate them before checkout so
-            # Render never keeps a half-dead Supavisor connection indefinitely.
             max_lifetime=300.0,
             max_idle=60.0,
             check=ConnectionPool.check_connection,
             kwargs={
                 "row_factory": dict_row,
-                # Repository writes are individual SQL statements. Autocommit
-                # prevents read requests from pinning a Supabase transaction-pool
-                # connection if request cleanup is delayed or interrupted.
                 "autocommit": True,
                 "application_name": "law-delegation-api",
                 # prepare_threshold=None disables auto-prepared statements entirely.
-                # psycopg3: 0 = prepare immediately (WRONG), None = never prepare (CORRECT)
+                # psycopg3: 0 = prepare immediately (WRONG for pgBouncer), None = never prepare (CORRECT)
                 # Required for Supabase pgBouncer Transaction pooler (port 6543).
                 "prepare_threshold": None,
-            }
+            },
         )
     return _pg_pool
+
 
 def close_postgres_pool():
     """Shutdown the PostgreSQL connection pool."""
@@ -63,35 +74,38 @@ def close_postgres_pool():
         _pg_pool.close()
         _pg_pool = None
 
+
 @contextmanager
 def get_db_conn():
     """Context manager for thread-safe database connections, supporting SQLite and Postgres."""
+    if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes") and settings.DB_PROVIDER == "postgres":
+        raise RuntimeError(
+            "CRITICAL SECURITY BLOCK: Unit tests are strictly forbidden from connecting to PostgreSQL / Supabase!"
+        )
+
     if settings.DB_PROVIDER == "postgres":
         pool = get_postgres_pool()
         conn = pool.getconn(timeout=2.0)
         try:
-            if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
-                from app.tests.base import SafeTestConnection
-                yield SafeTestConnection(conn)
-            else:
-                yield conn
+            yield conn
         finally:
             pool.putconn(conn)
     else:
         db_path = get_db_path()
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         conn = sqlite3.connect(db_path, timeout=30.0)
-        # Enable foreign keys
         conn.execute("PRAGMA foreign_keys = ON;")
         conn.row_factory = sqlite3.Row
         try:
             if os.environ.get("TEST_MODE", "").lower() in ("1", "true", "yes"):
                 from app.tests.base import SafeTestConnection
+
                 yield SafeTestConnection(conn)
             else:
                 yield conn
         finally:
             conn.close()
+
 
 def init_db():
     """Initialize the database based on the selected DB_PROVIDER."""
@@ -100,862 +114,31 @@ def init_db():
     else:
         init_sqlite_db()
 
+
 def init_postgres_db():
-    """Create PostgreSQL tables, enable pgvector, and seed defaults."""
-    import psycopg
-    if not settings.DATABASE_URL:
-        raise ValueError("DATABASE_URL is not set but DB_PROVIDER is postgres")
-    
-    logger.info("Initializing PostgreSQL database...")
-    # prepare_threshold=None disables ALL auto-prepared statements.
-    # psycopg3: 0 = prepare everything immediately (WRONG for pgBouncer)
-    #           None = never auto-prepare (CORRECT for pgBouncer Transaction mode)
-    conn = psycopg.connect(settings.DATABASE_URL, prepare_threshold=None)
-    conn.autocommit = True
-    
-    try:
-        with conn.cursor() as cursor:
-            # 1. Enable pgvector extension
-            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-            
-            # 2. Create tables
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS workspaces (
-                    id VARCHAR(255) PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    created_by VARCHAR(255),
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id VARCHAR(255) PRIMARY KEY,
-                    email VARCHAR(255) UNIQUE NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    is_admin INTEGER NOT NULL DEFAULT 0,
-                    can_add INTEGER NOT NULL DEFAULT 0,
-                    can_delete INTEGER NOT NULL DEFAULT 0,
-                    llm_provider VARCHAR(50),
-                    llm_api_key_encrypted TEXT,
-                    llm_model VARCHAR(100),
-                    llm_base_url TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
+    """Delegate to schema module for PostgreSQL initialization."""
+    schema_init_postgres()
 
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS user_llm_credentials (
-                    id VARCHAR(255) PRIMARY KEY,
-                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    provider VARCHAR(50) NOT NULL,
-                    api_key_encrypted TEXT,
-                    model VARCHAR(100),
-                    base_url TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT unique_user_provider UNIQUE (user_id, provider)
-                );
-            """)
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS workspace_memberships (
-                    id VARCHAR(255) PRIMARY KEY,
-                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                    user_email VARCHAR(255) NOT NULL,
-                    role VARCHAR(50) NOT NULL DEFAULT 'member' CHECK(role IN ('owner', 'admin', 'member')),
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT unique_workspace_user_email UNIQUE (workspace_id, user_email)
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS dashboards (
-                    id VARCHAR(255) PRIMARY KEY,
-                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT NOT NULL,
-                    prompt TEXT NOT NULL,
-                    schema TEXT NOT NULL DEFAULT '[]',
-                    model VARCHAR(255),
-                    dashboard_type VARCHAR(50) NOT NULL DEFAULT 'campaign',
-                    workflow_id VARCHAR(255) REFERENCES coding_workflows(id) ON DELETE SET NULL,
-                    workflow_source VARCHAR(50),
-                    workflow_version INTEGER,
-                    workflow_revision INTEGER,
-                    workflow_definition_json TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS coding_workflows (
-                    id VARCHAR(255) PRIMARY KEY,
-                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT NOT NULL DEFAULT '',
-                    status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
-                    draft_definition TEXT NOT NULL,
-                    revision INTEGER NOT NULL DEFAULT 1,
-                    latest_version INTEGER NOT NULL DEFAULT 0,
-                    created_by VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS coding_workflow_templates (
-                    id VARCHAR(255) PRIMARY KEY,
-                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                    slug VARCHAR(255) NOT NULL,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT NOT NULL DEFAULT '',
-                    category VARCHAR(255) NOT NULL DEFAULT 'General',
-                    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
-                    definition_json TEXT NOT NULL,
-                    revision INTEGER NOT NULL DEFAULT 1,
-                    created_by VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(workspace_id, slug)
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS coding_workflow_versions (
-                    id VARCHAR(255) PRIMARY KEY,
-                    workflow_id VARCHAR(255) NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
-                    version INTEGER NOT NULL,
-                    definition_json TEXT NOT NULL,
-                    definition_hash VARCHAR(255) NOT NULL,
-                    changelog TEXT NOT NULL DEFAULT '',
-                    created_by VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(workflow_id, version)
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS threads (
-                    id VARCHAR(255) PRIMARY KEY,
-                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    title VARCHAR(255) NOT NULL DEFAULT 'New conversation',
-                    provider VARCHAR(50) NOT NULL DEFAULT 'openai',
-                    provider_thread_id VARCHAR(255),
-                    model VARCHAR(255),
-                    dashboard_id VARCHAR(255) REFERENCES dashboards(id) ON DELETE CASCADE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id VARCHAR(255) PRIMARY KEY,
-                    thread_id VARCHAR(255) NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-                    content TEXT NOT NULL,
-                    provider_response_id VARCHAR(255),
-                    tokens_input INTEGER,
-                    tokens_output INTEGER,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS documents (
-                    id VARCHAR(255) PRIMARY KEY,
-                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE CASCADE,
-                    filename VARCHAR(255) NOT NULL,
-                    file_path TEXT NOT NULL,
-                    file_size INTEGER NOT NULL,
-                    content_type VARCHAR(255) NOT NULL,
-                    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-                    error_message TEXT,
-                    content_hash VARCHAR(255),
-                    metadata TEXT NOT NULL DEFAULT '{}',
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE (workspace_id, filename)
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS document_chunks (
-                    id VARCHAR(255) PRIMARY KEY,
-                    document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE CASCADE,
-                    content TEXT NOT NULL,
-                    embedding vector,
-                    metadata TEXT NOT NULL DEFAULT '{}',
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS dashboard_documents (
-                    dashboard_id VARCHAR(255) NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
-                    document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                    coded_values TEXT NOT NULL DEFAULT '{}',
-                    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
-                    error_message TEXT,
-                    error_type VARCHAR(50) CHECK(error_type IN ('API_FAILURE', 'COMPREHENSION_FAILURE', 'EXTRACTION_FAILURE')),
-                    current_step INTEGER DEFAULT 0,
-                    total_steps INTEGER DEFAULT 7,
-                    workflow_trace TEXT,
-                    workflow_context TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (dashboard_id, document_id)
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS workflow_jobs (
-                    id VARCHAR(255) PRIMARY KEY,
-                    dedupe_key TEXT NOT NULL UNIQUE,
-                    dashboard_id VARCHAR(255) NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
-                    document_id VARCHAR(255) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    workflow_id VARCHAR(255) NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
-                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE CASCADE,
-                    source VARCHAR(50) NOT NULL DEFAULT 'draft',
-                    version INTEGER,
-                    retry_model TEXT,
-                    status VARCHAR(50) NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'processing', 'completed', 'failed', 'canceled')),
-                    attempts INTEGER NOT NULL DEFAULT 0,
-                    max_attempts INTEGER NOT NULL DEFAULT 3,
-                    payload_json TEXT NOT NULL DEFAULT '{}',
-                    queued_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    started_at TIMESTAMP WITH TIME ZONE,
-                    completed_at TIMESTAMP WITH TIME ZONE,
-                    heartbeat_at TIMESTAMP WITH TIME ZONE,
-                    locked_by TEXT,
-                    locked_until TIMESTAMP WITH TIME ZONE,
-                    error_message TEXT
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS workspace_llm_credentials (
-                    id VARCHAR(255) PRIMARY KEY,
-                    workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                    provider VARCHAR(50) NOT NULL,
-                    api_key_encrypted TEXT,
-                    model VARCHAR(100),
-                    base_url TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT unique_workspace_provider UNIQUE (workspace_id, provider)
-                );
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS llm_usage_logs (
-                    id VARCHAR(255) PRIMARY KEY,
-                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    user_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
-                    workspace_id VARCHAR(255) REFERENCES workspaces(id) ON DELETE SET NULL,
-                    provider VARCHAR(255) NOT NULL,
-                    model VARCHAR(255) NOT NULL,
-                    service VARCHAR(255) NOT NULL,
-                    campaign_id VARCHAR(255) REFERENCES dashboards(id) ON DELETE SET NULL,
-                    thread_id VARCHAR(255) REFERENCES threads(id) ON DELETE SET NULL,
-                    input_tokens INTEGER NOT NULL DEFAULT 0,
-                    output_tokens INTEGER NOT NULL DEFAULT 0,
-                    calculated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-                    key_level_used VARCHAR(50) DEFAULT 'system'
-                );
-            """)
-
-            for ddl in [
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS llm_key_preference VARCHAR(50) DEFAULT 'USE_PERSONAL_IF_AVAILABLE';",
-                "ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);",
-                "ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS workspace_id VARCHAR(255);",
-                "ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS key_level_used VARCHAR(50) DEFAULT 'system';",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS model VARCHAR(255);",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS dashboard_type VARCHAR(50) NOT NULL DEFAULT 'campaign';",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_id VARCHAR(255) REFERENCES coding_workflows(id) ON DELETE SET NULL;",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_source VARCHAR(50);",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_version INTEGER;",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_revision INTEGER;",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_definition_json TEXT;",
-                "ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS token_limit INTEGER DEFAULT 2500000;",
-                "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_trace TEXT;",
-                "ALTER TABLE dashboard_documents ADD COLUMN IF NOT EXISTS workflow_context TEXT;",
-                # Workspace privacy: add role to memberships and created_by to workspaces
-                "ALTER TABLE workspace_memberships ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'member';",
-                "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);",
-            ]:
-                cursor.execute(ddl)
-
-            # Create indexes
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_threads_user_updated ON threads (user_id, updated_at DESC);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, created_at ASC);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks (document_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents (user_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents (workspace_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_workspace ON document_chunks (workspace_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_status ON workflow_jobs (status, queued_at);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_dashboard ON workflow_jobs (dashboard_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
-
-            # Seed test@gmail.com — regular user (admin is per-workspace, not global)
-            cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@gmail.com",))
-            admin_row = cursor.fetchone()
-            admin_pwd_hash = hash_password("test@gmail.com")
-            if not admin_row:
-                cursor.execute(
-                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 0, 1, 1);",
-                    (str(uuid.uuid4()), "test@gmail.com", admin_pwd_hash)
-                )
-            else:
-                cursor.execute(
-                    "UPDATE users SET password_hash = %s, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = %s;",
-                    (admin_pwd_hash, "test@gmail.com")
-                )
-
-            # Seed test@test.com — regular user (admin is per-workspace, not global)
-            cursor.execute("SELECT id FROM users WHERE email = %s;", ("test@test.com",))
-            test_row = cursor.fetchone()
-            test_pwd_hash = hash_password("test@test.com")
-            if not test_row:
-                cursor.execute(
-                    "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (%s, %s, %s, 0, 1, 1);",
-                    ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
-                )
-            else:
-                cursor.execute(
-                    "UPDATE users SET password_hash = %s, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = %s;",
-                    (test_pwd_hash, "test@test.com")
-                )
-
-            # Remove UNIQUE constraint on name if it exists from earlier schema
-            try:
-                cursor.execute("ALTER TABLE workspaces DROP CONSTRAINT IF EXISTS workspaces_name_key;")
-            except Exception:
-                pass
-
-            # Migrate legacy 'PRODUCTION' workspace ID to 'ws_prod_00000001'
-            try:
-                cursor.execute("UPDATE workspaces SET id = 'ws_prod_00000001' WHERE id = 'PRODUCTION';")
-                cursor.execute("UPDATE workspace_memberships SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
-                cursor.execute("UPDATE documents SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
-                cursor.execute("UPDATE dashboards SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
-                cursor.execute("UPDATE coding_workflows SET workspace_id = 'ws_prod_00000001' WHERE workspace_id = 'PRODUCTION';")
-            except Exception as mig_err:
-                logger.warning("Workspace ID migration note: %s", mig_err)
-
-            # Ensure ws_prod_00000001, QA & TEST workspaces exist (with created_by)
-            cursor.execute("INSERT INTO workspaces (id, name, created_by) VALUES ('ws_prod_00000001', 'PRODUCTION', 'test@gmail.com') ON CONFLICT (id) DO NOTHING;")
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT (id) DO NOTHING;")
-            cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT (id) DO NOTHING;")
-
-            # Seed workspace memberships with roles: creator gets 'owner', others get 'member'
-            cursor.execute(
-                "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'owner') ON CONFLICT (workspace_id, user_email) DO UPDATE SET role = 'owner';",
-                (str(uuid.uuid4()), "ws_prod_00000001", "test@gmail.com")
-            )
-            cursor.execute(
-                "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, %s, %s, 'member') ON CONFLICT DO NOTHING;",
-                (str(uuid.uuid4()), "ws_prod_00000001", "test@test.com")
-            )
-            cursor.execute(
-                "INSERT INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (%s, 'TEST', 'test@test.com', 'member') ON CONFLICT DO NOTHING;",
-                (str(uuid.uuid4()),)
-            )
-
-            # Backfill: set role='owner' for existing workspace creators where created_by is set
-            cursor.execute("""
-                UPDATE workspace_memberships SET role = 'owner'
-                WHERE (workspace_id, user_email) IN (
-                    SELECT w.id, w.created_by FROM workspaces w WHERE w.created_by IS NOT NULL
-                ) AND role != 'owner';
-            """)
-
-
-            # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing when not in TEST_MODE
-            if not os.environ.get("TEST_MODE"):
-                cursor.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = %s;", ("hj2713@columbia.edu",))
-                cursor.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = %s;", ("hj2713@columbia.edu",))
-            else:
-                cursor.execute("UPDATE users SET is_admin = 1, can_add = 1, can_delete = 1 WHERE email = %s;", ("hj2713@columbia.edu",))
-
-    finally:
-        conn.close()
 
 def init_sqlite_db():
-    """Create all SQLite tables if they do not exist, run migrations, and seed defaults."""
-    db_path = get_db_path()
-    
-    with get_db_conn() as conn:
-        # Create workspaces table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS workspaces (
-                id TEXT PRIMARY KEY,
-                name TEXT UNIQUE NOT NULL,
-                created_by TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                is_admin INTEGER NOT NULL DEFAULT 0,
-                can_add INTEGER NOT NULL DEFAULT 0,
-                can_delete INTEGER NOT NULL DEFAULT 0,
-                llm_provider TEXT,
-                llm_api_key_encrypted TEXT,
-                llm_model TEXT,
-                llm_base_url TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS user_llm_credentials (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                provider TEXT NOT NULL,
-                api_key_encrypted TEXT,
-                model TEXT,
-                base_url TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                UNIQUE(user_id, provider)
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS workspace_memberships (
-                id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                user_email TEXT NOT NULL,
-                role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('owner', 'admin', 'member')),
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                UNIQUE(workspace_id, user_email)
-            );
-        """)
-
-        # Create threads table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS threads (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                title TEXT NOT NULL DEFAULT 'New conversation',
-                provider TEXT NOT NULL DEFAULT 'openai',
-                provider_thread_id TEXT,
-                model TEXT,
-                dashboard_id TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-                FOREIGN KEY (dashboard_id) REFERENCES dashboards (id) ON DELETE CASCADE
-            );
-        """)
-
-        # Create messages table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id TEXT PRIMARY KEY,
-                thread_id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-                content TEXT NOT NULL,
-                provider_response_id TEXT,
-                tokens_input INTEGER,
-                tokens_output INTEGER,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                FOREIGN KEY (thread_id) REFERENCES threads (id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-            );
-        """)
-
-        # Create documents table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS documents (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                workspace_id TEXT,
-                filename TEXT NOT NULL,
-                file_path TEXT NOT NULL,
-                file_size INTEGER NOT NULL,
-                content_type TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-                error_message TEXT,
-                content_hash TEXT,
-                metadata TEXT NOT NULL DEFAULT '{}',
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-                FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE,
-                UNIQUE (workspace_id, filename)
-            );
-        """)
-
-        # Create document_chunks table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS document_chunks (
-                id TEXT PRIMARY KEY,
-                document_id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                workspace_id TEXT,
-                content TEXT NOT NULL,
-                embedding TEXT, -- JSON array of floats
-                metadata TEXT NOT NULL DEFAULT '{}',
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-                FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE
-            );
-        """)
-
-        # Create dashboards table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS dashboards (
-                id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                name TEXT NOT NULL,
-                description TEXT NOT NULL,
-                prompt TEXT NOT NULL,
-                schema TEXT NOT NULL DEFAULT '[]',
-                model TEXT,
-                dashboard_type TEXT NOT NULL DEFAULT 'campaign',
-                workflow_id TEXT REFERENCES coding_workflows(id) ON DELETE SET NULL,
-                workflow_source TEXT,
-                workflow_version INTEGER,
-                workflow_revision INTEGER,
-                workflow_definition_json TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS coding_workflows (
-                id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                name TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
-                draft_definition TEXT NOT NULL,
-                revision INTEGER NOT NULL DEFAULT 1,
-                latest_version INTEGER NOT NULL DEFAULT 0,
-                created_by TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS coding_workflow_templates (
-                id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                slug TEXT NOT NULL,
-                name TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                category TEXT NOT NULL DEFAULT 'General',
-                status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
-                definition_json TEXT NOT NULL,
-                revision INTEGER NOT NULL DEFAULT 1,
-                created_by TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                UNIQUE(workspace_id, slug)
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS coding_workflow_versions (
-                id TEXT PRIMARY KEY,
-                workflow_id TEXT NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
-                version INTEGER NOT NULL,
-                definition_json TEXT NOT NULL,
-                definition_hash TEXT NOT NULL,
-                changelog TEXT NOT NULL DEFAULT '',
-                created_by TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                UNIQUE(workflow_id, version)
-            );
-        """)
-
-        # Create dashboard_documents table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS dashboard_documents (
-                dashboard_id TEXT NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
-                document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                coded_values TEXT NOT NULL DEFAULT '{}',
-                status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
-                error_message TEXT,
-                error_type TEXT CHECK(error_type IN ('API_FAILURE', 'COMPREHENSION_FAILURE', 'EXTRACTION_FAILURE')),
-                current_step INTEGER DEFAULT 0,
-                total_steps INTEGER DEFAULT 7,
-                workflow_trace TEXT,
-                workflow_context TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                PRIMARY KEY (dashboard_id, document_id)
-            );
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS workflow_jobs (
-                id TEXT PRIMARY KEY,
-                dedupe_key TEXT NOT NULL UNIQUE,
-                dashboard_id TEXT NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
-                document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                workflow_id TEXT NOT NULL REFERENCES coding_workflows(id) ON DELETE CASCADE,
-                workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
-                source TEXT NOT NULL DEFAULT 'draft',
-                version INTEGER,
-                retry_model TEXT,
-                status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'processing', 'completed', 'failed', 'canceled')),
-                attempts INTEGER NOT NULL DEFAULT 0,
-                max_attempts INTEGER NOT NULL DEFAULT 3,
-                payload_json TEXT NOT NULL DEFAULT '{}',
-                queued_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                started_at TEXT,
-                completed_at TEXT,
-                heartbeat_at TEXT,
-                locked_by TEXT,
-                locked_until TEXT,
-                error_message TEXT
-            );
-        """)
-
-        # --- DB Migrations for existing databases ---
-        # Add model/workflow columns to threads and dashboards tables defensively
-        try:
-            conn.execute("ALTER TABLE threads ADD COLUMN model TEXT;")
-        except sqlite3.OperationalError:
-            pass
-
-        try:
-            conn.execute("ALTER TABLE threads ADD COLUMN dashboard_id TEXT REFERENCES dashboards(id) ON DELETE CASCADE;")
-        except sqlite3.OperationalError:
-            pass
-
-        try:
-            conn.execute("ALTER TABLE dashboards ADD COLUMN model TEXT;")
-        except sqlite3.OperationalError:
-            pass
-
-        for col_def in [
-            "dashboard_type TEXT NOT NULL DEFAULT 'campaign'",
-            "workflow_id TEXT REFERENCES coding_workflows(id) ON DELETE SET NULL",
-            "workflow_source TEXT",
-            "workflow_version INTEGER",
-            "workflow_revision INTEGER",
-            "workflow_definition_json TEXT",
-            "token_limit INTEGER DEFAULT 2500000",
-        ]:
-            try:
-                conn.execute(f"ALTER TABLE dashboards ADD COLUMN {col_def};")
-            except sqlite3.OperationalError:
-                pass
-
-        # Create workspace_llm_credentials table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS workspace_llm_credentials (
-                id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                provider TEXT NOT NULL,
-                api_key_encrypted TEXT,
-                model TEXT,
-                base_url TEXT,
-                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                UNIQUE(workspace_id, provider)
-            );
-        """)
-
-        # Create llm_usage_logs table
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS llm_usage_logs (
-                id TEXT PRIMARY KEY,
-                timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-                workspace_id TEXT REFERENCES workspaces(id) ON DELETE SET NULL,
-                provider TEXT NOT NULL,
-                model TEXT NOT NULL,
-                service TEXT NOT NULL,
-                campaign_id TEXT,
-                thread_id TEXT,
-                input_tokens INTEGER NOT NULL DEFAULT 0,
-                output_tokens INTEGER NOT NULL DEFAULT 0,
-                calculated_cost REAL NOT NULL DEFAULT 0.0,
-                key_level_used TEXT DEFAULT 'system',
-                FOREIGN KEY (campaign_id) REFERENCES dashboards (id) ON DELETE SET NULL,
-                FOREIGN KEY (thread_id) REFERENCES threads (id) ON DELETE SET NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS workflow_jobs (
-                id TEXT PRIMARY KEY,
-                job_type TEXT NOT NULL DEFAULT 'evaluate_column',
-                status TEXT NOT NULL DEFAULT 'queued',
-                dashboard_id TEXT NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
-                workspace_id TEXT REFERENCES workspaces(id) ON DELETE SET NULL,
-                payload_json TEXT NOT NULL DEFAULT '{}',
-                error_message TEXT,
-                queued_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                started_at TEXT,
-                completed_at TEXT
-            );
-        """)
-        conn.commit()
+    """Delegate to schema module for SQLite initialization."""
+    schema_init_sqlite()
 
 
+def _clean_bloated_coded_values(conn_or_cursor, is_postgres: bool = False):
+    """Delegate to schema module for coded_values cleanup."""
+    schema_clean_bloated(conn_or_cursor, is_postgres=is_postgres)
 
 
-        for col_def in ["user_id TEXT", "workspace_id TEXT", "key_level_used TEXT DEFAULT 'system'"]:
-            try:
-                conn.execute(f"ALTER TABLE llm_usage_logs ADD COLUMN {col_def};")
-            except sqlite3.OperationalError:
-                pass
-
-        # Add current_step and total_steps to dashboard_documents defensively
-        for col, default_val in [("current_step", 0), ("total_steps", 7)]:
-            try:
-                conn.execute(f"ALTER TABLE dashboard_documents ADD COLUMN {col} INTEGER DEFAULT {default_val};")
-            except sqlite3.OperationalError:
-                pass
-
-        for col_def in ["workflow_trace TEXT", "workflow_context TEXT"]:
-            try:
-                conn.execute(f"ALTER TABLE dashboard_documents ADD COLUMN {col_def};")
-            except sqlite3.OperationalError:
-                pass
-
-        # Add columns to users table defensively
-        for col, default_val in [("is_admin", 0), ("can_add", 0), ("can_delete", 0)]:
-            try:
-                conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER NOT NULL DEFAULT {default_val};")
-            except sqlite3.OperationalError:
-                pass
-
-        for col in ["llm_provider", "llm_api_key_encrypted", "llm_model", "llm_base_url", "llm_key_preference"]:
-            try:
-                conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT;")
-            except sqlite3.OperationalError:
-                pass
-
-        # Add workspace_id columns defensively
-        for table in ["documents", "document_chunks"]:
-            try:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE;")
-            except sqlite3.OperationalError:
-                pass
-
-        for col, col_type in [("created_by", "TEXT DEFAULT 'test@test.com'"), ("campaign_flow", "TEXT DEFAULT 'RAG Structured Extraction Flow'"), ("is_frozen", "INTEGER DEFAULT 1")]:
-            try:
-                conn.execute(f"ALTER TABLE dashboards ADD COLUMN {col} {col_type};")
-            except sqlite3.OperationalError:
-                pass
-
-        # Workspace privacy: add role to memberships and created_by to workspaces
-        for col, col_type in [("role", "TEXT NOT NULL DEFAULT 'member'"), ("created_by", "TEXT")]:
-            tbl = "workspace_memberships" if col == "role" else "workspaces"
-            try:
-                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type};")
-            except sqlite3.OperationalError:
-                pass
-
-        # Create indexes
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_threads_user_updated ON threads (user_id, updated_at DESC);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, created_at ASC);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks (document_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents (user_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents (workspace_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_chunks_workspace ON document_chunks (workspace_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_dash_docs_document ON dashboard_documents (document_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_status ON workflow_jobs (status, queued_at);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_jobs_dashboard ON workflow_jobs (dashboard_id);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON coding_workflows (workspace_id, updated_at DESC);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_templates_workspace ON coding_workflow_templates (workspace_id, updated_at DESC);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON coding_workflow_versions (workflow_id, version DESC);")
-
-        # --- SEED DEFAULTS ---
-        # Seed test@gmail.com — regular user (admin is per-workspace, not global)
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM users WHERE email = ?;", ("test@gmail.com",))
-        admin_row = cursor.fetchone()
-        admin_pwd_hash = hash_password("test@gmail.com")
-        if not admin_row:
-            admin_id = str(uuid.uuid4())
-            conn.execute(
-                "INSERT INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 1, 1);",
-                (admin_id, "test@gmail.com", admin_pwd_hash)
-            )
-        else:
-            conn.execute(
-                "UPDATE users SET password_hash = ?, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = ?;",
-                (admin_pwd_hash, "test@gmail.com")
-            )
-
-        # Seed test@test.com — regular user (admin is per-workspace, not global)
-        cursor.execute("SELECT id FROM users WHERE email = ?;", ("test@test.com",))
-        test_row = cursor.fetchone()
-        test_pwd_hash = hash_password("test@test.com")
-        if not test_row:
-            conn.execute(
-                "INSERT OR IGNORE INTO users (id, email, password_hash, is_admin, can_add, can_delete) VALUES (?, ?, ?, 0, 1, 1);",
-                ("00000000-0000-0000-0000-000000000001", "test@test.com", test_pwd_hash)
-            )
-        else:
-            conn.execute(
-                "UPDATE users SET password_hash = ?, is_admin = 0, can_add = 1, can_delete = 1 WHERE email = ?;",
-                (test_pwd_hash, "test@test.com")
-            )
-
-        # Seed ws_prod_00000001, QA & TEST workspaces with created_by
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name, created_by) VALUES ('ws_prod_00000001', 'PRODUCTION', 'test@gmail.com');")
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
-        conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")
-
-        # Seed workspace memberships with roles: creator gets 'owner', others get 'member'
-        conn.execute("INSERT OR REPLACE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'ws_prod_00000001', 'test@gmail.com', 'owner');", (str(uuid.uuid4()),))
-        conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'ws_prod_00000001', 'test@test.com', 'member');", (str(uuid.uuid4()),))
-        conn.execute("INSERT OR IGNORE INTO workspace_memberships (id, workspace_id, user_email, role) VALUES (?, 'TEST', 'test@test.com', 'member');", (str(uuid.uuid4()),))
-
-
-        # Requirement 4: Reset hj2713@columbia.edu for uninvited state testing when not in TEST_MODE
-        if not os.environ.get("TEST_MODE"):
-            conn.execute("UPDATE users SET is_admin = 0, can_add = 0, can_delete = 0 WHERE email = ?;", ("hj2713@columbia.edu",))
-            conn.execute("DELETE FROM workspace_memberships WHERE LOWER(user_email) = ?;", ("hj2713@columbia.edu",))
-        else:
-            conn.execute("UPDATE users SET is_admin = 1, can_add = 1, can_delete = 1 WHERE email = ?;", ("hj2713@columbia.edu",))
-
-
-        conn.commit()
-
-# Password Hashing Helper using pbkdf2
-def hash_password(password: str) -> str:
-    """Hash password using PBKDF2 with SHA-256."""
-    salt = os.urandom(16)
-    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
-    return salt.hex() + ":" + key.hex()
-
-def verify_password(password: str, hashed: str) -> bool:
-    """Verify standard PBKDF2 hash against input password."""
-    if not hashed or ":" not in hashed:
-        return False
-    try:
-        salt_hex, key_hex = hashed.split(":")
-        salt = bytes.fromhex(salt_hex)
-        expected_key = bytes.fromhex(key_hex)
-        actual_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
-        return expected_key == actual_key
-    except Exception:
-        return False
+__all__ = [
+    "get_db_path",
+    "get_postgres_pool",
+    "close_postgres_pool",
+    "get_db_conn",
+    "init_db",
+    "init_postgres_db",
+    "init_sqlite_db",
+    "_clean_bloated_coded_values",
+    "hash_password",
+    "verify_password",
+]

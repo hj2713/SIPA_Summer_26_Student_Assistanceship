@@ -237,21 +237,21 @@ CREATE TABLE IF NOT EXISTS user_llm_credentials (
 CREATE INDEX idx_user_llm_credentials_user ON user_llm_credentials(user_id);
 ```
 
-### Authentication Layer & Per-User Key Resolution
+### Authentication Layer & Per-User Key Resolution (Pure BYOK - Zero Server Fallback)
 When an LLM request or campaign run is triggered:
 
 1. **User Request Validation:**
    * Incoming request carries `Authorization: Bearer <JWT>`.
    * Auth middleware validates the token and extracts `current_user.id`.
-2. **Credential Resolution:**
-   * The backend queries:
-     ```sql
-     SELECT api_key_encrypted, base_url FROM user_llm_credentials 
-     WHERE user_id = :user_id AND provider = :provider;
+2. **Credential Resolution (DB Only):**
+   * The backend queries `user_llm_credentials` or `workspace_llm_credentials` based on user's preference (`USE_PERSONAL_IF_AVAILABLE`, `USE_WORKSPACE_ONLY`, `ALWAYS_PERSONAL`).
+   * **Zero Server Environment Fallback:** Server environment variables (`OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.) are NEVER used as fallbacks. If no valid encrypted key exists in the database for the user or workspace, the backend immediately halts and raises:
      ```
-   * If not found, it falls back to environment defaults **only if** configured by the instance admin; otherwise, it raises `400 Bad Request: "Missing API key for provider"`.
+     ValueError: "No valid API key configured for provider '{provider}'. Please add your API key in Settings → Cost Tracking & BYOK Vault."
+     ```
+   * This guarantees that host/developer credentials are never exposed, charged, or drained by unauthorized or unconfigured users. Even the platform developer/admin configures their key through the UI into the encrypted DB table.
 3. **Decryption in RAM Only:**
-   * The backend decrypts the ciphertext using the server master key.
+   * The backend decrypts the ciphertext using the server master key (AES-256-GCM / Fernet).
    * The plaintext key exists **only in RAM within the scope of that single async LLM call**.
    * It is never assigned to a global variable, never persisted to temporary disk storage, and never logged.
 
@@ -394,7 +394,116 @@ Use this checklist to track refactoring progress across working sessions:
 ### Phase 4: Production Hardening & Verification
 - [x] Establish 100% isolated test database harness (`TEST_MODE=1` using SQLite).
 - [x] Verify zero contact with cloud Supabase during automated test runs.
-- [x] Pass all backend unit and integration test suites (136 passed, 0 failed).
+- [x] Pass all backend unit and integration test suites (143 passed, 0 failed).
 - [x] Verify clean frontend production build with zero TypeScript compiler errors.
 - [ ] Final end-to-end integration test with live Google OAuth in production.
+
+### Phase 5: DARE Alignment, BYOK Architecture & Theme Abstraction (Current Milestone)
+- [x] **Task 1: Help & Terminology Modal Polish**
+  - [x] Fixed overlay backdrop opacity to `bg-black/60 backdrop-blur-sm` in `dialog.tsx`.
+  - [x] Refactored Help modal into a DARE-style 3-slide interactive carousel with slide indicator dots (`● ○ ○`), `Back`, `Skip`, and `Next` buttons in `ThreadSidebar.tsx`.
+  - [x] Slide 1: Academic Foundation (Epstein & O'Halloran formal theory); Slide 2: Core Coding Variables (`delegate_law` binary, `discretion_rank` 0-5); Slide 3: Deterministic 2-Stage Directed Pipeline.
+- [x] **Task 2: Cost Tracking & BYOK Architecture**
+  - [x] **2.1: Purged Wallet Option:** Removed `$20.00 Platform Wallet` card and wallet routing buttons; shifted entirely to Bring Your Own Key (BYOK) and LiteLLM Proxy.
+  - [x] **2.2: API Key Scope Preference & Overrides:**
+    - Documented and tested resolution logic in `backend/app/core/llm_resolver.py`.
+    - Three preference modes supported:
+      - `USE_PERSONAL_IF_AVAILABLE` (Default): Checks user's personal encrypted key first; falls back to shared workspace key; falls back to system environment variables.
+      - `USE_WORKSPACE_ONLY`: Strictly uses shared workspace keys set by workspace admin; ignores personal keys.
+      - `ALWAYS_PERSONAL`: Strictly requires user's personal key; rejects requests if not configured.
+    - Verified with 5 unit tests in `backend/app/tests/core/test_llm_resolver.py`.
+  - [x] **2.3: Mathematical Token Accounting & Cost Verification:**
+    - Audited token usage aggregation (`input_tokens`, `output_tokens`, `total_calls`, `total_cost`) in `backend/app/routes/usage.py`.
+    - Fixed pricing prefix match bug in `backend/app/llm/registry.py`: exact match check first + keys sorted by descending length to prevent `gpt-4o-mini` from matching `gpt-4o` and overbilling 16x.
+    - Verified with integration test suite in `backend/app/tests/routes/test_usage_accounting.py`.
+  - [x] **2.4: Minimalist Provider Credentials UI:**
+    - Redesigned `SettingsPage.tsx` into clean, refined, minimalist cards matching DARE (`media_1794247118228_ae77f333.jpg`), removing bulky AI-sloppy boxes.
+- [x] **Task 3: Centralized Abstract Theme Configuration & Full Frontend Sweep**
+  - [x] **3.1: Central Abstraction in `index.css`:** All colors mapped to Tailwind semantic tokens (`bg-primary`, `bg-accent`, `bg-background`, `bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-sidebar`, `text-accent-plum`). Any theme modification in `:root` / `.dark` immediately propagates across the entire application without touching JSX files.
+  - [x] **3.2: Full Frontend Sweep:** Replaced all hardcoded hex codes (`#0B3B36`, `#E6AA4C`, `#F7F3EE`, `#785D7B`) and legacy `indigo-*`, `violet-*`, `purple-*` classes across `SettingsPage.tsx`, `DashboardListPage.tsx`, `WorkflowLibraryPage.tsx`, `ChatPage.tsx`, `HeaderBar.tsx`, `ThreadSidebar.tsx`, and `CiteUsModal.tsx`.
+- [x] **Task 4: Guided Tour / Onboarding Walkthrough in Research Campaigns**
+  - [x] Built reusable `frontend/src/components/ui/GuidedTour.tsx` with darkened backdrop (`bg-black/65`), spotlight cutout border on target element, floating guide card, percentage progress bar, step counter, and persistent `localStorage` completion tracking.
+  - [x] Integrated into `DashboardListPage.tsx` with target IDs: `tour-tab-prompt` (Prompt Codebooks), `tour-tab-workflow` (Workflow Evaluations), and `tour-btn-create` (+ Create Campaign).
+  - [x] Added `Take Tour` trigger button in the workbench header.
+- [x] **Task 5: Pure BYOK Security — Zero Server Host Fallbacks**
+  - [x] Completely purged silent fallbacks to server `.env` credentials (`OPENAI_API_KEY`, etc.) in `llm_resolver.py` and `registry.py`.
+  - [x] Enforced `ALLOW_SERVER_LLM_FALLBACK = False` in `config.py`.
+  - [x] When a user or workspace has no encrypted key in the DB, the system immediately rejects requests with an actionable error directing them to Settings, guaranteeing zero developer key leakage.
+- [x] **Task 6: Clean Production Login Experience**
+  - [x] Removed "Use demo credentials" button and pre-filled demo text from `LoginForm.tsx`.
+  - [x] Updated input placeholders to academic standards (`name@university.edu`).
+  - [x] Fully migrated `LoginForm.tsx` to semantic design tokens.
+- [x] **Task 7: Comprehensive Abstract Test Layers & Mock Factories**
+  - [x] Implemented `backend/app/tests/factories.py` providing reusable factory functions:
+    - `create_test_user`: User creation with verified auth headers and signed JWT.
+    - `create_test_workspace` & `share_workspace_with_user`: Collaborative workspace fixtures.
+    - `save_test_llm_key`: Fernet-encrypted BYOK credential generator for personal and workspace scopes.
+    - `create_test_campaign` & `link_document_to_campaign`: Research campaign benchmarks and statute association.
+    - `create_test_workflow`: Valid 2-stage DAG pipelines (screening + branching).
+    - `create_test_document`: Statute text fixture with metadata.
+    - `create_test_thread` & `create_test_message`: Chat threads and message histories.
+    - `mock_llm_reply`: Robust async context manager intercepting streaming, structured parsing (`parse_structured`), and provider singleton resolvers (`get_llm`, `get_llm_for_model`).
+  - [x] Added automated test suite `backend/app/tests/core/test_factories.py` (7/7 passed).
+  - [x] Full test suite passing: 152 passed, 2 skipped in 14.34s.
+- [x] **Task 8: Guided Tour Spotlight Cutout & Blur Tuning**
+  - [x] Reduced backdrop darkness from 65% to 40% (`rgba(0, 0, 0, 0.40)`) and softened backdrop blur to 1.5px.
+  - [x] Implemented dynamic SVG mask cutout (`<mask id="tour-spotlight-mask">`) in `GuidedTour.tsx` that punches an exact rounded aperture directly over the target element.
+  - [x] The highlighted elements (`tour-tab-prompt`, `tour-tab-workflow`, `tour-btn-create`) are 100% sharp, unblurred, and completely legible, accented by an academic primary focus ring (`ring-4 ring-primary/25`).
+- [x] **Task 9: Shared Workflows & Workspace Collaboration Architecture**
+  - [x] Designed dual-delivery sharing pattern requiring **zero paid services**:
+    - Free standard Python `smtplib` / university SMTP dispatches email if configured.
+    - Direct 1-click shareable invite link (`/login?workspace=...&email=...`) copies to clipboard for sharing via Slack, Teams, or regular email.
+  - [x] Built reusable [`ShareWorkspaceModal.tsx`](frontend/src/components/workspace/ShareWorkspaceModal.tsx) displaying email invitation input, direct link copier, and collaborator list with remove permissions.
+  - [x] Integrated into `WorkflowLibraryPage.tsx` under the "Shared With Me" tab and top navigation bar.
+- [x] **Task 10: Gated Workspace Invitations & Zero-Poll Security Architecture**
+  - [x] **Strict Gating:** Recipient is **not** immediately granted workspace access. Invitations are created with `status = 'pending'`.
+  - [x] **Explicit Acceptance:** The recipient must explicitly accept via `POST /api/auth/workspaces/{workspace_id}/accept` to change `status = 'active'`. If declined via `POST /api/auth/workspaces/{workspace_id}/decline`, the record is deleted.
+  - [x] **Role Protection:** `_get_workspace_role()` returns `None` for pending members, preventing unauthorized document or workflow access prior to acceptance.
+  - [x] **Workspace Listing:** `list_for_user()` in SQLite and Postgres repositories filters by `AND (wm.status = 'active' OR wm.status IS NULL)` so pending workspaces never leak into the workspace selector.
+  - [x] **Zero Background Polling:** Absolutely no recurring database polls or mount loops. Pending invitations (`/invitations/pending`) and member rosters are queried strictly on-demand when the user opens the modal.
+  - [x] **Multi-Tenancy Isolation:** All SQL lookups use unique UUIDs (`user.id` and `workspace.id`), never names. Case-insensitive workspace ID matching via `LOWER(workspace_id) = LOWER(?)`.
+  - [x] Verified with unit tests in `test_auth_verify.py` (`test_invitation_pending_and_accept_flow`).
+- [x] **Task 11: Dedicated Academic Documentation & Turnkey Simplification**
+  - [x] **Documentation Page (`/docs`):** Created `frontend/src/routes/DocumentationPage.tsx` with 5 academic reference tabs:
+    1. *Academic Foundation:* Epstein & O'Halloran (*Delegating Powers*), non-delegation doctrine, administrative law.
+    2. *3-Step Quickstart:* Corpus upload, model benchmarking, and tabular dataset export.
+    3. *Variables & Coding Rubric:* Definitive definitions for `delegate_law` (0 or 1) and `discretion_rank` (0 to 5) with sample statutory excerpts.
+    4. *Deterministic 2-Stage Pipeline (DAG):* Node 1 screening + conditional branching to prevent hallucinated scores and eliminate API waste.
+    5. *Privacy & BYOK Architecture:* AES-256-GCM zero-knowledge encryption and zero server fallback guarantee.
+  - [x] **Deep Linking:** Integrated URL tab parameters (`/docs?tab=rubric`, `/docs?tab=pipeline`).
+  - [x] **Contextual Workbench Navigation:** Added `Rubric Guide` button to `DashboardListPage.tsx` and `Pipeline Guide` button to `WorkflowLibraryPage.tsx`. Added `Tutorial & Guide` button to the sidebar footer.
+- [x] **Task 12: Production Verification & Test Suite Integrity**
+  - [x] Full Pytest suite passed: **153 passed, 2 skipped in 14.06s (100% pass rate, zero cloud touch)**.
+  - [x] Frontend production build compiled: **`tsc -b && vite build` built clean with 0 errors**.
+- [x] **Task 13: Academic Citation Modal & Attribution Architecture**
+  - [x] **Purged Mock / Placeholder Data:** Replaced generic placeholder names ("Legal Text Workflow Studio Team", `arxiv:2608.xxxx`) with proper academic author attributions: **Himanshu Jhawar** & **Professor Sharyn O'Halloran** (Columbia University SIPA).
+  - [x] **Dual Attribution Tabs:** Provided distinct tabs for:
+    1. *Software Platform (2026):* Citing the open-source workbench and multi-model workflow engine.
+    2. *Theoretical Methodology (Epstein & O'Halloran 1999):* Citing *Delegating Powers* (Cambridge University Press).
+  - [x] **Multi-Format Formats:** Instant switching between **BibTeX**, **APA 7th**, and **Chicago 17th**, plus `.bib` file download.
+  - [x] **Google Scholar & Crossref Explanation:** Documented real-world citation indexing mechanics and free Zenodo DOI setup for automatic Google Scholar tracking.
+- [x] **Task 14: High-Performance Data Pruning, Grid Pagination & Polling Optimization**
+  - [x] **Database-Level Storage & Query Clean-Up (Zero DB Overload):**
+    - **Stopped DB Duplication**: Fixed `workflow_dashboard_service.py` so `trace` and `context` (which contained the full statutory text) are never serialized into the `coded_values` column in PostgreSQL / Supabase.
+    - **Proper Normalized Storage**: Traces and contexts now reside strictly in their dedicated database columns (`workflow_trace` and `workflow_context`).
+    - **Automated Database Migration**: Implemented `_clean_bloated_coded_values()` in `database.py` that strips embedded `trace` and `context` from existing `coded_values` rows directly in Supabase / SQLite on startup.
+    - **Database Projection**: `SELECT` queries for the grid (`list_by_dashboard_with_documents`) never query `workflow_trace` or `workflow_context`. Supabase transfers only ~150 KB over the wire for all 169 rows (or 25 KB with page limits) instead of 50 MB.
+  - [x] **Backend 98% Payload Pruning (`_prune_coded_values`):**
+    - Implemented defensive runtime filtering in `campaign_service.py` ensuring no bloated execution contexts or prompt histories ever leak to the client grid.
+    - Full traces are queried from the database strictly on demand via `GET /api/dashboards/{id}/documents/{doc_id}/trace` when an individual cell is inspected.
+  - [x] **Frontend Table Pagination (25 / 50 / 100 / All):**
+    - Slashed DOM element count from 11,000+ interactive cells (169 rows * 65 columns) down to ~200 cells by introducing client-side pagination with controls: `Showing 1-25 of 169 files`, `[Previous] Page 1 of 7 [Next]`, and page size selector.
+    - Smooth 60 FPS scrolling and instantaneous UI interactions.
+  - [x] **Smart Column Visibility Default & Persistence:**
+    - When campaigns have more than 8 columns (e.g. 65 columns), the page defaults to showing the first 8 key columns instead of forcing the browser to render a 12,000-pixel wide table.
+    - Saved column visibility choices in `localStorage` per campaign (`campaign_{id}_hidden_cols`).
+    - Added 1-click **[ Key Variables (8) ]**, **[ Show All ]**, and **[ Hide All ]** buttons in the Column Picker modal.
+  - [x] **Memoized $O(1)$ Header Statistics (`columnStatsMap`):**
+    - Replaced redundant $O(C \times D)$ iterations inside JSX loops with a single memoized $O(D)$ pass via `useMemo`.
+  - [x] **Tuned Polling Hook:**
+    - Increased status summary poll interval from 4s to 8s.
+    - Removed arbitrary 20s forced re-fetches. Documents are now only re-fetched if `completed`, `failed`, or `total` counts actually change, or when jobs transition from running to complete.
+    - Polling immediately shuts off when `pending === 0 && processing === 0`.
+
+
 

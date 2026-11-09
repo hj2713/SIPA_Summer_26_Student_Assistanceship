@@ -125,7 +125,15 @@ def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     # Strip openrouter namespace prefix like "deepseek/" → "deepseek-chat"
     if "/" in model_lower:
         model_lower = model_lower.split("/")[-1]
-    for key, (in_p, out_p) in PRICING_MAP.items():
+    
+    # Check exact match first
+    if model_lower in PRICING_MAP:
+        in_p, out_p = PRICING_MAP[model_lower]
+        return (input_tokens * (in_p / 1_000_000.0)) + (output_tokens * (out_p / 1_000_000.0))
+    
+    # Sort keys by descending length so "-mini", "-nano", "-flash" match before base prefixes like "gpt-4o"
+    sorted_pricing = sorted(PRICING_MAP.items(), key=lambda item: len(item[0]), reverse=True)
+    for key, (in_p, out_p) in sorted_pricing:
         if key in model_lower:
             return (input_tokens * (in_p / 1_000_000.0)) + (output_tokens * (out_p / 1_000_000.0))
     # Fallback to low-cost pricing
@@ -484,7 +492,10 @@ def _pick_key(
         if user_creds.provider.lower() == provider and user_creds.api_key:
             return user_creds.api_key
 
-    return server_env_key or None
+    # Pure BYOK security: Never fall back to server host .env keys unless explicitly enabled
+    if getattr(settings, "ALLOW_SERVER_LLM_FALLBACK", False):
+        return server_env_key or None
+    return None
 
 
 def reset_llm() -> None:

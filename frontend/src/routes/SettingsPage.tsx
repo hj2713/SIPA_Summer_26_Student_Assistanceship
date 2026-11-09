@@ -320,7 +320,7 @@ export function SettingsPage() {
     : 0;
 
   return (
-    <div className="flex h-screen bg-[#F7F3EE] text-stone-900 overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <ThreadSidebar />
       
       <div className="flex-1 flex flex-col overflow-y-auto w-full">
@@ -328,22 +328,22 @@ export function SettingsPage() {
 
         <div className="p-8 max-w-6xl mx-auto w-full space-y-6">
           {/* DARE-Style Hero Banner */}
-          <div className="rounded-2xl bg-gradient-to-r from-[#0B3B36] via-[#0E4F47] to-[#12584F] text-white p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="rounded-2xl bg-gradient-to-r from-primary via-primary/95 to-primary/85 text-primary-foreground p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-[#E6AA4C] text-[#0B3B36] text-[10px] font-bold uppercase tracking-wider">
+                <span className="px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold uppercase tracking-wider">
                   Academic Routing
                 </span>
-                <span className="text-xs text-stone-300 font-medium">
-                  Workspace: <strong className="text-white">{activeWorkspace?.name}</strong>
+                <span className="text-xs opacity-80 font-medium">
+                  Workspace: <strong className="text-primary-foreground">{activeWorkspace?.name}</strong>
                 </span>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                <Coins className="h-6 w-6 text-[#E6AA4C]" />
-                Research Wallet & Cost Tracking
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Coins className="h-6 w-6 text-accent" />
+                Cost Tracking & BYOK Vault
               </h1>
-              <p className="text-xs text-stone-300 max-w-xl leading-relaxed">
-                Platform Wallet Initial Balance: <strong className="text-[#E6AA4C] font-mono text-sm">$20.00</strong>. Or connect your own OpenRouter, OpenAI, Gemini, or LiteLLM proxy keys with AES-256-GCM encryption.
+              <p className="text-xs opacity-80 max-w-xl leading-relaxed">
+                Bring Your Own Key (BYOK) architecture. Connect your own OpenRouter, OpenAI, Gemini, Anthropic, or LiteLLM proxy keys with AES-256-GCM encryption.
               </p>
             </div>
 
@@ -365,7 +365,7 @@ export function SettingsPage() {
                   const target = document.getElementById("provider-credentials-section");
                   target?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="h-9 px-4 rounded-xl bg-[#E6AA4C] hover:bg-[#d89b35] text-[#0B3B36] text-xs font-bold gap-1.5 shadow-sm"
+                className="h-9 px-4 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold gap-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 Add BYO Key
@@ -373,54 +373,40 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* DARE-Style 3-Card Stack */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-2">
+          {/* DARE-Style BYOK Architecture Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                  <Coins className="h-4 w-4 text-[#E6AA4C]" />
-                  Platform Wallet
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
-                  Active
-                </span>
-              </div>
-              <div className="text-xl font-black text-stone-900 font-mono">$20.00</div>
-              <p className="text-[10px] text-stone-500">Departmental seed balance for test runs.</p>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-[#0B3B36]" />
-                  LiteLLM Gateway
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">
-                  Ready
-                </span>
-              </div>
-              <div className="text-xs font-semibold text-stone-700 pt-1">Proxy Architecture</div>
-              <p className="text-[10px] text-stone-500">Centralized routing through lab proxy endpoints.</p>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                  <KeyRound className="h-4 w-4 text-[#785D7B]" />
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <KeyRound className="h-4 w-4 text-accent-plum" />
                   BYOK Cipher Vault
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6AA4C]/20 text-[#A26D19]">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
                   AES-256-GCM
                 </span>
               </div>
-              <div className="text-xs font-semibold text-stone-700 pt-1">Direct Provider Keys</div>
-              <p className="text-[10px] text-stone-500">Encrypted at rest with strict user isolation.</p>
+              <div className="text-xs font-semibold text-foreground pt-1">Direct Provider Keys</div>
+              <p className="text-[11px] text-muted-foreground">User credentials are encrypted at rest with Fernet/AES-256-GCM and resolved on-demand per request.</p>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  LiteLLM Gateway
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  Ready
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-foreground pt-1">Proxy Architecture</div>
+              <p className="text-[11px] text-muted-foreground">Centralized lab proxy endpoint routing for OpenRouter, custom OpenAI-compatible proxies, or institutional clusters.</p>
             </div>
           </div>
 
           {/* Controls Bar for Scope & Timeframe */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
-            <div className="flex gap-1 border border-stone-200 rounded-xl p-1 bg-stone-100/70 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+            <div className="flex gap-1 border border-border rounded-xl p-1 bg-muted/50 text-xs">
               <Button
                 variant={usageScope === "personal" ? "secondary" : "ghost"}
                 size="sm"
@@ -439,7 +425,7 @@ export function SettingsPage() {
               </Button>
             </div>
 
-            <div className="flex gap-1 border border-stone-200 rounded-xl p-1 bg-stone-100/70">
+            <div className="flex gap-1 border border-border rounded-xl p-1 bg-muted/50">
               {(["last_hour", "last_day", "last_7_days", "all"] as const).map((t) => (
                 <Button
                   key={t}
@@ -456,9 +442,9 @@ export function SettingsPage() {
 
           {/* Google Auth & Workspace Team Card (Admin Only) */}
           {user?.is_admin && (
-            <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+            <Card className="p-6 bg-card border-border rounded-2xl shadow-sm space-y-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
@@ -469,7 +455,7 @@ export function SettingsPage() {
 
               <div className="grid md:grid-cols-2 gap-6 pt-2">
                 {/* Account Link Box */}
-                <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
                   <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     Link Account ({user?.email})
@@ -482,18 +468,18 @@ export function SettingsPage() {
                       placeholder="e.g. yourname@gmail.com"
                       value={googleEmailInput}
                       onChange={(e) => setGoogleEmailInput(e.target.value)}
-                      className="h-9 text-xs rounded-xl bg-background border-border/80"
+                      className="h-9 text-xs rounded-xl bg-background border-border"
                     />
-                    <Button size="sm" onClick={handleLinkGoogle} disabled={linkingLoading} className="h-9 text-xs font-semibold rounded-xl whitespace-nowrap shadow-sm">
+                    <Button size="sm" onClick={handleLinkGoogle} disabled={linkingLoading} className="h-9 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 whitespace-nowrap shadow-xs">
                       {linkingLoading ? "Linking..." : "Link Google Account"}
                     </Button>
                   </div>
                 </div>
 
                 {/* Invite Workspace Members Box */}
-                <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
                   <h3 className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
-                    <UserPlus className="w-4 h-4 text-indigo-500" />
+                    <UserPlus className="w-4 h-4 text-primary" />
                     Invite to {activeWorkspace?.name || "Workspace"}
                   </h3>
                   <p className="text-xs text-muted-foreground">
@@ -504,9 +490,9 @@ export function SettingsPage() {
                       placeholder="teammate@gmail.com"
                       value={inviteEmailInput}
                       onChange={(e) => setInviteEmailInput(e.target.value)}
-                      className="h-9 text-xs rounded-xl bg-background border-border/80"
+                      className="h-9 text-xs rounded-xl bg-background border-border"
                     />
-                    <Button size="sm" onClick={handleInviteMember} disabled={inviteLoading} className="h-9 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap shadow-sm">
+                    <Button size="sm" onClick={handleInviteMember} disabled={inviteLoading} className="h-9 text-xs font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap shadow-xs">
                       {inviteLoading ? "Sending..." : "Send Workspace Invite"}
                     </Button>
                   </div>
@@ -522,9 +508,9 @@ export function SettingsPage() {
         ) : (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Key Preference Mode Card */}
-            <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+            <Card className="p-6 bg-card border-border rounded-2xl shadow-sm space-y-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
+                <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
@@ -564,8 +550,8 @@ export function SettingsPage() {
                     onClick={() => handleSaveKeyPreference(item.id)}
                     className={`p-4 rounded-xl border text-left transition-all ${
                       keyPreference === item.id
-                        ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500"
-                        : "border-border/60 bg-muted/20 hover:border-border"
+                        ? "border-primary bg-primary/10 ring-1 ring-primary text-foreground"
+                        : "border-border bg-muted/20 hover:border-border text-foreground"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -582,10 +568,10 @@ export function SettingsPage() {
 
             {/* Workspace Shared Keys (Admin Only) */}
             {user?.is_admin && (
-              <Card className="p-6 glass-panel border-border/60 rounded-2xl shadow-sm space-y-4">
+              <Card className="p-6 bg-card border-border rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
                       <ShieldCheck className="w-5 h-5" />
                     </div>
                     <div>
@@ -599,7 +585,7 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                   {[
                     { id: "openai", name: "Workspace OpenAI Key", icon: "🤖" },
                     { id: "openrouter", name: "Workspace OpenRouter Key", icon: "🌐" },
@@ -612,13 +598,13 @@ export function SettingsPage() {
                     const isWsTesting = verifyingWsProvider[prov.id] || false;
 
                     return (
-                      <div key={prov.id} className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3">
+                      <div key={prov.id} className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-foreground flex items-center gap-2">
                             <span>{prov.icon}</span> {prov.name}
                           </span>
                           {isWsSaved ? (
-                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                               Configured ({savedWsKey.masked_key})
                             </span>
                           ) : (
@@ -634,15 +620,15 @@ export function SettingsPage() {
                             placeholder="Enter Workspace API Key..."
                             value={wsInput}
                             onChange={(e) => setWsProviderInput((prev) => ({ ...prev, [prov.id]: e.target.value }))}
-                            className="h-8 text-xs rounded-xl bg-background border-border/80"
+                            className="h-8 text-xs rounded-xl bg-background border-border"
                           />
                           <Button
                             size="sm"
                             disabled={isWsTesting}
                             onClick={() => handleVerifyAndSaveWorkspaceKey(prov.id, wsInput)}
-                            className="h-8 text-xs font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white whitespace-nowrap"
+                            className="h-8 text-xs font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap"
                           >
-                            {isWsTesting ? "Saving..." : "Save Workspace Key"}
+                            {isWsTesting ? "Saving..." : "Save Key"}
                           </Button>
                         </div>
                       </div>
@@ -652,17 +638,18 @@ export function SettingsPage() {
               </Card>
             )}
 
-            <Card id="provider-credentials-section" className="p-6 border border-stone-200 bg-white rounded-2xl shadow-sm space-y-6">
+            {/* DARE-Style Minimalist Provider Credentials & Key Verification */}
+            <Card id="provider-credentials-section" className="p-6 border border-border bg-card rounded-2xl shadow-sm space-y-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <KeyRound className="h-5 w-5 text-[#0B3B36]" />
-                    <h3 className="font-bold text-base text-stone-900 tracking-tight">
+                    <KeyRound className="h-5 w-5 text-primary" />
+                    <h3 className="font-bold text-base text-foreground tracking-tight">
                       LLM Provider Credentials & Key Verification
                     </h3>
                   </div>
-                  <p className="text-xs text-stone-500 mt-1">
-                    Enter API keys for your preferred LLM providers. Each key is tested with a live test call and securely encrypted in the database with AES-256-GCM.
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Bring your own keys. Each key is verified with a live test call and securely stored using AES-256-GCM encryption.
                   </p>
                 </div>
               </div>
@@ -672,12 +659,12 @@ export function SettingsPage() {
                   <Loader2 className="animate-spin text-primary h-6 w-6" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { id: "openai", name: "OpenAI API Key", defaultModel: "gpt-4o-mini", placeholder: "sk-proj-...", icon: "🤖", color: "border-emerald-500/30 text-emerald-500 bg-emerald-500/10" },
-                    { id: "openrouter", name: "OpenRouter API Key", defaultModel: "openai/gpt-4o-mini", placeholder: "sk-or-v1-...", icon: "🌐", color: "border-cyan-500/30 text-cyan-500 bg-cyan-500/10" },
-                    { id: "google", name: "Gemini API Key", defaultModel: "gemini-3.1-flash-lite-preview", placeholder: "AIzaSy...", icon: "✨", color: "border-blue-500/30 text-blue-500 bg-blue-500/10" },
-                    { id: "anthropic", name: "Anthropic API Key", defaultModel: "claude-3-5-sonnet-latest", placeholder: "sk-ant-...", icon: "🧠", color: "border-amber-500/30 text-amber-500 bg-amber-500/10" },
+                    { id: "openai", name: "OpenAI API Key", defaultModel: "gpt-4o-mini", placeholder: "sk-proj-...", icon: "🤖" },
+                    { id: "openrouter", name: "OpenRouter API Key", defaultModel: "openai/gpt-4o-mini", placeholder: "sk-or-v1-...", icon: "🌐" },
+                    { id: "google", name: "Gemini API Key", defaultModel: "gemini-3.1-flash-lite-preview", placeholder: "AIzaSy...", icon: "✨" },
+                    { id: "anthropic", name: "Anthropic API Key", defaultModel: "claude-3-5-sonnet-latest", placeholder: "sk-ant-...", icon: "🧠" },
                   ].map((provider) => {
                     const normProvName = provider.id === "google" ? "gemini" : provider.id;
                     const savedItem = credentials.saved_keys?.find((k) => k.provider === normProvName);
@@ -686,22 +673,22 @@ export function SettingsPage() {
                     const isTesting = verifyingProvider[provider.id] || false;
 
                     return (
-                      <div key={provider.id} className="p-5 rounded-2xl border border-border/60 bg-muted/20 space-y-4 shadow-sm hover:border-border transition-colors">
+                      <div key={provider.id} className="p-4 rounded-xl border border-border bg-background space-y-3 shadow-xs">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className={`text-base p-1.5 rounded-xl border ${provider.color}`}>{provider.icon}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm p-1 rounded-lg bg-muted text-foreground">{provider.icon}</span>
                             <div>
-                              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{provider.name}</h4>
-                              <p className="text-[10px] text-muted-foreground">Default: {savedItem?.model || provider.defaultModel}</p>
+                              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">{provider.name}</h4>
+                              <p className="text-[10px] text-muted-foreground font-mono">Default: {savedItem?.model || provider.defaultModel}</p>
                             </div>
                           </div>
                           {isSaved ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                               <ShieldCheck className="w-3 h-3" />
                               Verified & Saved
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border/60">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border">
                               Not Configured
                             </span>
                           )}
@@ -713,17 +700,17 @@ export function SettingsPage() {
                             placeholder={isSaved ? "•••••••••••••••••••• (Encrypted in DB)" : provider.placeholder}
                             value={currentInput}
                             onChange={(e) => setProviderKeysInput((prev) => ({ ...prev, [provider.id]: e.target.value }))}
-                            className="h-9 text-xs rounded-xl bg-background border-border/80"
+                            className="h-8 text-xs rounded-lg bg-card border-border font-mono"
                           />
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
                             <Button
                               type="button"
                               size="sm"
                               disabled={isTesting || !currentInput.trim()}
                               onClick={() => handleVerifyAndSaveProviderKey(provider.id, currentInput)}
-                              className="h-8 text-xs font-semibold rounded-xl bg-[#0B3B36] text-white hover:bg-[#0B3B36]/90 shadow-sm"
+                              className="h-7 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
                             >
-                              {isTesting ? "Testing API Call..." : "Test & Save API Key"}
+                              {isTesting ? "Testing Call..." : "Test & Save"}
                             </Button>
                             {isSaved && (
                               <Button
@@ -731,7 +718,7 @@ export function SettingsPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDeleteKey(normProvName)}
-                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                                className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg px-2"
                               >
                                 Delete Key
                               </Button>
@@ -747,52 +734,52 @@ export function SettingsPage() {
 
             {/* Stat Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-5 flex flex-col justify-between border-violet-500/20 bg-violet-500/5 hover:border-violet-500/30 transition-all">
+              <Card className="p-5 flex flex-col justify-between border-border bg-card shadow-xs">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-xs uppercase font-bold tracking-wider">Total Cost</span>
-                  <Coins className="h-4 w-4 text-violet-500" />
+                  <Coins className="h-4 w-4 text-accent" />
                 </div>
                 <div className="mt-4">
-                  <span className="text-3xl font-black text-violet-700 dark:text-violet-400">
+                  <span className="text-3xl font-black text-primary font-mono">
                     ${stats?.summary.total_cost.toFixed(5)}
                   </span>
-                  <p className="text-[10px] text-muted-foreground mt-1">Local pricing matrix estimate</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Exact token usage pricing</p>
                 </div>
               </Card>
 
-              <Card className="p-5 flex flex-col justify-between border-indigo-500/20 bg-indigo-500/5 hover:border-indigo-500/30 transition-all">
+              <Card className="p-5 flex flex-col justify-between border-border bg-card shadow-xs">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-xs uppercase font-bold tracking-wider">API Invocations</span>
-                  <Cpu className="h-4 w-4 text-indigo-500" />
+                  <Cpu className="h-4 w-4 text-primary" />
                 </div>
                 <div className="mt-4">
-                  <span className="text-3xl font-black text-indigo-700 dark:text-indigo-400">
+                  <span className="text-3xl font-black text-foreground">
                     {stats?.summary.total_calls}
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-1">Completed LLM runs</p>
                 </div>
               </Card>
 
-              <Card className="p-5 flex flex-col justify-between border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/30 transition-all">
+              <Card className="p-5 flex flex-col justify-between border-border bg-card shadow-xs">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-xs uppercase font-bold tracking-wider">Prompt Tokens</span>
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <TrendingUp className="h-4 w-4 text-accent-plum" />
                 </div>
                 <div className="mt-4">
-                  <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">
+                  <span className="text-2xl font-extrabold text-foreground">
                     {stats?.summary.input_tokens.toLocaleString()}
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-1">Total tokens read</p>
                 </div>
               </Card>
 
-              <Card className="p-5 flex flex-col justify-between border-amber-500/20 bg-amber-500/5 hover:border-amber-500/30 transition-all">
+              <Card className="p-5 flex flex-col justify-between border-border bg-card shadow-xs">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-xs uppercase font-bold tracking-wider">Completion Tokens</span>
-                  <TrendingUp className="h-4 w-4 text-amber-500" />
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="mt-4">
-                  <span className="text-2xl font-extrabold text-amber-700 dark:text-amber-400">
+                  <span className="text-2xl font-extrabold text-foreground">
                     {stats?.summary.output_tokens.toLocaleString()}
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-1">Total tokens generated</p>
@@ -801,7 +788,7 @@ export function SettingsPage() {
             </div>
 
             {/* Custom SVG/CSS Bar Chart for Cost Trends */}
-            <Card className="p-6">
+            <Card className="p-6 border-border bg-card shadow-xs">
               <h3 className="font-bold text-sm text-foreground uppercase tracking-wide mb-6">
                 Cost Trends over Time
               </h3>
@@ -811,17 +798,17 @@ export function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-end justify-between gap-2 h-48 border-b pb-2 pt-4">
+                  <div className="flex items-end justify-between gap-2 h-48 border-b border-border pb-2 pt-4">
                     {stats.timeline.map((item, idx) => {
                       const pct = maxTimelineCost > 0 ? (item.cost / maxTimelineCost) * 100 : 0;
                       return (
                         <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                           <div 
                             style={{ height: `${Math.max(pct, 4)}%` }}
-                            className="w-full max-w-[24px] bg-gradient-to-t from-indigo-500 to-violet-500 rounded-t-md hover:from-indigo-600 hover:to-violet-600 transition-all cursor-pointer"
+                            className="w-full max-w-[24px] bg-gradient-to-t from-primary to-primary/70 rounded-t-md hover:from-primary/90 hover:to-primary transition-all cursor-pointer"
                           />
                           {/* Tooltip */}
-                          <div className="absolute bottom-full mb-1 hidden group-hover:block bg-popover text-popover-foreground text-[10px] p-2 rounded shadow border whitespace-nowrap z-20">
+                          <div className="absolute bottom-full mb-1 hidden group-hover:block bg-popover text-popover-foreground text-[10px] p-2 rounded shadow border border-border whitespace-nowrap z-20">
                             <p className="font-semibold">${item.cost.toFixed(5)}</p>
                             <p className="text-muted-foreground">{item.calls} invocations</p>
                           </div>
@@ -839,27 +826,25 @@ export function SettingsPage() {
             </Card>
 
             {/* Models/Providers Breakdown Table */}
-            <Card className="p-6 space-y-6">
+            <Card className="p-6 border-border bg-card shadow-xs space-y-6">
               <div>
                 <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
                   Model & Provider Breakdown
                 </h3>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Manage saved provider keys and track historical usage costs.
+                  Track historical usage costs across LLM providers and models.
                 </p>
               </div>
 
-
-
               {/* Divider */}
-              <div className="border-t pt-6">
+              <div className="border-t border-border pt-6">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
                   Usage & Metrics
                 </h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b text-muted-foreground uppercase font-bold tracking-wider">
+                      <tr className="border-b border-border text-muted-foreground uppercase font-bold tracking-wider">
                         <th className="pb-3 pr-4">Provider</th>
                         <th className="pb-3 pr-4">Model Name</th>
                         <th className="pb-3 pr-4 text-right">Runs</th>
@@ -877,13 +862,13 @@ export function SettingsPage() {
                         </tr>
                       ) : (
                         stats.breakdown.map((row, index) => (
-                          <tr key={index} className="border-b last:border-0 hover:bg-muted/30">
-                            <td className="py-3 pr-4 font-bold text-indigo-600 capitalize">{row.provider}</td>
+                          <tr key={index} className="border-b border-border last:border-0 hover:bg-muted/30">
+                            <td className="py-3 pr-4 font-bold text-primary capitalize">{row.provider}</td>
                             <td className="py-3 pr-4 font-mono font-medium text-foreground">{row.model}</td>
                             <td className="py-3 pr-4 text-right font-semibold">{row.calls}</td>
                             <td className="py-3 pr-4 text-right text-muted-foreground">{row.input_tokens.toLocaleString()}</td>
                             <td className="py-3 pr-4 text-right text-muted-foreground">{row.output_tokens.toLocaleString()}</td>
-                            <td className="py-3 text-right font-black text-emerald-600">${row.cost.toFixed(5)}</td>
+                            <td className="py-3 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono">${row.cost.toFixed(5)}</td>
                           </tr>
                         ))
                       )}

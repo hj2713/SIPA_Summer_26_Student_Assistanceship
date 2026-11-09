@@ -5,6 +5,7 @@ from unittest.mock import patch
 from app.core.database import get_db_conn
 from app.services.campaign_service import campaign_service
 from app.tests.conftest import TEST_USER_ID
+from app.tests.factories import create_test_campaign, create_test_document, link_document_to_campaign
 
 def test_create_evaluation_campaign_requires_auth(client):
     response = client.post("/api/dashboards", json={
@@ -171,30 +172,28 @@ def test_retry_documents_can_recover_active_stuck_runs(client, auth_headers):
         },
     }
 
-    with get_db_conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO dashboards (id, workspace_id, name, description, prompt, schema, model)
-            VALUES (?, 'TEST', 'Recover Active', 'Desc', 'Prompt', '[]', 'gpt-4o-mini,gemini-3.1-flash-lite');
-            """,
-            (dashboard_id,),
+    create_test_campaign(
+        workspace_id="TEST",
+        name="Recover Active",
+        description="Desc",
+        prompt="Prompt",
+        model="gpt-4o-mini,gemini-3.1-flash-lite",
+        campaign_id=dashboard_id,
+    )
+    for index, doc_id in enumerate(doc_ids):
+        create_test_document(
+            workspace_id="TEST",
+            user_id=TEST_USER_ID,
+            filename=f"recover-{index}.txt",
+            document_id=doc_id,
+            status="completed",
         )
-        for index, doc_id in enumerate(doc_ids):
-            conn.execute(
-                """
-                INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
-                VALUES (?, ?, 'TEST', ?, ?, 10, 'text/plain', 'completed', '{}');
-                """,
-                (doc_id, TEST_USER_ID, f"recover-{index}.txt", f"/tmp/recover-{index}.txt"),
-            )
-            conn.execute(
-                """
-                INSERT INTO dashboard_documents (dashboard_id, document_id, status, coded_values)
-                VALUES (?, ?, 'processing', ?);
-                """,
-                (dashboard_id, doc_id, json.dumps(coded_values)),
-            )
-        conn.commit()
+        link_document_to_campaign(
+            dashboard_id=dashboard_id,
+            document_id=doc_id,
+            status="processing",
+            coded_values=coded_values,
+        )
 
     with patch("app.services.campaign_service.campaign_service._enqueue_dashboard_execution") as mock_enqueue:
         response = client.post(
@@ -386,24 +385,24 @@ def test_linked_evaluation_dashboard_runs_workflow_on_same_dashboard(client, aut
     workflow = workflow_response.json()
     workflow_id = workflow["id"]
 
-    with get_db_conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO dashboards (
-                id, workspace_id, name, description, prompt, schema, model, dashboard_type,
-                workflow_id, workflow_source, workflow_definition_json
-            ) VALUES (?, 'TEST', 'Eval Linked', '', 'Prompt', '[]', 'gemini-3.1-flash-lite,gpt-4o-mini', 'model_comparison', ?, 'draft', '{"nodes":[],"edges":[],"outputs":[]}');
-            """,
-            (dashboard_id, workflow_id),
-        )
-        conn.execute(
-            """
-            INSERT INTO documents (id, user_id, workspace_id, filename, file_path, file_size, content_type, status, metadata)
-            VALUES (?, ?, 'TEST', 'linked-law.txt', '/tmp/linked-law.txt', 10, 'text/plain', 'completed', '{}');
-            """,
-            (document_id, TEST_USER_ID),
-        )
-        conn.commit()
+    create_test_campaign(
+        workspace_id="TEST",
+        name="Eval Linked",
+        prompt="Prompt",
+        model="gemini-3.1-flash-lite,gpt-4o-mini",
+        dashboard_type="model_comparison",
+        workflow_id=workflow_id,
+        workflow_source="draft",
+        workflow_definition_json='{"nodes":[],"edges":[],"outputs":[]}',
+        campaign_id=dashboard_id,
+    )
+    create_test_document(
+        workspace_id="TEST",
+        user_id=TEST_USER_ID,
+        filename="linked-law.txt",
+        document_id=document_id,
+        status="completed",
+    )
 
     with patch(
         "app.services.workflow_dashboard_service.workflow_dashboard_service.queue_existing_documents_for_dashboard",

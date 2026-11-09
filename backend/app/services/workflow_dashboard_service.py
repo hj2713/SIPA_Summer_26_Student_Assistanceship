@@ -758,6 +758,8 @@ class WorkflowDashboardService:
                     completed_results: list[tuple[str, dict[str, Any]]] = []
                     representative_trace: list[dict[str, Any]] = []
                     representative_context: dict[str, Any] = {}
+                    all_model_traces: dict[str, Any] = {}
+                    all_model_contexts: dict[str, Any] = {}
                     representative_error: str | None = None
                     representative_error_type: str | None = None
 
@@ -773,9 +775,12 @@ class WorkflowDashboardService:
                             "error_message": model_result.get("error_message"),
                             "error_type": model_result.get("error_type"),
                             "timing": model_result.get("timing"),
-                            "trace": model_result.get("trace") or [],
-                            "context": model_result.get("context") or {},
                         }
+                        if model_result.get("trace"):
+                            all_model_traces[model] = model_result.get("trace")
+                        if model_result.get("context"):
+                            all_model_contexts[model] = model_result.get("context")
+
                         with self.db_session_factory() as session:
                             session.dashboard_documents.update_coded_values(
                                 dashboard_id,
@@ -814,13 +819,15 @@ class WorkflowDashboardService:
                         )
 
                     if completed_results:
+                        final_trace = all_model_traces if len(all_model_traces) > 1 else representative_trace
+                        final_context = all_model_contexts if len(all_model_contexts) > 1 else representative_context
                         with self.db_session_factory() as session:
                             session.dashboard_documents.update_workflow_result(
                                 dashboard_id,
                                 doc_id,
                                 json.dumps(all_coded),
-                                json.dumps(representative_trace),
-                                json.dumps(representative_context),
+                                json.dumps(final_trace),
+                                json.dumps(final_context),
                                 status=overall_status,
                                 error_message=representative_error if overall_status == "failed" else None,
                                 error_type=(representative_error_type or "API_FAILURE") if overall_status == "failed" and representative_error else None,
@@ -993,7 +1000,7 @@ class WorkflowDashboardService:
 
         with self.db_session_factory() as session:
             row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
-        return campaign_service._dashboard_document_row(row)
+        return campaign_service._dashboard_document_row(row, include_trace=True)
 
 
 
@@ -1261,7 +1268,7 @@ class WorkflowDashboardService:
             row = session.dashboard_documents.get_workflow_result(dashboard_id, document_id)
         if not row:
             raise HTTPException(status_code=404, detail="Workflow result not found.")
-        return campaign_service._dashboard_document_row(row)
+        return campaign_service._dashboard_document_row(row, include_trace=True)
 
 
 workflow_dashboard_service = WorkflowDashboardService()

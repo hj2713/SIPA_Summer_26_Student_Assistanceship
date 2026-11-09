@@ -9,11 +9,33 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/constants";
-import { Trash2, Plus, Play, Sparkles, Layers, X, Upload, ChevronDown, GitBranch } from "lucide-react";
+import { Trash2, Plus, Play, Sparkles, Layers, X, Upload, ChevronDown, GitBranch, BookOpen } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useAvailableModels } from "@/hooks/useAvailableModels";
 import { workflowApi } from "@/lib/workflowApi";
 import type { CodingWorkflow } from "@/types/workflow";
+import { GuidedTour, type TourStep } from "@/components/ui/GuidedTour";
+
+const CAMPAIGN_TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "tour-tab-prompt",
+    title: "Prompt Codebooks",
+    description: "Audit statutory language using structured codebooks. The AI analyzes each law and extracts discrete variables (e.g. delegation authority, discretion rank) into structured tabular records.",
+    preferredPlacement: "bottom",
+  },
+  {
+    targetId: "tour-tab-workflow",
+    title: "Workflow Evaluations",
+    description: "Benchmark multi-step directed acyclic graph (DAG) workflows across models (OpenAI, Gemini, Anthropic) with deterministic 2-stage verification to evaluate statutory discretion.",
+    preferredPlacement: "bottom",
+  },
+  {
+    targetId: "tour-btn-create",
+    title: "Create Campaign",
+    description: "Launch a new empirical campaign. You can build a direct Prompt Codebook with custom schemas or trigger a multi-model Workflow Benchmark run.",
+    preferredPlacement: "bottom",
+  },
+];
 
 interface Campaign {
   id: string;
@@ -59,6 +81,17 @@ export function DashboardListPage() {
 
   const [creating, setCreating] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const completed = localStorage.getItem("tour_campaigns_completed");
+      if (!completed) {
+        const timer = setTimeout(() => setIsTourOpen(true), 800);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (availableModels.length > 0) {
@@ -305,118 +338,143 @@ export function DashboardListPage() {
     : campaigns;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F7F3EE] text-stone-900">
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <ThreadSidebar />
 
       <main className="flex-1 flex flex-col h-full overflow-y-auto">
         {/* Top Header Section */}
-        <div className="bg-white border-b border-stone-200 px-8 py-6 shadow-sm">
+        <div className="bg-card border-b border-border px-8 py-6 shadow-xs">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-[#0B3B36] font-semibold text-xs tracking-wider uppercase mb-1">
-                <Layers className="h-4 w-4 text-[#E6AA4C]" />
+              <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase mb-1">
+                <Layers className="h-4 w-4 text-accent" />
                 <span>Empirical Research Workbench</span>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-stone-900">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Research Campaigns
               </h1>
-              <p className="text-xs text-stone-500 mt-1 max-w-2xl">
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
                 Define prompt codebooks or evaluate custom workflows across models to extract structured legislative delegation datasets.
               </p>
             </div>
 
-            {/* Split / Dropdown Create Campaign Action */}
-            <div className="relative">
-              <div className="inline-flex rounded-xl shadow-sm bg-[#0B3B36] text-white">
-                <Button 
-                  onClick={() => {
-                    setCreationMode("prompt");
-                    setShowCreateModal(true);
-                  }} 
-                  className="gap-2 rounded-r-none border-r border-white/20 font-semibold text-xs bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white h-9 px-3.5"
-                >
-                  <Plus size={15} className="text-[#E6AA4C]" /> Create Campaign
-                </Button>
-                <Button
-                  size="icon"
-                  onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                  className="rounded-l-none px-2 bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white h-9"
-                >
-                  <ChevronDown size={14} />
-                </Button>
-              </div>
-
-            {showCreateDropdown && (
-              <div 
-                className="absolute right-0 mt-2 w-64 rounded-xl border border-stone-200 bg-white p-1.5 shadow-xl z-50 text-xs animate-in fade-in slide-in-from-top-2"
-                onClick={() => setShowCreateDropdown(false)}
+            {/* Actions: Rubric Guide + Take Tour + Split / Dropdown Create Campaign */}
+            <div className="flex items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/docs?tab=rubric")}
+                className="h-9 px-3 rounded-xl border-border bg-card hover:bg-muted text-foreground text-xs font-semibold gap-1.5 shadow-xs"
               >
-                <button
-                  onClick={() => {
-                    setCreationMode("prompt");
-                    setShowCreateModal(true);
-                  }}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-stone-100 flex items-center gap-2.5 transition-colors font-medium text-stone-800"
-                >
-                  <Sparkles size={16} className="text-[#E6AA4C]" />
-                  <div>
-                    <div className="font-bold text-stone-900">Prompt a Campaign</div>
-                    <div className="text-[10px] text-stone-500">Codebook & variable extraction</div>
+                <BookOpen className="h-3.5 w-3.5 text-primary" />
+                Rubric Guide
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTourOpen(true)}
+                className="h-9 px-3.5 rounded-xl border-border bg-card hover:bg-muted text-foreground text-xs font-semibold gap-1.5 shadow-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                Take Tour
+              </Button>
+
+              <div className="relative">
+                <div className="inline-flex rounded-xl shadow-xs bg-primary text-primary-foreground">
+                  <Button 
+                    id="tour-btn-create"
+                    onClick={() => {
+                      setCreationMode("prompt");
+                      setShowCreateModal(true);
+                    }} 
+                    className="gap-2 rounded-r-none border-r border-white/20 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-3.5"
+                  >
+                    <Plus size={15} className="text-accent" /> Create Campaign
+                  </Button>
+                  <Button
+                    size="icon"
+                    onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+                    className="rounded-l-none px-2 bg-primary hover:bg-primary/90 text-primary-foreground h-9"
+                  >
+                    <ChevronDown size={14} />
+                  </Button>
+                </div>
+
+                {showCreateDropdown && (
+                  <div 
+                    className="absolute right-0 mt-2 w-64 rounded-xl border border-border bg-card p-1.5 shadow-xl z-50 text-xs animate-in fade-in slide-in-from-top-2"
+                    onClick={() => setShowCreateDropdown(false)}
+                  >
+                    <button
+                      onClick={() => {
+                        setCreationMode("prompt");
+                        setShowCreateModal(true);
+                      }}
+                      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted flex items-center gap-2.5 transition-colors font-medium text-foreground"
+                    >
+                      <Sparkles size={16} className="text-accent" />
+                      <div>
+                        <div className="font-bold text-foreground">Prompt a Campaign</div>
+                        <div className="text-[10px] text-muted-foreground">Codebook & variable extraction</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCreationMode("workflow");
+                        setShowCreateModal(true);
+                      }}
+                      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted flex items-center gap-2.5 transition-colors font-medium border-t border-border mt-1 pt-2 text-foreground"
+                    >
+                      <GitBranch size={16} className="text-primary" />
+                      <div>
+                        <div className="font-bold text-foreground">Workflow Evaluation</div>
+                        <div className="text-[10px] text-muted-foreground">Multi-model benchmark & graph flow</div>
+                      </div>
+                    </button>
                   </div>
-                </button>
-                <button
-                  onClick={() => {
-                    setCreationMode("workflow");
-                    setShowCreateModal(true);
-                  }}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-stone-100 flex items-center gap-2.5 transition-colors font-medium border-t border-stone-100 mt-1 pt-2 text-stone-800"
-                >
-                  <GitBranch size={16} className="text-[#0B3B36]" />
-                  <div>
-                    <div className="font-bold text-stone-900">Workflow Evaluation</div>
-                    <div className="text-[10px] text-stone-500">Multi-model benchmark & graph flow</div>
-                  </div>
-                </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
 
         {/* Content Container */}
         <div className="flex-1 max-w-7xl mx-auto w-full p-8 space-y-6">
           {/* Requirement 14: Filter Options Bar */}
-          <div className="flex items-center gap-2 border-b pb-4 border-stone-200">
-            <div className="flex items-center gap-1 bg-stone-200/60 p-1 rounded-xl">
+          <div className="flex items-center gap-2 border-b pb-4 border-border">
+            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl">
               <button
                 onClick={() => setFilterTab("all")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   filterTab === "all"
-                    ? "bg-white text-[#0B3B36] shadow-sm font-bold"
-                    : "text-stone-600 hover:text-stone-900"
+                    ? "bg-card text-primary shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 All Campaigns ({campaigns.length})
               </button>
               <button
+                id="tour-tab-prompt"
                 onClick={() => setFilterTab("prompt")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   filterTab === "prompt"
-                    ? "bg-white text-[#0B3B36] shadow-sm font-bold"
-                    : "text-stone-600 hover:text-stone-900"
+                    ? "bg-card text-primary shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Sparkles size={13} className="text-[#E6AA4C]" /> Prompt Codebooks ({promptCampaigns.length})
+                <Sparkles size={13} className="text-accent" /> Prompt Codebooks ({promptCampaigns.length})
               </button>
               <button
+                id="tour-tab-workflow"
                 onClick={() => setFilterTab("workflow")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   filterTab === "workflow"
-                    ? "bg-white text-[#0B3B36] shadow-sm font-bold"
-                    : "text-stone-600 hover:text-stone-900"
+                    ? "bg-card text-primary shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <GitBranch size={13} className="text-[#0B3B36]" /> Workflow Evaluations ({workflowCampaigns.length})
+                <GitBranch size={13} className="text-primary" /> Workflow Evaluations ({workflowCampaigns.length})
               </button>
             </div>
           </div>
@@ -425,24 +483,24 @@ export function DashboardListPage() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((n) => (
-                <div key={n} className="h-48 rounded-2xl border border-stone-200 bg-white animate-pulse" />
+                <div key={n} className="h-48 rounded-2xl border border-border bg-card animate-pulse" />
               ))}
             </div>
           ) : filteredCampaigns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-stone-300 rounded-2xl p-16 text-center max-w-2xl mx-auto my-12 bg-white">
-              <div className="h-14 w-14 rounded-full bg-[#E6AA4C]/20 flex items-center justify-center text-[#A26D19] mb-4">
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl p-16 text-center max-w-2xl mx-auto my-12 bg-card">
+              <div className="h-14 w-14 rounded-full bg-accent/20 flex items-center justify-center text-accent-foreground mb-4">
                 <Layers size={26} />
               </div>
-              <h3 className="text-base font-bold text-stone-900">No campaigns found</h3>
-              <p className="text-stone-500 text-xs max-w-sm mt-1.5 mb-6">
+              <h3 className="text-base font-bold text-foreground">No campaigns found</h3>
+              <p className="text-muted-foreground text-xs max-w-sm mt-1.5 mb-6">
                 {filterTab === "prompt"
                   ? "No Prompt a Campaign dashboards created yet."
                   : filterTab === "workflow"
                   ? "No Workflow Evaluation dashboards created yet."
                   : "Create your first campaign to define a research codebook or evaluate multi-model workflows."}
               </p>
-              <Button onClick={() => setShowCreateModal(true)} className="gap-2 bg-[#0B3B36] hover:bg-[#0B3B36]/90 text-white rounded-xl text-xs font-semibold">
-                <Plus size={15} className="text-[#E6AA4C]" /> Create Campaign
+              <Button onClick={() => setShowCreateModal(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold">
+                <Plus size={15} className="text-accent" /> Create Campaign
               </Button>
             </div>
           ) : (
@@ -452,15 +510,15 @@ export function DashboardListPage() {
                 return (
                   <Card 
                     key={c.id} 
-                    className="group relative border border-stone-200 bg-white hover:border-[#0B3B36]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between rounded-2xl"
+                    className="group relative border border-border bg-card hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between rounded-2xl shadow-xs"
                     onClick={() => navigate(isWorkflowType ? `/evaluation/${c.id}` : `/campaigns/${c.id}`)}
                   >
                     <div className="p-6">
                       <div className="flex justify-between items-start gap-4 mb-3">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           isWorkflowType
-                            ? "bg-[#E6AA4C]/20 text-[#A26D19] border border-[#E6AA4C]/40"
-                            : "bg-[#0B3B36]/10 text-[#0B3B36] border border-[#0B3B36]/20"
+                            ? "bg-accent/20 text-accent-foreground border border-accent/40"
+                            : "bg-primary/10 text-primary border border-primary/20"
                         }`}>
                           {isWorkflowType ? <GitBranch size={11} /> : <Sparkles size={11} />}
                           {isWorkflowType ? "Workflow Evaluation" : "Prompt Codebook"}
@@ -470,7 +528,7 @@ export function DashboardListPage() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-stone-400 hover:text-red-600 hover:bg-red-50 h-7 w-7 rounded-lg"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 rounded-lg"
                             onClick={(e) => handleDeleteCampaignClick(c.id, e)}
                           >
                             <Trash2 size={13} />
@@ -478,30 +536,30 @@ export function DashboardListPage() {
                         )}
                       </div>
                       
-                      <CardTitle className="text-base font-bold text-stone-900 group-hover:text-[#0B3B36] transition-colors">
+                      <CardTitle className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
                         {c.name}
                       </CardTitle>
 
                       {c.created_by && (
-                        <div className="text-[10px] text-stone-400 font-medium mt-1">
+                        <div className="text-[10px] text-muted-foreground font-medium mt-1">
                           Created by: {c.created_by}
                         </div>
                       )}
 
-                      <CardDescription className="text-stone-500 line-clamp-2 text-xs mt-2 leading-relaxed">
+                      <CardDescription className="text-muted-foreground line-clamp-2 text-xs mt-2 leading-relaxed">
                         {c.description || c.prompt}
                       </CardDescription>
                     </div>
 
-                    <div className="border-t border-stone-100 bg-stone-50/70 px-6 py-3.5 flex justify-between items-center text-xs text-stone-500">
+                    <div className="border-t border-border bg-muted/30 px-6 py-3.5 flex justify-between items-center text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5 font-medium text-[11px]">
-                        <Layers size={13} className={c.schema?.length ? "text-[#0B3B36]" : "text-[#E6AA4C]"} />
+                        <Layers size={13} className={c.schema?.length ? "text-primary" : "text-accent"} />
                         {isWorkflowType
                           ? `${c.model?.split(",").length || 1} models compared`
                           : `${c.schema?.length || 0} variables coded`}
                       </span>
-                      <span className="flex items-center gap-1 text-[#0B3B36] font-bold text-xs group-hover:underline">
-                        Open Grid <Play size={10} className="fill-[#0B3B36]" />
+                      <span className="flex items-center gap-1 text-primary font-bold text-xs group-hover:underline">
+                        Open Grid <Play size={10} className="fill-primary" />
                       </span>
                     </div>
                   </Card>
@@ -858,6 +916,13 @@ export function DashboardListPage() {
           onConfirm={executeDeleteCampaign}
           confirmText="Delete"
           variant="destructive"
+        />
+
+        <GuidedTour
+          steps={CAMPAIGN_TOUR_STEPS}
+          isOpen={isTourOpen}
+          onClose={() => setIsTourOpen(false)}
+          tourKey="campaigns"
         />
       </main>
     </div>

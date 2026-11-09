@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from typing import Optional
+from typing import Optional, Literal
 from app.core.deps import CurrentUserDep
 from app.repositories import get_db_session
 
@@ -10,10 +10,10 @@ router = APIRouter(prefix="/api/usage", tags=["usage"])
 @router.get("/stats")
 def get_usage_stats(
     current_user: CurrentUserDep,
-    timeframe: str = Query("last_day", enum=["last_hour", "last_day", "last_7_days", "all"]),
+    timeframe: Literal["last_hour", "last_day", "last_7_days", "all"] = Query("last_day"),
     campaign_id: Optional[str] = Query(None),
     thread_id: Optional[str] = Query(None),
-    scope: Optional[str] = Query("personal", enum=["personal", "workspace", "personal_in_workspace"]),
+    scope: Optional[Literal["personal", "workspace", "personal_in_workspace"]] = Query("personal"),
 ):
     """Retrieve isolated summarized, categorized, and timestamped cost & token statistics."""
     active_workspace_id = get_active_workspace()

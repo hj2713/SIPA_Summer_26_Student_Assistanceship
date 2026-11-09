@@ -504,6 +504,28 @@ Use this checklist to track refactoring progress across working sessions:
     - Increased status summary poll interval from 4s to 8s.
     - Removed arbitrary 20s forced re-fetches. Documents are now only re-fetched if `completed`, `failed`, or `total` counts actually change, or when jobs transition from running to complete.
     - Polling immediately shuts off when `pending === 0 && processing === 0`.
+- [x] **Task 15: Column Selection Modal UI Overhaul & Dialog Responsive Layout**
+  - [x] Fixed `DialogContent` in `frontend/src/components/ui/dialog.tsx`: Changed restrictive default `sm:max-w-sm` (384px) to `sm:max-w-lg` so caller overrides with `sm:max-w-*` properly take precedence.
+  - [x] Upgraded Column Picker modal in `ModelEvaluationPage.tsx`:
+    - Spacious container: `w-[95vw] sm:max-w-3xl max-h-[85vh]`.
+    - Responsive 2-column grid (`grid grid-cols-1 sm:grid-cols-2 gap-2`) with distinct checkmark indicators, variable names, and types (`boolean`, `string`, `list[string]`).
+    - Top toolbar: Search bar with instant text filter alongside 1-click filter buttons (`Key Variables (8)`, `Show all`, `Hide all`).
+    - Live counter footer: `X of Y columns visible` with a styled Done button.
+  - [x] Upgraded Model Picker modal in `ModelEvaluationPage.tsx`: `w-[92vw] sm:max-w-lg` with search, select/deselect, and clean status badges.
+- [x] **Task 16: Database Modularization & Pure SQL Schema Architecture**
+  - [x] Slashed `backend/app/core/database.py` from 1,044 lines down to ~125 lines, strictly focused on connection pooling lifecycle (`ConnectionPool`, `get_db_conn`, `close_postgres_pool`).
+  - [x] Extracted raw DDL schema strings into dedicated SQL files:
+    - `backend/app/db/schemas/postgres_schema.sql` (PostgreSQL extensions, pgvector, tables, and performance indexes).
+    - `backend/app/db/schemas/sqlite_schema.sql` (SQLite tables and indexes for testing).
+  - [x] Encapsulated schema runner, seed defaults, migrations, and `_clean_bloated_coded_values` in `backend/app/core/schema.py`.
+  - [x] Maintained 100% backward compatibility with all repository imports.
+- [x] **Task 17: Impenetrable Test Air-Gap & Zero Cloud Touch**
+  - [x] **Driver Air-Gap:** Hardcoded non-bypassable checks in `database.py` and `schema.py`: if `TEST_MODE=1`, any attempt to connect to PostgreSQL or initialize Supabase pools immediately raises `RuntimeError("CRITICAL SECURITY BLOCK: Unit tests are strictly forbidden from connecting to PostgreSQL / Supabase!")`.
+  - [x] **Eradicated Dangerous Latent Connections:** Completely removed `psycopg.connect` setup from `conftest.py`, forced `settings.DATABASE_URL = None`, and added an autouse session shield patching `psycopg.connect` to prevent any remote cloud connection.
+  - [x] **Eliminated Catastrophic Deletes:** Replaced all broad `DELETE FROM dashboards;` calls in fixtures with strictly scoped workspace deletions (`WHERE workspace_id = 'TEST'`).
+  - [x] **Abstract Mock & Factory Layer:** Extended `backend/app/tests/factories.py` (`create_test_user`, `create_test_workspace`, `create_test_campaign`, `create_test_document`, `link_document_to_campaign`, `mock_llm_reply`) and updated tests to use abstract factories instead of raw SQL.
+  - [x] **Verification:** Pytest suite passes 100% (**153 passed, 2 skipped in 8.52s**) with absolute zero risk of cloud interaction. Frontend builds clean in 397ms.
+
 
 
 

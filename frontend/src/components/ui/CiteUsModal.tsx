@@ -104,7 +104,7 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-2xl p-6 bg-card border-border shadow-xl">
+      <DialogContent className="w-full sm:max-w-xl md:max-w-2xl rounded-2xl p-6 bg-card border-border shadow-xl overflow-hidden">
         <DialogHeader className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-accent-plum/10 text-accent-plum border border-accent-plum/20 shadow-xs">
@@ -123,21 +123,21 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
 
         <div className="space-y-4 pt-2">
           {/* Target Selection: Software vs Foundational Methodology */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/50 border border-border">
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/50 border border-border w-full">
             <button
               type="button"
               onClick={() => {
                 setTarget("software");
                 setCopied(false);
               }}
-              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all min-w-0 ${
                 target === "software"
                   ? "bg-card text-foreground shadow-xs border border-border/80"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Laptop className="w-3.5 h-3.5 text-primary" />
-              <span>1. Software Platform (2026)</span>
+              <Laptop className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="truncate">1. Software Platform (2026)</span>
             </button>
             <button
               type="button"
@@ -145,28 +145,28 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
                 setTarget("book");
                 setCopied(false);
               }}
-              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all min-w-0 ${
                 target === "book"
                   ? "bg-card text-foreground shadow-xs border border-border/80"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5 text-accent-plum" />
-              <span>2. Theory Book (1999)</span>
+              <BookOpen className="w-3.5 h-3.5 text-accent-plum shrink-0" />
+              <span className="truncate">2. Theory Book (1999)</span>
             </button>
           </div>
 
           {/* Active Citation Card Title & Source Link */}
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <h3 className="text-xs font-bold text-foreground">{currentData.title}</h3>
-              <p className="text-[11px] text-muted-foreground">{currentData.subtitle}</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-1">
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-foreground truncate">{currentData.title}</h3>
+              <p className="text-[11px] text-muted-foreground truncate">{currentData.subtitle}</p>
             </div>
             <a
               href={currentData.linkUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-medium"
+              className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-medium shrink-0"
             >
               <span>{currentData.linkText}</span>
               <ExternalLink className="w-3 h-3" />
@@ -174,8 +174,8 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
           </div>
 
           {/* Format Selector Pills & Action Buttons */}
-          <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               {(["bibtex", "apa", "chicago"] as CitationFormat[]).map((fmt) => (
                 <button
                   key={fmt}
@@ -195,7 +195,7 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {format === "bibtex" && (
                 <Button
                   variant="outline"
@@ -220,13 +220,13 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
           </div>
 
           {/* Display Preview Box */}
-          <div className="relative rounded-xl border border-border bg-background p-4 shadow-2xs">
+          <div className="relative rounded-xl border border-border bg-background p-4 shadow-2xs min-w-0 w-full overflow-hidden">
             {format === "bibtex" ? (
-              <pre className="text-xs font-mono text-foreground/90 leading-relaxed overflow-x-auto whitespace-pre-wrap select-all">
+              <pre className="text-xs font-mono text-foreground/90 leading-relaxed overflow-x-auto whitespace-pre-wrap [overflow-wrap:anywhere] select-all min-w-0 w-full">
                 {activeText}
               </pre>
             ) : (
-              <p className="text-xs font-sans text-foreground/90 leading-relaxed select-all">
+              <p className="text-xs font-sans text-foreground/90 leading-relaxed select-all break-words min-w-0 w-full">
                 {activeText}
               </p>
             )}
@@ -241,7 +241,7 @@ export function CiteUsModal({ open, onOpenChange }: CiteUsModalProps) {
               indexing algorithms at <span className="font-medium text-foreground">Google Scholar</span>,{" "}
               <span className="font-medium text-foreground">Semantic Scholar</span>, and{" "}
               <span className="font-medium text-foreground">Crossref</span> parse the authors&apos; names and automatically
-              attribute citations to Himanshu Jhawar and Professor Sharyn O&apos;Halloran.
+              attribute citations to Himanshu Jhawar and the research project.
             </div>
           </div>
         </div>

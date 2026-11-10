@@ -212,6 +212,16 @@ CREATE TABLE IF NOT EXISTS workspace_llm_credentials (
     CONSTRAINT unique_workspace_provider UNIQUE (workspace_id, provider)
 );
 
+CREATE TABLE IF NOT EXISTS model_pricing (
+    model_id VARCHAR(255) PRIMARY KEY,
+    provider VARCHAR(100) NOT NULL,
+    input_cost_per_million DOUBLE PRECISION NOT NULL,
+    output_cost_per_million DOUBLE PRECISION NOT NULL,
+    cache_read_input_cost_per_million DOUBLE PRECISION,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    source VARCHAR(50) DEFAULT 'default'
+);
+
 CREATE TABLE IF NOT EXISTS llm_usage_logs (
     id VARCHAR(255) PRIMARY KEY,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -224,8 +234,10 @@ CREATE TABLE IF NOT EXISTS llm_usage_logs (
     thread_id VARCHAR(255) REFERENCES threads(id) ON DELETE SET NULL,
     input_tokens INTEGER NOT NULL DEFAULT 0,
     output_tokens INTEGER NOT NULL DEFAULT 0,
+    cached_tokens INTEGER NOT NULL DEFAULT 0,
     calculated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    key_level_used VARCHAR(50) DEFAULT 'system'
+    key_level_used VARCHAR(50) DEFAULT 'system',
+    generation_id VARCHAR(255)
 );
 
 -- 3. Defensive Schema Migrations (Safe for existing databases)
@@ -233,6 +245,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS llm_key_preference VARCHAR(50) DEFAUL
 ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);
 ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS workspace_id VARCHAR(255);
 ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS key_level_used VARCHAR(50) DEFAULT 'system';
+ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS cached_tokens INTEGER DEFAULT 0;
+ALTER TABLE llm_usage_logs ADD COLUMN IF NOT EXISTS generation_id VARCHAR(255);
 ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS model VARCHAR(255);
 ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS dashboard_type VARCHAR(50) NOT NULL DEFAULT 'campaign';
 ALTER TABLE dashboards ADD COLUMN IF NOT EXISTS workflow_id VARCHAR(255) REFERENCES coding_workflows(id) ON DELETE SET NULL;
@@ -253,6 +267,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, c
 CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks (document_id);
 CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents (user_id);
 CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents (workspace_id);
+CREATE INDEX IF NOT EXISTS idx_documents_workspace_created ON documents (workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chunks_workspace ON document_chunks (workspace_id);
 CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);
 CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);

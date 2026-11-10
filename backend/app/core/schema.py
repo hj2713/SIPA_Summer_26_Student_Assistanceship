@@ -115,6 +115,7 @@ def init_postgres_db():
                 logger.warning("Workspace ID migration note: %s", mig_err)
 
             # 6. Ensure default workspaces exist
+            cursor.execute("INSERT INTO workspaces (id, name, created_by) VALUES ('ws_system_templates', 'System Templates', 'system') ON CONFLICT (id) DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name, created_by) VALUES ('ws_prod_00000001', 'PRODUCTION', 'test@gmail.com') ON CONFLICT (id) DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('QA', 'QA') ON CONFLICT (id) DO NOTHING;")
             cursor.execute("INSERT INTO workspaces (id, name) VALUES ('TEST', 'TEST') ON CONFLICT (id) DO NOTHING;")
@@ -190,6 +191,12 @@ def init_sqlite_db():
             except sqlite3.OperationalError:
                 pass
 
+        for col, col_type in [("cached_tokens", "INTEGER DEFAULT 0"), ("generation_id", "TEXT")]:
+            try:
+                conn.execute(f"ALTER TABLE llm_usage_logs ADD COLUMN {col} {col_type};")
+            except sqlite3.OperationalError:
+                pass
+
         # 3. Seed test@gmail.com
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM users WHERE email = ?;", ("test@gmail.com",))
@@ -223,6 +230,7 @@ def init_sqlite_db():
             )
 
         # 5. Seed default workspaces
+        conn.execute("INSERT OR IGNORE INTO workspaces (id, name, created_by) VALUES ('ws_system_templates', 'System Templates', 'system');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name, created_by) VALUES ('ws_prod_00000001', 'PRODUCTION', 'test@gmail.com');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('QA', 'QA');")
         conn.execute("INSERT OR IGNORE INTO workspaces (id, name) VALUES ('TEST', 'TEST');")

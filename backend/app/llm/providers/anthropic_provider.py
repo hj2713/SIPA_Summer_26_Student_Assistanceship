@@ -90,12 +90,14 @@ class AnthropicProvider:
 
         input_tokens = 0
         output_tokens = 0
+        cached_tokens = 0
         async for event in response:
             text_delta = ""
             tool_call_deltas: list[LLMToolCallDelta] = []
 
             if event.type == "message_start":
                 input_tokens = getattr(event.message.usage, "input_tokens", 0) or 0
+                cached_tokens = getattr(event.message.usage, "cache_read_input_tokens", 0) or 0
             elif event.type == "content_block_delta":
                 if event.delta.type == "text_delta":
                     text_delta = event.delta.text
@@ -112,7 +114,7 @@ class AnthropicProvider:
 
             usage = None
             if input_tokens > 0 or output_tokens > 0:
-                usage = LLMUsage(input_tokens=input_tokens, output_tokens=output_tokens)
+                usage = LLMUsage(input_tokens=input_tokens, output_tokens=output_tokens, cached_tokens=cached_tokens)
 
             yield LLMChunk(
                 response_id="",
@@ -165,6 +167,7 @@ class AnthropicProvider:
         parsed = schema.model_validate(tool_use.input)
         usage = LLMUsage(
             input_tokens=response.usage.input_tokens,
-            output_tokens=response.usage.output_tokens
+            output_tokens=response.usage.output_tokens,
+            cached_tokens=getattr(response.usage, "cache_read_input_tokens", 0) or 0,
         )
         return parsed, usage

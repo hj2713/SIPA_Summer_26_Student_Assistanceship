@@ -228,6 +228,49 @@ def test_legacy_credentials_migration(client):
     assert anthropic_key["model"] == "claude-opus-4.8"
 
 
+def test_verify_using_saved_key_when_api_key_omitted(client, auth_headers):
+    # 1. Save OpenRouter credentials
+    res_save = client.put(
+        "/api/auth/llm-credentials",
+        json={"provider": "openrouter", "model": "openai/gpt-4o", "api_key": "sk-or-saved-test-key"},
+        headers=auth_headers
+    )
+    assert res_save.status_code == 200
+
+    # 2. Mock OpenRouter HTTP client
+    mock_auth_response = MagicMock()
+    mock_auth_response.status_code = 200
+    mock_models_response = MagicMock()
+    mock_models_response.status_code = 200
+    mock_models_response.json = MagicMock(return_value={"data": [{"id": "openai/gpt-4o"}]})
+
+    class MockAsyncClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+        async def get(self, url, **kwargs):
+            if "auth/key" in url:
+                assert kwargs["headers"]["Authorization"] == "Bearer sk-or-saved-test-key"
+                return mock_auth_response
+            elif "models" in url:
+                return mock_models_response
+            raise ValueError(f"Unexpected URL: {url}")
+
+    with patch("httpx.AsyncClient", return_value=MockAsyncClient()):
+        # 3. Call verify WITHOUT api_key (omitted)
+        res_verify = client.post(
+            "/api/auth/llm-credentials/verify",
+            json={"provider": "openrouter", "save": False},
+            headers=auth_headers
+        )
+        assert res_verify.status_code == 200
+        data = res_verify.json()
+        assert data["success"] is True
+        assert data["test_output"] == "YES"
+        assert "openai/gpt-4o" in data["models"]
+
+
 def test_link_google_endpoint_success(client, auth_headers):
     response = client.post(
         "/api/auth/link-google",
@@ -327,5 +370,131 @@ def test_invitation_pending_and_accept_flow(client):
     member_after = next((m for m in members_after if m["email"] == collab["email"]), None)
     assert member_after is not None
     assert member_after["status"] == "Active"
+
+
+def test_workspace_invite_security_non_admin_forbidden(client):
+    from app.tests.factories import create_test_user, create_test_workspace
+    owner = create_test_user(email="ws_boss@university.edu", is_admin=True)
+    ws = create_test_workspace(name="Security Sandbox", creator_user_id=owner["id"], creator_email=owner["email"])
+
+    member = create_test_user(email="regular_member@university.edu")
+    # Owner invites member
+    client.post(
+        f"/api/auth/workspaces/{ws['id']}/invite",
+        json={"email": member["email"], "role": "member"},
+        headers=owner["headers"]
+    )
+    # Member accepts
+    client.post(f"/api/auth/workspaces/{ws['id']}/accept", headers=member["headers"])
+
+    # Non-admin member attempts to invite someone else -> must be 403 Forbidden
+    intruder_invite = client.post(
+        f"/api/auth/workspaces/{ws['id']}/invite",
+        json={"email": "unauthorized_invitee@university.edu", "role": "member"},
+        headers=member["headers"]
+    )
+    assert intruder_invite.status_code == 403
+    assert "Only workspace owners and admins" in intruder_invite.json()["detail"]
+
+
+def test_workspace_unauthorized_user_cannot_view_or_remove_members(client):
+    from app.tests.factories import create_test_user, create_test_workspace
+    owner = create_test_user(email="lab_head@university.edu", is_admin=True)
+    ws = create_test_workspace(name="Private Lab", creator_user_id=owner["id"], creator_email=owner["email"])
+
+    outsider = create_test_user(email="outsider@external.org")
+
+    # Outsider tries to list members of a workspace they don't belong to -> 403
+    members_res = client.get(f"/api/auth/workspaces/{ws['id']}/members", headers=outsider["headers"])
+    assert members_res.status_code == 403
+    assert "You are not a member" in members_res.json()["detail"]
+
+    # Outsider tries to remove owner -> 403
+    del_res = client.delete(f"/api/auth/workspaces/{ws['id']}/members/{owner['email']}", headers=outsider["headers"])
+    assert del_res.status_code == 403
+
+
+def test_workspace_decline_invitation(client):
+    from app.tests.factories import create_test_user, create_test_workspace
+    owner = create_test_user(email="inviter@university.edu", is_admin=True)
+    ws = create_test_workspace(name="Collaboration Pool", creator_user_id=owner["id"], creator_email=owner["email"])
+
+    invitee = create_test_user(email="declining_researcher@university.edu")
+    client.post(
+        f"/api/auth/workspaces/{ws['id']}/invite",
+        json={"email": invitee["email"], "role": "member"},
+        headers=owner["headers"]
+    )
+
+    # Verify pending
+    pending = client.get("/api/auth/invitations/pending", headers=invitee["headers"]).json()
+    assert any(p["workspace_id"] == ws["id"] for p in pending)
+
+    # Decline invite
+    decline_res = client.post(f"/api/auth/workspaces/{ws['id']}/decline", headers=invitee["headers"])
+    assert decline_res.status_code == 200
+
+    # Verify pending list is now empty
+    pending_after = client.get("/api/auth/invitations/pending", headers=invitee["headers"]).json()
+    assert not any(p["workspace_id"] == ws["id"] for p in pending_after)
+
+    # Invitee has no access to workspace
+    ws_list = client.get("/api/auth/workspaces", headers=invitee["headers"]).json()
+    assert not any(w["id"] == ws["id"] for w in ws_list)
+
+
+def test_get_current_user_profile(client):
+    from app.tests.factories import create_test_user
+    user = create_test_user(email="alice_profile@university.edu", password="validpassword123")
+    res = client.get("/api/auth/me", headers=user["headers"])
+    assert res.status_code == 200
+    data = res.json()
+    assert data["email"] == "alice_profile@university.edu"
+    assert "Alice" in data["name"]
+    assert data["has_password"] is True
+    assert data["auth_method"] == "password"
+
+
+def test_update_account_password_and_email(client):
+    from app.tests.factories import create_test_user
+    user = create_test_user(email="bob_account@university.edu", password="oldpassword123")
+    headers = user["headers"]
+
+    # 1. Reject invalid current password
+    fail_pwd = client.put(
+        "/api/auth/account",
+        headers=headers,
+        json={"current_password": "wrongpassword", "new_password": "newpassword123"}
+    )
+    assert fail_pwd.status_code == 400
+    assert "incorrect" in fail_pwd.json()["detail"].lower()
+
+    # 2. Reject short password
+    short_pwd = client.put(
+        "/api/auth/account",
+        headers=headers,
+        json={"current_password": "oldpassword123", "new_password": "123"}
+    )
+    assert short_pwd.status_code == 400
+    assert "at least 6 characters" in short_pwd.json()["detail"].lower()
+
+    # 3. Successful password update
+    success_pwd = client.put(
+        "/api/auth/account",
+        headers=headers,
+        json={"current_password": "oldpassword123", "new_password": "brandnewpassword456"}
+    )
+    assert success_pwd.status_code == 200
+
+    # 4. Reject email update (email is permanent)
+    new_email = "bob_new_email@university.edu"
+    fail_email = client.put(
+        "/api/auth/account",
+        headers=headers,
+        json={"email": new_email}
+    )
+    assert fail_email.status_code == 400
+    assert "permanent" in fail_email.json()["detail"].lower()
+
 
 

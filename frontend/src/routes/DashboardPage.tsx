@@ -1158,7 +1158,7 @@ export function DashboardView({ hideSidebar = false }: { hideSidebar?: boolean }
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/evaluation?dashboard_id=${activeCampaignObj.id}`)}
+                  onClick={() => navigate(`/campaigns?tab=workflow&dashboard_id=${activeCampaignObj.id}`)}
                   className="text-xs gap-1.5 font-semibold rounded-xl border-border/80 hover:bg-muted/50"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>

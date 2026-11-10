@@ -9,18 +9,21 @@ import {
   Download,
   Copy,
   Search,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
   Sliders,
   Workflow,
   BookOpen,
   Share2,
   Users,
+  FileInput,
+  Layers,
+  HelpCircle,
+  Loader2,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { ShareWorkspaceModal } from "@/components/workspace/ShareWorkspaceModal";
+import { TechniquesGuideModal } from "@/components/workflows/TechniquesGuideModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -30,6 +33,7 @@ import { useAuthContext } from "@/context/AuthContext";
 import { workflowApi } from "@/lib/workflowApi";
 import type { CodingWorkflow, WorkflowTemplate } from "@/types/workflow";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/constants";
 
 function downloadJson(filename: string, value: unknown) {
   const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
@@ -57,6 +61,8 @@ export function WorkflowLibraryPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showTechniquesGuide, setShowTechniquesGuide] = useState(false);
+  const [techniquesGuideInitialStep, setTechniquesGuideInitialStep] = useState<1 | 2 | 3>(1);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [name, setName] = useState("");
@@ -65,6 +71,7 @@ export function WorkflowLibraryPage() {
   const [importJson, setImportJson] = useState("");
   const [deleteWorkflowTarget, setDeleteWorkflowTarget] = useState<CodingWorkflow | null>(null);
   const [deleteTemplateTarget, setDeleteTemplateTarget] = useState<WorkflowTemplate | null>(null);
+  const [replicateLoading, setReplicateLoading] = useState(false);
 
   useEffect(() => {
     if (!jwt || !activeWorkspace?.id) return;
@@ -78,7 +85,14 @@ export function WorkflowLibraryPage() {
         if (!active) return;
         setWorkflows(workflowItems);
         setTemplates(templateItems);
-        setTemplateId((current) => current || templateItems[0]?.id || "");
+        const standardTpl =
+          templateItems.find(
+            (t) =>
+              t.id === "2055d255-10db-426a-a215-fe6181b36ea7" ||
+              t.slug === "professor_discretion_prompt_suite_detailed" ||
+              t.slug.includes("detailed")
+          ) || templateItems[0];
+        setTemplateId((current) => current || standardTpl?.id || "");
       })
       .catch((error) => {
         if (active) toast.error(error instanceof Error ? error.message : "Failed to load coding workflows");
@@ -161,6 +175,100 @@ export function WorkflowLibraryPage() {
       navigate(`/workflows/${workflow.id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to duplicate workflow");
+    }
+  };
+
+  const replicateAndLaunchCampaign = async (template: WorkflowTemplate) => {
+    setReplicateLoading(true);
+    toast.info("Preparing turnkey campaign: duplicating workflow & publishing v1...", { duration: 3000 });
+    try {
+      // 1. Create a user-owned workflow from this library template
+      const workflow = await workflowApi.create(
+        {
+          name: `${template.name} (Custom)`,
+          description: template.description || "Replicated from official library benchmark.",
+          template_id: template.id,
+        },
+        jwt,
+        workspaceId
+      );
+
+      // 2. Publish revision 1 so it is a valid, immutable engine version for campaigns
+      await workflowApi.publish(
+        workflow.id,
+        "Turnkey evaluation campaign deployment",
+        jwt,
+        workspaceId
+      );
+
+      // 3. Create the Evaluation Campaign dashboard linked to this published workflow
+      const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(workspaceId)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          name: `${template.name} Evaluation`,
+          description: `Turnkey empirical benchmark run using ${template.name}`,
+          prompt: "Workflow evaluation benchmark run",
+          model: "gemini-1.5-flash,gpt-4o-mini",
+          dashboard_type: "model_comparison",
+          campaign_flow: "Workflow Evaluation",
+          workflow_id: workflow.id,
+          workflow_source: "published",
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to create evaluation campaign");
+      }
+
+      const campaign = await res.json();
+      toast.success("Turnkey campaign ready! Attach statutes and run your multi-model evaluation.");
+      navigate(`/evaluation/${campaign.id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to launch campaign");
+    } finally {
+      setReplicateLoading(false);
+    }
+  };
+
+  const launchCampaignFromUserWorkflow = async (workflow: CodingWorkflow) => {
+    setReplicateLoading(true);
+    toast.info("Preparing campaign for this workflow...", { duration: 3000 });
+    try {
+      let workflowVersion = workflow.latest_version;
+      if (!workflowVersion || workflow.status === "draft") {
+        const publishedVer = await workflowApi.publish(workflow.id, "Campaign deployment", jwt, workspaceId);
+        workflowVersion = publishedVer.version;
+      }
+      const res = await fetch(`${API_BASE_URL}/api/dashboards?workspace_id=${encodeURIComponent(workspaceId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({
+          name: `${workflow.name} Evaluation`,
+          description: `Empirical evaluation run using ${workflow.name} (v${workflowVersion})`,
+          prompt: "Workflow evaluation benchmark run",
+          model: "gemini-1.5-flash,gpt-4o-mini",
+          dashboard_type: "model_comparison",
+          campaign_flow: "Workflow Evaluation",
+          workflow_id: workflow.id,
+          workflow_source: "published",
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to create campaign");
+      }
+      const campaign = await res.json();
+      toast.success("Turnkey campaign ready! Attach statutes and select models.");
+      navigate(`/evaluation/${campaign.id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to launch campaign");
+    } finally {
+      setReplicateLoading(false);
     }
   };
 
@@ -350,85 +458,245 @@ export function WorkflowLibraryPage() {
           {/* TAB 1: LIBRARY (Official Frozen Benchmarks) */}
           {activeTab === "library" && (
             <div className="space-y-6">
-              {/* Featured Frozen Benchmark Card */}
+              {/* Featured Visual Pipeline Card */}
               <div className="rounded-2xl border border-border bg-card p-6 shadow-xs relative overflow-hidden">
-                <div className="absolute right-4 -top-8 w-40 h-40 bg-accent/10 rounded-full blur-2xl pointer-events-none" />
-                
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                  <div className="space-y-2 max-w-3xl">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold tracking-wide uppercase flex items-center gap-1">
-                        <Lock className="h-3 w-3 text-accent" />
-                        Official Frozen Benchmark v1.0
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-accent/20 text-accent-foreground border border-accent/40 text-[10px] font-bold tracking-wide uppercase flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Verified Peer-Review Standard
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-5 border-b border-border/40">
+                  <div className="space-y-1.5 max-w-2xl">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                        Standard Multi-Step Suite · 3 Techniques
                       </span>
                     </div>
-
-                    <h2 className="text-xl font-bold text-foreground tracking-tight">
-                      O'Halloran Administrative Delegation & Discretion Coder
+                    <h2 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                      <GitBranch className="h-5 w-5 text-primary" />
+                      Standard Delegation &amp; Discretion Suite
                     </h2>
-
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Deterministic 2-stage directed pipeline: Node 1 screens statutory text for administrative delegation (<code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">delegate_law</code>). If zero, Node 2 deterministically branches to set <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">discretion_rank = 0</code> with zero LLM waste. If one, evaluates statutory discretion constraints on a 1–5 scale.
+                      Multi-step statutory coding pipeline executing three comparative evaluation techniques in parallel: Cascade Screening, M9 Multiclass, and B3 Binary Partitioning.
                     </p>
-
-                    {/* Node Chaining Preview */}
-                    <div className="pt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="px-2.5 py-1 rounded-lg bg-muted border border-border font-medium text-foreground">
-                        1. Statute Ingestion
-                      </span>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                      <span className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 font-bold">
-                        2. Delegation Screening
-                      </span>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                      <span className="px-2.5 py-1 rounded-lg bg-accent/20 text-accent-foreground border border-accent/30 font-bold">
-                        3. Branch Logic (delegate==1)
-                      </span>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                      <span className="px-2.5 py-1 rounded-lg bg-accent-plum/15 text-accent-plum border border-accent-plum/30 font-bold">
-                        4. Discretion Classifier (1–5)
-                      </span>
-                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <Button
+                      variant="outline"
                       size="sm"
-                      className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold gap-2 h-10 px-5 shadow-xs"
+                      className="rounded-xl border-border text-foreground hover:bg-muted text-xs font-semibold gap-1.5 h-9 px-3.5"
                       onClick={() => {
-                        const standardTemplate = templates.find((t) =>
-                          t.name.toLowerCase().includes("delegation")
-                        ) || templates[0];
-                        if (standardTemplate) {
-                          void replicateAndEditTemplate(standardTemplate);
-                        } else {
-                          setShowCreate(true);
-                        }
+                        setTechniquesGuideInitialStep(1);
+                        setShowTechniquesGuide(true);
                       }}
                     >
-                      <Sparkles className="h-4 w-4 text-accent" />
-                      Replicate & Run
+                      <HelpCircle className="h-3.5 w-3.5 text-primary" />
+                      Techniques Guide
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-xl border-border text-foreground hover:bg-muted text-xs font-semibold gap-1.5 h-10 px-4"
+                      className="rounded-xl border-border text-foreground hover:bg-muted text-xs font-semibold gap-1.5 h-9 px-4"
                       onClick={() => {
-                        const standardTemplate = templates.find((t) =>
-                          t.name.toLowerCase().includes("delegation")
-                        ) || templates[0];
+                        const standardTemplate =
+                          templates.find(
+                            (t) =>
+                              t.id === "2055d255-10db-426a-a215-fe6181b36ea7" ||
+                              t.slug === "professor_discretion_prompt_suite_detailed" ||
+                              t.slug.includes("detailed")
+                          ) ||
+                          templates.find((t) => t.slug === "professor_discretion_prompt_suite") ||
+                          templates.find(
+                            (t) =>
+                              t.name.toLowerCase().includes("discretion") ||
+                              t.name.toLowerCase().includes("delegation")
+                          ) ||
+                          templates[0];
                         if (standardTemplate) {
                           navigate(`/workflows/${standardTemplate.id}?type=template`);
                         }
                       }}
                     >
-                      <Sliders className="h-3.5 w-3.5 text-stone-500" />
+                      <Sliders className="h-3.5 w-3.5 text-muted-foreground" />
                       Inspect Graph
                     </Button>
+                    <Button
+                      size="sm"
+                      disabled={replicateLoading}
+                      className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold gap-2 h-9 px-4 shadow-xs"
+                      onClick={() => {
+                        const standardTemplate =
+                          templates.find(
+                            (t) =>
+                              t.id === "2055d255-10db-426a-a215-fe6181b36ea7" ||
+                              t.slug === "professor_discretion_prompt_suite_detailed" ||
+                              t.slug.includes("detailed")
+                          ) ||
+                          templates.find((t) => t.slug === "professor_discretion_prompt_suite") ||
+                          templates.find(
+                            (t) =>
+                              t.name.toLowerCase().includes("discretion") ||
+                              t.name.toLowerCase().includes("delegation")
+                          ) ||
+                          templates[0];
+                        if (standardTemplate) {
+                          void replicateAndLaunchCampaign(standardTemplate);
+                        } else {
+                          setShowCreate(true);
+                        }
+                      }}
+                    >
+                      {replicateLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5 text-accent" />
+                      )}
+                      {replicateLoading ? "Launching Campaign…" : "Replicate & Run"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Visual Pipeline Node Chain */}
+                <div className="pt-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* Shared Stage */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTechniquesGuideInitialStep(1);
+                        setShowTechniquesGuide(true);
+                      }}
+                      className="rounded-xl border border-border/60 bg-muted/20 p-3.5 flex items-start gap-3 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left group cursor-pointer"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <FileInput size={15} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Shared Foundation</span>
+                          <span className="text-[10px] text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 font-medium">Guide &rarr;</span>
+                        </div>
+                        <div className="text-xs font-bold text-foreground truncate">Statute &amp; Inventory</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5 truncate">Ingestion, authority &amp; constraints</div>
+                      </div>
+                    </button>
+
+                    {/* Technique 1 */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTechniquesGuideInitialStep(1);
+                        setShowTechniquesGuide(true);
+                      }}
+                      className="rounded-xl border border-border/60 bg-muted/20 p-3.5 flex items-start gap-3 hover:border-violet-500/50 hover:bg-violet-500/5 transition-all text-left group cursor-pointer"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <Layers size={15} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider block">Technique 1</span>
+                          <span className="text-[10px] text-muted-foreground group-hover:text-violet-600 dark:group-hover:text-violet-400 font-medium">Explain &rarr;</span>
+                        </div>
+                        <div className="text-xs font-bold text-foreground truncate">Cascade Screen</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5 truncate">Sequential threshold elimination</div>
+                      </div>
+                    </button>
+
+                    {/* Technique 2 */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTechniquesGuideInitialStep(2);
+                        setShowTechniquesGuide(true);
+                      }}
+                      className="rounded-xl border border-border/60 bg-muted/20 p-3.5 flex items-start gap-3 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-left group cursor-pointer"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <Sparkles size={15} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">Technique 2</span>
+                          <span className="text-[10px] text-muted-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 font-medium">Explain &rarr;</span>
+                        </div>
+                        <div className="text-xs font-bold text-foreground truncate">M9 Multiclass</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5 truncate">Full-spectrum rank &amp; boundary</div>
+                      </div>
+                    </button>
+
+                    {/* Technique 3 */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTechniquesGuideInitialStep(3);
+                        setShowTechniquesGuide(true);
+                      }}
+                      className="rounded-xl border border-border/60 bg-muted/20 p-3.5 flex items-start gap-3 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left group cursor-pointer"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <GitBranch size={15} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Technique 3</span>
+                          <span className="text-[10px] text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 font-medium">Explain &rarr;</span>
+                        </div>
+                        <div className="text-xs font-bold text-foreground truncate">B3 Binary Split</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5 truncate">Bounded vs agency partitioning</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Educational Bridge: Workflow Blueprint -> Empirical Campaign */}
+              <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-card to-primary/5 p-5 shadow-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                      Research Concept &amp; Execution Model
+                    </span>
+                    <h3 className="text-sm font-bold text-foreground">
+                      How Workflows and Campaigns Work Together
+                    </h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground max-w-md">
+                    Workflows define the coding logic; Campaigns attach the statutes and benchmark multiple AI models.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-border/60 bg-card p-3.5 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <GitBranch size={13} />
+                      </div>
+                      <span className="text-xs font-bold text-foreground">1. Workflow (The Blueprint)</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      The directed acyclic graph (DAG) defining the screening gates, discretion rubrics, and structured output fields. Contains no specific files or models.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 bg-card p-3.5 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Rocket size={13} />
+                      </div>
+                      <span className="text-xs font-bold text-foreground">2. Turnkey Bridge (Replicate &amp; Run)</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Clicking "Replicate &amp; Run" clones the frozen blueprint into your workspace, publishes revision 1, and instantiates an active Evaluation Campaign.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 bg-card p-3.5 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <Layers size={13} />
+                      </div>
+                      <span className="text-xs font-bold text-foreground">3. Campaign (The Empirical Lab)</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Where statutes (PDF/TXT or Law Corpus) meet LLMs. Run evaluations, compare consensus &amp; Cohen's Kappa, and export replication datasets.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -490,9 +758,22 @@ export function WorkflowLibraryPage() {
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
+                          <div className="flex items-center justify-between pt-2.5 border-t border-border/50 text-[10px] text-muted-foreground">
                             <span>{template.definition.nodes.length} nodes · rev {template.revision}</span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                className="h-7 px-2.5 rounded-lg text-[11px] font-semibold bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs"
+                                title="Replicate template, publish v1, and launch evaluation campaign"
+                                disabled={replicateLoading}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void replicateAndLaunchCampaign(template);
+                                }}
+                              >
+                                <Rocket className="h-3 w-3 text-accent" />
+                                Run Campaign
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -569,7 +850,7 @@ export function WorkflowLibraryPage() {
                   <Sparkles className="h-8 w-8 text-accent mx-auto" />
                   <h3 className="text-sm font-bold text-foreground">No custom workflows yet</h3>
                   <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                    Start by replicating the official O'Halloran template or create a new blank graph.
+                    Start by replicating the official Standard Discretion template or create a new blank graph.
                   </p>
                   <Button
                     size="sm"
@@ -632,6 +913,19 @@ export function WorkflowLibraryPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="h-7 w-7 p-0 text-primary hover:text-primary hover:bg-primary/10"
+                                title="Launch Evaluation Campaign"
+                                disabled={replicateLoading}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void launchCampaignFromUserWorkflow(workflow);
+                                }}
+                              >
+                                <Rocket className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="h-7 w-7 p-0 text-stone-500 hover:text-stone-900"
                                 title="Duplicate"
                                 onClick={(e) => {
@@ -679,7 +973,7 @@ export function WorkflowLibraryPage() {
                     Shared Pipelines in {activeWorkspace?.name || "Workspace"}
                   </h3>
                   <p className="text-xs text-muted-foreground max-w-xl">
-                    Invite colleagues by university email or share a direct 1-click link. Collaborators can build, test, and run coding pipelines together.
+                    Invite colleagues by email to collaborate on legislative coding pipelines, share empirical campaign results, and audit statutes together.
                   </p>
                 </div>
                 <Button
@@ -959,6 +1253,31 @@ export function WorkflowLibraryPage() {
       <ShareWorkspaceModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
+      />
+
+      <TechniquesGuideModal
+        open={showTechniquesGuide}
+        onOpenChange={setShowTechniquesGuide}
+        initialStep={techniquesGuideInitialStep}
+        onInspectGraph={() => {
+          const standardTemplate =
+            templates.find(
+              (t) =>
+                t.id === "2055d255-10db-426a-a215-fe6181b36ea7" ||
+                t.slug === "professor_discretion_prompt_suite_detailed" ||
+                t.slug.includes("detailed")
+            ) ||
+            templates.find((t) => t.slug === "professor_discretion_prompt_suite") ||
+            templates.find(
+              (t) =>
+                t.name.toLowerCase().includes("discretion") ||
+                t.name.toLowerCase().includes("delegation")
+            ) ||
+            templates[0];
+          if (standardTemplate) {
+            navigate(`/workflows/${standardTemplate.id}?type=template`);
+          }
+        }}
       />
     </div>
   );

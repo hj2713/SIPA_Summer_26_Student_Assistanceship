@@ -119,25 +119,84 @@ PRICING_MAP = {
 }
 
 
-def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
-    """Calculate the cost of an LLM invocation using local pricing map."""
+# In-memory pricing cache: model_id -> (input_cost, output_cost, cache_read_input_cost)
+_DB_PRICING_CACHE: dict[str, tuple[float, float, float]] = {}
+
+
+def invalidate_pricing_cache() -> None:
+    """Clear memory pricing cache so new DB updates take effect immediately."""
+    _DB_PRICING_CACHE.clear()
+
+
+def get_model_rates(model: str) -> tuple[float, float, float]:
+    """Retrieve per-1M token rates (input, output, cache_read_input) from DB or PRICING_MAP."""
     model_lower = model.lower()
-    # Strip openrouter namespace prefix like "deepseek/" → "deepseek-chat"
     if "/" in model_lower:
         model_lower = model_lower.split("/")[-1]
-    
-    # Check exact match first
+
+    if model_lower in _DB_PRICING_CACHE:
+        return _DB_PRICING_CACHE[model_lower]
+
+    # 1. Try querying DB table
+    try:
+        from app.core.database import get_db_conn
+        with get_db_conn() as conn:
+            cursor = conn.cursor()
+            placeholder = "%s" if settings.DB_PROVIDER == "postgres" else "?"
+            cursor.execute(
+                f"SELECT input_cost_per_million, output_cost_per_million, cache_read_input_cost_per_million FROM model_pricing WHERE LOWER(model_id) = {placeholder};",
+                (model_lower,)
+            )
+            row = cursor.fetchone()
+            if row:
+                if isinstance(row, (tuple, list)):
+                    in_p = float(row[0])
+                    out_p = float(row[1])
+                    cache_p = float(row[2]) if row[2] is not None else round(in_p * 0.25, 4)
+                else:
+                    in_p = float(row["input_cost_per_million"])
+                    out_p = float(row["output_cost_per_million"])
+                    c_val = row.get("cache_read_input_cost_per_million")
+                    cache_p = float(c_val) if c_val is not None else round(in_p * 0.25, 4)
+                rates = (in_p, out_p, cache_p)
+                _DB_PRICING_CACHE[model_lower] = rates
+                return rates
+    except Exception:
+        pass
+
+    # 2. Check exact match in static PRICING_MAP fallback
     if model_lower in PRICING_MAP:
         in_p, out_p = PRICING_MAP[model_lower]
-        return (input_tokens * (in_p / 1_000_000.0)) + (output_tokens * (out_p / 1_000_000.0))
-    
-    # Sort keys by descending length so "-mini", "-nano", "-flash" match before base prefixes like "gpt-4o"
+        rates = (in_p, out_p, round(in_p * 0.25, 4))
+        _DB_PRICING_CACHE[model_lower] = rates
+        return rates
+
+    # 3. Substring match
     sorted_pricing = sorted(PRICING_MAP.items(), key=lambda item: len(item[0]), reverse=True)
     for key, (in_p, out_p) in sorted_pricing:
         if key in model_lower:
-            return (input_tokens * (in_p / 1_000_000.0)) + (output_tokens * (out_p / 1_000_000.0))
-    # Fallback to low-cost pricing
-    return (input_tokens * (0.15 / 1_000_000.0)) + (output_tokens * (0.60 / 1_000_000.0))
+            rates = (in_p, out_p, round(in_p * 0.25, 4))
+            _DB_PRICING_CACHE[model_lower] = rates
+            return rates
+
+    fallback = (0.15, 0.60, 0.0375)
+    _DB_PRICING_CACHE[model_lower] = fallback
+    return fallback
+
+
+def calculate_cost(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    cached_tokens: int = 0
+) -> float:
+    """Calculate the cost of an LLM invocation applying prompt caching discounts."""
+    in_p, out_p, cache_p = get_model_rates(model)
+    regular_input = max(0, input_tokens - cached_tokens)
+    regular_cost = regular_input * (in_p / 1_000_000.0)
+    cached_cost = cached_tokens * (cache_p / 1_000_000.0)
+    output_cost = output_tokens * (out_p / 1_000_000.0)
+    return round(regular_cost + cached_cost + output_cost, 6)
 
 
 def log_usage_to_db(
@@ -145,7 +204,9 @@ def log_usage_to_db(
     model: str,
     input_tokens: int,
     output_tokens: int,
-    context: dict[str, Any] | None
+    context: dict[str, Any] | None,
+    cached_tokens: int = 0,
+    generation_id: str | None = None
 ) -> None:
     """Insert LLM invocation token counts and calculated cost into the local database."""
     from app.core.database import get_db_conn
@@ -156,14 +217,14 @@ def log_usage_to_db(
     user_id = ctx.get("user_id")
     workspace_id = ctx.get("workspace_id")
     key_level_used = ctx.get("key_level_used", "system")
-    cost = calculate_cost(model, input_tokens, output_tokens)
+    cost = calculate_cost(model, input_tokens, output_tokens, cached_tokens=cached_tokens)
 
     try:
         with get_db_conn() as conn:
             query = """
                 INSERT INTO llm_usage_logs (
-                    id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost, user_id, workspace_id, key_level_used
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, cached_tokens, calculated_cost, user_id, workspace_id, key_level_used, generation_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
             if settings.DB_PROVIDER == "postgres":
                 query = query.replace("?", "%s")
@@ -179,13 +240,26 @@ def log_usage_to_db(
                     thread_id,
                     input_tokens,
                     output_tokens,
+                    cached_tokens,
                     cost,
                     user_id,
                     workspace_id,
-                    key_level_used
+                    key_level_used,
+                    generation_id
                 )
             )
             conn.commit()
+
+        # If OpenRouter with generation_id and API key, trigger background reconciliation
+        if generation_id and generation_id.startswith("gen-") and provider in ("openrouter", "deepseek", "kimi"):
+            import asyncio
+            from app.services.pricing_sync_service import reconcile_openrouter_cost
+            api_key = ctx.get("api_key")
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(reconcile_openrouter_cost(generation_id, api_key))
+            except RuntimeError:
+                pass
     except Exception as e:
         logger.error("Failed to log LLM usage: %s", e)
 
@@ -334,6 +408,8 @@ class LLMService:
                 model=self.model,
                 input_tokens=captured_usage.input_tokens,
                 output_tokens=captured_usage.output_tokens,
+                cached_tokens=getattr(captured_usage, "cached_tokens", 0) or 0,
+                generation_id=getattr(captured_usage, "generation_id", None),
                 context=log_context,
             )
 
@@ -355,6 +431,8 @@ class LLMService:
                 model=self.model,
                 input_tokens=usage.input_tokens,
                 output_tokens=usage.output_tokens,
+                cached_tokens=getattr(usage, "cached_tokens", 0) or 0,
+                generation_id=getattr(usage, "generation_id", None),
                 context=log_context,
             )
         return parsed_val

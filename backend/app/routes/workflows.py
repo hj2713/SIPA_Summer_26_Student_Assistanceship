@@ -40,6 +40,12 @@ def _require_editor(current_user: CurrentUserDep) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to modify workflows.")
 
 
+@router.get("/standard-suite", response_model=WorkflowTemplateRow)
+def get_standard_suite_workflow():
+    """Retrieve the single canonical Standard Delegation & Discretion Suite template globally."""
+    return workflow_service.get_standard_suite_template()
+
+
 @router.get("/templates")
 def list_templates(current_user: CurrentUserDep, workspace_id: str = Depends(get_workspace_id)):
     return workflow_service.list_templates(workspace_id)
@@ -238,6 +244,15 @@ def get_workflow_version(workflow_id: str, version: int, current_user: CurrentUs
 
 
 template_router = APIRouter(prefix="/api/workflow-templates", tags=["workflow-templates"])
+
+
+@template_router.get("/standard-suite", response_model=WorkflowTemplateRow)
+def get_standard_suite_template():
+    """Retrieve the single canonical Standard Delegation & Discretion Suite template globally.
+    
+    Not tied to any user ID or specific workspace.
+    """
+    return workflow_service.get_standard_suite_template()
 
 
 @template_router.get("", response_model=List[WorkflowTemplateRow])

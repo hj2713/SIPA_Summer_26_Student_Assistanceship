@@ -211,6 +211,16 @@ CREATE TABLE IF NOT EXISTS workspace_llm_credentials (
     UNIQUE(workspace_id, provider)
 );
 
+CREATE TABLE IF NOT EXISTS model_pricing (
+    model_id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    input_cost_per_million REAL NOT NULL,
+    output_cost_per_million REAL NOT NULL,
+    cache_read_input_cost_per_million REAL,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    source TEXT DEFAULT 'default'
+);
+
 CREATE TABLE IF NOT EXISTS llm_usage_logs (
     id TEXT PRIMARY KEY,
     timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -223,8 +233,10 @@ CREATE TABLE IF NOT EXISTS llm_usage_logs (
     thread_id TEXT REFERENCES threads(id) ON DELETE SET NULL,
     input_tokens INTEGER NOT NULL DEFAULT 0,
     output_tokens INTEGER NOT NULL DEFAULT 0,
+    cached_tokens INTEGER NOT NULL DEFAULT 0,
     calculated_cost REAL NOT NULL DEFAULT 0.0,
-    key_level_used TEXT DEFAULT 'system'
+    key_level_used TEXT DEFAULT 'system',
+    generation_id TEXT
 );
 
 -- Performance Indexes
@@ -233,6 +245,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON messages (thread_id, c
 CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks (document_id);
 CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents (user_id);
 CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents (workspace_id);
+CREATE INDEX IF NOT EXISTS idx_documents_workspace_created ON documents (workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chunks_workspace ON document_chunks (workspace_id);
 CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON dashboards (workspace_id);
 CREATE INDEX IF NOT EXISTS idx_dash_docs_dashboard ON dashboard_documents (dashboard_id);

@@ -102,6 +102,7 @@ class GeminiProvider:
                 LLMUsage(
                     input_tokens=getattr(usage_obj, "prompt_token_count", 0) or 0,
                     output_tokens=getattr(usage_obj, "candidates_token_count", 0) or 0,
+                    cached_tokens=getattr(usage_obj, "cached_content_token_count", 0) or 0,
                 )
                 if usage_obj is not None
                 else None
@@ -154,6 +155,7 @@ class GeminiProvider:
         usage = LLMUsage(
             input_tokens=getattr(usage_obj, "prompt_token_count", 0) or 0,
             output_tokens=getattr(usage_obj, "candidates_token_count", 0) or 0,
+            cached_tokens=getattr(usage_obj, "cached_content_token_count", 0) or 0,
         )
 
         cleaned = response.text.strip()

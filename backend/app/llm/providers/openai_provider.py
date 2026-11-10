@@ -201,10 +201,14 @@ def _from_openai_chunk(chunk: Any) -> LLMChunk:
     response_id = getattr(chunk, "id", "") or ""
 
     usage_obj = getattr(chunk, "usage", None)
+    prompt_details = getattr(usage_obj, "prompt_tokens_details", None)
+    cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
     usage = (
         LLMUsage(
             input_tokens=getattr(usage_obj, "prompt_tokens", 0) or 0,
             output_tokens=getattr(usage_obj, "completion_tokens", 0) or 0,
+            cached_tokens=cached_tokens,
+            generation_id=response_id or None,
         )
         if usage_obj is not None
         else None
@@ -513,7 +517,12 @@ def _split_string_to_list(value: str) -> list[str]:
 
 def _usage_from_response(response: Any) -> LLMUsage:
     usage_obj = getattr(response, "usage", None)
+    prompt_details = getattr(usage_obj, "prompt_tokens_details", None)
+    cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
+    resp_id = getattr(response, "id", None)
     return LLMUsage(
         input_tokens=getattr(usage_obj, "prompt_tokens", 0) or 0,
         output_tokens=getattr(usage_obj, "completion_tokens", 0) or 0,
+        cached_tokens=cached_tokens,
+        generation_id=str(resp_id) if resp_id else None,
     )

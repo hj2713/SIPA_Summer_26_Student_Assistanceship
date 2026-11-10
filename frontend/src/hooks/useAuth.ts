@@ -365,6 +365,15 @@ export function useAuth(): AuthContextValue {
     setActiveWorkspaceState(null);
   };
 
+  const updateUserSession = (updatedUser: User, token?: string) => {
+    const updatedSession: Session = {
+      access_token: token || session?.access_token || "",
+      user: updatedUser,
+    };
+    localStorage.setItem("local_session", JSON.stringify(updatedSession));
+    setSession(updatedSession);
+    setUser(updatedUser);
+  };
 
   return {
     session,
@@ -381,5 +390,6 @@ export function useAuth(): AuthContextValue {
     setActiveWorkspace,
     createWorkspace,
     refreshWorkspaces,
+    updateUserSession,
   };
 }

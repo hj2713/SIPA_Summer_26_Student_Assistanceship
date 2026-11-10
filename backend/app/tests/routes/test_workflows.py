@@ -452,3 +452,36 @@ def test_workflow_update_rejects_stale_revision(client, auth_headers):
     }
     assert client.patch(f"/api/workflows/{workflow['id']}?workspace_id=TEST", headers=auth_headers, json=payload).status_code == 200
     assert client.patch(f"/api/workflows/{workflow['id']}?workspace_id=TEST", headers=auth_headers, json=payload).status_code == 409
+
+
+def test_get_global_standard_suite_without_workspace_or_user(client, auth_headers):
+    # 1. /api/workflow-templates/standard-suite works completely unauthenticated and without workspace_id
+    res = client.get("/api/workflow-templates/standard-suite")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["slug"] == "professor_discretion_prompt_suite_detailed"
+    assert data["created_by"] == "system"
+    assert data["workspace_id"] == "ws_system_templates"
+    assert len(data["definition"]["nodes"]) == 40
+    assert any("cascade" in n["id"] for n in data["definition"]["nodes"])
+    assert any("m9" in n["id"] for n in data["definition"]["nodes"])
+    assert any("b3" in n["id"] for n in data["definition"]["nodes"])
+
+    # 2. Authenticated alias also retrieves the same canonical global template
+    res_alias = client.get("/api/workflows/standard-suite", headers=auth_headers)
+    assert res_alias.status_code == 200
+    assert res_alias.json()["id"] == data["id"]
+
+
+def test_list_workflow_templates_across_workspaces_idempotent(client, auth_headers):
+    # Calling list templates with PRODUCTION workspace
+    res1 = client.get("/api/workflow-templates?workspace_id=PRODUCTION", headers=auth_headers)
+    assert res1.status_code == 200
+    templates1 = res1.json()
+    assert len(templates1) >= 5
+
+    # Calling again with another workspace or same workspace must be completely idempotent
+    res2 = client.get("/api/workflow-templates?workspace_id=TEST", headers=auth_headers)
+    assert res2.status_code == 200
+    templates2 = res2.json()
+    assert len(templates2) >= 5

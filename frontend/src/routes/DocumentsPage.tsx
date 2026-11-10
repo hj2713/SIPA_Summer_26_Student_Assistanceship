@@ -40,8 +40,12 @@ export function DocumentsPage() {
     deleteDocument,
     bulkDeleteDocuments,
     retryDocument,
-    retryDocumentsBatch
-  } = useDocuments({ autoPoll: true });
+    retryDocumentsBatch,
+    page,
+    setPage,
+    pageCount,
+    totalDocuments,
+  } = useDocuments({ pageSize: 50, autoPoll: true });
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [expandedSummaryIds, setExpandedSummaryIds] = useState<string[]>([]);
@@ -880,7 +884,7 @@ export function DocumentsPage() {
                 : "border-transparent text-stone-500 hover:text-stone-900"
             }`}
           >
-            📄 Statutes & Public Laws ({documents.length})
+            📄 Statutes & Public Laws ({totalDocuments || documents.length})
           </button>
           <button
             onClick={() => setTab("dashboard")}
@@ -1062,6 +1066,33 @@ export function DocumentsPage() {
               ) : (
                 <div className="divide-y border-t bg-card">
                   {renderTree(treeRoot)}
+                  {pageCount > 1 && (
+                    <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground bg-muted/10">
+                      <span>
+                        Showing {Math.min((page - 1) * 50 + 1, totalDocuments)}–{Math.min(page * 50, totalDocuments)} of {totalDocuments} documents (Page {page} of {pageCount})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={page <= 1 || loading}
+                          onClick={() => setPage(page - 1)}
+                          className="h-7 text-xs rounded-lg border-border"
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={page >= pageCount || loading}
+                          onClick={() => setPage(page + 1)}
+                          className="h-7 text-xs rounded-lg border-border"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

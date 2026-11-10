@@ -26,6 +26,8 @@ from app.workflows.validator import validate_workflow_definition
 
 
 class WorkflowService:
+    SYSTEM_WORKSPACE_ID = "ws_system_templates"
+
     def __init__(self, db_session_factory=get_db_session):
         self.db_session_factory = db_session_factory
 
@@ -102,7 +104,10 @@ class WorkflowService:
 
     def _get_owned_template(self, session, template_id: str, workspace_id: str):
         row = session.workflow_templates.get_by_id(template_id)
-        if not row or row["workspace_id"] != workspace_id:
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow template not found.")
+        # Allow system templates to be read/inspected by any workspace, or templates owned by this workspace
+        if row["workspace_id"] not in (workspace_id, self.SYSTEM_WORKSPACE_ID):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow template not found.")
         return row
 
@@ -114,9 +119,12 @@ class WorkflowService:
             suffix += 1
         return slug
 
-    def ensure_seed_templates(self, workspace_id: str) -> None:
+    def ensure_seed_templates(self, workspace_id: str | None = None) -> None:
+        target_ws = self.SYSTEM_WORKSPACE_ID
+
         seeds = [
             {
+                "id": "tpl_blank_000000000001",
                 "slug": "blank",
                 "name": "Blank Workflow",
                 "description": "Start with document input and dashboard output.",
@@ -125,6 +133,7 @@ class WorkflowService:
                 "definition": WORKFLOW_TEMPLATES["blank"](),
             },
             {
+                "id": "tpl_delegation_0000000002",
                 "slug": "law_delegation_discretion_rank",
                 "name": "Law Delegation + Discretion Rank",
                 "description": "Project workflow with explicit Law Delegation audit fields and two clean final outputs.",
@@ -133,22 +142,25 @@ class WorkflowService:
                 "definition": self._normalize_definition(WORKFLOW_TEMPLATES["law_delegation_discretion_rank"]()).model_dump(),
             },
             {
+                "id": "tpl_discretion_0000000003",
                 "slug": "professor_discretion_prompt_suite",
-                "name": "Professor Discretion Prompt Suite",
-                "description": "Multi-step workflow that runs the professor's cascade, M9 multiclass, and B3 binary discretion prompts side by side.",
+                "name": "Standard Discretion Prompt Suite",
+                "description": "Multi-step workflow that runs cascade, M9 multiclass, and B3 binary discretion prompts side by side.",
                 "category": "Project",
                 "seed_version": self.SEED_TEMPLATE_VERSIONS["professor_discretion_prompt_suite"],
                 "definition": self._normalize_definition(WORKFLOW_TEMPLATES["professor_discretion_prompt_suite"]()).model_dump(),
             },
             {
+                "id": "2055d255-10db-426a-a215-fe6181b36ea7",
                 "slug": "professor_discretion_prompt_suite_detailed",
-                "name": "Professor Discretion Prompt Suite Detailed",
-                "description": "Accuracy-oriented detailed workflow with explicit evidence, constraint, boundary, cascade, M9, and B3 stages.",
+                "name": "Standard Discretion Prompt Suite (Detailed)",
+                "description": "Accuracy-oriented multi-step workflow with explicit evidence, constraint, boundary, cascade, M9, and B3 stages.",
                 "category": "Project",
                 "seed_version": self.SEED_TEMPLATE_VERSIONS["professor_discretion_prompt_suite_detailed"],
                 "definition": self._normalize_definition(WORKFLOW_TEMPLATES["professor_discretion_prompt_suite_detailed"]()).model_dump(),
             },
             {
+                "id": "tpl_summarizer_0000000005",
                 "slug": "structured_law_summarizer",
                 "name": "Structured Law Summarizer",
                 "description": "Multi-step workflow that digests law documents into high-level purpose, key provisions, statutory constraints, and CQ-Almanac style summaries.",
@@ -158,27 +170,61 @@ class WorkflowService:
             },
         ]
         with self.db_session_factory() as session:
+            # Ensure target workspace exists in DB
+            if not session.workspaces.get_by_id(target_ws):
+                try:
+                    session.workspaces.create(workspace_id=target_ws, name="System Templates")
+                except Exception:
+                    pass
+
             for seed in seeds:
-                existing = session.workflow_templates.get_by_slug(workspace_id, seed["slug"])
+                seed_id = seed.get("id")
                 seed_definition = self._normalize_definition(seed["definition"]).model_dump()
                 seed_definition.setdefault("metadata", {})["seed_version"] = seed["seed_version"]
-                if existing:
-                    existing_definition = self._parse_definition(existing["definition_json"]).model_dump()
+
+                # 1. Check if row already exists in target_ws with this slug
+                existing_in_ws = session.workflow_templates.get_by_slug(target_ws, seed["slug"])
+                
+                # 2. Check if row exists by fixed seed ID
+                existing_by_id = session.workflow_templates.get_by_id(seed_id) if seed_id else None
+
+                # 3. Check legacy "GLOBAL" workspace
+                legacy_global = session.workflow_templates.get_by_slug("GLOBAL", seed["slug"]) if not existing_in_ws else None
+
+                target_row = existing_in_ws or existing_by_id or legacy_global
+
+                if target_row:
+                    # If existing_in_ws exists AND existing_by_id exists and they differ,
+                    # remove the duplicate so (workspace_id, slug) won't collide.
+                    if existing_in_ws and existing_by_id and existing_in_ws["id"] != existing_by_id["id"]:
+                        try:
+                            session.workflow_templates.delete(existing_in_ws["id"])
+                        except Exception:
+                            pass
+                        target_row = existing_by_id
+
+                    existing_definition = self._parse_definition(target_row["definition_json"]).model_dump()
                     metadata = existing_definition.get("metadata") or {}
                     seed_is_outdated = metadata.get("seed_version", 1) < seed["seed_version"]
-                    system_seed_is_untouched = existing["created_by"] == "system" and existing["revision"] <= 1
-                    if system_seed_is_untouched and seed_is_outdated:
-                        session.workflow_templates.update(existing["id"], {
+                    definition_changed = json.dumps(existing_definition, sort_keys=True) != json.dumps(seed_definition, sort_keys=True)
+                    ws_needs_update = target_row.get("workspace_id") != target_ws
+
+                    if ws_needs_update or seed_is_outdated or definition_changed:
+                        session.workflow_templates.update(target_row["id"], {
+                            "workspace_id": target_ws,
+                            "slug": seed["slug"],
                             "name": seed["name"],
                             "description": seed["description"],
                             "category": seed["category"],
                             "definition_json": json.dumps(seed_definition),
-                            "revision": existing["revision"] + 1,
+                            "revision": target_row.get("revision", 1) + 1,
                         })
                     continue
+
+                template_id = seed_id or str(uuid.uuid4())
                 session.workflow_templates.create(
-                    str(uuid.uuid4()),
-                    workspace_id,
+                    template_id,
+                    target_ws,
                     seed["slug"],
                     seed["name"],
                     seed["description"],
@@ -193,7 +239,7 @@ class WorkflowService:
             row = self._get_owned_template(session, payload.template_id, workspace_id)
             return self._parse_definition(row["definition_json"])
         slug = payload.template or "blank"
-        row = session.workflow_templates.get_by_slug(workspace_id, slug)
+        row = session.workflow_templates.get_by_slug(workspace_id, slug) or session.workflow_templates.get_by_slug(self.SYSTEM_WORKSPACE_ID, slug)
         if row:
             return self._parse_definition(row["definition_json"])
         if slug in WORKFLOW_TEMPLATES:
@@ -217,12 +263,35 @@ class WorkflowService:
     def list_templates(self, workspace_id: str) -> List[WorkflowTemplateRow]:
         self.ensure_seed_templates(workspace_id)
         with self.db_session_factory() as session:
-            return [self._to_template_row(row) for row in session.workflow_templates.list_by_workspace(workspace_id)]
+            # 1. Fetch single canonical global system templates
+            system_templates = session.workflow_templates.list_by_workspace(self.SYSTEM_WORKSPACE_ID)
+            # 2. Fetch workspace-specific custom templates (if any user imported/created one)
+            seen_slugs = {row["slug"] for row in system_templates}
+            user_templates = []
+            if workspace_id and workspace_id != self.SYSTEM_WORKSPACE_ID:
+                for row in session.workflow_templates.list_by_workspace(workspace_id):
+                    if row["created_by"] != "system" and row["slug"] not in seen_slugs:
+                        user_templates.append(row)
+            all_templates = system_templates + user_templates
+            return [self._to_template_row(row) for row in all_templates]
 
     def get_template(self, template_id: str, workspace_id: str) -> WorkflowTemplateRow:
         self.ensure_seed_templates(workspace_id)
         with self.db_session_factory() as session:
             return self._to_template_row(self._get_owned_template(session, template_id, workspace_id))
+
+    def get_standard_suite_template(self) -> WorkflowTemplateRow:
+        """Fetch the single canonical global Standard Discretion Suite without requiring workspace context."""
+        self.ensure_seed_templates(self.SYSTEM_WORKSPACE_ID)
+        with self.db_session_factory() as session:
+            row = (
+                session.workflow_templates.get_by_id("2055d255-10db-426a-a215-fe6181b36ea7")
+                or session.workflow_templates.get_by_slug(self.SYSTEM_WORKSPACE_ID, "professor_discretion_prompt_suite_detailed")
+                or session.workflow_templates.get_by_slug(self.SYSTEM_WORKSPACE_ID, "professor_discretion_prompt_suite")
+            )
+            if not row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standard suite template not found.")
+            return self._to_template_row(row)
 
     def create_template(self, payload: WorkflowTemplateCreate | WorkflowTemplateImport, workspace_id: str, user_id: str) -> WorkflowTemplateRow:
         normalized_definition = self._normalize_definition(payload.definition)

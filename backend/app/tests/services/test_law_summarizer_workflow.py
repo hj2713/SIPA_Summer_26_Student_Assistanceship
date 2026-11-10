@@ -32,11 +32,17 @@ def test_structured_law_summarizer_db_seeding():
     svc.ensure_seed_templates("TEST")
 
     with svc.db_session_factory() as session:
-        row = session.workflow_templates.get_by_slug("TEST", "structured_law_summarizer")
+        row = session.workflow_templates.get_by_slug(svc.SYSTEM_WORKSPACE_ID, "structured_law_summarizer")
         assert row is not None
         assert row["name"] == "Structured Law Summarizer"
         definition = json.loads(row["definition_json"])
         assert len(definition["nodes"]) == 6
+
+    # Verify that listing templates for any workspace (e.g. TEST) surfaces the global system template
+    templates = svc.list_templates("TEST")
+    test_view = next((t for t in templates if t.slug == "structured_law_summarizer"), None)
+    assert test_view is not None
+    assert test_view.name == "Structured Law Summarizer"
 
 
 @pytest.mark.asyncio

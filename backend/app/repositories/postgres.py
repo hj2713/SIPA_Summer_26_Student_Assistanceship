@@ -834,7 +834,17 @@ class PostgresWorkflowTemplateRepository(BaseWorkflowTemplateRepository):
                 """
                 INSERT INTO coding_workflow_templates
                     (id, workspace_id, slug, name, description, category, status, definition_json, revision, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s);
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    workspace_id = EXCLUDED.workspace_id,
+                    slug = EXCLUDED.slug,
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    category = EXCLUDED.category,
+                    status = EXCLUDED.status,
+                    definition_json = EXCLUDED.definition_json,
+                    created_by = EXCLUDED.created_by,
+                    updated_at = CURRENT_TIMESTAMP;
                 """,
                 (template_id, workspace_id, slug, name, description, category, status, definition_json, created_by),
             )
@@ -1117,20 +1127,22 @@ class PostgresLlmUsageLogRepository(BaseLlmUsageLogRepository):
         calculated_cost: float,
         user_id: Optional[str] = None,
         workspace_id: Optional[str] = None,
-        key_level_used: str = "system"
+        key_level_used: str = "system",
+        cached_tokens: int = 0,
+        generation_id: Optional[str] = None
     ) -> None:
         with self.conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO llm_usage_logs (id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, calculated_cost, user_id, workspace_id, key_level_used)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO llm_usage_logs (id, provider, model, service, campaign_id, thread_id, input_tokens, output_tokens, cached_tokens, calculated_cost, user_id, workspace_id, key_level_used, generation_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """,
                 (
                     str(log_id), provider, model, service,
                     str(campaign_id) if campaign_id else None,
                     str(thread_id) if thread_id else None,
-                    input_tokens, output_tokens, calculated_cost,
-                    user_id, workspace_id, key_level_used
+                    input_tokens, output_tokens, cached_tokens, calculated_cost,
+                    user_id, workspace_id, key_level_used, generation_id
                 )
             )
 

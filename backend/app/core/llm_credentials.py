@@ -88,20 +88,9 @@ def _query(sql: str) -> str:
 def _migrate_legacy_credentials(user_id: str) -> None:
     """Migrate legacy columns in `users` table to `user_llm_credentials` table."""
     try:
+        user_id = str(user_id)
         with get_db_conn() as conn:
-            # Check if user already has records in user_llm_credentials
             cursor = conn.cursor()
-            cursor.execute(_query("SELECT COUNT(*) as count FROM user_llm_credentials WHERE user_id = ?"), (user_id,))
-            row = cursor.fetchone()
-            
-            if row:
-                count = row.get("count") if isinstance(row, dict) else row[0]
-            else:
-                count = 0
-                
-            if count > 0:
-                return
-
             # Check if users table has legacy key
             cursor.execute(_query("SELECT llm_provider, llm_api_key_encrypted, llm_model, llm_base_url FROM users WHERE id = ?"), (user_id,))
             user_row = cursor.fetchone()
@@ -119,7 +108,17 @@ def _migrate_legacy_credentials(user_id: str) -> None:
                 model = user_row[2] or DEFAULT_MODEL_BY_PROVIDER.get(provider, "")
                 base_url = user_row[3] or ""
 
-            if api_key_encrypted:
+            if not api_key_encrypted:
+                return
+
+            # Check if this specific provider is already recorded in user_llm_credentials
+            cursor.execute(
+                _query("SELECT COUNT(*) as count FROM user_llm_credentials WHERE user_id = ? AND provider = ?"),
+                (user_id, provider)
+            )
+            row = cursor.fetchone()
+            count = row.get("count") if isinstance(row, dict) else (row[0] if row else 0)
+            if count == 0:
                 cursor.execute(
                     _query("""
                     INSERT INTO user_llm_credentials (id, user_id, provider, api_key_encrypted, model, base_url)
@@ -208,9 +207,12 @@ def get_user_llm_credentials_for_provider(user_id: str, provider: str) -> UserLL
     if not user_id:
         return None
 
+    user_id = str(user_id)
     provider = provider.strip().lower()
     if provider not in SUPPORTED_LLM_PROVIDERS:
         return None
+
+    _migrate_legacy_credentials(user_id)
 
     with get_db_conn() as conn:
         cursor = conn.cursor()
@@ -221,6 +223,22 @@ def get_user_llm_credentials_for_provider(user_id: str, provider: str) -> UserLL
         row = cursor.fetchone()
 
     if not row:
+        # Fallback to users table directly if not yet in user_llm_credentials
+        from app.repositories import get_db_session
+        with get_db_session() as session:
+            user_row = session.users.get_by_id(user_id)
+        if user_row:
+            user_provider = (user_row.get("llm_provider") or "").strip().lower()
+            if user_provider == provider:
+                api_key_encrypted = user_row.get("llm_api_key_encrypted")
+                if api_key_encrypted:
+                    try:
+                        api_key = decrypt_api_key(api_key_encrypted)
+                        model = (user_row.get("llm_model") or "").strip() or DEFAULT_MODEL_BY_PROVIDER.get(provider, "")
+                        base_url = (user_row.get("llm_base_url") or "").strip() or None
+                        return UserLLMCredentials(provider=provider, api_key=api_key, model=model, base_url=base_url)
+                    except Exception as e:
+                        raise ValueError(f"Saved key in database could not be decrypted with server secret. Please re-enter your key: {e}")
         return None
 
     if isinstance(row, dict):
@@ -237,8 +255,8 @@ def get_user_llm_credentials_for_provider(user_id: str, provider: str) -> UserLL
 
     try:
         api_key = decrypt_api_key(api_key_encrypted)
-    except Exception:
-        return None
+    except Exception as e:
+        raise ValueError(f"Saved key in database could not be decrypted with server secret. Please re-enter your key: {e}")
 
     return UserLLMCredentials(provider=provider, api_key=api_key, model=model, base_url=base_url)
 

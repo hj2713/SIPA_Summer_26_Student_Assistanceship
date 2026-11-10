@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { useAuthContext } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { useAvailableModels } from "@/hooks/useAvailableModels";
 import { workflowApi } from "@/lib/workflowApi";
 import type { CodingWorkflow } from "@/types/workflow";
 import { GuidedTour, type TourStep } from "@/components/ui/GuidedTour";
+import workflowStepsSvg from "@/assets/workflow-steps.svg";
+import multiModelBenchmarkPng from "@/assets/multi-model-benchmark.png";
 
 const CAMPAIGN_TOUR_STEPS: TourStep[] = [
   {
@@ -52,6 +54,10 @@ interface Campaign {
 
 export function DashboardListPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") as "all" | "prompt" | "workflow" | null;
+  const initialTab = tabParam && ["all", "prompt", "workflow"].includes(tabParam) ? tabParam : "all";
+
   const { session, user, activeWorkspace } = useAuthContext();
   const { availableModels, loading: modelsLoading } = useAvailableModels();
   
@@ -60,7 +66,20 @@ export function DashboardListPage() {
   const [loading, setLoading] = useState(true);
   
   // Filter tab state: "all" | "prompt" | "workflow"
-  const [filterTab, setFilterTab] = useState<"all" | "prompt" | "workflow">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "prompt" | "workflow">(initialTab);
+
+  useEffect(() => {
+    if (tabParam && ["all", "prompt", "workflow"].includes(tabParam)) {
+      setFilterTab(tabParam);
+    } else if (!tabParam && filterTab !== "all") {
+      setFilterTab("all");
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: "all" | "prompt" | "workflow") => {
+    setFilterTab(tab);
+    setSearchParams(tab === "all" ? {} : { tab });
+  };
 
   // Modal & Creation Mode State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -385,12 +404,12 @@ export function DashboardListPage() {
                   <Button 
                     id="tour-btn-create"
                     onClick={() => {
-                      setCreationMode("prompt");
+                      setCreationMode(filterTab === "workflow" ? "workflow" : "prompt");
                       setShowCreateModal(true);
                     }} 
                     className="gap-2 rounded-r-none border-r border-white/20 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-3.5"
                   >
-                    <Plus size={15} className="text-accent" /> Create Campaign
+                    <Plus size={15} className="text-accent" /> {filterTab === "workflow" ? "Create Evaluation" : "Create Campaign"}
                   </Button>
                   <Button
                     size="icon"
@@ -445,7 +464,7 @@ export function DashboardListPage() {
           <div className="flex items-center gap-2 border-b pb-4 border-border">
             <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl">
               <button
-                onClick={() => setFilterTab("all")}
+                onClick={() => handleTabChange("all")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   filterTab === "all"
                     ? "bg-card text-primary shadow-xs font-bold"
@@ -456,7 +475,7 @@ export function DashboardListPage() {
               </button>
               <button
                 id="tour-tab-prompt"
-                onClick={() => setFilterTab("prompt")}
+                onClick={() => handleTabChange("prompt")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   filterTab === "prompt"
                     ? "bg-card text-primary shadow-xs font-bold"
@@ -467,14 +486,14 @@ export function DashboardListPage() {
               </button>
               <button
                 id="tour-tab-workflow"
-                onClick={() => setFilterTab("workflow")}
+                onClick={() => handleTabChange("workflow")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   filterTab === "workflow"
                     ? "bg-card text-primary shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <GitBranch size={13} className="text-primary" /> Workflow Evaluations ({workflowCampaigns.length})
+                <GitBranch size={13} className="text-primary" /> Multi-Model Evaluations ({workflowCampaigns.length})
               </button>
             </div>
           </div>
@@ -483,25 +502,46 @@ export function DashboardListPage() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((n) => (
-                <div key={n} className="h-48 rounded-2xl border border-border bg-card animate-pulse" />
+                <div key={n} className="h-48 rounded-xl border border-border bg-card animate-pulse" />
               ))}
             </div>
           ) : filteredCampaigns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl p-16 text-center max-w-2xl mx-auto my-12 bg-card">
-              <div className="h-14 w-14 rounded-full bg-accent/20 flex items-center justify-center text-accent-foreground mb-4">
-                <Layers size={26} />
+            <div className="flex flex-col items-center justify-center border border-border rounded-xl p-8 sm:p-12 text-center max-w-3xl mx-auto my-8 bg-card shadow-xs">
+              <div className="w-full max-w-lg mx-auto mb-6 p-4 rounded-xl bg-background/50 border border-border/40">
+                <img 
+                  src={filterTab === "workflow" ? multiModelBenchmarkPng : workflowStepsSvg} 
+                  alt={filterTab === "workflow" ? "Multi-Model Legal Benchmark Architecture" : "3-Step Legislative Auditing Workflow"} 
+                  className={`w-full h-auto object-contain max-h-56 select-none pointer-events-none ${filterTab === "workflow" ? "" : "dark:invert dark:opacity-90"}`} 
+                />
               </div>
-              <h3 className="text-base font-bold text-foreground">No campaigns found</h3>
-              <p className="text-muted-foreground text-xs max-w-sm mt-1.5 mb-6">
+              <h3 className="text-base font-bold text-foreground">
                 {filterTab === "prompt"
-                  ? "No Prompt a Campaign dashboards created yet."
+                  ? "No Prompt Codebook Campaigns Yet"
                   : filterTab === "workflow"
-                  ? "No Workflow Evaluation dashboards created yet."
-                  : "Create your first campaign to define a research codebook or evaluate multi-model workflows."}
+                  ? "No Multi-Model Evaluations Yet"
+                  : "Start Your Empirical Coding Campaign"}
+              </h3>
+              <p className="text-muted-foreground text-xs max-w-lg mt-1.5 mb-6 leading-relaxed">
+                {filterTab === "prompt"
+                  ? "Prompt Codebooks allow you to extract custom variables from statutes using single LLMs."
+                  : filterTab === "workflow"
+                  ? "Multi-Model Evaluations benchmark multiple LLMs (OpenAI, Anthropic, Gemini) side-by-side using frozen DAG routing with inter-model consensus matrices."
+                  : "Upload legislative statutes, benchmark multiple AI models (OpenAI, Anthropic, Gemini) with frozen DAG routing, and generate verifiable consensus datasets."}
               </p>
-              <Button onClick={() => setShowCreateModal(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold">
-                <Plus size={15} className="text-accent" /> Create Campaign
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button 
+                  onClick={() => {
+                    setCreationMode(filterTab === "workflow" ? "workflow" : "prompt");
+                    setShowCreateModal(true);
+                  }} 
+                  className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-semibold px-4 py-2"
+                >
+                  <Plus size={15} className="text-accent" /> {filterTab === "workflow" ? "Create First Evaluation" : "Create First Campaign"}
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/docs?tab=quickstart")} className="gap-2 text-xs rounded-lg border-border">
+                  <BookOpen size={14} /> View 3-Step Guide
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
@@ -510,7 +550,7 @@ export function DashboardListPage() {
                 return (
                   <Card 
                     key={c.id} 
-                    className="group relative border border-border bg-card hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between rounded-2xl shadow-xs"
+                    className="group relative border border-border bg-card hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between rounded-xl shadow-xs"
                     onClick={() => navigate(isWorkflowType ? `/evaluation/${c.id}` : `/campaigns/${c.id}`)}
                   >
                     <div className="p-6">

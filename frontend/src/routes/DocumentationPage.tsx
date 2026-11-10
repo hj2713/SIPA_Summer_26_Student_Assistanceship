@@ -13,6 +13,12 @@ import { HeaderBar } from "@/components/ui/HeaderBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { TwoStagePipelineStepper } from "@/components/docs/TwoStagePipelineStepper";
+import workflowStepsSvg from "@/assets/workflow-steps.svg";
+import delegationFrameworkPng from "@/assets/delegation-framework.png";
+import rubricStaircasePng from "@/assets/rubric-staircase.png";
+import byokVaultPng from "@/assets/byok-vault.png";
+import multiModelBenchmarkPng from "@/assets/multi-model-benchmark.png";
 
 export function DocumentationPage() {
   const navigate = useNavigate();
@@ -104,61 +110,99 @@ export function DocumentationPage() {
               <div className="space-y-2">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <Scale className="h-5 w-5 text-primary" />
-                  Academic Foundation: Epstein & O'Halloran Formal Theory
+                  Academic Foundation: Standard Discretion &amp; Delegation Theory
                 </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Why does Congress delegate authority to executive agencies? When does it constrain administrators with rigid procedures?
                 </p>
               </div>
 
+              {/* Visual Delegation & Auditing Framework */}
+              <div className="w-full flex items-center justify-center py-2">
+                <img 
+                  src={delegationFrameworkPng} 
+                  alt="Legislative Delegation and Auditing Framework" 
+                  className="w-full max-w-4xl h-auto object-contain max-h-[360px] select-none pointer-events-none" 
+                />
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
-                <Card className="rounded-2xl border-border bg-card shadow-xs">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-foreground">
-                      The Theoretical Problem
+                <Card className="rounded-xl border-border bg-card shadow-xs">
+                  <CardHeader className="pb-2.5">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs">⚖️</span>
+                      The Lawmaker's Dilemma
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      Delegating Powers (Cambridge University Press)
+                      Policy Expertise vs. Political Control
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="text-xs text-muted-foreground leading-relaxed space-y-2.5">
-                    <p>
-                      Formulated by <strong>Professor Sharyn O'Halloran</strong> (Columbia University & Trinity College Dublin) and David Epstein, formal models of legislative delegation show that legislators face a trade-off between policy expertise and political control.
-                    </p>
-                    <p>
-                      When issues are technically complex, Congress delegates authority to expert agencies. But when the President and Congress represent conflicting political interests, legislators impose strict procedural hurdles, reporting mandates, and narrow discretion boundaries to limit executive drift.
-                    </p>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Why Congress delegates:</strong> Lawmakers aren't banking or environmental specialists. For complex statutory issues, Congress grants regulatory power to expert agencies (e.g. SEC, EPA, FDA).</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Why Congress constrains:</strong> When political interests conflict (e.g. divided government), legislators impose strict deadlines, mandatory hearings, and reporting mandates to prevent agency drift.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">The strategic balance:</strong> Every federal statute balances administrative discretion (freedom to act) against statutory guardrails (limits on power).</span>
+                      </li>
+                    </ul>
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-2xl border-border bg-card shadow-xs">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-foreground">
-                      The Computational Solution
+                <Card className="rounded-xl border-border bg-card shadow-xs">
+                  <CardHeader className="pb-2.5">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">⚡</span>
+                      The AI Auditing Engine
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      Automated & Immutable Statutory Auditing
+                      Automated &amp; Mathematical Statutory Coding
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="text-xs text-muted-foreground leading-relaxed space-y-2.5">
-                    <p>
-                      Historically, auditing major statutes required teams of legal researchers manually annotating thousands of statutory provisions over years of work.
-                    </p>
-                    <p>
-                      This platform brings <strong>deterministic, multi-model LLM benchmarking</strong> to legislative studies. By executing frozen directed acyclic graph (DAG) pipelines, researchers can audit 500+ statutes in minutes, verify exact statutory citations, and replicate empirical findings across institutions with 100% mathematical fidelity.
-                    </p>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">The old manual way:</strong> Auditing major public laws required teams of legal scholars spending years manually reading and categorizing thousands of statutory provisions.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">The platform approach:</strong> Executes frozen directed acyclic graph (DAG) pipelines across competing LLMs (GPT-4o, Claude, DeepSeek) simultaneously.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Verifiable citations:</strong> Audits 500+ statutes in minutes, pairs every score with exact statutory provisions, and calculates inter-model consensus (Kappa).</span>
+                      </li>
+                    </ul>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-2">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
                 <div className="flex items-center gap-2 text-primary font-bold text-xs">
                   <Sparkles className="h-4 w-4 text-accent" />
-                  <span>The Core Research Question</span>
+                  <span>The Core Research Question We Measure</span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Does a given statutory text delegate regulatory authority to the executive branch? If so, what degree of discretion is granted (Scale 1–5), and what procedural constraints are imposed to limit agency leeway?
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+                  <div className="p-3 rounded-lg bg-background/60 border border-border/60">
+                    <span className="font-bold text-foreground block">1. Delegation Gate</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">Does this law grant new or expanded authority to an executive agency? (<code className="text-primary font-mono font-bold">delegate_law</code>: 0 or 1)</span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/60 border border-border/60">
+                    <span className="font-bold text-foreground block">2. Discretion Scale</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">How much regulatory leeway is granted? (<code className="text-primary font-mono font-bold">discretion_rank</code>: 0 to 5)</span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/60 border border-border/60">
+                    <span className="font-bold text-foreground block">3. Statutory Safeguards</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">What procedural constraints, oversight, and deadlines bind the agency?</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -172,13 +216,22 @@ export function DocumentationPage() {
                   The 3-Step Turnkey Replication Journey
                 </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Replicating the official Epstein & O'Halloran empirical coding benchmark takes less than 2 minutes.
+                  Replicating the official Standard Discretion empirical coding benchmark takes less than 2 minutes.
                 </p>
+              </div>
+
+              {/* Visual Workflow Steps Graphic */}
+              <div className="w-full flex items-center justify-center py-2">
+                <img 
+                  src={workflowStepsSvg} 
+                  alt="3-Step Legislative Auditing Workflow: 1. Upload Corpus -> 2. Benchmark LLMs -> 3. Generate Consensus Matrix & Export" 
+                  className="w-full max-w-4xl h-auto dark:invert dark:opacity-90 object-contain max-h-[380px] select-none pointer-events-none" 
+                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-3">
                 {/* Step 1 */}
-                <div className="rounded-2xl border border-border bg-card p-5 space-y-3 relative shadow-xs flex flex-col justify-between">
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3 relative shadow-xs flex flex-col justify-between">
                   <div className="space-y-2">
                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
                       1
@@ -192,7 +245,7 @@ export function DocumentationPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/documents")}
-                    className="text-xs h-8 rounded-xl border-border justify-between"
+                    className="text-xs h-8 rounded-lg border-border justify-between"
                   >
                     <span>Open Law Corpus</span>
                     <ArrowRight className="h-3 w-3" />
@@ -200,7 +253,7 @@ export function DocumentationPage() {
                 </div>
 
                 {/* Step 2 */}
-                <div className="rounded-2xl border border-border bg-card p-5 space-y-3 relative shadow-xs flex flex-col justify-between">
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3 relative shadow-xs flex flex-col justify-between">
                   <div className="space-y-2">
                     <span className="h-6 w-6 rounded-full bg-accent/20 text-accent-foreground font-bold text-xs flex items-center justify-center">
                       2
@@ -214,7 +267,7 @@ export function DocumentationPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/workflows")}
-                    className="text-xs h-8 rounded-xl border-border justify-between"
+                    className="text-xs h-8 rounded-lg border-border justify-between"
                   >
                     <span>View Workflows</span>
                     <ArrowRight className="h-3 w-3" />
@@ -222,7 +275,7 @@ export function DocumentationPage() {
                 </div>
 
                 {/* Step 3 */}
-                <div className="rounded-2xl border border-border bg-card p-5 space-y-3 relative shadow-xs flex flex-col justify-between">
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3 relative shadow-xs flex flex-col justify-between">
                   <div className="space-y-2">
                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
                       3
@@ -236,7 +289,7 @@ export function DocumentationPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/campaigns")}
-                    className="text-xs h-8 rounded-xl border-border justify-between"
+                    className="text-xs h-8 rounded-lg border-border justify-between"
                   >
                     <span>Go to Campaigns</span>
                     <ArrowRight className="h-3 w-3" />
@@ -255,12 +308,12 @@ export function DocumentationPage() {
                   Key Coding Variables & Methodology Rubric
                 </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Definitions of the primary discrete variables emitted by the O'Halloran legislative coding framework.
+                  Definitions of the primary discrete variables emitted by the Standard Discretion legislative coding framework.
                 </p>
               </div>
 
               {/* Variable 1 */}
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-3">
+              <div className="rounded-xl border border-border bg-card p-6 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary">
@@ -278,13 +331,13 @@ export function DocumentationPage() {
                   Identifies whether Congress grants authority to an executive agency, department, commission, or administrator to promulgate rules, execute regulations, issue licenses, or hold administrative hearings.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2 pt-1 text-xs">
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/60">
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
                     <span className="font-bold text-foreground">delegate_law = 0</span>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       Statute contains no administrative delegation (e.g. commemorative resolutions, direct appropriations, or self-executing statutory commands).
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/60">
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
                     <span className="font-bold text-foreground">delegate_law = 1</span>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       Statute delegates regulatory, adjudicative, or enforcement authority to an agency or executive officer.
@@ -294,7 +347,7 @@ export function DocumentationPage() {
               </div>
 
               {/* Variable 2: Discretion Rank Scale */}
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+              <div className="rounded-xl border border-border bg-card p-6 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-accent/20 text-accent-foreground border border-accent/40">
@@ -312,54 +365,15 @@ export function DocumentationPage() {
                   Evaluates statutory constraint strength against agency leeway. If <code className="text-primary font-mono">delegate_law == 0</code>, discretion is deterministically set to 0.
                 </p>
 
-                <div className="space-y-2 pt-1">
-                  {[
-                    {
-                      rank: 0,
-                      label: "No Delegation",
-                      desc: "Pure legislative command or symbolic act; no agency administrative power granted.",
-                    },
-                    {
-                      rank: 1,
-                      label: "Highly Constrained",
-                      desc: "Extremely tight constraints: rigid deadlines, mandatory public hearings, inter-agency signoffs, zero rulemaking leeway.",
-                    },
-                    {
-                      rank: 2,
-                      label: "Constrained Discretion",
-                      desc: "Statute establishes narrow parameters and specific standards; agency must follow detailed procedural rules.",
-                    },
-                    {
-                      rank: 3,
-                      label: "Moderate Discretion",
-                      desc: "Agency is authorized to formulate substantive rules within general statutory criteria, with standard APA safeguards.",
-                    },
-                    {
-                      rank: 4,
-                      label: "Broad Discretion",
-                      desc: "Congress sets open-ended goals; the agency determines standards, eligibility, enforcement procedures, and timelines.",
-                    },
-                    {
-                      rank: 5,
-                      label: "Plenary / Unbounded Discretion",
-                      desc: "Agency given sweeping rulemaking power 'as deemed necessary and appropriate in the administrator’s judgment'.",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.rank}
-                      className="p-3 rounded-xl border border-border/60 bg-muted/20 flex items-start gap-3 text-xs"
-                    >
-                      <span className="h-6 w-6 rounded-lg bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">
-                        {item.rank}
-                      </span>
-                      <div>
-                        <span className="font-bold text-foreground">{item.label}</span>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                {/* Staircase Infographic */}
+                <div className="pt-2 flex flex-col items-center">
+                  <div className="w-full max-w-3xl rounded-2xl border border-border/70 bg-white p-4 sm:p-6 shadow-xs flex flex-col items-center">
+                    <img
+                      src={rubricStaircasePng}
+                      alt="Degrees of Administrative Leeway (Scale 0 to 5)"
+                      className="w-full max-h-[520px] object-contain rounded-lg"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -378,38 +392,100 @@ export function DocumentationPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Directed Execution Flow
-                </h3>
-                <div className="font-mono text-xs p-4 rounded-xl bg-muted/50 border border-border text-foreground space-y-2 leading-relaxed">
-                  <div>Statute Text (PDF / TXT)</div>
-                  <div className="text-muted-foreground pl-4">&darr;</div>
-                  <div className="pl-4 font-bold text-primary">
-                    [ Node 1: Delegation Detection ]
+              {/* Interactive Pipeline Stepper Component */}
+              <TwoStagePipelineStepper />
+
+              {/* Multi-Model Consensus Architecture Diagram */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs">⚖️</span>
+                      Multi-Model Consensus &amp; Legal Benchmark Architecture
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Parallel execution across competing LLM architectures to eliminate single-model bias.
+                    </p>
                   </div>
-                  <div className="text-muted-foreground pl-4">
-                    Outputs: delegate_law (0 or 1), rationale, administrative actors
+                  <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full shrink-0 self-start sm:self-auto">
+                    Inter-Annotator Agreement
+                  </span>
+                </div>
+
+                {/* Visual Multi-Model Benchmark Diagram */}
+                <div className="w-full flex items-center justify-center py-2">
+                  <img 
+                    src={multiModelBenchmarkPng} 
+                    alt="Multi-Model Legal Benchmark: Law Corpus Input + Parallel Evaluation (OpenAI, Gemini, Claude) + Inter-Annotator Agreement + Standard Rubric Score -> Legal Benchmark" 
+                    className="w-full max-w-xl h-auto object-contain max-h-[380px] select-none pointer-events-none" 
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3 pt-1 text-xs">
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                    <span className="font-bold text-foreground block">1. Law Corpus Input</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">Statutory provisions ingested and pre-formatted for parallel model prompts.</span>
                   </div>
-                  <div className="text-muted-foreground pl-4">&darr;</div>
-                  <div className="pl-4 text-accent font-semibold">
-                    [ Deterministic Conditional Split ]
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                    <span className="font-bold text-foreground block">2. Parallel Evaluation</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">Independent execution across OpenAI, Gemini, and Claude simultaneously.</span>
                   </div>
-                  <div className="pl-8 space-y-1">
-                    <div>&boxur; If delegate_law == 0:</div>
-                    <div className="pl-4 text-emerald-600 dark:text-emerald-400 font-semibold">
-                      &rarr; Node 2A: Set discretion_rank = 0 (No LLM call &mdash; 0 tokens wasted)
-                    </div>
-                    <div>&boxvr; If delegate_law == 1:</div>
-                    <div className="pl-4 text-accent-plum font-semibold">
-                      &rarr; Node 2B: Classify Discretion Rank (1–5) based on statutory constraints
-                    </div>
-                  </div>
-                  <div className="text-muted-foreground pl-4">&darr;</div>
-                  <div className="pl-4 font-bold">
-                    [ Final Verified Output Record ]
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                    <span className="font-bold text-foreground block">3. Mathematical Kappa</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">Automated Cohen's and Fleiss' Kappa matrix generation for peer review.</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Technical Specifications */}
+              <div className="grid gap-4 md:grid-cols-2 pt-1">
+                <Card className="rounded-xl border-border bg-card shadow-xs">
+                  <CardHeader className="pb-2.5">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs">⚡</span>
+                      Short-Circuit Token Economics
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Eliminating wasted compute on non-delegating laws
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground leading-relaxed space-y-2">
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">35%–45% non-delegating:</strong> Commemorative bills, land conveyances, and direct appropriations contain zero administrative discretion.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Immediate branch halt:</strong> Branching on <code className="font-mono text-primary font-bold">delegate_law == 0</code> sets discretion to 0 instantly, skipping Stage 2 and cutting API costs by up to 40%.</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-xl border-border bg-card shadow-xs">
+                  <CardHeader className="pb-2.5">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs">📜</span>
+                      Verifiable Verbatim Citations
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Traceable back to statutory text
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground leading-relaxed space-y-2">
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Direct statutory mapping:</strong> Every discrete flag is paired with verbatim excerpts and coordinates (Section, Subsection, Paragraph).</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Empirical replicability:</strong> Cross-reference citations against the US Code or export clean CSVs for econometric regression analysis.</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
@@ -420,51 +496,86 @@ export function DocumentationPage() {
               <div className="space-y-2">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  Zero Host Fallback & Pure BYOK Architecture
+                  Zero Host Fallback &amp; Pure BYOK Architecture
                 </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Enterprise-grade credential encryption and multi-tenant isolation designed for open-source academic deployment.
                 </p>
               </div>
 
+              {/* Visual Zero-Knowledge Vault Infographic */}
+              <div className="w-full flex items-center justify-center py-2">
+                <img 
+                  src={byokVaultPng} 
+                  alt="What does the Zero-Knowledge API Key Vault include? User API Key, AES-256-GCM Encryption, Direct Provider Execution, Zero Exposure" 
+                  className="w-full max-w-2xl h-auto object-contain max-h-[420px] select-none pointer-events-none" 
+                />
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
-                <Card className="rounded-2xl border-border bg-card shadow-xs">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-foreground">
+                <Card className="rounded-xl border-border bg-card shadow-xs">
+                  <CardHeader className="pb-2.5">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">🛡️</span>
                       Zero Server Host Fallbacks
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      Developer & Host Security
+                      Developer &amp; Host Isolation
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="text-xs text-muted-foreground leading-relaxed space-y-2">
-                    <p>
-                      In open-source deployments, host server environment keys are never used as silent fallbacks. All model calls require an explicit, encrypted user or workspace key.
-                    </p>
-                    <p>
-                      If a user attempts an evaluation run without a configured key, the platform halts immediately with an actionable error directing them to Settings.
-                    </p>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Explicit credentials only:</strong> Server environment keys are never used as silent fallbacks. All evaluations require explicit, encrypted keys.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">No accidental billing:</strong> If a model call lacks an active key, the pipeline halts immediately with an actionable warning.</span>
+                      </li>
+                    </ul>
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-2xl border-border bg-card shadow-xs">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-foreground">
+                <Card className="rounded-xl border-border bg-card shadow-xs">
+                  <CardHeader className="pb-2.5">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs">🔒</span>
                       AES-256-GCM / Fernet Encryption
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      In-Memory Scope Only
+                      In-Memory Lifespan Only
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="text-xs text-muted-foreground leading-relaxed space-y-2">
-                    <p>
-                      Every API key entered in Settings is verified via a live handshake call and encrypted in the database using authenticated AES-256-GCM.
-                    </p>
-                    <p>
-                      Plaintext keys exist in server memory solely for the lifespan of that specific HTTP call and are never written to disk or recorded in logs.
-                    </p>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Pre-flight handshake:</strong> Every key entered is verified with a live test query before encryption and storage.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                        <span><strong className="text-foreground">Ephemeral memory:</strong> Plaintext keys exist in RAM strictly during that specific HTTP request—never written to disk or logs.</span>
+                      </li>
+                    </ul>
                   </CardContent>
                 </Card>
+              </div>
+
+              {/* Action Callout */}
+              <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="space-y-0.5 text-center sm:text-left">
+                  <span className="text-xs font-bold text-foreground block">Ready to connect your LLM provider keys?</span>
+                  <span className="text-[11px] text-muted-foreground block">Add personal keys or workspace pooled credentials in Settings.</span>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/settings")}
+                  className="text-xs h-8 rounded-lg bg-primary text-primary-foreground font-semibold px-4 shrink-0 gap-1.5 shadow-xs"
+                >
+                  <span>Open BYOK Vault in Settings</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
               </div>
             </div>
           )}

@@ -13,13 +13,15 @@ import {
   Trash2, Plus, Sparkles,
   AlertTriangle, Upload, RefreshCw,
   DollarSign, BarChart2, ShieldAlert,
-  Loader2, Layers, GitBranch, X, Search, SlidersHorizontal, Check, Eye, EyeOff
+  Loader2, Layers, GitBranch, X, Search, SlidersHorizontal, Check, Eye, EyeOff,
+  Maximize2, Minimize2, FileText, ArrowRight
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { WorkflowTraceGraph } from "@/features/workflows/WorkflowTraceGraph";
 import { workflowApi } from "@/lib/workflowApi";
 import { useAvailableModels } from "@/hooks/useAvailableModels";
 import type { WorkflowDefinition } from "@/types/workflow";
+import workflowStepsSvg from "@/assets/workflow-steps.svg";
 
 interface Campaign {
   id: string;
@@ -304,7 +306,11 @@ export function ModelEvaluationPage() {
   const [retryingDocumentKey, setRetryingDocumentKey] = useState<string | null>(null);
   const [raisingLimit, setRaisingLimit] = useState(false);
   const [selectedCellView, setSelectedCellView] = useState<any | null>(null);
-  const [traceViewMode, setTraceViewMode] = useState<"list" | "graph">("list");
+  const [selectedFileWorkflow, setSelectedFileWorkflow] = useState<{
+    doc: CampaignDocument;
+    selectedModel: string;
+  } | null>(null);
+  const [isGraphEnlarged, setIsGraphEnlarged] = useState(false);
   const [linkedWorkflowDefinition, setLinkedWorkflowDefinition] = useState<WorkflowDefinition | null>(null);
   const [showLinkDocumentsDialog, setShowLinkDocumentsDialog] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
@@ -417,7 +423,7 @@ export function ModelEvaluationPage() {
   const [selectedBenchmarkStrategyByModel, setSelectedBenchmarkStrategyByModel] = useState<Record<string, string>>({});
   const benchmarkInputRef = useRef<HTMLInputElement>(null);
 
-  const campaignModels = campaign?.model.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
+  const campaignModels = campaign?.model ? campaign.model.split(",").map((m) => m.trim()).filter(Boolean) : [];
   const visibleCampaignModels = campaignModels.filter((model) => !hiddenModelColumns[model]);
   const schemaColumns = (campaign?.schema ?? []).filter((col) => col?.name);
   const visibleSchemaColumns = schemaColumns.filter((col) => !hiddenColumns[col.name]);
@@ -427,6 +433,23 @@ export function ModelEvaluationPage() {
     type: col.type || "string",
   }));
   const basename = (filename: string) => filename.split("/").pop() || filename;
+  const getDocTokens = (doc: CampaignDocument) => {
+    let totalInput = 0;
+    let totalOutput = 0;
+    let totalCost = 0;
+    for (const model of campaignModels) {
+      const run = getModelRun(doc, model);
+      totalInput += run.input_tokens || 0;
+      totalOutput += run.output_tokens || 0;
+      totalCost += run.cost || 0;
+    }
+    return {
+      totalInput,
+      totalOutput,
+      totalTokens: totalInput + totalOutput,
+      totalCost,
+    };
+  };
   const visibleColumnCount = visibleSchemaColumns.length;
   const filteredSchemaColumns = schemaColumns.filter((col) => {
     const query = columnPickerQuery.trim().toLowerCase();
@@ -718,7 +741,7 @@ export function ModelEvaluationPage() {
 
   const fetchGlobalDocs = async () => {
     if (!session?.access_token || !activeWorkspace?.id) return;
-    const res = await fetch(`${API_BASE_URL}/api/documents?workspace_id=${encodeURIComponent(activeWorkspace.id)}`, {
+    const res = await fetch(`${API_BASE_URL}/api/documents?workspace_id=${encodeURIComponent(activeWorkspace.id)}&lightweight=true`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     if (!res.ok) throw new Error("Failed to load workspace documents");
@@ -889,33 +912,53 @@ export function ModelEvaluationPage() {
     return () => clearInterval(interval);
   }, [isPolling, id, session]);
 
-  // Lazily fetch trace details for single-model runs if not already in the cell view
+  // Lazily fetch trace details for selected file workflow if not already present
   useEffect(() => {
-    if (!selectedCellView || !campaign?.id || !session?.access_token) return;
-    if (selectedCellView.trace && selectedCellView.trace.length > 0) return;
+    if (!selectedFileWorkflow || !campaign?.id || !session?.access_token) return;
+    const model = selectedFileWorkflow.selectedModel;
+    const run = getModelRun(selectedFileWorkflow.doc, model);
+    if ((run.trace && run.trace.length > 0) || (selectedFileWorkflow.doc.workflow_trace && selectedFileWorkflow.doc.workflow_trace.length > 0)) {
+      return;
+    }
 
     let cancelled = false;
-    const fetchLazyTrace = async () => {
+    const fetchLazyFileTrace = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/${selectedCellView.documentId}/trace`, {
+        const res = await fetch(`${API_BASE_URL}/api/dashboards/${campaign.id}/documents/${selectedFileWorkflow.doc.document_id}/trace`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data.workflow_trace) {
-          setSelectedCellView((prev: any) =>
-            prev ? { ...prev, trace: data.workflow_trace, context: data.workflow_context || prev.context } : null
+          setDocuments((prev) =>
+            prev.map((d) =>
+              d.document_id === selectedFileWorkflow.doc.document_id
+                ? { ...d, workflow_trace: data.workflow_trace, workflow_context: data.workflow_context || d.workflow_context }
+                : d
+            )
+          );
+          setSelectedFileWorkflow((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  doc: {
+                    ...prev.doc,
+                    workflow_trace: data.workflow_trace,
+                    workflow_context: data.workflow_context || prev.doc.workflow_context,
+                  },
+                }
+              : null
           );
         }
       } catch (err) {
-        console.error("Failed to load trace lazily", err);
+        console.error("Failed to load file trace lazily", err);
       }
     };
-    void fetchLazyTrace();
+    void fetchLazyFileTrace();
     return () => {
       cancelled = true;
     };
-  }, [selectedCellView?.documentId, campaign?.id, session?.access_token]);
+  }, [selectedFileWorkflow?.doc?.document_id, selectedFileWorkflow?.selectedModel, campaign?.id, session?.access_token]);
 
   // Handle campaign creation. When a workflow is selected, dashboard columns come
   // directly from workflow outputs instead of prompt schema extraction.
@@ -1478,7 +1521,7 @@ export function ModelEvaluationPage() {
     });
   }, [parsedBenchmark, documents, campaign, workflowStrategies, benchmarkMappings, campaignModels]);
 
-  // Export spreadsheet matching professor's requirement
+  // Export spreadsheet matching standard benchmark requirement
   const handleExportComparisonCSV = () => {
     if (!campaign || documents.length === 0) return;
 
@@ -1561,8 +1604,8 @@ export function ModelEvaluationPage() {
             <div className="border-b border-stone-200 bg-white px-8 py-5 flex items-center justify-between z-10 shadow-sm">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/evaluation")} className="text-xs h-6 px-1.5 gap-1 text-stone-500 hover:text-[#0B3B36]">
-                    &larr; Back
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/campaigns")} className="text-xs h-6 px-1.5 gap-1 text-stone-500 hover:text-[#0B3B36]">
+                    &larr; Campaigns
                   </Button>
                   <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#0B3B36] bg-[#0B3B36]/10 px-2.5 py-0.5 rounded-full">
                     Model Evaluation Run
@@ -2164,21 +2207,25 @@ export function ModelEvaluationPage() {
                 </Dialog>
 
                 {documents.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-4 p-10 text-center">
-                    <div className="rounded-full bg-muted/40 p-4">
-                      <Layers className="h-7 w-7 text-muted-foreground" />
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center max-w-2xl mx-auto my-auto">
+                    <div className="w-full max-w-md mx-auto mb-2 p-3 rounded-xl bg-card border border-border/40 shadow-2xs">
+                      <img 
+                        src={workflowStepsSvg} 
+                        alt="3-Step Evaluation Pipeline" 
+                        className="w-full h-auto dark:invert dark:opacity-90 object-contain max-h-44 select-none pointer-events-none" 
+                      />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-sm font-bold">No files added yet</h3>
+                      <h3 className="text-sm font-bold text-foreground">Step 1: Link or Upload Legal Documents</h3>
                       <p className="text-xs text-muted-foreground max-w-md">
-                        Add workspace files or upload local files here. Each selected file will run through the linked workflow once per selected model, and the results will appear on this evaluation dashboard.
+                        Add statutes from your workspace or upload local text/PDF files. Each document is routed through the multi-model pipeline to extract delegation &amp; discretion variables.
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setShowLinkDocumentsDialog(true)} className="gap-1.5 text-xs">
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button size="sm" variant="outline" onClick={() => setShowLinkDocumentsDialog(true)} className="gap-1.5 text-xs rounded-lg border-border">
                         <Layers size={13} /> Link Workspace Files
                       </Button>
-                      <Button size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5 text-xs">
+                      <Button size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5 text-xs rounded-lg bg-primary text-primary-foreground">
                         <Upload size={13} /> Upload Local Files
                       </Button>
                     </div>
@@ -2281,7 +2328,20 @@ export function ModelEvaluationPage() {
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <div className="font-medium max-w-[220px] truncate">{basename(doc.filename)}</div>
+                                  <div 
+                                    onClick={() => {
+                                      setSelectedFileWorkflow({
+                                        doc,
+                                        selectedModel: visibleCampaignModels[0] || campaignModels[0] || "",
+                                      });
+                                      setIsGraphEnlarged(false);
+                                    }}
+                                    className="font-semibold max-w-[220px] truncate text-foreground hover:text-primary hover:underline cursor-pointer flex items-center gap-1.5 group"
+                                    title={`Click to inspect workflow execution graph for ${basename(doc.filename)}`}
+                                  >
+                                    <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                                    <span className="truncate">{basename(doc.filename)}</span>
+                                  </div>
                                   <div className="mt-1 text-[10px] text-muted-foreground">
                                     {campaignModels.filter((model) => {
                                       const status = getModelRunStatus(doc, model);
@@ -2290,6 +2350,22 @@ export function ModelEvaluationPage() {
                                     {" • "}
                                     {campaignModels.filter((model) => getModelRunStatus(doc, model) === "missing").length} missing
                                   </div>
+                                  {(() => {
+                                    const { totalTokens, totalCost } = getDocTokens(doc);
+                                    if (totalTokens <= 0) return null;
+                                    return (
+                                      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/50 border border-border/40 text-foreground font-medium">
+                                          ⚡ {totalTokens >= 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : totalTokens} tokens
+                                        </span>
+                                        {totalCost > 0 && (
+                                          <span className="text-muted-foreground">
+                                            ${totalCost.toFixed(3)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                                 <Button
                                   type="button"
@@ -2339,7 +2415,6 @@ export function ModelEvaluationPage() {
                                       maxWidth: `${columnWidths[`${col.name}-${model}`] || 180}px` 
                                     }}
                                     onClick={() => {
-                                      setTraceViewMode("list");
                                       setSelectedCellView({
                                         documentId: doc.document_id,
                                         filename: basename(doc.filename),
@@ -2356,9 +2431,10 @@ export function ModelEvaluationPage() {
                                         inputTokens: run.input_tokens,
                                         outputTokens: run.output_tokens,
                                         timing: run.timing || {},
+                                        rawDoc: doc,
                                       });
                                     }}
-                                    className={`p-3 text-center border-r border-border/20 align-top cursor-pointer hover:bg-muted/10 transition-colors ${
+                                    className={`p-2 text-center border-r border-border/20 align-middle cursor-pointer hover:bg-muted/10 transition-colors ${
                                       isMismatch 
                                         ? "bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-900" 
                                         : isFailed 
@@ -2368,7 +2444,7 @@ export function ModelEvaluationPage() {
                                             : ""
                                     }`}
                                   >
-                                    <div className="flex h-[88px] flex-col items-center justify-start overflow-hidden">
+                                    <div className="flex min-h-[44px] flex-col items-center justify-center overflow-hidden py-1">
                                       {isPending ? (
                                         <span className="flex items-center justify-center gap-1.5 text-muted-foreground animate-pulse text-[10px]">
                                           <RefreshCw className="h-3 w-3 animate-spin text-primary" /> {statusLabel(runStatus)}...
@@ -2440,23 +2516,12 @@ export function ModelEvaluationPage() {
                                             </div>
                                           ) : (
                                             <div
-                                              className={`max-w-[170px] overflow-hidden text-center font-semibold underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 ${
-                                                isLongformColumn(col.name) ? "line-clamp-3 text-[11px] leading-4" : "line-clamp-2 break-words"
+                                              className={`max-w-[170px] overflow-hidden text-center font-medium hover:text-primary transition-colors ${
+                                                isLongformColumn(col.name) ? "line-clamp-2 text-[11px] leading-4 text-foreground/90" : "line-clamp-2 break-words text-xs font-semibold text-foreground"
                                               }`}
                                             >
                                               {value !== undefined && value !== null && value !== "" ? String(value) : "—"}
                                             </div>
-                                          )}
-                                          <div className="mt-1 text-[9px] text-muted-foreground/75 font-normal">
-                                            {run.trace?.length ? `${run.trace.length} trace node${run.trace.length === 1 ? "" : "s"}` : "No trace"}
-                                          </div>
-                                          {(run.input_tokens || run.output_tokens) ? (
-                                            <div className="mt-0.5 text-[8.5px] text-muted-foreground/60 font-mono">
-                                              in:{run.input_tokens || 0} / out:{run.output_tokens || 0}
-                                            </div>
-                                          ) : null}
-                                          {isLongformColumn(col.name) && (
-                                            <div className="mt-1 text-[9px] font-medium text-muted-foreground">Click to read full text</div>
                                           )}
                                         </>
                                       )}
@@ -3021,7 +3086,7 @@ export function ModelEvaluationPage() {
                     {selectableModels
                       .filter(m => m.toLowerCase().includes(newModelToAdd.toLowerCase()))
                       .map(model => {
-                        const isAlreadyPresent = campaign?.model.split(",").map(m => m.trim()).includes(model);
+                        const isAlreadyPresent = campaign?.model ? campaign.model.split(",").map(m => m.trim()).includes(model) : false;
                         return (
                           <div 
                             key={model}
@@ -3465,97 +3530,83 @@ export function ModelEvaluationPage() {
 
         {/* Inspect Coded Cell Modal */}
         <Dialog open={selectedCellView !== null} onOpenChange={(open) => !open && setSelectedCellView(null)}>
-          <DialogContent className="w-[96vw] sm:max-w-3xl lg:max-w-6xl max-h-[92vh] overflow-y-auto p-6">
+          <DialogContent className="w-[96vw] sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-6 rounded-xl">
             <DialogHeader className="border-b pb-3 mb-4">
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <GitBranch className="text-primary" size={18} />
-                LLM Result, Reasoning, and Workflow Trace
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <FileText className="text-primary" size={16} />
+                Variable Result &amp; Reasoning
               </DialogTitle>
             </DialogHeader>
 
             {selectedCellView && (
-              <div className="space-y-5 text-sm">
-                {/* Metadata cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
+              <div className="space-y-4 text-sm">
+                {/* Variable & Model Header Pill Bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/30 text-center">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Variable</span>
-                    <span className="font-bold text-xs truncate block">{selectedCellView.columnName}</span>
+                    <span className="font-bold text-xs truncate block text-foreground">{selectedCellView.columnName}</span>
                   </div>
-                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Model Identifier</span>
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/30 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Model</span>
                     <span className="font-bold text-xs truncate block text-primary">{selectedCellView.modelName}</span>
                   </div>
-                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Run Status</span>
-                    <span className="font-bold text-xs truncate block">{selectedCellView.status}</span>
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/30 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Status</span>
+                    <span className="font-bold text-xs truncate block capitalize">{selectedCellView.status}</span>
                   </div>
-                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Trace Nodes</span>
-                    <span className="font-bold text-xs truncate block">{selectedCellView.trace?.length || 0}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Queue Wait</span>
-                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.queue_wait_ms)}</span>
-                  </div>
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Total Runtime</span>
-                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.total_run_ms)}</span>
-                  </div>
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Source Load</span>
-                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.source_text_load_ms)}</span>
-                  </div>
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Workflow Execute</span>
-                    <span className="font-bold text-xs truncate block">{formatDuration(selectedCellView.timing?.workflow_execute_ms)}</span>
+                  <div className="bg-muted/30 p-2.5 rounded-lg border border-border/30 text-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Execution Time</span>
+                    <span className="font-bold text-xs truncate block font-mono">
+                      {formatDuration(selectedCellView.timing?.total_run_ms || selectedCellView.timing?.workflow_execute_ms)}
+                    </span>
                   </div>
                 </div>
 
-                <div className="bg-muted/30 p-2.5 rounded-lg border border-border/20">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Document File</span>
-                  <span className="font-semibold text-xs truncate block">{selectedCellView.filename}</span>
+                {/* Document File Card */}
+                <div className="bg-muted/20 p-2.5 rounded-lg border border-border/30 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Document:</span>
+                    <span className="font-medium text-foreground truncate">{selectedCellView.filename}</span>
+                  </div>
                 </div>
 
-                {/* Economics breakdown */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                {/* Economics / Token Usage for this Run */}
+                <div className="grid grid-cols-3 gap-2.5 text-xs">
+                  <div className="bg-muted/20 p-2 rounded-lg border border-border/20 text-center">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Input Tokens</span>
-                    <span className="font-bold text-xs truncate block">{selectedCellView.inputTokens !== undefined && selectedCellView.inputTokens !== null ? selectedCellView.inputTokens.toLocaleString() : "—"}</span>
+                    <span className="font-bold text-xs font-mono">{selectedCellView.inputTokens !== undefined && selectedCellView.inputTokens !== null ? selectedCellView.inputTokens.toLocaleString() : "—"}</span>
                   </div>
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                  <div className="bg-muted/20 p-2 rounded-lg border border-border/20 text-center">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Output Tokens</span>
-                    <span className="font-bold text-xs truncate block">{selectedCellView.outputTokens !== undefined && selectedCellView.outputTokens !== null ? selectedCellView.outputTokens.toLocaleString() : "—"}</span>
+                    <span className="font-bold text-xs font-mono">{selectedCellView.outputTokens !== undefined && selectedCellView.outputTokens !== null ? selectedCellView.outputTokens.toLocaleString() : "—"}</span>
                   </div>
-                  <div className="bg-muted/20 p-2.5 rounded-lg border border-border/10 text-center">
+                  <div className="bg-muted/20 p-2 rounded-lg border border-border/20 text-center">
                     <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Estimated Cost</span>
-                    <span className="font-bold text-xs truncate block text-emerald-600 dark:text-emerald-500">{selectedCellView.cost !== undefined && selectedCellView.cost !== null ? `$${selectedCellView.cost.toFixed(5)}` : "—"}</span>
+                    <span className="font-bold text-xs font-mono text-emerald-600 dark:text-emerald-400">{selectedCellView.cost !== undefined && selectedCellView.cost !== null ? `$${selectedCellView.cost.toFixed(4)}` : "—"}</span>
                   </div>
                 </div>
 
                 {/* Predicted Value */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Predicted Value</span>
-                  <div className="bg-primary/5 text-primary border border-primary/20 rounded-lg p-3 font-mono font-bold text-sm inline-block">
+                  <div className="bg-primary/5 text-primary border border-primary/20 rounded-lg p-3 font-semibold text-sm">
                     {selectedCellView.value}
                   </div>
                 </div>
 
                 {selectedCellView.errorMessage && (
                   <div className="space-y-1">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Run Error</span>
-                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-xs whitespace-pre-wrap">
+                    <span className="text-xs font-bold text-destructive uppercase tracking-wider block">Run Error</span>
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-xs whitespace-pre-wrap text-destructive">
                       {selectedCellView.errorMessage}
                     </div>
                   </div>
                 )}
 
-                {/* Reasoning */}
-                <div className="space-y-1">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">AI Reasoning & Evidence</span>
-                  <div className="bg-card border rounded-lg p-4 font-normal text-xs leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto shadow-inner">
+                {/* Specific AI Reasoning & Evidence for this column */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Reasoning &amp; Citations</span>
+                  <div className="bg-card border rounded-lg p-4 font-normal text-xs leading-relaxed whitespace-pre-wrap max-h-52 overflow-y-auto shadow-inner text-foreground/90">
                     {selectedCellView.reasoning}
                   </div>
                 </div>
@@ -3565,6 +3616,7 @@ export function ModelEvaluationPage() {
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
                       onClick={() => void handleRetryDocument(selectedCellView.documentId, selectedCellView.modelName)}
                       disabled={retryingDocumentKey === `${selectedCellView.documentId}:${selectedCellView.modelName}`}
                       className="gap-2 text-xs font-bold"
@@ -3572,78 +3624,6 @@ export function ModelEvaluationPage() {
                       <RefreshCw className={`h-3.5 w-3.5 ${retryingDocumentKey === `${selectedCellView.documentId}:${selectedCellView.modelName}` ? "animate-spin" : ""}`} />
                       Retry this model for this file
                     </Button>
-                  </div>
-                )}
-
-                {selectedCellView.trace && selectedCellView.trace.length > 0 && (
-                  <div className="space-y-3 pt-3 border-t">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Workflow Trace</span>
-                      <div className="inline-flex rounded-lg border bg-muted/20 p-1">
-                        <button
-                          type="button"
-                          onClick={() => setTraceViewMode("list")}
-                          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${traceViewMode === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                          Step View
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTraceViewMode("graph")}
-                          disabled={!linkedWorkflowDefinition}
-                          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${traceViewMode === "graph" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"} disabled:cursor-not-allowed disabled:opacity-50`}
-                        >
-                          Graph View
-                        </button>
-                      </div>
-                    </div>
-
-                    {traceViewMode === "graph" ? (
-                      linkedWorkflowDefinition ? (
-                        <WorkflowTraceGraph
-                          definition={linkedWorkflowDefinition}
-                          trace={selectedCellView.trace}
-                          context={selectedCellView.context || {}}
-                        />
-                      ) : (
-                        <div className="rounded-lg border border-dashed p-4 text-[11px] text-muted-foreground">
-                          Workflow definition is still loading for this campaign, so the graph preview is not ready yet.
-                        </div>
-                      )
-                    ) : (
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {selectedCellView.trace.map((item: any, idx: number) => (
-                          <div key={idx} className="rounded-lg border bg-muted/20 p-3 text-[11px]">
-                            <div className="flex items-center justify-between gap-3 mb-2">
-                              <span className="font-bold">{item.name || item.node_id}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground font-semibold">
-                                  {formatDuration(item.duration_ms)}
-                                </span>
-                                <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold">
-                                  {item.status || "completed"}
-                                </span>
-                              </div>
-                            </div>
-                            {item.message ? (
-                              <div className="text-muted-foreground mb-2 whitespace-pre-wrap">{item.message}</div>
-                            ) : null}
-                            <pre className="rounded-md bg-background/80 p-2 overflow-x-auto whitespace-pre-wrap break-words">
-                              {JSON.stringify(item.outputs || {}, null, 2)}
-                            </pre>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {selectedCellView.context && Object.keys(selectedCellView.context).length > 0 && (
-                  <div className="space-y-2 pt-3 border-t">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Workflow Context</span>
-                    <pre className="rounded-lg border bg-muted/20 p-3 text-[11px] overflow-x-auto whitespace-pre-wrap break-words max-h-56 overflow-y-auto">
-                      {JSON.stringify(selectedCellView.context, null, 2)}
-                    </pre>
                   </div>
                 )}
 
@@ -3666,12 +3646,33 @@ export function ModelEvaluationPage() {
                   </div>
                 )}
 
-                <div className="flex justify-end pt-3 border-t">
+                {/* Modal Footer with Direct Link to Full Workflow Graph */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border mt-4">
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedCellView.rawDoc) {
+                        setSelectedFileWorkflow({
+                          doc: selectedCellView.rawDoc,
+                          selectedModel: selectedCellView.modelName,
+                        });
+                        setSelectedCellView(null);
+                      }
+                    }}
+                    className="gap-2 text-xs font-semibold rounded-lg text-primary hover:bg-primary/5 border-primary/30"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                    Inspect Full Workflow Execution Graph
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setSelectedCellView(null)}
-                    className="text-xs font-bold px-4"
+                    className="text-xs font-semibold px-4"
                   >
                     Close
                   </Button>
@@ -3680,6 +3681,149 @@ export function ModelEvaluationPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Full Workflow Execution Graph Modal */}
+        {selectedFileWorkflow && (
+          <Dialog
+            open={selectedFileWorkflow !== null}
+            onOpenChange={(open) => {
+              if (!open) {
+                setSelectedFileWorkflow(null);
+                setIsGraphEnlarged(false);
+              }
+            }}
+          >
+            <DialogContent
+              className={
+                isGraphEnlarged
+                  ? "!w-[98vw] !max-w-[98vw] !h-[96vh] !max-h-[96vh] p-6 bg-card border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+                  : "!w-[94vw] sm:!max-w-4xl lg:!max-w-6xl !h-[88vh] !max-h-[88vh] flex flex-col p-6 overflow-hidden rounded-xl"
+              }
+            >
+              {/* Header */}
+              <DialogHeader className="border-b pb-3 mb-3 flex flex-row items-center justify-between gap-4 shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <GitBranch size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <DialogTitle className="text-sm font-bold truncate">
+                      Workflow Execution: {basename(selectedFileWorkflow.doc.filename)}
+                    </DialogTitle>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {selectedFileWorkflow.doc.filename}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Model Selector Dropdown & Enlarge Button */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 text-xs bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border">
+                    <span className="text-[11px] text-muted-foreground font-semibold">Model:</span>
+                    <select
+                      value={selectedFileWorkflow.selectedModel}
+                      onChange={(e) =>
+                        setSelectedFileWorkflow((prev) =>
+                          prev ? { ...prev, selectedModel: e.target.value } : null
+                        )
+                      }
+                      className="bg-transparent text-xs font-bold text-primary focus:outline-none cursor-pointer"
+                    >
+                      {campaignModels.map((m) => (
+                        <option key={m} value={m} className="bg-card text-foreground">
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsGraphEnlarged(!isGraphEnlarged)}
+                    className="h-8 gap-1.5 text-xs rounded-lg border-border"
+                  >
+                    {isGraphEnlarged ? (
+                      <>
+                        <Minimize2 size={13} /> Exit Fullscreen
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 size={13} /> Enlarge View
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              {/* Execution Summary Bar */}
+              {(() => {
+                const run = getModelRun(selectedFileWorkflow.doc, selectedFileWorkflow.selectedModel);
+                return isGraphEnlarged ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5 mb-2 rounded-lg bg-muted/20 border border-border/40 text-[11px] shrink-0">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-muted-foreground">Status: <span className="text-foreground capitalize font-bold">{run.status || selectedFileWorkflow.doc.status || "Completed"}</span></span>
+                      <span className="text-muted-foreground/50">•</span>
+                      <span className="font-semibold text-muted-foreground">Tokens: <span className="font-mono text-foreground">{run.input_tokens ? run.input_tokens.toLocaleString() : "—"} in / {run.output_tokens ? run.output_tokens.toLocaleString() : "—"} out</span></span>
+                      <span className="text-muted-foreground/50">•</span>
+                      <span className="font-semibold text-muted-foreground">Cost: <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{run.cost !== undefined ? `$${run.cost.toFixed(4)}` : "—"}</span></span>
+                      <span className="text-muted-foreground/50">•</span>
+                      <span className="font-semibold text-muted-foreground">Duration: <span className="font-mono text-foreground font-semibold">{formatDuration(run.timing?.total_run_ms || run.timing?.workflow_execute_ms)}</span></span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">Hover nodes for thinking preview • Click node to inspect details</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 mb-3 border-b border-border text-xs shrink-0">
+                    <div className="bg-muted/30 p-2 rounded-lg border border-border/30 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Status</span>
+                      <span className="font-bold text-xs truncate block capitalize">{run.status || selectedFileWorkflow.doc.status || "Completed"}</span>
+                    </div>
+                    <div className="bg-muted/30 p-2 rounded-lg border border-border/30 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Input Tokens</span>
+                      <span className="font-bold text-xs font-mono">{run.input_tokens ? run.input_tokens.toLocaleString() : "—"}</span>
+                    </div>
+                    <div className="bg-muted/30 p-2 rounded-lg border border-border/30 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Output Tokens</span>
+                      <span className="font-bold text-xs font-mono">{run.output_tokens ? run.output_tokens.toLocaleString() : "—"}</span>
+                    </div>
+                    <div className="bg-muted/30 p-2 rounded-lg border border-border/30 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Cost</span>
+                      <span className="font-bold text-xs font-mono text-emerald-600 dark:text-emerald-400">{run.cost !== undefined ? `$${run.cost.toFixed(4)}` : "—"}</span>
+                    </div>
+                    <div className="bg-muted/30 p-2 rounded-lg border border-border/30 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">Duration</span>
+                      <span className="font-bold text-xs font-mono">{formatDuration(run.timing?.total_run_ms || run.timing?.workflow_execute_ms)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* The Visual Interactive Execution Graph */}
+              {(() => {
+                const run = getModelRun(selectedFileWorkflow.doc, selectedFileWorkflow.selectedModel);
+                const trace = (run.trace && run.trace.length > 0) ? run.trace : (selectedFileWorkflow.doc.workflow_trace || []);
+                const context = run.context && Object.keys(run.context).length > 0 ? run.context : (selectedFileWorkflow.doc.workflow_context || {});
+
+                return (
+                  <div className="flex-1 min-h-0 w-full rounded-xl border border-border bg-muted/10 overflow-hidden relative">
+                    {linkedWorkflowDefinition ? (
+                      <WorkflowTraceGraph
+                        definition={linkedWorkflowDefinition}
+                        trace={trace}
+                        context={context}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-xs text-muted-foreground p-8 text-center">
+                        Workflow definition is loading...
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+        )}
 
         <ConfirmationDialog
           open={deleteCampaignId !== null}

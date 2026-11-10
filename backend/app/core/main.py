@@ -73,6 +73,15 @@ async def lifespan(app: FastAPI):
     # Initialize SQLite database schema
     from app.core.database import init_db, get_db_conn
     init_db()
+
+    # Seed default model pricing into database and check weekly sync
+    try:
+        from app.services.pricing_sync_service import seed_default_model_pricing, check_and_run_weekly_sync
+        seed_default_model_pricing()
+        import asyncio
+        asyncio.create_task(check_and_run_weekly_sync())
+    except Exception as e:
+        logger.warning("Failed to initialize model pricing sync: %s", e)
     
     # Clean up stale document statuses from database on startup
     try:

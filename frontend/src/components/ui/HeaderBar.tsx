@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CiteUsModal } from "@/components/ui/CiteUsModal";
-import { Quote } from "lucide-react";
+import { AccountSettingsModal } from "@/components/ui/AccountSettingsModal";
+import { Quote, User as UserIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNavigate } from "react-router-dom";
 
 export function HeaderBar({ title, description }: { title?: string; description?: string }) {
   const { user, activeWorkspace, signOut } = useAuthContext();
-  const navigate = useNavigate();
   const [citeModalOpen, setCiteModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
 
   return (
     <>
@@ -78,16 +78,10 @@ export function HeaderBar({ title, description }: { title?: string; description?
             />
             <DropdownMenuContent align="end" className="w-56">
               <div className="px-3 py-2 border-b border-border/50">
-                <p className="text-xs font-medium text-foreground truncate">{user.email}</p>
-                <p className="text-[10px] text-muted-foreground capitalize">
-                  {user.is_admin ? "Administrator" : "Team Member"}
-                </p>
+                <p className="text-xs font-semibold text-foreground truncate">{user.email}</p>
               </div>
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
-                <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+              <DropdownMenuItem onClick={() => setAccountModalOpen(true)}>
+                <UserIcon className="mr-2 h-4 w-4 text-primary" />
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -103,6 +97,7 @@ export function HeaderBar({ title, description }: { title?: string; description?
       </div>
     </header>
     <CiteUsModal open={citeModalOpen} onOpenChange={setCiteModalOpen} />
+    <AccountSettingsModal open={accountModalOpen} onOpenChange={setAccountModalOpen} />
     </>
   );
 }

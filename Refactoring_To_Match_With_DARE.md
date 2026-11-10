@@ -10,13 +10,13 @@
 1. [Origin & Architectural Context](#1-origin--architectural-context)
    - What is CMU DARE?
    - What is Socratic Bots?
-   - Professor Sharyn O'Halloran's Research & Vision
+   - Standard Research & Academic Vision
    - Standalone Product vs. Inside DARE
 2. [What We Already Fixed (Phases 1, 2 & 4 Summary)](#2-what-we-already-fixed-phases-1-2--4-summary)
 3. [Target Information Architecture (The 5-Pillar Navigation)](#3-target-information-architecture-the-5-pillar-navigation)
 4. [The Frozen Workflow & 1-Click Replication Standard](#4-the-frozen-workflow--1-click-replication-standard)
    - Academic Provenance & Immutability
-   - Official Pipeline: O'Halloran Delegation & Discretion Coder v1.0
+   - Official Pipeline: Standard Delegation & Discretion Coder v1.0
    - The Turnkey 1-Click Replication User Journey
 5. [Enterprise-Grade Secure API Key Management (BYOK Architecture)](#5-enterprise-grade-secure-api-key-management-byok-architecture)
    - The Threat Model in Open Source
@@ -55,10 +55,10 @@
 * **Purpose:** Turnkey pedagogical AI companion.
 * **Why Referenced:** Demonstrates the **"1-Click Template Duplication"** user experience. An instructor or researcher with zero coding knowledge can take a pre-configured template, drop in their course readings or rubrics, and run the system immediately.
 
-### Professor Sharyn O'Halloran's Research & Vision
-Professor Sharyn O'Halloran (Columbia University & Trinity College Dublin) is a pioneer in the formal political theory of **legislative delegation, congressional politics, and administrative discretion** (author of *Delegating Powers: A Law and Economics Approach to Politics, Regulation, and the Economy* with David Epstein).
+### Standard Research & Academic Vision
+The platform formalizes the political economy of **legislative delegation, congressional politics, and administrative discretion** based on the foundational framework in *Delegating Powers: A Law and Economics Approach to Politics, Regulation, and the Economy*.
 
-Her vision for this platform:
+Its core vision:
 1. **Academic Reproducibility:** Legislative coding across hundreds of statutes must be scientifically rigorous, auditable, and immutable.
 2. **Open-Source Delivery:** The platform will be published as an open-source tool so political scientists, legal scholars, and university labs worldwide can run, audit, and replicate empirical findings.
 3. **Turnkey Usability:** Non-technical legal researchers must not be forced to build complex node graphs. They need a "one-button replication" experience.
@@ -118,11 +118,11 @@ Rather than cluttering the app with 15 disconnected pages, we adopt DARE's focus
 
 ### Academic Provenance & Immutability
 In published social science research, coding rules must remain **frozen** across evaluation campaigns. If an author writes in a paper:
-> *"We coded 500 Public Laws using the O'Halloran Delegation & Discretion Rubric v1.0,"*
+> *"We coded 500 Public Laws using the Standard Delegation & Discretion Rubric v1.0,"*
 
 No user or collaborator should be able to alter the prompts, temperature, or condition logic of that published version.
 
-### The Official Pipeline: O'Halloran Delegation & Discretion Coder v1.0
+### The Official Pipeline: Standard Delegation & Discretion Coder v1.0
 The standard published workflow consists of a deterministic, 2-stage directed graph:
 
 ```mermaid
@@ -286,7 +286,7 @@ When a user launches a 500-document coding campaign, jobs are queued into `workf
 
 * **Three-Tab Header:**
   1. `My Workflows`: Workflows created or duplicated by the user. Includes draft status, version tags, and edit actions.
-  2. `Library`: Curated, official, and frozen workflows (e.g. *O'Halloran Delegation Coder v1.0*, *Statutory Complexity Analyzer*, *Agency Identification Pipeline*).
+  2. `Library`: Curated, official, and frozen workflows (e.g. *Standard Delegation Coder v1.0*, *Statutory Complexity Analyzer*, *Agency Identification Pipeline*).
   3. `Shared With Me`: Workflows shared across workspace team members.
 * **Card & Table Layout:**
   * Search bar with instant fuzzy filtering.
@@ -371,10 +371,10 @@ Use this checklist to track refactoring progress across working sessions:
 - [x] **Step 3.1: Global Navigation & Layout Shell**
   - [x] Implemented DARE-inspired sidebar rail (`Campaigns`, `Workflows`, `Law Corpus`, `Conversations`, `Evaluation`).
   - [x] Added Columbia SIPA branding, active workspace switcher with live status indicator, and user profile pill with sign out.
-  - [x] Added interactive *Methodology & Rubric* dialog explaining Professor O'Halloran's 2-stage delegation coding logic.
+  - [x] Added interactive *Methodology & Rubric* dialog explaining the Standard 2-stage delegation coding logic.
 - [x] **Step 3.2: Workflow Library & Frozen Benchmarks**
   - [x] Built DARE 3-tab navigation: `Library (Official Benchmarks)`, `My Workflows`, `Shared With Me`.
-  - [x] Created prominent frozen benchmark card: *O'Halloran Administrative Delegation & Discretion Coder v1.0* with `Verified / Frozen` badges and node chain preview.
+  - [x] Created prominent frozen benchmark card: *Standard Administrative Delegation & Discretion Coder v1.0* with `Verified / Frozen` badges and node chain preview.
   - [x] Implemented turnkey `[ Replicate & Run ]` workflow duplication and graph inspection.
 - [x] **Step 3.3: High-Density Research Campaigns**
   - [x] Modernized `DashboardListPage.tsx` and `DashboardDetailPage.tsx` with crisp white cards, stone borders, and clean status badges.
@@ -402,7 +402,7 @@ Use this checklist to track refactoring progress across working sessions:
 - [x] **Task 1: Help & Terminology Modal Polish**
   - [x] Fixed overlay backdrop opacity to `bg-black/60 backdrop-blur-sm` in `dialog.tsx`.
   - [x] Refactored Help modal into a DARE-style 3-slide interactive carousel with slide indicator dots (`● ○ ○`), `Back`, `Skip`, and `Next` buttons in `ThreadSidebar.tsx`.
-  - [x] Slide 1: Academic Foundation (Epstein & O'Halloran formal theory); Slide 2: Core Coding Variables (`delegate_law` binary, `discretion_rank` 0-5); Slide 3: Deterministic 2-Stage Directed Pipeline.
+  - [x] Slide 1: Academic Foundation (Standard Discretion formal theory); Slide 2: Core Coding Variables (`delegate_law` binary, `discretion_rank` 0-5); Slide 3: Deterministic 2-Stage Directed Pipeline.
 - [x] **Task 2: Cost Tracking & BYOK Architecture**
   - [x] **2.1: Purged Wallet Option:** Removed `$20.00 Platform Wallet` card and wallet routing buttons; shifted entirely to Bring Your Own Key (BYOK) and LiteLLM Proxy.
   - [x] **2.2: API Key Scope Preference & Overrides:**
@@ -465,7 +465,7 @@ Use this checklist to track refactoring progress across working sessions:
   - [x] Verified with unit tests in `test_auth_verify.py` (`test_invitation_pending_and_accept_flow`).
 - [x] **Task 11: Dedicated Academic Documentation & Turnkey Simplification**
   - [x] **Documentation Page (`/docs`):** Created `frontend/src/routes/DocumentationPage.tsx` with 5 academic reference tabs:
-    1. *Academic Foundation:* Epstein & O'Halloran (*Delegating Powers*), non-delegation doctrine, administrative law.
+    1. *Academic Foundation:* Standard Discretion Framework (*Delegating Powers*), non-delegation doctrine, administrative law.
     2. *3-Step Quickstart:* Corpus upload, model benchmarking, and tabular dataset export.
     3. *Variables & Coding Rubric:* Definitive definitions for `delegate_law` (0 or 1) and `discretion_rank` (0 to 5) with sample statutory excerpts.
     4. *Deterministic 2-Stage Pipeline (DAG):* Node 1 screening + conditional branching to prevent hallucinated scores and eliminate API waste.
@@ -476,10 +476,10 @@ Use this checklist to track refactoring progress across working sessions:
   - [x] Full Pytest suite passed: **153 passed, 2 skipped in 14.06s (100% pass rate, zero cloud touch)**.
   - [x] Frontend production build compiled: **`tsc -b && vite build` built clean with 0 errors**.
 - [x] **Task 13: Academic Citation Modal & Attribution Architecture**
-  - [x] **Purged Mock / Placeholder Data:** Replaced generic placeholder names ("Legal Text Workflow Studio Team", `arxiv:2608.xxxx`) with proper academic author attributions: **Himanshu Jhawar** & **Professor Sharyn O'Halloran** (Columbia University SIPA).
+  - [x] **Purged Mock / Placeholder Data:** Replaced generic placeholder names ("Legal Text Workflow Studio Team", `arxiv:2608.xxxx`) with proper academic author attributions: **Himanshu Jhawar & Research Team** (Columbia University SIPA).
   - [x] **Dual Attribution Tabs:** Provided distinct tabs for:
     1. *Software Platform (2026):* Citing the open-source workbench and multi-model workflow engine.
-    2. *Theoretical Methodology (Epstein & O'Halloran 1999):* Citing *Delegating Powers* (Cambridge University Press).
+    2. *Theoretical Methodology (1999):* Citing *Delegating Powers* (Cambridge University Press).
   - [x] **Multi-Format Formats:** Instant switching between **BibTeX**, **APA 7th**, and **Chicago 17th**, plus `.bib` file download.
   - [x] **Google Scholar & Crossref Explanation:** Documented real-world citation indexing mechanics and free Zenodo DOI setup for automatic Google Scholar tracking.
 - [x] **Task 14: High-Performance Data Pruning, Grid Pagination & Polling Optimization**

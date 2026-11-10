@@ -584,8 +584,9 @@ class WorkflowDashboardService:
 
             input_tokens = sum(u.input_tokens for u in usage_list if u)
             output_tokens = sum(u.output_tokens for u in usage_list if u)
+            cached_tokens = sum(getattr(u, "cached_tokens", 0) for u in usage_list if u)
             from app.llm.registry import calculate_cost
-            cost = calculate_cost(model, input_tokens, output_tokens)
+            cost = calculate_cost(model, input_tokens, output_tokens, cached_tokens=cached_tokens)
 
             return {
                 "status": "completed",
@@ -593,6 +594,7 @@ class WorkflowDashboardService:
                 "cost": cost,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
+                "cached_tokens": cached_tokens,
                 "trace": result["trace"],
                 "context": result["context"],
                 "error_message": None,

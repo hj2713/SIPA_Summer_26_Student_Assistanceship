@@ -4,10 +4,26 @@ import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, TrendingUp, Cpu, Coins, KeyRound, ShieldCheck, Users, UserPlus, Plus } from "lucide-react";
+import {
+  Loader2,
+  TrendingUp,
+  Cpu,
+  Coins,
+  KeyRound,
+  ShieldCheck,
+  Users,
+  UserPlus,
+  Plus,
+  CheckCircle2,
+  AlertCircle,
+  Play,
+  Trash2,
+  ExternalLink,
+} from "lucide-react";
 import { API_BASE_URL } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 import { HeaderBar } from "@/components/ui/HeaderBar";
+import byokVaultPng from "@/assets/byok-vault.png";
 
 interface UsageSummary {
   input_tokens: number;
@@ -83,14 +99,37 @@ export function SettingsPage() {
 
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [providerKeysInput, setProviderKeysInput] = useState<Record<string, string>>({});
-  const [verifyingProvider, setVerifyingProvider] = useState<Record<string, boolean>>({});
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("openai");
+  const [showVaultExplainer, setShowVaultExplainer] = useState<boolean>(false);
+  const [isTestingCall, setIsTestingCall] = useState<boolean>(false);
+  const [isSavingKey, setIsSavingKey] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    provider: string;
+    message?: string;
+    latency_ms?: number | null;
+    test_output?: string | null;
+    modelsCount?: number;
+  } | null>(null);
 
-  const handleVerifyAndSaveProviderKey = async (providerId: string, apiKey: string) => {
-    if (!apiKey.trim()) {
+  const handleTestOrSaveProviderKey = async (providerId: string, save: boolean) => {
+    const normProvName = providerId === "google" ? "gemini" : providerId;
+    const savedItem = credentials.saved_keys?.find((k) => k.provider === normProvName);
+    const isSaved = !!savedItem || (credentials.provider === normProvName && credentials.has_api_key);
+    const inputKey = (providerKeysInput[providerId] || "").trim();
+
+    if (!inputKey && !isSaved) {
       toast.error(`Please enter an API key for ${providerId.toUpperCase()}`);
       return;
     }
-    setVerifyingProvider((prev) => ({ ...prev, [providerId]: true }));
+
+    if (save) {
+      setIsSavingKey(true);
+    } else {
+      setIsTestingCall(true);
+    }
+    setTestResult(null);
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/llm-credentials/verify`, {
         method: "POST",
@@ -100,20 +139,47 @@ export function SettingsPage() {
         },
         body: JSON.stringify({
           provider: providerId,
-          api_key: apiKey.trim(),
+          api_key: inputKey || undefined,
+          save: save,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || `API Key test call failed for ${providerId.toUpperCase()}`);
+        const errorMsg = data.error || data.detail || `Test call failed for ${providerId.toUpperCase()}`;
+        setTestResult({
+          success: false,
+          provider: providerId,
+          message: errorMsg,
+          latency_ms: data.latency_ms,
+        });
+        toast.error(`Verification failed: ${errorMsg}`);
+      } else {
+        setTestResult({
+          success: true,
+          provider: providerId,
+          latency_ms: data.latency_ms,
+          test_output: data.test_output || "YES",
+          modelsCount: data.models?.length || 0,
+        });
+        if (save) {
+          toast.success(`Key verified & encrypted in DB for ${providerId.toUpperCase()}! (${data.latency_ms}ms)`);
+          setProviderKeysInput((prev) => ({ ...prev, [providerId]: "" }));
+          await fetchCredentials();
+        } else {
+          toast.success(`Live ping successful! Provider responded: "${data.test_output || "YES"}" in ${data.latency_ms}ms`);
+        }
       }
-      toast.success(`API Key verified & safely encrypted in DB for ${providerId.toUpperCase()}! Loaded ${data.models.length} models.`);
-      setProviderKeysInput((prev) => ({ ...prev, [providerId]: "" }));
-      await fetchCredentials();
     } catch (err: any) {
-      toast.error(err.message || `Test call failed for ${providerId}`);
+      const msg = err.message || `Test failed for ${providerId}`;
+      setTestResult({
+        success: false,
+        provider: providerId,
+        message: msg,
+      });
+      toast.error(msg);
     } finally {
-      setVerifyingProvider((prev) => ({ ...prev, [providerId]: false }));
+      setIsTestingCall(false);
+      setIsSavingKey(false);
     }
   };
 
@@ -327,81 +393,33 @@ export function SettingsPage() {
         <HeaderBar title="Cost Tracking & BYOK Vault" description="Manage LLM provider credentials, token expenses, Google OAuth, and workspace permissions." />
 
         <div className="p-8 max-w-6xl mx-auto w-full space-y-6">
-          {/* DARE-Style Hero Banner */}
-          <div className="rounded-2xl bg-gradient-to-r from-primary via-primary/95 to-primary/85 text-primary-foreground p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold uppercase tracking-wider">
-                  Academic Routing
-                </span>
-                <span className="text-xs opacity-80 font-medium">
-                  Workspace: <strong className="text-primary-foreground">{activeWorkspace?.name}</strong>
-                </span>
+          {/* Bring Your Own Keys Banner */}
+          <div className="rounded-xl bg-gradient-to-r from-primary via-primary/95 to-primary/90 text-primary-foreground px-5 py-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-white/10 text-accent flex items-center justify-center shrink-0">
+                <KeyRound className="h-4 w-4" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                <Coins className="h-6 w-6 text-accent" />
-                Cost Tracking & BYOK Vault
-              </h1>
-              <p className="text-xs opacity-80 max-w-xl leading-relaxed">
-                Bring Your Own Key (BYOK) architecture. Connect your own OpenRouter, OpenAI, Gemini, Anthropic, or LiteLLM proxy keys with AES-256-GCM encryption.
-              </p>
+              <div>
+                <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                  Bring Your Own Keys (BYOK)
+                </h1>
+                <p className="text-xs text-white/80">
+                  Store and manage your API keys for OpenAI, Gemini, Anthropic, OpenRouter, and LiteLLM.
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const target = document.getElementById("provider-credentials-section");
-                  target?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="h-9 px-3.5 rounded-xl border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold gap-1.5"
-              >
-                + LiteLLM Key
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  const target = document.getElementById("provider-credentials-section");
-                  target?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="h-9 px-4 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold gap-1.5 shadow-sm"
-              >
-                <Plus className="h-4 w-4" />
-                Add BYO Key
-              </Button>
-            </div>
-          </div>
-
-          {/* DARE-Style BYOK Architecture Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <KeyRound className="h-4 w-4 text-accent-plum" />
-                  BYOK Cipher Vault
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
-                  AES-256-GCM
-                </span>
-              </div>
-              <div className="text-xs font-semibold text-foreground pt-1">Direct Provider Keys</div>
-              <p className="text-[11px] text-muted-foreground">User credentials are encrypted at rest with Fernet/AES-256-GCM and resolved on-demand per request.</p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  LiteLLM Gateway
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                  Ready
-                </span>
-              </div>
-              <div className="text-xs font-semibold text-foreground pt-1">Proxy Architecture</div>
-              <p className="text-[11px] text-muted-foreground">Centralized lab proxy endpoint routing for OpenRouter, custom OpenAI-compatible proxies, or institutional clusters.</p>
-            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                const target = document.getElementById("provider-credentials-section");
+                target?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="h-8 px-3.5 rounded-lg bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold gap-1.5 shadow-xs shrink-0 self-start sm:self-auto"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Key
+            </Button>
           </div>
 
           {/* Controls Bar for Scope & Timeframe */}
@@ -638,9 +656,9 @@ export function SettingsPage() {
               </Card>
             )}
 
-            {/* DARE-Style Minimalist Provider Credentials & Key Verification */}
-            <Card id="provider-credentials-section" className="p-6 border border-border bg-card rounded-2xl shadow-sm space-y-5">
-              <div className="flex items-start justify-between gap-4">
+            {/* Unified Provider Credentials & Key Verification */}
+            <Card id="provider-credentials-section" className="p-6 border border-border bg-card rounded-xl shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/60">
                 <div>
                   <div className="flex items-center gap-2">
                     <KeyRound className="h-5 w-5 text-primary" />
@@ -649,86 +667,295 @@ export function SettingsPage() {
                     </h3>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Bring your own keys. Each key is verified with a live test call and securely stored using AES-256-GCM encryption.
+                    Bring your own keys. Encrypted at rest (AES-256-GCM) and verified via live query test.
                   </p>
+                </div>
+
+                {/* Dropdown Provider Selector & Security Explainer */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowVaultExplainer((prev) => !prev)}
+                    className="h-8.5 px-3 text-xs font-semibold rounded-lg border-border gap-1.5"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">{showVaultExplainer ? "Hide Architecture" : "Vault Architecture"}</span>
+                  </Button>
+
+                  <span className="text-xs font-semibold text-muted-foreground hidden sm:inline">Provider:</span>
+                  <select
+                    value={selectedProviderId}
+                    onChange={(e) => {
+                      setSelectedProviderId(e.target.value);
+                      setTestResult(null);
+                    }}
+                    className="h-8.5 px-3 text-xs font-semibold rounded-lg border border-border bg-background text-foreground shadow-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    {[
+                      { id: "openai", name: "OpenAI", icon: "🤖" },
+                      { id: "google", name: "Gemini", icon: "✨" },
+                      { id: "anthropic", name: "Anthropic Claude", icon: "🧠" },
+                      { id: "openrouter", name: "OpenRouter", icon: "🌐" },
+                    ].map((p) => {
+                      const norm = p.id === "google" ? "gemini" : p.id;
+                      const saved = credentials.saved_keys?.find((k) => k.provider === norm) || (credentials.provider === norm && credentials.has_api_key);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.icon} {p.name} {saved ? "✓ (Configured)" : "○ (Not Configured)"}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
               </div>
 
+              {/* Vault Security Architecture Explainer */}
+              {showVaultExplainer && (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Zero-Knowledge API Key Vault Architecture</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowVaultExplainer(false)}
+                      className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      Close
+                    </Button>
+                  </div>
+
+                  <div className="w-full flex items-center justify-center py-2">
+                    <img
+                      src={byokVaultPng}
+                      alt="Zero-Knowledge API Key Vault Architecture"
+                      className="w-full max-w-lg h-auto object-contain max-h-[340px] select-none pointer-events-none"
+                    />
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-4 pt-1 text-xs">
+                    <div className="p-2.5 rounded-lg bg-background/80 border border-border/60">
+                      <span className="font-bold text-foreground block">1. User API Key</span>
+                      <span className="text-[11px] text-muted-foreground mt-0.5 block">Your private provider credentials.</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-background/80 border border-border/60">
+                      <span className="font-bold text-foreground block">2. AES-256-GCM</span>
+                      <span className="text-[11px] text-muted-foreground mt-0.5 block">Military-grade authenticated encryption.</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-background/80 border border-border/60">
+                      <span className="font-bold text-foreground block">3. Direct Provider</span>
+                      <span className="text-[11px] text-muted-foreground mt-0.5 block">Zero intermediate telemetry interception.</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-background/80 border border-border/60">
+                      <span className="font-bold text-foreground block">4. Zero Exposure</span>
+                      <span className="text-[11px] text-muted-foreground mt-0.5 block">Keys never touch disk, logs, or backups.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {credentialsLoading ? (
-                <div className="flex items-center justify-center py-10">
+                <div className="flex items-center justify-center py-8">
                   <Loader2 className="animate-spin text-primary h-6 w-6" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { id: "openai", name: "OpenAI API Key", defaultModel: "gpt-4o-mini", placeholder: "sk-proj-...", icon: "🤖" },
-                    { id: "openrouter", name: "OpenRouter API Key", defaultModel: "openai/gpt-4o-mini", placeholder: "sk-or-v1-...", icon: "🌐" },
-                    { id: "google", name: "Gemini API Key", defaultModel: "gemini-3.1-flash-lite-preview", placeholder: "AIzaSy...", icon: "✨" },
-                    { id: "anthropic", name: "Anthropic API Key", defaultModel: "claude-3-5-sonnet-latest", placeholder: "sk-ant-...", icon: "🧠" },
-                  ].map((provider) => {
-                    const normProvName = provider.id === "google" ? "gemini" : provider.id;
-                    const savedItem = credentials.saved_keys?.find((k) => k.provider === normProvName);
-                    const isSaved = !!savedItem || (credentials.provider === normProvName && credentials.has_api_key);
-                    const currentInput = providerKeysInput[provider.id] || "";
-                    const isTesting = verifyingProvider[provider.id] || false;
+                (() => {
+                  const currentProviderMeta = [
+                    { id: "openai", name: "OpenAI", defaultModel: "gpt-4o-mini", placeholder: "sk-proj-...", icon: "🤖", docsUrl: "https://platform.openai.com/api-keys" },
+                    { id: "google", name: "Google Gemini", defaultModel: "gemini-3.1-flash-lite-preview", placeholder: "AIzaSy...", icon: "✨", docsUrl: "https://aistudio.google.com/apikey" },
+                    { id: "anthropic", name: "Anthropic Claude", defaultModel: "claude-3-5-sonnet-latest", placeholder: "sk-ant-...", icon: "🧠", docsUrl: "https://console.anthropic.com/settings/keys" },
+                    { id: "openrouter", name: "OpenRouter", defaultModel: "openai/gpt-4o-mini", placeholder: "sk-or-v1-...", icon: "🌐", docsUrl: "https://openrouter.ai/keys" },
+                  ].find((p) => p.id === selectedProviderId) || {
+                    id: "openai",
+                    name: "OpenAI",
+                    defaultModel: "gpt-4o-mini",
+                    placeholder: "sk-proj-...",
+                    icon: "🤖",
+                    docsUrl: "https://platform.openai.com/api-keys",
+                  };
 
-                    return (
-                      <div key={provider.id} className="p-4 rounded-xl border border-border bg-background space-y-3 shadow-xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm p-1 rounded-lg bg-muted text-foreground">{provider.icon}</span>
-                            <div>
-                              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">{provider.name}</h4>
-                              <p className="text-[10px] text-muted-foreground font-mono">Default: {savedItem?.model || provider.defaultModel}</p>
+                  const normProvName = selectedProviderId === "google" ? "gemini" : selectedProviderId;
+                  const savedItem = credentials.saved_keys?.find((k) => k.provider === normProvName);
+                  const isSaved = !!savedItem || (credentials.provider === normProvName && credentials.has_api_key);
+                  const currentInput = providerKeysInput[selectedProviderId] || "";
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Active Provider Details Card */}
+                      <div className="p-4 rounded-lg border border-border bg-background/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl p-2 rounded-lg bg-card border border-border">
+                            {currentProviderMeta.icon}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-foreground">{currentProviderMeta.name}</h4>
+                              {isSaved ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  Verified & Saved
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
+                                  Not Configured
+                                </span>
+                              )}
                             </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Default model: <span className="font-mono text-foreground font-medium">{savedItem?.model || currentProviderMeta.defaultModel}</span>
+                            </p>
                           </div>
-                          {isSaved ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                              <ShieldCheck className="w-3 h-3" />
-                              Verified & Saved
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border">
-                              Not Configured
-                            </span>
-                          )}
                         </div>
 
-                        <div className="space-y-2">
+                        <a
+                          href={currentProviderMeta.docsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 shrink-0 self-start sm:self-center font-medium"
+                        >
+                          Get {currentProviderMeta.name} API Key
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      {/* Input & Action Buttons */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                          <span>API Key</span>
+                          {isSaved && (
+                            <span className="text-[11px] text-muted-foreground font-normal">
+                              Key saved in encrypted vault. Enter a new key below to update.
+                            </span>
+                          )}
+                        </label>
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <Input
                             type="password"
-                            placeholder={isSaved ? "•••••••••••••••••••• (Encrypted in DB)" : provider.placeholder}
+                            placeholder={isSaved ? "•••••••••••••••••••••••••••••••• (Encrypted in DB)" : currentProviderMeta.placeholder}
                             value={currentInput}
-                            onChange={(e) => setProviderKeysInput((prev) => ({ ...prev, [provider.id]: e.target.value }))}
-                            className="h-8 text-xs rounded-lg bg-card border-border font-mono"
+                            onChange={(e) => {
+                              setProviderKeysInput((prev) => ({ ...prev, [selectedProviderId]: e.target.value }));
+                              setTestResult(null);
+                            }}
+                            className="h-9 text-xs rounded-lg bg-card border-border font-mono flex-1"
                           />
-                          <div className="flex items-center justify-between gap-2 pt-0.5">
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Live Query Test Button */}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isTestingCall || isSavingKey || (!currentInput.trim() && !isSaved)}
+                              onClick={() => handleTestOrSaveProviderKey(selectedProviderId, false)}
+                              className="h-9 text-xs font-semibold rounded-lg border-border hover:bg-muted flex items-center gap-1.5"
+                            >
+                              {isTestingCall ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Testing Ping...
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3.5 h-3.5 text-primary" />
+                                  Test Query
+                                </>
+                              )}
+                            </Button>
+
+                            {/* Save Key Button */}
                             <Button
                               type="button"
                               size="sm"
-                              disabled={isTesting || !currentInput.trim()}
-                              onClick={() => handleVerifyAndSaveProviderKey(provider.id, currentInput)}
-                              className="h-7 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+                              disabled={isSavingKey || isTestingCall || !currentInput.trim()}
+                              onClick={() => handleTestOrSaveProviderKey(selectedProviderId, true)}
+                              className="h-9 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs flex items-center gap-1.5"
                             >
-                              {isTesting ? "Testing Call..." : "Test & Save"}
+                              {isSavingKey ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                "Save Key"
+                              )}
                             </Button>
+
+                            {/* Delete Key Button */}
                             {isSaved && (
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
+                                disabled={isSavingKey || isTestingCall}
                                 onClick={() => handleDeleteKey(normProvName)}
-                                className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg px-2"
+                                className="h-9 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg px-2.5"
+                                title="Delete saved key"
                               >
-                                Delete Key
+                                <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             )}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Live Test Query Result Banner */}
+                      {testResult && testResult.provider === selectedProviderId && (
+                        <div
+                          className={`p-3.5 rounded-lg border text-xs transition-all ${
+                            testResult.success
+                              ? "bg-emerald-500/10 border-emerald-500/25 text-foreground"
+                              : "bg-destructive/10 border-destructive/25 text-foreground"
+                          }`}
+                        >
+                          {testResult.success ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                  API Test Call Succeeded — Status: Working
+                                </span>
+                                {testResult.latency_ms && (
+                                  <span className="font-mono text-[11px] text-muted-foreground bg-background px-2 py-0.5 rounded border border-border">
+                                    {testResult.latency_ms}ms roundtrip
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                                <span>
+                                  Model Output: <code className="font-mono font-semibold text-emerald-800 dark:text-emerald-300">"{testResult.test_output}"</code>
+                                </span>
+                                <span>
+                                  Available Models: <span className="font-semibold text-foreground">{testResult.modelsCount}</span>
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-destructive flex items-center gap-1.5">
+                                  <AlertCircle className="w-4 h-4" />
+                                  API Test Call Failed
+                                </span>
+                                {testResult.latency_ms && (
+                                  <span className="font-mono text-[11px] text-muted-foreground bg-background px-2 py-0.5 rounded border border-border">
+                                    {testResult.latency_ms}ms
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] font-mono text-destructive/90 break-all bg-card/60 p-2 rounded border border-destructive/20 mt-1">
+                                {testResult.message}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </Card>
 

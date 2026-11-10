@@ -39,7 +39,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/campaigns" element={<DashboardListPage />} />
               <Route path="/campaigns/:id" element={<DashboardDetailPage />} />
-              <Route path="/evaluation" element={<ModelEvaluationPage />} />
+              <Route path="/evaluation" element={<Navigate to="/campaigns?tab=workflow" replace />} />
               <Route path="/evaluation/:id" element={<ModelEvaluationPage />} />
               <Route path="/workflows" element={<WorkflowLibraryPage />} />
               <Route path="/workflows/:id" element={<WorkflowBuilderPage />} />

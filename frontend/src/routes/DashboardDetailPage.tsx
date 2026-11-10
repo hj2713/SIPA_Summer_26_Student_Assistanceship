@@ -541,7 +541,7 @@ export function DashboardDetailPage() {
   // Fetch global workspace documents for Linking
   const fetchGlobalDocuments = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/documents`, {
+      const res = await fetch(`${API_BASE_URL}/api/documents?lightweight=true`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) throw new Error("Failed to fetch global documents");
@@ -1633,7 +1633,7 @@ export function DashboardDetailPage() {
                 ) : (
                   <Sparkles size={14} className={professorBenchmark ? "text-amber-500 fill-amber-500" : ""} />
                 )}
-                Professor Benchmark
+                Standard Benchmark
               </Button>
             )}
             <Button
@@ -1759,7 +1759,7 @@ export function DashboardDetailPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles size={15} className="text-amber-500 fill-amber-500" />
-                  <h3 className="text-sm font-bold">Professor Benchmark Calibration</h3>
+                  <h3 className="text-sm font-bold">Standard Benchmark Calibration</h3>
                   <span className="text-[10px] rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300">
                     {professorBenchmark.matched_rows}/{professorBenchmark.benchmark_rows} benchmark rows matched by filename
                   </span>
@@ -3786,7 +3786,7 @@ export function DashboardDetailPage() {
                           <div className="bg-rose-500/10 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 p-3 rounded-lg border border-rose-200 dark:border-rose-900 text-xs">
                             <span className="font-bold block uppercase text-[10px] tracking-wider mb-1 flex items-center gap-1.5">
                               <Sparkles size={11} className="text-amber-500 fill-amber-500 animate-pulse" />
-                              Professor Benchmark Value
+                              Standard Benchmark Value
                             </span>
                             <span className="font-mono text-xs font-bold">{String(benchVal)}</span>
                           </div>

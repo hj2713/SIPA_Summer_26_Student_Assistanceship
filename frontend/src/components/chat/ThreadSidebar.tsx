@@ -6,7 +6,6 @@ import {
   GitBranch,
   FileText,
   MessagesSquare,
-  FlaskConical,
   CreditCard,
   HelpCircle,
   LogOut,
@@ -112,7 +111,10 @@ export function ThreadSidebar() {
       label: "Campaigns",
       path: "/campaigns",
       icon: BarChart3,
-      isActive: pathname.startsWith("/campaigns") || pathname.startsWith("/dashboard"),
+      isActive:
+        pathname.startsWith("/campaigns") ||
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/evaluation"),
       badge: null,
     },
     {
@@ -135,13 +137,6 @@ export function ThreadSidebar() {
       icon: MessagesSquare,
       isActive: pathname.startsWith("/chat"),
       badge: null,
-    },
-    {
-      label: "Evaluation",
-      path: "/evaluation",
-      icon: FlaskConical,
-      isActive: pathname.startsWith("/evaluation"),
-      badge: "Multi-Model",
     },
   ];
 
@@ -340,7 +335,7 @@ export function ThreadSidebar() {
             <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-2">
               <div className="flex items-center gap-1.5 text-stone-200 font-semibold text-xs">
                 <Sparkles className="h-3.5 w-3.5 text-accent" />
-                <span>O'Halloran Rubric</span>
+                <span>Standard Discretion Rubric</span>
               </div>
               <p className="leading-relaxed text-[11px] text-stone-300">
                 Auditing legislative discretion with deterministic 2-stage verification across Congress public laws.
@@ -510,7 +505,7 @@ export function ThreadSidebar() {
                     Auditing Legislative Delegation & Administrative Discretion
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Based on <em>Delegating Powers: A Law and Economics Approach to Politics, Regulation, and the Economy</em> (Epstein & O'Halloran). This system automates the scientific audit of statutory language to determine whether, to whom, and under what constraints Congress delegates regulatory authority.
+                    Based on the Standard Discretion &amp; Delegation Framework (<em>Delegating Powers: A Law and Economics Approach to Politics, Regulation, and the Economy</em>). This system automates the scientific audit of statutory language to determine whether, to whom, and under what constraints Congress delegates regulatory authority.
                   </p>
                 </div>
 
@@ -573,7 +568,7 @@ export function ThreadSidebar() {
                 <div>
                   <h3 className="text-base font-bold text-foreground">Deterministic 2-Stage Pipeline</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    How the official O'Halloran pipeline guarantees scientific rigor while saving API costs.
+                    How the official Standard Discretion pipeline guarantees scientific rigor while saving API costs.
                   </p>
                 </div>
 

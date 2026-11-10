@@ -33,6 +33,7 @@ export interface AuthContextValue {
   inviteMember: (email: string) => Promise<void>;
   createWorkspace: (name: string) => Promise<Workspace>;
   refreshWorkspaces: () => Promise<void>;
+  updateUserSession: (user: User, token?: string) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

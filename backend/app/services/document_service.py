@@ -89,29 +89,39 @@ class DocumentService:
             return get_storage()
         return self._storage_service
 
-    def _row_to_doc(self, row: Any) -> DocumentRow:
+    def _row_to_doc(self, row: Any, lightweight: bool = False) -> DocumentRow:
         """Helper to convert a dictionary or Row to a DocumentRow Pydantic model."""
         d = dict(row)
         if "metadata" in d and d["metadata"]:
             if isinstance(d["metadata"], str):
-                d["metadata"] = json.loads(d["metadata"])
+                try:
+                    d["metadata"] = json.loads(d["metadata"])
+                except Exception:
+                    d["metadata"] = {}
+            if lightweight and isinstance(d["metadata"], dict):
+                # Omit/truncate verbose summary text in bulk list payloads
+                summary = d["metadata"].get("summary")
+                if summary and len(summary) > 140:
+                    d["metadata"] = {**d["metadata"], "summary": summary[:140] + "..."}
         else:
             d["metadata"] = {}
         return DocumentRow.model_validate(d)
 
-    def list_documents(self, client: Any, workspace_id: str) -> list[DocumentRow]:
+    def list_documents(self, client: Any, workspace_id: str, lightweight: bool = False) -> list[DocumentRow]:
         """List all documents belonging to a workspace, most recently created first."""
         with self.db_session_factory() as session:
             rows = session.documents.list_by_workspace(workspace_id)
-            return [self._row_to_doc(row) for row in rows]
+            return [self._row_to_doc(row, lightweight=lightweight) for row in rows]
 
-    def list_documents_page(self, client: Any, workspace_id: str, page: int, page_size: int) -> tuple[list[DocumentRow], int]:
+    def list_documents_page(
+        self, client: Any, workspace_id: str, page: int, page_size: int, lightweight: bool = True
+    ) -> tuple[list[DocumentRow], int]:
         """Return one bounded document page plus the workspace total."""
         offset = (page - 1) * page_size
         with self.db_session_factory() as session:
             total = session.documents.count_by_workspace(workspace_id)
             rows = session.documents.list_page_by_workspace(workspace_id, page_size, offset)
-            return [self._row_to_doc(row) for row in rows], total
+            return [self._row_to_doc(row, lightweight=lightweight) for row in rows], total
 
     def create_document(
         self,
@@ -351,8 +361,14 @@ document_service = DocumentService()
 
 
 # Backward-compatible functional delegates delegating to the singleton + storage service
-def list_documents(client: Any, workspace_id: str) -> list[DocumentRow]:
-    return document_service.list_documents(client, workspace_id)
+def list_documents(client: Any, workspace_id: str, lightweight: bool = False) -> list[DocumentRow]:
+    return document_service.list_documents(client, workspace_id, lightweight=lightweight)
+
+
+def list_documents_page(
+    client: Any, workspace_id: str, page: int, page_size: int, lightweight: bool = True
+) -> tuple[list[DocumentRow], int]:
+    return document_service.list_documents_page(client, workspace_id, page, page_size, lightweight=lightweight)
 
 
 def create_document(

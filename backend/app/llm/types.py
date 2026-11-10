@@ -11,6 +11,8 @@ class LLMUsage:
     """Token usage reported by the provider at the end of a response."""
     input_tokens: int = 0
     output_tokens: int = 0
+    cached_tokens: int = 0
+    generation_id: str | None = None
 
 
 @dataclass(frozen=True)

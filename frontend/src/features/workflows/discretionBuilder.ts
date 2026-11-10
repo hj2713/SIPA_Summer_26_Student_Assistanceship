@@ -101,7 +101,7 @@ export function createDefaultDiscretionBuilder(): DiscretionBuilderConfig {
         title: "Binary Split",
         purpose: "Classify the law into the lower or higher discretion band before choosing the final adjacent rank.",
         instructions:
-          "Use the streamlined binary screen first: distinguish lower-bounded discretion from the higher policy-shaping band. Treat the higher class label as the professor's requested 'agency' label.",
+          "Use the streamlined binary screen first: distinguish lower-bounded discretion from the higher policy-shaping band. Treat the higher class label as the standard 'agency' label.",
         outputs: [
           field("discretion_band", "Discretion band", "enum", {
             required: true,
@@ -130,7 +130,7 @@ export function createDefaultDiscretionBuilder(): DiscretionBuilderConfig {
       },
       high_rank: {
         title: "Rank 3 vs 4",
-        purpose: "Resolve whether the higher band is substantial discretion or the professor's agency-labeled high class.",
+        purpose: "Resolve whether the higher band is substantial discretion or the standard agency-labeled high class.",
         instructions:
           "If the case is in the higher band, distinguish rank 3 from rank 4. Do not assign the top class merely because authority is broad in wording; require genuine policy-shaping leeway.",
         outputs: [
@@ -439,7 +439,7 @@ export function compileDiscretionWorkflow(definition: WorkflowDefinition): Workf
       llmNode(
         "binary_split",
         "Binary Split",
-        "Separate the lower bounded band from the professor's agency band.",
+        "Separate the lower bounded band from the standard agency band.",
         { x: 1010, y: 420 },
         stagePrompt(
           builder.stages.binary_split,
